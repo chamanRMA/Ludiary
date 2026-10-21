@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+import { AuthNotice } from "./components/AuthNotice";
 import { Layout } from "./components/Layout";
 import { matchRoute, navigate, useLocation, type Params } from "./app/router";
 import { api } from "./data/api";
@@ -27,6 +28,15 @@ const ROUTES: readonly [pattern: string, render: (p: Params) => ReactNode][] = [
 ];
 
 export function App() {
+  return (
+    <>
+      <AuthNotice />
+      <Routes />
+    </>
+  );
+}
+
+function Routes() {
   const { path } = useLocation();
   const onboarding = useQuery(() => api.getOnboarding());
   const needsWelcome = onboarding !== undefined && onboarding.completedAt === null && path !== "/welcome";

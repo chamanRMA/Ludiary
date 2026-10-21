@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --mode simulator",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite build --mode simulator --outDir dist/simulator && vite preview --mode simulator --outDir dist/simulator"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "5.3.0",

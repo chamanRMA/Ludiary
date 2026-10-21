@@ -3,14 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "@ludiary/api": "workspace:*",
+    "@ludiary/api-contract": "workspace:*",
+    "@ludiary/connector-steam": "workspace:*",
     "@ludiary/contracts": "workspace:*",
+    "@ludiary/core": "workspace:*",
+    "@ludiary/db": "workspace:*",
     "@ludiary/i18n": "workspace:*",
-    "better-sqlite3": "13.0.3"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "9.6.0"
+    "@ludiary/platform-node": "workspace:*"
   }
 }

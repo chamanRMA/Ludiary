@@ -8,8 +8,12 @@ import type { UserDialogs } from "@ludiary/contracts";
 import {
   CredentialManagerKeyStore,
   HelperProcessDialogs,
+  HelperProcessFolderPicker,
   HelperProcessTrayHost,
+  WindowsLocationResolver,
+  createHelperRunner,
   createWindowsPlatformInfo,
+  createWindowsProcessLauncher,
   type KeyringBinding,
 } from "@ludiary/platform-windows";
 import { APP_ID, createFileLogger, main, type RuntimeDeps, type SqliteAddon } from "@ludiary/runtime";
@@ -22,7 +26,7 @@ declare const __LUDIARY_TEST_HOOKS__: boolean;
  * Test hooks let tests redirect native addons, the tray helper, the data folder, the browser and the dialogs.
  * In a signed release they would let anyone who controls the environment run code as Ludiary.exe, so they are removed.
  */
-const TEST_HOOK_VARS = ["LUDIARY_NATIVE_DIR", "LUDIARY_TRAY_HELPER", "LUDIARY_DATA_DIR", "LUDIARY_OPEN_URL_FILE", "LUDIARY_DIALOG_FILE"];
+const TEST_HOOK_VARS = ["LUDIARY_NATIVE_DIR", "LUDIARY_TRAY_HELPER", "LUDIARY_DATA_DIR", "LUDIARY_OPEN_URL_FILE", "LUDIARY_DIALOG_FILE", "LUDIARY_WEB_DIR"];
 /** Node variables that change how a release behaves (TLS checks off, preloaded code); never inherited (ADR 65). */
 const UNSAFE_NODE_VARS = ["NODE_OPTIONS", "NODE_TLS_REJECT_UNAUTHORIZED"];
 
@@ -65,6 +69,11 @@ function compose(): RuntimeDeps {
     ? { showError: async (title, body) => appendFileSync(dialogFile, JSON.stringify({ title, body }) + "\n") }
     : new HelperProcessDialogs(trayHelper);
 
+  // The same helper serves the tray, the dialogs, the registry reads and the folder picker (ADR 72).
+  const runHelper = createHelperRunner(trayHelper);
+  // web/ next to the executable (ADR 72 point 9); LUDIARY_WEB_DIR exists only in the test variant (ADR 65).
+  const webDir = env["LUDIARY_WEB_DIR"] || join(platform.installDir, "web");
+
   let sqlite: SqliteAddon | undefined;
   const deps: RuntimeDeps = {
     version: __LUDIARY_VERSION__,
@@ -73,6 +82,11 @@ function compose(): RuntimeDeps {
     createKeyStore,
     createTray: () => new HelperProcessTrayHost(trayHelper),
     dialogs,
+    webDir,
+    createLocationResolver: (files) => new WindowsLocationResolver({ files, runHelper, env }),
+    createProcessLauncher: (allowedSchemes) => createWindowsProcessLauncher({ allowedSchemes }),
+    folderPicker: new HelperProcessFolderPicker(runHelper),
+    dispose: () => runHelper.dispose(),
     // Loaded lazily through a getter so that roles that never touch SQLite do not pay for it.
     get sqliteAddon() {
       sqlite ??= loadAddon(join(nativeDir, "better_sqlite3.node"));

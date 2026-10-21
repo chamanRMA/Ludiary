@@ -1,9 +1,22 @@
 import { randomBytes } from "node:crypto";
 import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { openDatabase, probeDatabase } from "./database";
+import { openDatabase } from "@ludiary/db";
 import type { RuntimeDeps } from "./deps";
 import { redactHome } from "./files";
+
+type Db = ReturnType<typeof openDatabase>;
+
+/** Writes and reads one row; proves the packaged executable can use the database. Only for --selftest's throw-away file. */
+function probeDatabase(db: Db) {
+  db.exec("CREATE TABLE IF NOT EXISTS prototype_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+  db.prepare("INSERT INTO prototype_meta (key, value) VALUES ('start_count', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+  return {
+    sqliteVersion: (db.prepare("SELECT sqlite_version() AS v").get() as { v: string }).v,
+    journalMode: String(db.pragma("journal_mode", { simple: true })),
+    foreignKeys: db.pragma("foreign_keys", { simple: true }) === 1,
+  };
+}
 
 /**
  * Packaging smoke test (ADR 41, 45): proves the packaged executable can use SQLite (WAL, write, read, backup)

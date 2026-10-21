@@ -1,12 +1,15 @@
 import type { DetectionMode, ScanRootDto } from "@ludiary/api-contract";
+import i18next from "i18next";
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { changeLocale } from "../app/i18n";
 import { Link } from "../app/Link";
 import { navigate } from "../app/router";
 import { setThemePref, useThemePref, type ThemePref } from "../app/theme";
-import { api } from "../data/api";
-import type { GeneralSettings } from "../data/api";
+import { errorText } from "../app/errors";
+import { STORE_BRAND } from "../app/stores";
+import { api, isSimulated } from "../data/api";
+import type { GeneralSettings, SettingsUpdate } from "../data/api";
 import { mutate, useQuery } from "../data/hooks";
 import { cx, PageTitle, relativeTime, SimNote } from "../components/bits";
 import { TargetRow } from "../components/TargetRow";
@@ -86,7 +89,7 @@ export function Settings({ section: raw }: { section: string }) {
   );
 }
 
-function useSettings(): [GeneralSettings | undefined, (patch: Partial<GeneralSettings>) => Promise<void>] {
+function useSettings(): [GeneralSettings | undefined, (patch: SettingsUpdate) => Promise<void>] {
   const settings = useQuery(() => api.getSettings());
   return [settings, async (patch) => void (await mutate(api.updateSettings(patch)))];
 }
@@ -187,13 +190,22 @@ function Folders() {
   const [settings, update] = useSettings();
   const maintenance = useQuery(() => api.getMaintenance());
   const [scanned, setScanned] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const modeId = useId();
   if (!settings) return null;
-  const setRoots = (roots: readonly ScanRootDto[]): Promise<void> => update({ scanRoots: roots });
-  const addFolder = (): Promise<void> => {
-    const n = settings.scanRoots.filter((r) => r.origin === "user").length + 1;
-    // Simulator: a real folder picker needs a native dialog opened by the server (ADR 68).
-    return setRoots([...settings.scanRoots, { id: `user-${Date.now()}`, origin: "user", path: `D:\\Games\\Folder ${n}`, enabled: true }]);
+  // The picker is a native dialog opened by the server (ADR 72); cancelling it is not an error.
+  const run = async (action: Promise<unknown>): Promise<void> => {
+    setError(null);
+    try {
+      await mutate(action);
+    } catch (e) {
+      setError(errorText(t, e));
+    }
+  };
+  const rootLabel = (root: ScanRootDto): string => (root.labelKey && i18next.exists(root.labelKey) ? t(root.labelKey) : root.path);
+  const rootHint = (root: ScanRootDto): string => {
+    const origin = root.origin === "user" ? t("settings.folders.user") : t("settings.folders.discovered");
+    return root.store ? `${STORE_BRAND[root.store].name} · ${origin}` : origin;
   };
   return (
     <>
@@ -216,32 +228,34 @@ function Folders() {
       {settings.scanRoots.map((root) => (
         <div key={root.id} className={ui.row}>
           <div>
-            <span className={ui.path}>{root.path}</span>
-            <small style={{ display: "block", color: "var(--mu)" }}>{root.origin === "user" ? t("settings.folders.user") : t("settings.folders.discovered")}</small>
+            <span className={ui.path}>{rootLabel(root)}</span>
+            {rootLabel(root) !== root.path && <small className={ui.path} style={{ display: "block" }}>{root.path}</small>}
+            <small style={{ display: "block", color: "var(--mu)" }}>{rootHint(root)}</small>
           </div>
           <div className={ui.actions}>
             {root.origin === "user" && (
-              <button type="button" className={cx(ui.btn, ui.small)} onClick={() => void setRoots(settings.scanRoots.filter((r) => r.id !== root.id))}>
+              <button type="button" className={cx(ui.btn, ui.small)} onClick={() => void run(api.removeScanRoot(root.id))}>
                 {t("common.remove")}
               </button>
             )}
-            <Switch checked={root.enabled} label={t("settings.folders.enable", { path: root.path })} onChange={(enabled) => void setRoots(settings.scanRoots.map((r) => (r.id === root.id ? { ...r, enabled } : r)))} />
+            <Switch checked={root.enabled} label={t("settings.folders.enable", { path: root.path })} onChange={(enabled) => void run(api.setScanRootEnabled(root.id, enabled))} />
           </div>
         </div>
       ))}
       <div className={ui.actions} style={{ justifyContent: "flex-start" }}>
-        <button type="button" className={ui.btn} onClick={() => void addFolder()}>
+        <button type="button" className={ui.btn} onClick={() => void run(api.addScanRoot())}>
           {t("settings.folders.add")}
         </button>
-        <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void mutate(api.scan()).then(() => setScanned(true))}>
+        <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void run(api.scan()).then(() => setScanned(true))}>
           {t("settings.folders.scan")}
         </button>
       </div>
       <p className={ui.muted}>
         {maintenance?.lastScanAt ? t("settings.folders.lastScan", { when: relativeTime(maintenance.lastScanAt, i18n.language) }) : t("settings.folders.neverScanned")}
       </p>
+      {error && <p className={ui.error} role="alert">{error}</p>}
       <SimNote show={scanned} />
-      <p className={ui.muted}>{t("settings.folders.simulatedPicker")}</p>
+      {isSimulated && <p className={ui.muted}>{t("settings.folders.simulatedPicker")}</p>}
     </>
   );
 }

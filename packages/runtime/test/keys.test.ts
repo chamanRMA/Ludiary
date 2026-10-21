@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { KeyStore } from "@ludiary/contracts";
-import { createLocalServer, SessionStore } from "@ludiary/api";
+import { createLocalServer, SessionStore, type LudiaryCoreFacade } from "@ludiary/api";
 import { describe, expect, it } from "vitest";
 import { callServer } from "../src/launcher";
 import { loadInstallToken, loadMasterKey } from "../src/server-role";
@@ -62,6 +62,9 @@ describe("launcher talking to whoever holds the port (ADR 63)", () => {
       t: (k) => k,
       getStatus: () => ({}),
       onShutdownRequested: () => {},
+      core: {} as LudiaryCoreFacade, // the launcher protocol never reaches the core
+      webAssets: new Map(),
+      mediaHosts: [],
     });
     const port = await server.listen(0);
     try {

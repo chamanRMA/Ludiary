@@ -1,0 +1,6 @@
+{
+  "connectors.steam.name": "Steam",
+  "connectors.steam.errors.malformedFile": "Steam tiene un fichero que Ludiary no puede leer. Ese juego se omite.",
+  "connectors.steam.errors.invalidAppId": "Este juego de Steam tiene un identificador no válido y no se puede lanzar.",
+  "connectors.steam.errors.launcherMissing": "No se encontró Steam en este equipo. Instálalo o comprueba que se detecta en Ajustes."
+}

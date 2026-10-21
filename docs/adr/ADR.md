@@ -76,7 +76,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
 | 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26) |
 | 63 | Autenticación entre el lanzador y el servidor local | Vigente (confirmada por el usuario; amplía la 23 y revisa el token de la 46); URL del enlace revisada en la 66; alcance de la sesión ligada al puerto corregido en la 67 |
-| 64 | Errores fatales visibles y credenciales no reconocidas | Vigente (compartimento de claves decidido por el usuario; amplía las 35, 45 y 46) |
+| 64 | Errores fatales visibles y credenciales no reconocidas | Vigente (compartimento de claves decidido por el usuario; amplía las 35, 45 y 46); código de salida 14 añadido en la 72 |
 | 65 | Ganchos de prueba y opciones de Node en el ejecutable publicado | Vigente (recomendada; amplía la 45) |
 | 66 | Dirección de la web: `ludiary.localhost` | Vigente (recomendada; nombre aceptado por el usuario; amplía las 23, 28 y 29 y revisa la URL del enlace de la 63); alcance de la sesión ligada al puerto corregido en la 67 |
 | 67 | Segundo factor ligado al origen y cookie de la dirección alternativa | Vigente (recomendada; amplía las 29 y 54 y corrige las 63 y 66) |
@@ -84,7 +84,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 69 | Asistente de primer arranque | Vigente (confirmada por el usuario) |
 | 70 | Fuentes tipográficas empaquetadas (OFL-1.1) | Vigente (confirmada por el usuario; amplía la 60) |
 | 71 | Portadas de Steam desde su CDN | Vigente (qué, confirmado por el usuario; cómo, recomendado; revisa la 68 en portadas y CSP; amplía las 6 y 40) |
-| 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; tres puntos pendientes del usuario; amplía las 40, 42, 47, 50 y 68) |
+| 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68) |
 
 ## Decisiones
 
@@ -1342,7 +1342,7 @@ Alternativas descartadas:
   - Supuesto a verificar: libuv no fija `SO_EXCLUSIVEADDRUSE` en Windows (según los comentarios de su código fuente), y se cuenta con que la seguridad de sockets reforzada de Windows impide a otra cuenta enlazar el mismo puerto ya ocupado con `SO_REUSEADDR`. Se comprueba con una prueba manual desde una segunda cuenta; si falla, habrá que fijar esa opción desde código nativo.
 - En modo servidor (fase 2), el agente local se emparejará con el mismo principio: una clave compartida que nunca viaja en claro.
 
-### 64. Errores fatales visibles y credenciales no reconocidas (amplía las decisiones 35, 45 y 46)
+### 64. Errores fatales visibles y credenciales no reconocidas (amplía las decisiones 35, 45 y 46; código de salida 14 añadido en la decisión 72)
 
 **Decisión (recomendada, 21 de octubre de 2026, tras la auditoría del prototipo):**
 
@@ -1352,8 +1352,9 @@ Alternativas descartadas:
   - 3: ya hay otra instancia (decisión 62).
   - 10: clave maestra no reconocida.
   - 11: almacén de credenciales no disponible.
-  - 12: base de datos no disponible, incluido no poder cargar SQLite.
+  - 12: base de datos no disponible, incluido no poder cargar SQLite, y cualquier fallo de la migración que no sea el del código 14.
   - 13: sin puerto libre.
+  - 14: base de datos más nueva que esta versión, con migraciones que no conoce (añadido en la decisión 72). Mensaje `fatal.databaseTooNew`.
   - 1: cualquier otro error.
 - **Espera del lanzador:** mientras siga vivo el servidor que arrancó, espera hasta 60 s (antes, 20) a que responda con la autenticación de la decisión 63. Si el servidor sale con 3, sigue esperando a la otra instancia. Si sale con otro código, o se agota la espera, muestra el mensaje que corresponde y sale con 1.
 - **Cuadro de mensaje desde el auxiliar de Go:** `ludiary-tray.exe --dialog` lee un JSON por la entrada estándar, `{"kind":"error","title":"…","body":"…"}`, y muestra `MessageBoxW` con icono de error, Aceptar y `MB_SETFOREGROUND`. Después escribe `{"result":"ok"}` y termina. Windows traduce el botón; los textos llegan ya traducidos (invariante 6). No hay cuadro de confirmación: con la clave compartimentada no hace falta preguntar nada.
@@ -1368,7 +1369,7 @@ export interface UserDialogs {
 
 - La implementación `HelperProcessDialogs` vive en `platform-windows`. En `RuntimeDeps` es opcional: sin ella, el fallo solo se registra. Las pruebas inyectan un doble.
 - **Textos:**
-  - Claves `fatal.title`, `fatal.masterKeyUnrecognized`, `fatal.keyStore`, `fatal.database`, `fatal.noPort`, `fatal.timeout` y `fatal.unexpected`, en español e inglés.
+  - Claves `fatal.title`, `fatal.masterKeyUnrecognized`, `fatal.keyStore`, `fatal.database`, `fatal.databaseTooNew` (decisión 72), `fatal.noPort`, `fatal.timeout` y `fatal.unexpected`, en español e inglés.
   - Indican la carpeta de registros (`%LOCALAPPDATA%\Ludiary\logs`) y cómo abrir una incidencia (decisión 35).
   - Un error del papel lanzador que llega a `runLauncher` se escribe en `launcher.log` y muestra `fatal.unexpected`. Un `uncaughtException` fuera de ese camino solo se escribe en `crash.log`, sin cuadro.
 - **Formato de la entrada `master-key/1`:**
@@ -1740,9 +1741,14 @@ export interface GameDetailDto extends GameSummaryDto {
 - El tester añade una prueba para la validación de `mediaHosts` y otra para la paridad de la CSP.
 - El auditor revisa la CSP y `Referrer-Policy` cuando el servidor sirva la SPA.
 
-### 72. Primer corte vertical de Steam: instalados, biblioteca y lanzamiento (amplía las decisiones 40, 42, 47, 50 y 68)
+### 72. Primer corte vertical de Steam: instalados, biblioteca y lanzamiento (amplía las decisiones 40, 42, 47, 50, 64 y 68)
 
-**Decisión (recomendada, 21 de octubre de 2026; los tres puntos marcados «decide el usuario» quedan con la opción recomendada hasta que responda):**
+**Decisión (recomendada, 21 de octubre de 2026; puntos del usuario respondidos el mismo día):**
+
+- **Respuestas del usuario:**
+  - **A:** el selector nativo de carpetas entra en este corte.
+  - **B:** lo que el servidor aún no tiene se queda en la web **como está ahora**, es decir, con el comportamiento del simulador, en lugar de mostrarse como «Disponible próximamente». Esto revisa el punto «Sin mezclar datos reales y simulados» del apartado 7: el cliente real implementa lo que el servidor ya tiene y delega el resto en el simulador, método a método. Lo simulado sigue sin guardar nada en el servidor.
+  - **C:** no se fija todavía el orden de los cortes siguientes: primero se termina y se prueba este; el orden se decide después.
 
 #### 1. Alcance
 
@@ -1811,7 +1817,9 @@ export interface LaunchContext extends BaseContext {
 export function checkConnectorManifest(c: StoreConnector): readonly string[];
 ```
 
-- **`ScopedFileReader`** (semántica que el contrato no fijaba): UTF-8 sin BOM; `readText` como mucho de 1 MiB; `readDir` como mucho de 10 000 entradas. Toda ruta se resuelve con `realpath` y se rechaza si queda fuera de las raíces (`..`, uniones, enlaces simbólicos). Los errores son `ConnectorError` con `scan.root-unreadable`; una ruta fuera de las raíces da `internal`, porque es un fallo del conector. `join` sigue la semántica de rutas del SO.
+- **`ScopedFileReader`** (semántica que el contrato no fijaba): UTF-8 sin BOM; `readText` como mucho de 1 MiB; `readDir` como mucho de 10 000 entradas. Toda ruta se resuelve con `realpath` y se rechaza si queda fuera de las raíces (`..`, uniones, enlaces simbólicos). Los errores de lectura son `ConnectorError` con `scan.root-unreadable`. `join` sigue la semántica de rutas del SO. Una ruta fuera de las raíces da `internal`, con dos casos (precisado tras la auditoría, punto 11):
+  - **Fuera por su texto** (absoluta ajena o con `..`): `ConnectorError` con `internal`. Es un fallo del conector y tumba su escaneo.
+  - **Dentro por su texto, pero su `realpath` sale de las raíces** (unión o enlace que escapa): `PathEscapesRootsError`, subtipo de `ConnectorError` con código `internal`. El conector puede capturarlo y tratarlo como un dato del disco, no como un fallo propio. Steam lo trata así: si es una instalación (`common\<installdir>`), se salta esa entrada y la instalación se retira de la biblioteca; si es la propia `steamapps`, la raíz cuenta como ilegible y conserva sus instalaciones.
 - **Manifiesto de Steam en este corte:**
   - `access: 'official-api'`.
   - Capacidades: `library: false` (pasa a `true` con la cuenta), `scan: true`, `dlc: 'none'`, `actions: ['play']`, `launchKinds: ['uri']`, `uriSchemes: ['steam']`, `storePlaytime: false`, `price: false`.
@@ -1853,6 +1861,12 @@ export interface LocalFiles {
   /** Equality key for uniqueness (lower-case on Windows). */
   compareKey(path: string): string;
   isDirectory(path: string): Promise<boolean>;
+  /**
+   * Added after the audit (point 11). Required. Pure text check, no I/O: false for UNC paths
+   * and device paths (`\\?\`, `\\.\`) on Windows. Discovered and registry roots are filtered
+   * with it before any stat, so no SMB connection is ever opened on their behalf.
+   */
+  isLocalPath(path: string): boolean;
 }
 
 /** ADR 40 rule 5: never through a shell; the core validates the spec before calling. */
@@ -1884,7 +1898,7 @@ export interface Clock {
   - El auxiliar abre las claves solo con `KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS` (`golang.org/x/sys/windows/registry`), así que no puede escribir aunque se le pida. Solo admite `HKCU` y `HKLM`.
   - Las rutas leídas pasan por `LocalFiles.normalize`: `SteamPath` viene con `/` y en minúsculas.
   - Alternativas descartadas: `reg.exe query` (salida en la página de códigos de la consola, que estropea rutas con caracteres no ASCII, y formato pensado para personas) y un módulo nativo de registro (otro `.node` que compilar, distribuir y firmar).
-- **`ProcessLauncher.openUri` de Windows** usa el mismo mecanismo que `openUrl`, ya validado en el prototipo: `spawn('rundll32.exe', ['url.dll,FileProtocolHandler', uri])`, sin shell, `windowsHide` y `detached`.
+- **`ProcessLauncher.openUri` de Windows** usa el mismo mecanismo que `openUrl`, ya validado en el prototipo: `spawn('rundll32.exe', ['url.dll,FileProtocolHandler', uri])`, sin shell, `windowsHide` y `detached`. Tras la auditoría, `rundll32.exe` se invoca por ruta absoluta (`%SystemRoot%\System32\rundll32.exe`), no por nombre, para no depender del `PATH` ni de la carpeta actual.
   - Antes, la plataforma valida por su cuenta: `^[a-z][a-z0-9+.-]*:[\x21-\x7E]+$`, sin comillas, sin `%` seguido de algo que no sea hexadecimal, y como mucho 2048 caracteres. La lista de esquemas ya la comprobó el núcleo; esta es la segunda barrera.
   - `PlatformInfo.openUrl` sigue admitiendo solo `http(s)`: abre el navegador y no es un lanzamiento. Se factoriza la llamada común.
   - Si en las pruebas manuales `rundll32` no abriera `steam://`, la alternativa es `ludiary-tray.exe --open-uri` con `ShellExecuteW`. Las dos usan la API del sistema, no `cmd /c start`.
@@ -1977,10 +1991,12 @@ export function createCore(deps: CoreDeps): Promise<LudiaryCore>;
     - Índices únicos: (`user_id`, `store`, `store_game_id`), (`property_id`, `device_id`) y (`user_id`, `device_id`, `origin`, `path_key`). Índice por (`user_id`, `normalized_title`).
     - Las demás tablas y columnas de la 47 llegan con su funcionalidad.
   - **Migrador propio:**
-    - Aplica el SQL que genera `drizzle-kit` (separado por `--> statement-breakpoint`), incluido en el bundle como texto (`loader: { '.sql': 'text' }` de esbuild). El migrador de Drizzle lee una carpeta del disco, que no existe dentro del SEA.
+    - Aplica el SQL que genera `drizzle-kit` (separado por `--> statement-breakpoint`), incluido en el bundle. El migrador de Drizzle lee una carpeta del disco, que no existe dentro del SEA.
+    - **Implementado** (sustituye a la idea inicial de importar los `.sql` con `loader: { '.sql': 'text' }` de esbuild): `drizzle-kit` deja su salida en `packages/db/drizzle/`; `packages/db/scripts/embed-migrations.mjs` la convierte en `packages/db/src/migrations.generated.ts`, que es TypeScript normal y entra en el bundle sin cargadores especiales. Una prueba comprueba que el fichero generado coincide con la salida de `drizzle-kit`, para que no se desincronicen.
+    - El id registrado en `schema_migrations` es `0001_library_scan`, aunque el fichero de `drizzle-kit` se llame `0000_…`. El id es el que cuenta y no cambia.
     - Tabla `schema_migrations(id, hash, applied_at)` y una transacción por migración.
     - Si la base ya tiene migraciones aplicadas y hay alguna pendiente, primero hace la copia previa de la decisión 57 (`db.backup()` en `%LOCALAPPDATA%\Ludiary\backups`, conservando 3).
-    - Una base con migraciones que esta versión no conoce (más nueva) no se abre: el servidor sale con 12 (decisión 64) y lo registra. La vuelta a una versión anterior es la de la decisión 58.
+    - Una base con migraciones que esta versión no conoce (más nueva) no se abre: el servidor sale con 14 y el lanzador muestra `fatal.databaseTooNew` (decisión 64, código añadido tras la auditoría; antes decía 12, que queda para los demás fallos de la base de datos y de la migración). Se registra. La vuelta a una versión anterior es la de la decisión 58.
   - Repositorios que implementan los puertos de `core`. Métodos asíncronos en la firma, aunque el controlador sea síncrono, para no atar el núcleo a él.
 - **`packages/platform-node`:** `LocalFiles` y `ScopedFileReader`, y el reloj real. `exec` llega con GOG.
 - **`connectors/steam`:**
@@ -2000,6 +2016,7 @@ export function createCore(deps: CoreDeps): Promise<LudiaryCore>;
   - Todos los cuerpos y consultas llevan `additionalProperties: false`. Así, un `uri`, `command` o `path` en la petición de lanzar da 400 (invariante 3).
   - `apps/web` importa `api-contract` solo con `import type`, con `verbatimModuleSyntax` y una regla de ESLint, para que TypeBox no entre en la web.
   - Supuesto: TypeBox 1.x se publica como `typebox` y la línea 0.34 sigue como `@sinclair/typebox` con soporte largo. Se usa la 1.x si su JSON Schema compila con el Ajv de Fastify 5.12. Si no, la 0.34. Se fija exacta al instalar y se anota aquí.
+  - **Fijado:** `typebox` 1.4.2 (la línea 1.x), comprobado con el Ajv de Fastify 5.12.7. Fastify se configura con `removeAdditional: false`, `coerceTypes: false` y `useDefaults: false`: el Ajv no retoca la entrada, así que un campo de más da 400 en lugar de borrarse en silencio, y un tipo equivocado no se convierte.
   - Alternativas descartadas: Zod (necesita un adaptador a JSON Schema y un proveedor de tipos de terceros) y tipos sin validación (deja la validación de entrada a mano en rutas que lanzan procesos).
 - **Nivel de acceso** (decisión 67) en `config.access` de cada ruta. Un gancho después de `Host` y `Origin` lo aplica, y lo no declarado es `session+key`. El manejador de rutas no encontradas responde 404 JSON sin autenticar y no revela nada.
 
@@ -2056,10 +2073,14 @@ export function createCore(deps: CoreDeps): Promise<LudiaryCore>;
 
 #### 7. Web: de simulador a API real
 
-- **Sin mezclar datos reales y simulados.** `isSimulated` pasa a ser una constante de compilación (`import.meta.env.VITE_LUDIARY_SIMULATOR === '1'`). `vite dev` y `vite preview` la activan con su script; la compilación que se empaqueta, no. Una prueba comprueba que `dist/` no contiene el simulador.
-- **El cliente real** (`src/data/real.ts`) implementa `LudiaryApi`:
-  - Los métodos sin servidor en este corte (`startWizard`, `submitWizard` y `disconnect` de tiendas y servicios, colecciones, copias, registros, `syncAll` de biblioteca, favoritos y etiquetas) rechazan con `NotAvailableError`.
-  - Las pantallas lo muestran como «Disponible próximamente» con el control desactivado, con texto traducido (**decide el usuario: punto B**).
+- ~~**Sin mezclar datos reales y simulados.** … Una prueba comprueba que `dist/` no contiene el simulador.~~ (Revisado por el **punto B** del usuario y ajustado tras la auditoría, que señaló la contradicción.) Lo vigente:
+  - `isSimulated` es una constante de compilación (`import.meta.env.VITE_LUDIARY_SIMULATOR === '1'`). `vite dev` y `vite preview` la activan con su script; la compilación que se empaqueta, no. Una prueba (`apps/web/src/data/build-mode.test.ts`) comprueba que vale `false` en producción.
+  - `isSimulated` indica si **toda** la web va contra el simulador, no si el simulador está en el bundle: `dist/` sí lo contiene, porque el cliente real lo usa para los métodos sin servidor.
+- **El cliente real** (`apps/web/src/data/real.ts`) implementa `LudiaryApi`:
+  - Los métodos que el servidor ya tiene van a la API.
+  - Los métodos sin servidor en este corte (`startWizard`, `submitWizard` y `disconnect` de tiendas y servicios, colecciones, copias, registros, `syncAll` de biblioteca, favoritos y etiquetas) se delegan en el simulador, método a método, como hasta ahora. Lo simulado no guarda nada en el servidor.
+  - ~~Rechazan con `NotAvailableError` y las pantallas lo muestran como «Disponible próximamente» con el control desactivado~~ (revisado por el punto B: no hay `NotAvailableError` en este corte).
+  - **Pendiente del usuario:** si en producción esas partes muestran un aviso «Simulado». Hoy `SimNote` (`apps/web/src/components/bits.tsx`) solo se pinta con `isSimulated`, así que en el ejecutable no hay aviso. Propuesta del auditor: quitar `&& isSimulated` de la condición de `SimNote` para que el aviso salga siempre en lo simulado, y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null` para no enseñar una fecha de copia inventada. Recomendación del arquitecto: aceptarla, porque una fecha de copia falsa en el producto real puede hacer creer al usuario que tiene copias; es una decisión de producto y la toma el usuario.
   - En la tarjeta de Steam, el camino completo del asistente sale como «próximamente» y el modo solo instalados está activo sin pasos.
   - `simulateExpiredSession` solo existe en el simulador.
 - **`LudiaryApi`** añade `launchGame(id: string, propertyId?: string): Promise<{ status: 'started' | 'already-starting' }>` (también en el simulador, que no lanza nada). En `pages/Game.tsx`, Jugar lo llama, se desactiva 5 s y muestra «Abriendo en Steam…» o el error traducido.
@@ -2088,6 +2109,28 @@ Fuera de este corte, en el corte 2b (punto 1). `installations.executables` no se
   - Tras reiniciar, la clave de origen ya no vale (decisión 67) y el uso normal pasa por el acceso directo. Persistirlas solo mantendría vivo `/api/status`.
   - Se persisten cuando haya una ruta `session` con valor tras reiniciar, o si el usuario lo pide. El cambio es pequeño.
 - El idioma de la bandeja sigue saliendo del sistema o de `LUDIARY_LANG`. `ui.locale` se aplica a la web.
+
+#### 11. Implementado y corregido tras la auditoría (21 de octubre de 2026)
+
+Lo que se fijó al implementar y lo que el programador corrigió a raíz de la revisión del auditor. Los puntos 2 a 7 ya lo recogen en su sitio; aquí está el resumen y lo que no tenía sitio propio.
+
+- **Contradicciones con el punto B** (señaladas por el auditor): el apartado 7 y las pruebas de la web decían que `dist/` no contenía el simulador y que lo no disponible se pintaba como «próximamente». Quedan revisados en su sitio según B: `isSimulated` vale `false` en producción y el cliente real delega en el simulador los métodos sin servidor.
+- **Migraciones embebidas** en `packages/db/src/migrations.generated.ts`, generadas desde `packages/db/drizzle/` con `packages/db/scripts/embed-migrations.mjs` y con prueba de coincidencia. Id `0001_library_scan` (punto 4).
+- **TypeBox** fijado en `typebox` 1.4.2 con el Ajv de Fastify 5.12.7, sin `removeAdditional`, `coerceTypes` ni `useDefaults` (punto 5).
+- **Código de salida 14** `databaseTooNew` con `fatal.databaseTooNew`, añadido a la tabla de la decisión 64. El 12 queda para los demás fallos de la base de datos y de la migración.
+- **`ScopedFileReader` y uniones:** `PathEscapesRootsError` (subtipo de `ConnectorError`, código `internal`) cuando el `realpath` sale de las raíces; Steam lo trata como entrada saltada o raíz ilegible. Una ruta fuera por su texto sigue siendo un fallo del conector (punto 2).
+  - **Consecuencia para el usuario:** quien mueva juegos de Steam a otro disco con `mklink /J` dejando la unión en `steamapps\common` no los verá en la biblioteca.
+  - **Propuesta, sin decidir (pendiente del usuario):** admitirlos añadiendo como raíz el destino real de la unión. Opciones:
+    - (a) **Dejarlo así** y documentarlo en la guía de solución de problemas: mover el juego con el gestor de almacenamiento del propio Steam (supuesto: el nombre exacto del menú se comprueba al escribir la guía), que usa una biblioteca real en el otro disco, en lugar de `mklink /J`. Sin coste y sin superficie nueva. Añadir la carpeta de destino como carpeta manual no basta: no contiene `steamapps\appmanifest_*.acf`, así que el escaneo actual no encuentra nada en ella.
+    - (b) **Añadir el destino real como raíz, con permiso explícito** (la propuesta): al detectar `PathEscapesRootsError` en una instalación, el núcleo muestra en Ajustes «Esta instalación apunta a otra carpeta» con un botón para autorizar el destino. El destino entra como raíz asociada a esa biblioteca, el lector de esa biblioteca lo acepta como raíz adicional y `isInside` da por buena la instalación. Conserva el confinamiento (nada se lee sin que el usuario lo autorice) a cambio de un tipo de raíz y una pantalla nuevos.
+    - (c) **Seguir las uniones automáticamente** si el destino es local (`isLocalPath`). Lo más cómodo, pero rompe la regla de que el conector solo lee bajo raíces que el usuario ve y puede desactivar (decisión 42).
+    - Recomendación del arquitecto: (a) en este corte y (b) si hay usuarios afectados. (c) se descarta.
+- **`LocalFiles.isLocalPath`** (obligatorio en el puerto, punto 3): las raíces descubiertas y las leídas del registro se descartan si son UNC o rutas de dispositivo (`\\?\`, `\\.\`) antes de cualquier `stat`, para no abrir conexiones SMB por un valor del registro o de `libraryfolders.vdf`. Una carpeta UNC solo se admite si la elige el usuario en el selector.
+- **Manifiesto ilegible en ese momento** (fichero bloqueado, error de E/S): la raíz se marca como ilegible y conserva sus instalaciones, igual que una raíz de `unreadableRoots`. Un manifiesto que se lee pero está **malformado** se salta (y se registra), como ya decía el analizador VDF; si esa instalación ya no aparece por otra vía, se retira con las reglas del plan de escaneo.
+- **`rundll32.exe`** por ruta absoluta bajo `SystemRoot` (punto 3).
+- **Apagado:** `RuntimeDeps.dispose` y `DisposableHelperRunner.dispose()` matan los procesos auxiliares que sigan vivos, como un diálogo de carpetas abierto, para que no queden huérfanos al parar desde la bandeja.
+- **Filtro de `user_id`** añadido en `getGame`, en `listInstallations` y en el `update` de `applyScanPlan`, que no lo aplicaban. Regla general (decisión 47): toda consulta y toda escritura de `db` filtra por `user_id`, aunque el MVP tenga un solo usuario.
+- **Dependencias de desarrollo con avisos:** `drizzle-kit` trae `esbuild` ≤0.24.2 (aviso moderado GHSA-67mh-4wv8-2f99, que afecta al servidor de desarrollo de esbuild) y `@esbuild-kit/*`, obsoleto. Son solo de desarrollo y no entran en el instalador ni en el bundle. Se aceptan y se revisan al subir `drizzle-kit`.
 
 #### Supuestos de Steam (no hay documentación oficial; se verifican con los juegos reales del desarrollador)
 
@@ -2139,9 +2182,9 @@ Fuera de este corte, en el corte 2b (punto 1). `installations.executables` no se
     - Paridad de la lista de `vite.config.ts` con los `mediaHosts` (decisión 71; vive aquí porque `runtime` es el único que conoce los conectores).
   - Web:
     - El envoltorio de `fetch` lee la clave en cada petición y la borra con `origin_key_required`.
-    - `NotAvailableError` se pinta como «próximamente».
+    - ~~`NotAvailableError` se pinta como «próximamente».~~ (Revisado por el punto B.) Los métodos sin servidor del cliente real delegan en el simulador.
     - Jugar llama a `launchGame`.
-    - `dist/` sin simulador.
+    - ~~`dist/` sin simulador.~~ (Revisado por el punto B.) `isSimulated` vale `false` en producción (`build-mode.test.ts`).
   - `i18n`: paridad incluyendo `connectors/steam/locales`.
   - Playwright (decisión 48): servidor de `runtime` en modo prueba con un árbol de Steam de fixtures en una carpeta temporal, `LocationResolver` doble y `ProcessLauncher` que graba. Casos: enlace → biblioteca → ficha → Jugar graba `steam://rungameid/<id>`; primer arranque con cada modo; desactivar una carpeta retira sus juegos.
   - Prueba de humo del exe empaquetado: `/` sirve `index.html` y un `/assets/*`.
@@ -2194,7 +2237,10 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 
 - Actualizador con vuelta atrás (decisión 58): por implementar y validar en Windows; condición que antes cerraba la 45.
 - Detección del proceso de cada juego: propuesta en la 55. Se cierra para Steam en el corte 2b de la 72 (tiempo de juego, después del corte de la cuenta de Steam y antes de GOG), con al menos tres juegos reales, y se revalida con cada tienda nueva.
-- Tres puntos de producto de la decisión 72: (A) selector nativo de carpetas en este corte o, mientras tanto, ocultar «Solo las carpetas que yo indique»; (B) funciones aún sin servidor mostradas como «Disponible próximamente» u ocultas; (C) confirmar el orden de cortes: cuenta de Steam, tiempo de juego y GOG.
+- Puntos de producto de la decisión 72 (A y B ya decididos por el usuario):
+  - (C) Orden de los cortes siguientes (cuenta de Steam, tiempo de juego, GOG): el usuario lo decide cuando se termine y se pruebe el primer corte.
+  - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
+  - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
 - Verificar los supuestos marcados en las decisiones 39 a 72 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

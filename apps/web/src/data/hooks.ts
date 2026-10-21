@@ -8,11 +8,16 @@ const subscribe = (cb: () => void): (() => void) => {
   return () => listeners.delete(cb);
 };
 
+/** Re-runs every active query (used while a background sync is running). */
+export function refresh(): void {
+  version += 1;
+  listeners.forEach((l) => l());
+}
+
 /** Runs a mutation and refreshes every active query afterwards. */
 export async function mutate<T>(action: Promise<T>): Promise<T> {
   const result = await action;
-  version += 1;
-  listeners.forEach((l) => l());
+  refresh();
   return result;
 }
 
@@ -22,7 +27,8 @@ export function useQuery<T>(load: () => Promise<T>, deps: readonly unknown[] = [
   const [data, setData] = useState<T>();
   useEffect(() => {
     let live = true;
-    void load().then((d) => live && setData(d));
+    // A failed load keeps the previous data; the failure itself is shown elsewhere (e.g. the 401 notice).
+    void load().then((d) => live && setData(d), () => undefined);
     return () => {
       live = false;
     };

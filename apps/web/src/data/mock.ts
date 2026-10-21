@@ -218,7 +218,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
   let settings: GeneralSettings = {
     locale: ((v) => (v === "es" || v === "en" ? v : "system"))(storage.getItem("ludiary.locale")),
     detection: null,
-    scanRoots: ROOTS,
+    scanRoots: ROOTS.map((r) => ({ ...r })),
     backups: { periodic: true, folder: null },
     autoUpdate: true,
     autostart: false,
@@ -324,6 +324,19 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     },
 
     getSettings: async () => settings,
+    // Simulator: there is no native dialog, so "add folder" adds a sample path (the real client asks the server).
+    addScanRoot: async () => {
+      const n = settings.scanRoots.filter((r) => r.origin === "user").length + 1;
+      const root: ScanRootDto = { id: `user-${now()}`, origin: "user", path: `D:\\Games\\Folder ${n}`, enabled: true };
+      settings = { ...settings, scanRoots: [...settings.scanRoots, root] };
+      return root;
+    },
+    setScanRootEnabled: async (id, enabled) => {
+      settings = { ...settings, scanRoots: settings.scanRoots.map((r) => (r.id === id ? { ...r, enabled } : r)) };
+    },
+    removeScanRoot: async (id) => {
+      settings = { ...settings, scanRoots: settings.scanRoots.filter((r) => r.id !== id || r.origin !== "user") };
+    },
     updateSettings: async (patch) => {
       settings = { ...settings, ...patch };
       if (patch.locale) storage.setItem("ludiary.locale", patch.locale);
@@ -360,6 +373,8 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     scan: async () => {
       maintenance.lastScanAt = now();
     },
+    // Simulator: starts nothing. The real client asks the server, which starts the store's launcher.
+    launchGame: async () => ({ status: "started" }),
     createBackup: async () => {
       maintenance.lastBackupAt = now();
     },

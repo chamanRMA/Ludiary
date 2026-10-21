@@ -16,8 +16,12 @@ const csp = [
   "frame-ancestors 'none'",
 ].join("; ");
 
-export default defineConfig({
+// ADR 72: `--mode simulator` (scripts `dev` and `preview`) turns the whole app into the simulator; the
+// normal `vite build` (mode production) never does. The value is folded at build time, so a production
+// bundle has `isSimulated === false`. A .env file is not used: `.env.*` is git-ignored.
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  define: { "import.meta.env.VITE_LUDIARY_SIMULATOR": JSON.stringify(mode === "simulator" ? "1" : "") },
   server: { host: "127.0.0.1", strictPort: true },
   preview: { host: "127.0.0.1", headers: { "Content-Security-Policy": csp, "Referrer-Policy": "no-referrer" } },
-});
+}));

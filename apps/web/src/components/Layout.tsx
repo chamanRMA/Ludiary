@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "../app/Link";
 import { navigate } from "../app/router";
 import { STORE_BRAND, STORE_IDS } from "../app/stores";
 import { setSidebarCompact, useSidebarCompact } from "../app/theme";
 import { api } from "../data/api";
-import { mutate, useQuery } from "../data/hooks";
+import { mutate, refresh, useQuery } from "../data/hooks";
 import { cx, relativeTime, StoreBadge } from "./bits";
 import { Icon } from "./Icon";
 import styles from "./layout.module.css";
@@ -20,6 +20,22 @@ export function Layout({ children }: { children: ReactNode }) {
   const library = useQuery(() => api.getLibrary());
   const stores = useQuery(() => api.getStores());
   const maintenance = useQuery(() => api.getMaintenance());
+
+  // Syncs run in the background on the server: while one runs, poll; when it ends, reload everything once more.
+  const running = stores?.some((s) => s.sync.some((x) => x.state === "running")) ?? false;
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (running) {
+      const timer = setTimeout(refresh, 1500);
+      wasRunning.current = true;
+      return () => clearTimeout(timer);
+    }
+    if (wasRunning.current) {
+      wasRunning.current = false;
+      refresh();
+    }
+    return undefined;
+  }, [running, stores]);
 
   const count = (store: string): number => library?.filter((g) => g.stores.includes(store as never)).length ?? 0;
   const localCount = library?.filter((g) => g.stores.length === 0).length ?? 0;
@@ -35,7 +51,9 @@ export function Layout({ children }: { children: ReactNode }) {
   async function sync(): Promise<void> {
     setSyncing(true);
     try {
-      await mutate(api.syncAll());
+      await mutate(api.syncAll("manual"));
+    } catch {
+      /* the failure is shown by the 401 notice or by the store status */
     } finally {
       setSyncing(false);
     }
@@ -60,8 +78,8 @@ export function Layout({ children }: { children: ReactNode }) {
             if (e.key === "Enter") navigate(`/library?q=${encodeURIComponent(e.currentTarget.value.trim())}`);
           }}
         />
-        <button type="button" className={styles.pill} onClick={() => void sync()} disabled={syncing} aria-live="polite">
-          {syncing ? t("nav.syncing") : t("nav.sync")}
+        <button type="button" className={styles.pill} onClick={() => void sync()} disabled={syncing || running} aria-live="polite">
+          {syncing || running ? t("nav.syncing") : t("nav.sync")}
         </button>
       </header>
 

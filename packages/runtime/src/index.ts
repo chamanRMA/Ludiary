@@ -4,7 +4,7 @@ import { runSelfTest } from "./selftest";
 import { runServer } from "./server-role";
 
 export { APP_ID, type RuntimeDeps } from "./deps";
-export type { SqliteAddon } from "./database";
+export type { SqliteAddon } from "@ludiary/db";
 export { createFileLogger, redactHome } from "./files";
 
 /**
@@ -27,3 +27,5 @@ export async function main(argv: readonly string[], deps: RuntimeDeps): Promise<
   }
   return runLauncher(deps);
 }
+export { loadWebAssets, MIME_TYPES } from "./web-assets";
+export { createCoreFacade } from "./core-adapter";

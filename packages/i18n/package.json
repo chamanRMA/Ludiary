@@ -3,5 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./web": "./src/web.ts" }
+  "exports": {
+    ".": "./src/index.ts",
+    "./web": "./src/web.ts",
+    "./connectors": "./src/connectors.ts"
+  }
 }

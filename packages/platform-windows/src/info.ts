@@ -1,6 +1,6 @@
-import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import type { PlatformInfo } from "@ludiary/contracts";
+import { openWithShellHandler } from "./process-launcher";
 
 export interface WindowsPlatformOptions {
   /** Technical identifier (ADR 44); names the data folder. */
@@ -27,18 +27,7 @@ export function createWindowsPlatformInfo(opts: WindowsPlatformOptions): Platfor
         return Promise.reject(new Error("only http(s) URLs can be opened"));
       }
       // No shell involved: rundll32 hands the URL to the default browser.
-      return new Promise((resolve, reject) => {
-        const child = spawn("rundll32.exe", ["url.dll,FileProtocolHandler", parsed.href], {
-          stdio: "ignore",
-          windowsHide: true,
-          detached: true,
-        });
-        child.once("error", reject);
-        child.once("spawn", () => {
-          child.unref();
-          resolve();
-        });
-      });
+      return openWithShellHandler(parsed.href, undefined, opts.env);
     },
   };
 }
