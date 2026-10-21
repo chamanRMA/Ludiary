@@ -57,7 +57,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
 | 44 | Nombre del proyecto (Ludiary) y ámbito de los paquetes | Vigente (confirmada por el usuario) |
-| 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Propuesta (bandeja en Go confirmada; el resto se cierra con el prototipo); ampliada en las 62 a 65 |
+| 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Vigente (confirmada por el usuario tras el prototipo); ampliada en las 62 a 65; la actualización con vuelta atrás pasa a la 58 |
 | 46 | Cifrado de secretos y rotación de la clave | Vigente (confirmada por el usuario; amplía la 14); token de instalación revisado en la 63 |
 | 47 | Modelo de datos detallado | Vigente (confirmada por el usuario; migraciones por fases) |
 | 48 | Framework de pruebas | Vigente (confirmada por el usuario) |
@@ -70,7 +70,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
 | 56 | Tiempo de juego propio y tiempo informado por las tiendas | Vigente (confirmada por el usuario) |
 | 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18) |
-| 58 | Actualización y firma de las versiones | Vigente (confirmada por el usuario) |
+| 58 | Actualización y firma de las versiones | Vigente (confirmada por el usuario); hereda de la 45 el requisito de validar la actualización con vuelta atrás |
 | 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario) |
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
@@ -968,9 +968,9 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 - La decisión 38 queda con ámbito `@ludiary/`.
 - La carpeta local del repositorio puede seguir llamándose `AtlasGames`: no afecta al producto.
 
-### 45. Ejecutable, instalador, bandeja y almacén de claves en Windows (propuesta; se cierra con el prototipo)
+### 45. Ejecutable, instalador, bandeja y almacén de claves en Windows (ampliada en las decisiones 62 a 65)
 
-**Decisión (propuesta):**
+**Decisión (confirmada por el usuario el 21 de octubre de 2026, tras validar el prototipo y sus pruebas manuales):**
 
 - **Ejecutable:** ejecutable único de Node (SEA) generado desde un único fichero CommonJS producido por un empaquetador de JavaScript (esbuild). El ejecutable no lleva dentro los módulos nativos: se instalan en una carpeta `native/` junto a él y se cargan desde ahí. Si SEA da problemas, la alternativa es distribuir `node.exe` oficial con el fichero empaquetado y un pequeño iniciador con el icono y el nombre de la aplicación.
 - **Un solo ejecutable con varios papeles:** el acceso directo abre `Ludiary.exe`. Si el servidor responde a la comprobación de estado, le pide un enlace de apertura y abre el navegador; si no, arranca el servidor en segundo plano y la bandeja. El agente local futuro es el mismo ejecutable con otra configuración (decisión 22).
@@ -986,7 +986,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 
 **Consecuencias:**
 
-- El empaquetador valida en el prototipo los ocho puntos de su guía con estas piezas. La decisión pasa a vigente cuando funcione el ciclo completo: instalar, arrancar, bandeja, SQLite, credencial, abrir navegador y actualizar con vuelta atrás.
+- El empaquetador valida en el prototipo los ocho puntos de su guía con estas piezas. La condición original para pasar a vigente era el ciclo completo: instalar, arrancar, bandeja, SQLite, credencial, abrir navegador y actualizar con vuelta atrás. *Revisión del 21 de octubre de 2026 (decisión del usuario):* la decisión se confirma con todo el ciclo validado salvo la actualización con vuelta atrás, que no depende de estas piezas sino del actualizador y pasa a ser requisito de la decisión 58.
 - La compilación de Windows necesita Node, Go e Inno Setup en CI (por ejemplo, GitHub Actions con Windows).
 
 **Resultados del prototipo (21 de octubre de 2026, Windows 11 10.0.26200, x64):** código en `apps/desktop`, `packages/platform-windows`, `packages/runtime`, `packages/api`. Las comprobaciones de línea de comandos se ejecutaron de verdad; lo visual queda en la lista de pruebas manuales del informe del empaquetador. Estado: **cerrable** si el usuario valida esas pruebas (icono y menú de la bandeja, asistente del instalador, apertura real del navegador). El ciclo de actualización firmada con vuelta atrás (punto 8 de la guía del empaquetador) no se ha implementado: queda para la decisión 58, con las implicaciones de más abajo. El estado de la decisión no se ha cambiado.
@@ -1199,6 +1199,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 - **Actualizador propio** dentro del ejecutable. Consulta un manifiesto de versiones en GitHub Releases, descarga el paquete, verifica su firma Ed25519 con la clave pública incluida en la aplicación y lo instala en una carpeta versionada (`app-<versión>`). Después cambia el puntero de versión activa.
 - **Vuelta atrás:** si la nueva versión no supera la comprobación de estado en el primer arranque, el puntero vuelve a la anterior. Se conservan las dos últimas versiones.
+- **Requisito heredado de la decisión 45 (21 de octubre de 2026):** el actualizador no se da por cerrado hasta validar en Windows el ciclo completo de actualizar con vuelta atrás: descargar, verificar la firma, parar el servidor con `Ludiary.exe --stop`, cambiar el puntero de versión, arrancar y, si la comprobación de estado falla, volver solo a la versión anterior. El prototipo de la 45 dejó anotado lo que exige: un lanzador mínimo y estable en la raíz de la instalación que lea el puntero (candidato: ampliar el auxiliar de Go), porque el acceso directo apunta a una ruta fija y Windows no deja reemplazar un ejecutable en marcha; y unos 100 MB por versión conservada.
 - **Firma Authenticode** del instalador y del ejecutable, para evitar los avisos de SmartScreen: se pide primero SignPath Foundation, gratuita para proyectos de código abierto con compilación automatizada.
   - Si SignPath no acepta el proyecto, se publica sin Authenticode (decisión del usuario): la guía de instalación explica el aviso de SmartScreen. La firma Ed25519 sigue protegiendo las actualizaciones.
   - Azure Artifact Signing no parece disponible para particulares fuera de EE. UU. y Canadá (supuesto, según una fuente secundaria de febrero de 2026).
@@ -1570,7 +1571,7 @@ Sin fase asignada: juegos manuales y personalización de metadatos por el usuari
 
 Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 
-- Ejecutable, instalador y almacén de claves: propuesta en la 45 (la bandeja en Go ya está confirmada). Se cierra con el prototipo del instalador.
+- Actualizador con vuelta atrás (decisión 58): por implementar y validar en Windows; condición que antes cerraba la 45.
 - Detección del proceso de cada juego: propuesta en la 55. Se cierra durante el conector de Steam, con al menos tres juegos por tienda.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).

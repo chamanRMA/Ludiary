@@ -81,7 +81,7 @@ La fuente de verdad completa es `docs/adr/ADR.md`. Lo de abajo es la versión co
 
 Revisadas con el usuario el 21 de octubre de 2026: casi todo está decidido (decisiones 38 a 61 del ADR). La lista viva es la sección «Pendiente por decidir» del ADR. Quedan abiertas:
 
-1. Ejecutable, instalador y almacén de claves (decisión 45): se cierra con el prototipo del instalador. La bandeja en Go ya está confirmada.
+1. Actualizador con vuelta atrás (decisión 58): por implementar y validar en Windows. Hereda la condición que cerraba la 45, ya confirmada tras el prototipo.
 2. Detección del proceso de cada juego (decisión 55): se cierra durante el conector de Steam, con juegos reales.
 3. Linux y macOS (decisión 61): se cierra al terminar la fase 2.
 4. Comprobar el nombre «Ludiary» en las bases oficiales de marcas antes de publicar (decisión 44).
