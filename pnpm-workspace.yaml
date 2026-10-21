@@ -1,0 +1,17 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "connectors/*"
+
+# ADR 39: install scripts of dependencies are blocked unless listed here.
+# pnpm 11 setting name: allowBuilds (onlyBuiltDependencies was removed in v11).
+# Every entry needs a written justification and auditor review.
+allowBuilds:
+  esbuild: true # downloads/validates its platform binary; build tool only (not shipped)
+
+# Fail the install if a dependency has an unreviewed build script (default true in v11, explicit on purpose).
+strictDepBuilds: true
+
+# ADR 39: minimum age of a published version, in MINUTES (default 1440 since pnpm 11).
+# Urgent security fixes: add the exact version to minimumReleaseAgeExclude with a comment.
+minimumReleaseAge: 1440

@@ -1,0 +1,18 @@
+{
+  "app.name": "Ludiary",
+  "tray.tooltip": "Ludiary",
+  "tray.open": "Open Ludiary",
+  "tray.quit": "Quit",
+  "tray.status": "Server running on port {port}",
+  "web.home.title": "Ludiary",
+  "web.home.body": "The local server is running and this browser is authorized.",
+  "web.denied.title": "Not authorized",
+  "web.denied.body": "Open Ludiary from its shortcut or from the tray icon.",
+  "fatal.title": "Ludiary could not start",
+  "fatal.masterKeyUnrecognized": "Ludiary's stored keys use a format this version does not recognize, and they were left untouched. Update Ludiary to the latest version. Details are in the logs: {logs}",
+  "fatal.keyStore": "Ludiary could not use the Windows Credential Manager, where it keeps its key. Try again and, if it keeps failing, check the logs: {logs}",
+  "fatal.database": "Ludiary could not open its database. Check that there is free disk space and look at the logs: {logs}",
+  "fatal.noPort": "Ludiary could not find a free port on this computer for its local server. Check the logs: {logs}",
+  "fatal.timeout": "The Ludiary server is taking too long to start. Wait a moment and open it again; if it keeps failing, check the logs: {logs}",
+  "fatal.unexpected": "An unexpected error happened. You can attach the logs to an issue on GitHub: {logs}"
+}

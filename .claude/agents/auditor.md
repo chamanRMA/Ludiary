@@ -76,7 +76,7 @@ La fuente de verdad es `docs/adr/ADR.md`. Cuando una decisión posterior revisa 
 
 ### 8. Licencias y distribución (ADR 30, 34)
 
-- Cada herramienta o librería incluida en el instalador tiene su licencia comprobada y sus avisos cumplidos (en especial, `legendary` y `gogdl`, que se prevén GPL, a verificar).
+- Cada herramienta o librería incluida en el instalador tiene su licencia comprobada y sus avisos cumplidos (en especial, `legendary` y `heroic-gogdl`, que son GPL-3.0, comprobado; ADR 60).
 - La licencia del proyecto es coherente con las de sus dependencias.
 - El proyecto declara que **no está afiliado a las tiendas**.
 - No hay claves de servicios de terceros en el repositorio abierto: cada usuario aporta las suyas.

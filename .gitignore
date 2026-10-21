@@ -1,7 +1,7 @@
 # Dependencies and build output
 node_modules/
 dist/
-build/
+/build/
 coverage/
 *.tsbuildinfo
 
@@ -27,3 +27,9 @@ logs/
 .DS_Store
 Thumbs.db
 .idea/
+
+# Code-signing material never goes to the repo (ADR 58)
+*.pfx
+*.p12
+*.pem
+*.key

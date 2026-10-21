@@ -1,4 +1,7 @@
 * text=auto eol=lf
+# cmd.exe can mis-handle goto/call labels in LF-only batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
 *.ico binary
 *.png binary
 *.jpg binary

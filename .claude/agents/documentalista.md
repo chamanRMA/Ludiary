@@ -40,7 +40,7 @@ Tu lector principal **no es técnico**. El ADR (`docs/adr/ADR.md`) establece que
 ### Avisos y legales
 
 - **Aviso de no afiliación:** el proyecto no está afiliado a Steam, GOG, Epic, Ubisoft ni EA. Va en el README y en lugares visibles.
-- **Licencia del proyecto.** Se recomienda GPL-3.0, pero la decisión se revisará antes de la primera publicación, idealmente con asesoramiento legal. No presentes la licencia como definitiva ni des consejo legal.
+- **Licencia del proyecto.** GPL-3.0-only, confirmada por el usuario (ADR 34); el texto está en `LICENSE`. Las contribuciones van con DCO (ADR 60). No des consejo legal.
 - **Avisos de licencias de terceros** de lo que se incluya en el instalador. Pídele al `auditor` o al arquitecto que verifiquen cada herramienta antes de listarla.
 
 ## Reglas de estilo

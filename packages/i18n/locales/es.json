@@ -1,0 +1,18 @@
+{
+  "app.name": "Ludiary",
+  "tray.tooltip": "Ludiary",
+  "tray.open": "Abrir Ludiary",
+  "tray.quit": "Salir",
+  "tray.status": "Servidor activo en el puerto {port}",
+  "web.home.title": "Ludiary",
+  "web.home.body": "El servidor local funciona y este navegador está autorizado.",
+  "web.denied.title": "Acceso no autorizado",
+  "web.denied.body": "Abre Ludiary desde su acceso directo o desde el icono de la bandeja.",
+  "fatal.title": "Ludiary no ha podido arrancar",
+  "fatal.masterKeyUnrecognized": "Las claves guardadas de Ludiary tienen un formato que esta versión no reconoce y no se han tocado. Actualiza Ludiary a la última versión. Los detalles están en los registros: {logs}",
+  "fatal.keyStore": "No se ha podido usar el Administrador de credenciales de Windows, donde Ludiary guarda su clave. Vuelve a intentarlo y, si sigue fallando, revisa los registros: {logs}",
+  "fatal.database": "No se ha podido abrir la base de datos de Ludiary. Comprueba que hay espacio en el disco y revisa los registros: {logs}",
+  "fatal.noPort": "Ludiary no ha encontrado ningún puerto libre en este equipo para su servidor local. Revisa los registros: {logs}",
+  "fatal.timeout": "El servidor de Ludiary está tardando demasiado en arrancar. Espera un momento y vuelve a abrirlo; si sigue fallando, revisa los registros: {logs}",
+  "fatal.unexpected": "Ha ocurrido un error inesperado. Puedes adjuntar los registros a una incidencia en GitHub: {logs}"
+}

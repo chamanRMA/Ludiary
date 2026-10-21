@@ -1,0 +1,23 @@
+{
+  "name": "ludiary",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Ludiary - unified video game library manager",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "packageManager": "pnpm@11.28.6",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "build:desktop": "pnpm --filter @ludiary/desktop run build",
+    "build:installer": "pnpm --filter @ludiary/desktop run build:installer"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}

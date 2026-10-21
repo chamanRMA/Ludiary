@@ -1,6 +1,6 @@
 # Ludiary — gestor unificado de bibliotecas de videojuegos
 
-**Ludiary** es una aplicación web local para ver y lanzar, desde un solo sitio, los juegos de varias tiendas: **Steam, GOG, Epic, Ubisoft y EA**. Proyecto de código abierto para el público general con licencia GPL-3.0 y contribuciones bajo DCO.
+**Ludiary** es una aplicación web local para ver y lanzar, desde un solo sitio, los juegos de varias tiendas: **Steam, GOG, Epic, Ubisoft y EA**. Proyecto de código abierto para el público general con licencia GPL-3.0-only (texto en `LICENSE`) y contribuciones bajo DCO.
 
 La fuente de verdad del diseño es el **ADR** (`docs/adr/ADR.md`). Este fichero resume lo que todo agente debe saber. Cada agente de `.claude/agents/` amplía lo suyo.
 
@@ -57,7 +57,7 @@ Cuando un agente detecta que una tarea contradice el ADR o necesita una decisió
 2. **Conector de Steam** de principio a fin: sincronizar, mostrar y lanzar un juego.
 3. **Conector de GOG**: valida el lanzamiento por línea de comandos, el caso más distinto.
 
-## Convenciones (propuesta, a confirmar por el arquitecto)
+## Convenciones
 
 - Nombre del proyecto: **Ludiary**. Paquetes con ámbito `@ludiary/`, todos con `"private": true` (ADR, decisión 44).
 - Identificadores y comentarios del código en inglés. ADR en español. Documentación en inglés, con el README traducido en `docs/readme/` (decisión 49).

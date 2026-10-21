@@ -1,0 +1,192 @@
+import { randomBytes } from "node:crypto";
+import { mkdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { createLocalServer, SessionStore, type LocalServer } from "@ludiary/api";
+import type { KeyStore, TrayHost, TrayState } from "@ludiary/contracts";
+import { translate } from "@ludiary/i18n";
+import { openDatabase, readDatabaseStatus } from "./database";
+import { APP_ID, EXIT, INSTALL_TOKEN_NAME, MAX_MASTER_KEY_ID, localeOf, masterKeyName, type RuntimeDeps } from "./deps";
+import { createFileLogger, readRuntimeInfo, writeRuntimeInfo, type Logger } from "./files";
+import { createSqliteInstanceLock } from "./instance-lock";
+import { candidatePorts } from "./ports";
+
+const KEY_BYTES = 32;
+
+/** An error that already knows which exit code the launcher should report (ADR 64). */
+class FatalError extends Error {
+  constructor(
+    readonly exitCode: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** Runs one startup step and maps any failure to its exit code. */
+async function step<T>(exitCode: number, what: string, fn: () => T | Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof FatalError) throw e;
+    throw new FatalError(exitCode, `${what}: ${(e as Error).message}`);
+  }
+}
+
+/**
+ * Master key (ADR 14, 46, 64). The first recognized entry `master-key/<n>` is used. An entry this version does not
+ * recognize is never overwritten: it stays as its own compartment (secrets encrypted with it keep their key id and are
+ * simply not readable here). Only when no slot holds a recognized key is a new one created, in the first free slot:
+ * a free slot before a valid key (after a rotation) must not replace that key.
+ */
+export async function loadMasterKey(store: KeyStore, log: Logger): Promise<{ id: number; value: Buffer; origin: "created" | "loaded" }> {
+  let firstFree: number | null = null;
+  for (let id = 1; id <= MAX_MASTER_KEY_ID; id++) {
+    const existing = await store.get(masterKeyName(id));
+    if (existing === null) firstFree ??= id;
+    else if (existing.length === KEY_BYTES) return { id, value: Buffer.from(existing), origin: "loaded" };
+    else log("warn", `${masterKeyName(id)} has a format this version does not recognize (${existing.length} bytes); kept untouched`);
+  }
+  if (firstFree === null) throw new FatalError(EXIT.masterKeyUnrecognized, "no recognizable master key slot left");
+  const value = randomBytes(KEY_BYTES);
+  await store.set(masterKeyName(firstFree), value);
+  return { id: firstFree, value, origin: "created" };
+}
+
+/** Installation token (ADR 23, 63). Losing it costs nothing, so an invalid one is simply regenerated. */
+export async function loadInstallToken(store: KeyStore, log: Logger): Promise<Buffer> {
+  const existing = await store.get(INSTALL_TOKEN_NAME);
+  if (existing !== null && existing.length === KEY_BYTES) return Buffer.from(existing);
+  if (existing !== null) log("warn", "install token had an unexpected size; regenerated");
+  const value = randomBytes(KEY_BYTES);
+  await store.set(INSTALL_TOKEN_NAME, value);
+  return value;
+}
+
+async function listenOnAvailablePort(makeServer: () => LocalServer, saved: number | null, log: Logger): Promise<{ server: LocalServer; port: number }> {
+  for (const candidate of candidatePorts(saved)) {
+    const server = makeServer(); // a fresh instance per attempt: a failed listen leaves Fastify unusable
+    try {
+      const port = await server.listen(candidate);
+      return { server, port };
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code !== "EADDRINUSE" && code !== "EACCES") throw e;
+      log("warn", `port ${candidate} unavailable (${code})`);
+      await server.close().catch(() => {});
+    }
+  }
+  throw new FatalError(EXIT.noPort, "no port available");
+}
+
+/** The background role: database, secrets, local HTTP server and tray. Resolves with the exit code (see EXIT). */
+export async function runServer(deps: RuntimeDeps): Promise<number> {
+  const { platform } = deps;
+  mkdirSync(platform.dataDir, { recursive: true });
+  const log = createFileLogger(platform.dataDir, "server");
+
+  let release: (() => void) | null;
+  try {
+    // ADR 62: first of all, so two servers never touch the same database or create two master keys.
+    release = await createSqliteInstanceLock(join(platform.dataDir, "instance.lock"), deps.sqliteAddon).acquire();
+  } catch (e) {
+    log("error", `instance lock: ${(e as Error).message}`);
+    return EXIT.database;
+  }
+  if (!release) {
+    log("info", "another server holds the instance lock; exiting");
+    return EXIT.alreadyRunning;
+  }
+  rmSync(join(platform.dataDir, "server.lock"), { force: true }); // file lock of the first prototype, no longer used
+
+  let shutdown: () => Promise<void> = async () => {};
+  try {
+    const keyStore = deps.createKeyStore(APP_ID);
+    const masterKey = await step(EXIT.keyStore, "credential store", () => loadMasterKey(keyStore, log));
+    const installToken = await step(EXIT.keyStore, "credential store", () => loadInstallToken(keyStore, log));
+    log("info", `master key ${masterKeyName(masterKey.id)} ${masterKey.origin}`);
+
+    const db = await step(EXIT.database, "database", () => openDatabase(join(platform.dataDir, "ludiary.db"), deps.sqliteAddon));
+    const dbStatus = readDatabaseStatus(db);
+    log("info", `sqlite ${dbStatus.sqliteVersion} journal=${dbStatus.journalMode}`);
+
+    const locale = localeOf(deps);
+    const sessions = new SessionStore();
+    let exitResolve: (code: number) => void = () => {};
+    const exited = new Promise<number>((resolve) => (exitResolve = resolve));
+    let tray: TrayHost | null = null;
+    let stopping = false;
+
+    const makeServer = () =>
+      createLocalServer({
+        appId: APP_ID,
+        version: deps.version,
+        launcherKey: installToken,
+        sessions,
+        t: (key) => translate(locale, key),
+        getStatus: () => ({
+          locale,
+          db: dbStatus,
+          masterKey: { id: masterKey.id, origin: masterKey.origin },
+          tray: tray !== null,
+        }),
+        onShutdownRequested: () => void shutdown(),
+      });
+
+    const saved = readRuntimeInfo(platform.dataDir)?.port ?? null;
+    const { server, port } = await listenOnAvailablePort(makeServer, saved, log);
+    if (saved !== null && saved !== port) log("info", `saved port ${saved} was busy; now using ${port}`);
+    writeRuntimeInfo(platform.dataDir, { version: deps.version, port, pid: process.pid });
+    log("info", `listening on 127.0.0.1:${port}`);
+
+    shutdown = async () => {
+      if (stopping) return;
+      stopping = true;
+      log("info", "shutting down");
+      // Safety net: a stuck step must never leave a zombie server. The OS releases the instance lock on exit.
+      setTimeout(() => process.exit(EXIT.ok), 5_000).unref();
+      await tray?.stop().catch(() => {});
+      await server.close().catch(() => {});
+      db.close();
+      writeRuntimeInfo(platform.dataDir, { version: deps.version, port, pid: null });
+      release?.();
+      release = null;
+      exitResolve(EXIT.ok);
+    };
+
+    if (deps.createTray) {
+      const trayState = (): TrayState => ({
+        tooltip: translate(locale, "tray.tooltip"),
+        items: [
+          { id: "status", label: translate(locale, "tray.status", { port }), enabled: false },
+          { id: "open", label: translate(locale, "tray.open") },
+          { id: "quit", label: translate(locale, "tray.quit") },
+        ],
+      });
+      const host = deps.createTray();
+      host.onClick((id) => {
+        if (id === "quit") void shutdown();
+        else if (id === "open" || id === "@default") {
+          platform.openUrl(server.createOpenUrl()).catch((e: Error) => log("error", `open failed: ${e.message}`));
+        }
+      });
+      host.onLost((reason) => log("error", `tray lost: ${reason}`));
+      try {
+        await host.start(trayState());
+        tray = host;
+        log("info", "tray ready");
+      } catch (e) {
+        // The server keeps working without the tray; the user can still open it from the shortcut.
+        log("error", `tray failed: ${(e as Error).message}`);
+      }
+    }
+
+    process.once("SIGINT", () => void shutdown());
+    process.once("SIGTERM", () => void shutdown());
+    return await exited;
+  } catch (e) {
+    log("error", `fatal: ${(e as Error).stack ?? String(e)}`);
+    await shutdown();
+    release?.();
+    return e instanceof FatalError ? e.exitCode : EXIT.error;
+  }
+}

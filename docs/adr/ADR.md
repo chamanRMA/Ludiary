@@ -35,10 +35,10 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 20 | Emparejamiento de juegos entre tiendas | Vigente (confirmada por el usuario); concretada en la 51 |
 | 21 | DLC y contenidos adicionales | Vigente |
 | 22 | Lanzamiento y escaneo directos en modo localhost | Vigente |
-| 23 | Seguridad local del servidor | Vigente |
+| 23 | Seguridad local del servidor | Vigente; ampliada en la 63 |
 | 24 | Comparador de precios: IsThereAnyDeal primero | Vigente |
 | 25 | Secuencia: localhost primero, Docker después | Vigente |
-| 26 | Instalador y acceso directo en localhost | Vigente |
+| 26 | Instalador y acceso directo en localhost | Vigente; instancia única concretada en la 62 |
 | 27 | Sistemas operativos del modo localhost | Vigente |
 | 28 | Puerto del servidor local | Vigente |
 | 29 | Autorización del navegador | Vigente (confirmada por el usuario); duración en la 54 |
@@ -57,8 +57,8 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
 | 44 | Nombre del proyecto (Ludiary) y ámbito de los paquetes | Vigente (confirmada por el usuario) |
-| 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Propuesta (bandeja en Go confirmada; el resto se cierra con el prototipo) |
-| 46 | Cifrado de secretos y rotación de la clave | Vigente (confirmada por el usuario; amplía la 14) |
+| 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Propuesta (bandeja en Go confirmada; el resto se cierra con el prototipo); ampliada en las 62 a 65 |
+| 46 | Cifrado de secretos y rotación de la clave | Vigente (confirmada por el usuario; amplía la 14); token de instalación revisado en la 63 |
 | 47 | Modelo de datos detallado | Vigente (confirmada por el usuario; migraciones por fases) |
 | 48 | Framework de pruebas | Vigente (confirmada por el usuario) |
 | 49 | Traducción e idiomas de la documentación | Vigente (confirmada por el usuario) |
@@ -66,7 +66,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 51 | Normalización de nombres y ediciones dudosas | Vigente (confirmada por el usuario) |
 | 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario) |
 | 53 | Puerto: dónde se guarda y rango permitido | Vigente (confirmada por el usuario) |
-| 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario) |
+| 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63 |
 | 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
 | 56 | Tiempo de juego propio y tiempo informado por las tiendas | Vigente (confirmada por el usuario) |
 | 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18) |
@@ -74,6 +74,10 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario) |
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
+| 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26) |
+| 63 | Autenticación entre el lanzador y el servidor local | Vigente (confirmada por el usuario; amplía la 23 y revisa el token de la 46) |
+| 64 | Errores fatales visibles y credenciales no reconocidas | Vigente (compartimento de claves decidido por el usuario; amplía las 35, 45 y 46) |
+| 65 | Ganchos de prueba y opciones de Node en el ejecutable publicado | Vigente (recomendada; amplía la 45) |
 
 ## Decisiones
 
@@ -143,7 +147,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 
 **Motivo:** mayor ecosistema y facilidad para encontrar ayuda. El peso no importa en una Raspberry porque se sirve ya compilado. Decisión revisable.
 
-### 11. Autenticación con las tiendas (revisión propuesta en la decisión 43)
+### 11. Autenticación con las tiendas (revisada en la decisión 43)
 
 **Decisión:** login guiado desde la propia web: un asistente de conexión por tienda, dentro de Ajustes, que lleva al usuario paso a paso sin editar ficheros ni pegar claves a mano.
 
@@ -177,7 +181,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - El menú de la bandeja se limita a lo esencial: abrir la web, ver el estado de la sincronización y salir.
 - Una app de escritorio con ventana propia (Electron o Tauri) queda descartada por ahora y podría añadirse después sin tocar el núcleo.
 
-### 14. Custodia de la clave de cifrado
+### 14. Custodia de la clave de cifrado (ampliada en la decisión 46)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** la clave que cifra los tokens vive fuera de la base de datos. En localhost se guarda en el almacén de credenciales del sistema operativo; en Docker se pasa por variable de entorno o Docker secret.
 
@@ -187,7 +191,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 
 - El `docker-compose` de ejemplo incluye la variable de la clave.
 - Perder la clave obliga a volver a conectar las tiendas, no a reconstruir la biblioteca.
-- Una contraseña maestra opcional queda como mejora futura.
+- La contraseña maestra opcional, prevista aquí como mejora futura, se concretó en la decisión 46 (desactivada por defecto, activable en Ajustes).
 
 ### 15. Framework de backend y acceso a datos
 
@@ -220,9 +224,9 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - El modelo de datos debe admitir desde el principio un origen de tipo manual, aunque aún no exista interfaz para crearlo.
 - Reutilizará el mismo mecanismo de edición de metadatos que la personalización prevista en la decisión 6.
 
-### 18. Copias de seguridad
+### 18. Copias de seguridad (revisada en la decisión 57)
 
-**Decisión:** copia automática de la base de datos a una carpeta que el usuario configura.
+**Decisión:** copia de la base de datos a una carpeta que el usuario configura. Revisada en la decisión 57: las copias periódicas vienen desactivadas por defecto y el usuario las activa en Ajustes; la copia previa a una migración o actualización es siempre automática.
 
 **Motivo:** la biblioteca se reconstruye sincronizando con las tiendas; lo insustituible son las personalizaciones del usuario y, más adelante, los juegos manuales.
 
@@ -245,7 +249,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - Si una tienda cambia su API, las pruebas manuales fallan y hay que actualizar el conector y sus respuestas grabadas.
 - No hay detección automática de conectores rotos: un fallo de sincronización se muestra por tienda con un mensaje claro en la web (decisión 12).
 
-### 20. Emparejamiento de juegos entre tiendas
+### 20. Emparejamiento de juegos entre tiendas (concretada en la decisión 51)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** emparejamiento automático conservador con corrección manual. Dos entradas se unen solas cuando comparten un ID externo (IGDB o RAWG, si ya se obtuvo) o cuando su nombre normalizado coincide exactamente (sin mayúsculas, símbolos ni marcas como ™ o ®). Los casos dudosos, como ediciones o subtítulos distintos, se dejan separados y se marcan como posible duplicado para que el usuario los confirme.
 
@@ -281,7 +285,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - El agente local futuro es este mismo ejecutable funcionando como cliente de un servidor casero.
 - Las URI de EA han dado fallos en algunos juegos reportados: su conector debe validarse con juegos reales.
 
-### 23. Seguridad local del servidor (amplía la decisión 7)
+### 23. Seguridad local del servidor (amplía la decisión 7; ampliada en la decisión 63)
 
 **Decisión:** en modo localhost el servidor escucha solo en `127.0.0.1`, valida las cabeceras `Origin` y `Host` de cada petición, exige un token por instalación en las acciones que cambian datos o lanzan procesos, y lanza juegos únicamente por el ID de un juego guardado en la base de datos, nunca por comandos libres recibidos por la API.
 
@@ -291,6 +295,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 
 - En modo servidor LAN se escucha en la red local, pero se mantienen la validación de cabeceras y el token.
 - El token lo gestiona el sistema; el usuario no lo escribe.
+- **Ampliación (decisión 63):** se considera también la amenaza de otro usuario sin privilegios del mismo equipo, que comparte los puertos de `127.0.0.1`. El token de instalación no viaja nunca en claro: el lanzador y el servidor se autentican mutuamente con HMAC-SHA256 sobre un nonce de un solo uso, y el lanzador solo abre un enlace cuya prueba y formato ha comprobado. Las sesiones del navegador quedan ligadas al puerto en el que se crearon.
 
 ### 24. Comparador de precios: IsThereAnyDeal primero (revisa la decisión 9)
 
@@ -321,7 +326,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 
 **Consecuencias:**
 
-- Debe haber una sola instancia: el lanzador detecta el servidor ya activo (por ejemplo, con una comprobación de estado en su puerto local) antes de arrancar otro.
+- Debe haber una sola instancia: el lanzador detecta el servidor ya activo (por ejemplo, con una comprobación de estado en su puerto local) antes de arrancar otro. Concretado en la decisión 62: la instancia única la garantiza un cerrojo del sistema en la carpeta de datos, y el lanzador reconoce a su servidor con la autenticación de la decisión 63, no solo con la comprobación de estado.
 - El icono de la bandeja permite abrir la web, ver el estado de la sincronización y parar el servidor.
 - El instalador y el empaquetado (bandeja, SQLite, almacén de claves del SO) son el principal riesgo técnico, por lo que conviene validarlos pronto.
 
@@ -349,7 +354,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - Las comprobaciones de `Origin` y `Host` (decisión 23) deben usar siempre el puerto vigente.
 - La dirección de la web puede cambiar entre instalaciones o tras un conflicto; el acceso directo siempre abre la correcta.
 
-### 29. Autorización del navegador (concreta la decisión 23)
+### 29. Autorización del navegador (concreta la decisión 23; duración en la decisión 54)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** en modo localhost, el acceso directo o la bandeja piden al servidor un enlace de apertura de un solo uso y de corta duración. Al abrirlo, el servidor lo canjea por una cookie de sesión (`HttpOnly`) y lo invalida. A partir de ahí el navegador queda autorizado sin login.
 
@@ -411,7 +416,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 
 ### 34. Licencia del proyecto
 
-**Decisión (confirmada por el usuario el 21 de octubre de 2026; no es asesoría legal):** GPL-3.0, con contribuciones bajo DCO (decisión 60).
+**Decisión (confirmada por el usuario el 21 de octubre de 2026; no es asesoría legal):** GPL-3.0 solo esa versión (identificador SPDX `GPL-3.0-only`, sin «or later»), con contribuciones bajo DCO (decisión 60).
 
 **Motivo:** garantiza que las versiones derivadas que se distribuyan sigan siendo abiertas, y encaja con herramientas de terceros que, según lo que se sabe, también usan GPL-3.0 (`legendary` y `heroic-gogdl`, comprobado en sus repositorios; decisión 60).
 
@@ -963,9 +968,12 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 - **Ejecutable:** ejecutable único de Node (SEA) generado desde un único fichero CommonJS producido por un empaquetador de JavaScript (esbuild). El ejecutable no lleva dentro los módulos nativos: se instalan en una carpeta `native/` junto a él y se cargan desde ahí. Si SEA da problemas, la alternativa es distribuir `node.exe` oficial con el fichero empaquetado y un pequeño iniciador con el icono y el nombre de la aplicación.
 - **Un solo ejecutable con varios papeles:** el acceso directo abre `Ludiary.exe`. Si el servidor responde a la comprobación de estado, le pide un enlace de apertura y abre el navegador; si no, arranca el servidor en segundo plano y la bandeja. El agente local futuro es el mismo ejecutable con otra configuración (decisión 22).
 - **Bandeja (confirmada por el usuario el 21 de octubre de 2026):** un ejecutable auxiliar pequeño y propio, en Go con una librería de bandeja sin CGO (por ejemplo `gogpu/systray`), que habla con el servidor por su entrada y salida estándar. Recibe sus textos ya traducidos desde el servidor. Alternativas: `systray2` (envuelve un auxiliar en Go ya hecho; mantenimiento por confirmar) o un auxiliar en .NET (exige runtime o NativeAOT).
+  - Prueba manual del usuario (21 de octubre de 2026): el tooltip no aparecía. Causa: `gogpu/systray` v0.3.0 registra el icono con `NOTIFYICON_VERSION_4` y nunca envía `NIF_SHOWTIP`, que ese modo exige. No hay versión posterior con el arreglo, así que se usa una copia parcheada en `apps/desktop/tray-helper/third_party/gogpu-systray` (MIT, cambio descrito en su `PATCHED.md`) mediante `replace` en `go.mod`. Se quita en cuanto haya una versión oficial con el arreglo.
 - **Almacén de claves:** `@napi-rs/keyring` sobre el Administrador de credenciales de Windows (supuesto: binding mantenido con binarios precompilados; verificar en el prototipo). Alternativa: un módulo nativo propio sobre DPAPI.
 - **Instalador:** Inno Setup, con instalación por usuario en `%LOCALAPPDATA%\Programs\Ludiary` sin permisos de administrador, textos en español e inglés, acceso directo y desinstalador que pregunta si se borran los datos. Supuesto: su licencia permite usarlo en un proyecto GPL; verificar. Alternativas: Velopack (instalador y actualizaciones juntos, pero no admite volver a una versión anterior, que la decisión 32 exige); NSIS; MSIX (restricciones de empaquetado y de lanzamiento de procesos por evaluar).
 - **Datos fuera del programa:** base de datos, registros y configuración de arranque en `%LOCALAPPDATA%\Ludiary\`, separados de la carpeta del programa para que las actualizaciones no los toquen.
+- **Textos del instalador (ampliación tras la auditoría del prototipo, recomendada):** los textos propios del instalador usan el mecanismo de idiomas de Inno Setup: los `.isl` que trae Inno para sus mensajes y `[CustomMessages]` con prefijo de idioma (`spanish.`, `english.`) para los nuestros, que el código Pascal usa siempre como `{cm:Clave}`. Se acepta frente al invariante 6 porque son ficheros de traducción por idioma, no texto mezclado con la lógica, con dos condiciones: los mensajes propios salen del `.iss` principal a un fichero incluido que solo contiene mensajes (`apps/desktop/installer/messages.iss`, con `#include`), y la compilación del instalador falla si una clave existe en un idioma y no en el otro. No se comparten con `@ludiary/i18n`: el instalador corre antes de que exista la aplicación y son unas pocas frases.
+- **Ampliaciones tras la auditoría del prototipo:** instancia única (decisión 62), autenticación entre lanzador y servidor (63), errores fatales visibles y credenciales no reconocidas (64), y ganchos de prueba y opciones de Node en el ejecutable publicado (65).
 
 **Motivo:** son piezas conocidas y separables, de modo que un fallo en una (por ejemplo, la bandeja) se cambia sin rehacer las demás. SEA es la vía oficial de Node.
 
@@ -974,24 +982,54 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 - El empaquetador valida en el prototipo los ocho puntos de su guía con estas piezas. La decisión pasa a vigente cuando funcione el ciclo completo: instalar, arrancar, bandeja, SQLite, credencial, abrir navegador y actualizar con vuelta atrás.
 - La compilación de Windows necesita Node, Go e Inno Setup en CI (por ejemplo, GitHub Actions con Windows).
 
-### 46. Cifrado de secretos y rotación de la clave
+**Resultados del prototipo (21 de octubre de 2026, Windows 11 10.0.26200, x64):** código en `apps/desktop`, `packages/platform-windows`, `packages/runtime`, `packages/api`. Las comprobaciones de línea de comandos se ejecutaron de verdad; lo visual queda en la lista de pruebas manuales del informe del empaquetador. Estado: **cerrable** si el usuario valida esas pruebas (icono y menú de la bandeja, asistente del instalador, apertura real del navegador). El ciclo de actualización firmada con vuelta atrás (punto 8 de la guía del empaquetador) no se ha implementado: queda para la decisión 58, con las implicaciones de más abajo. El estado de la decisión no se ha cambiado.
+
+*Versiones usadas:* Node 24.20.0, pnpm 11.28.6, Go 1.27.0, `better-sqlite3` 13.0.3 (SQLite 3.53.4), `@napi-rs/keyring` 2.1.2, Fastify 5.12.7, esbuild 0.28.2, `postject` 1.0.0-alpha.6, `resedit` 3.1.0 (solo compilación), `gogpu/systray` 0.3.0, Inno Setup 6.7.3, TypeScript 7.0.2.
+
+*Qué funcionó:*
+
+- **SEA desde un bundle de esbuild:** un único CommonJS de 1,5 MB (sin minificar, con Fastify y Pino dentro, sin avisos de esbuild) inyectado en una copia de `node.exe`. El ejecutable pesa 95 MB (es el runtime de Node); el instalador comprimido, 27 MB. En Node 24.20 solo existe `--experimental-sea-config` más `postject`; `--build-sea` llegó en Node 25.5.0 y no consta que esté en la línea 24.
+- **`better-sqlite3` 13.0.3 desde `native/`:** se carga con `process.dlopen` y se pasa a la base de datos como objeto en la opción `nativeBinding` (la versión 13 lo admite). Dentro de un SEA `require` no carga ficheros `.node`, así que no sirve el camino por defecto. Verificado desde el exe: modo WAL, claves foráneas, escritura y lectura, `db.backup()` y lectura de la copia. El paquete no declara scripts de instalación: pnpm no necesitó permitir nada para él (supuesto de la decisión 41 confirmado).
+- **`@napi-rs/keyring` 2.1.2:** hay binario `win32-x64-msvc` precompilado. Se carga también con `process.dlopen` sobre el `.node` suelto, sin pasar por su `index.js` (que usa `require`). Escritura, lectura y borrado de 32 bytes con `setSecret` y `getSecret` comprobados. La entrada aparece en el Administrador de credenciales como credencial genérica con destino `<nombre>.<servicio>`: `master-key/1.Ludiary` e `install-token.Ludiary`. Primer arranque «creada», siguientes «cargada». Este paquete tampoco tiene scripts de instalación.
+- **Bandeja en Go sin CGO:** auxiliar de 3 MB (`CGO_ENABLED=0`, `-H=windowsgui`) con `gogpu/systray` 0.3.0 (MIT). Protocolo de un JSON por línea sobre stdio; los textos llegan ya traducidos desde el servidor (es/en). Comprobado: arranca, informa «ready», acepta actualizaciones de menú y se cierra al cerrarse su stdin (si el servidor muere de golpe con `taskkill /F`, el auxiliar desaparece solo). Falta la comprobación visual y el clic.
+- **Servidor e instancia única:** Fastify en `127.0.0.1`, puerto según la decisión 53 guardado en `runtime.json`, `/api/health` que identifica a Ludiary (28), `Host` distinto de `127.0.0.1:<puerto>` rechazado con 421 (incluido `localhost`) y `Origin` ajeno con 403 (23). El lanzador reutiliza el servidor vivo (segunda ejecución: mismo PID, solo nuevo enlace); cuatro lanzamientos simultáneos dejan un solo servidor (cerrojo de arranque exclusivo); un servidor muerto con `taskkill /F` se recupera; y con el puerto guardado ocupado por otro programa se elige uno nuevo y se actualiza `runtime.json`. El arranque en frío hasta tener el enlace tarda unos 0,5 s. *Nota posterior:* el auditor encontró dos carreras en ese cerrojo de fichero con PID; se sustituye por el cerrojo del sistema de la decisión 62, y el envío del token en claro por la autenticación de la 63.
+- **Enlace de un solo uso y cookie (29, 54):** `POST /api/open-link` exigía el token de instalación (sustituido por el protocolo de la decisión 63); `GET /open?t=…` responde 302 con `Set-Cookie: …; Path=/; HttpOnly; SameSite=Strict`; el segundo canje del mismo enlace da 403; `/` sin cookie da 401 y con cookie 200.
+- **Instalador Inno Setup 6.7.3:** por usuario, sin administrador, en `%LOCALAPPDATA%\Programs\Ludiary`; acceso directo en el menú Inicio y opcional en el escritorio; textos es/en (`Spanish.isl` viene con Inno); desinstalador. Comprobado en modo silencioso: instalar; instalar encima con el servidor en marcha (lo para antes); desinstalar conservando datos (valor por defecto en silencio); desinstalar borrando datos y credenciales (`/PURGEDATA=1` en silencio, o la pregunta en el asistente); y el acceso directo abriendo la web. La licencia de Inno Setup es permisiva (se conservan copyright y avisos), compatible con distribuir el instalador de un proyecto GPL (supuesto de esta decisión confirmado leyendo su `license.txt`).
+
+*Qué no funcionó o hay que tener en cuenta:*
+
+- **Orden de las herramientas del exe:** editar con `resedit` (icono, versión, subsistema) y luego inyectar con `postject` falla («Relocation corrupted»). Funciona inyectar primero y editar después. Ambos pasos quitan la firma del `node.exe` oficial: Authenticode (decisión 58) debe aplicarse a `Ludiary.exe` ya terminado.
+- **Subsistema GUI:** `node.exe` es de consola y un acceso directo mostraría una ventana negra. El prototipo cambia el subsistema del exe a Windows GUI (campo de la cabecera PE). Consecuencia: el exe no tiene salida estándar. El diagnóstico va por ficheros de registro (`%LOCALAPPDATA%\Ludiary\logs`), `--selftest --out <fichero>` para las pruebas, y si el lanzador falla el usuario no ve ningún mensaje (pendiente: cuadro de error, por ejemplo desde el auxiliar de Go). *Resuelto en la decisión 64.*
+- **`postject` 1.0.0-alpha.6** no se publica desde mayo de 2023. Es la herramienta que documenta Node, pero es un riesgo de mantenimiento.
+- **Un servidor visto sin terminar:** una vez, en una prueba contaminada (asistente sin modo silencioso por un parámetro mal pasado), un servidor registró «shutting down» y siguió vivo. No se reprodujo con las pruebas limpias; se añadió una salida forzada a los 5 s.
+- **`gogpu/systray` es joven** (versión 0.x, repositorio con pocas decenas de estrellas). Las alternativas de la decisión (`systray2`, .NET) no se probaron.
+- **Nombre de la credencial:** el destino real es `<nombre>.<servicio>` (`master-key/1.Ludiary`); la decisión 46 habla de `Ludiary/master-key/<keyId>`. Solo es una convención de nombres, pero conviene alinear el texto. *Alineado en la decisión 46.*
+
+*Qué implican las decisiones aún no implementadas:*
+
+- **Cifrado (46):** `node:crypto` (AES-256-GCM, `scrypt`, SHA-256) funciona dentro del SEA. La clave maestra de 32 bytes ya se guarda como bytes en el Administrador de credenciales; un envoltorio con contraseña maestra cabe de sobra en el límite del almacén (2560 bytes por credencial, según la documentación de Windows; sin verificar en el prototipo). El lanzador necesita el token de instalación en claro para pedir el enlace: en el prototipo vive en el Administrador de credenciales (`install-token`), mientras que la decisión 46 dice que en la base de datos solo va su hash. Son compatibles, pero hay que confirmar que el token en claro vive en el almacén del sistema. *Confirmado en la decisión 63: vive en claro en el almacén del sistema y no viaja nunca.*
+- **Actualizador (58):** las carpetas versionadas (`app-<versión>`) chocan con dos hechos del prototipo: el acceso directo apunta a una ruta fija y un exe en marcha no se puede reemplazar. Hace falta un lanzador mínimo y estable en la raíz de la instalación que lea el puntero de versión activa (candidato natural: ampliar el auxiliar de Go, de 3 MB, para no duplicar los 95 MB de Node). Cada versión retenida pesa unos 100 MB descomprimidos (dos versiones conservadas, unos 200 MB). El instalador ya sabe parar el servidor con `Ludiary.exe --stop`; el actualizador debe hacer lo mismo antes de cambiar el puntero.
+- **Firma:** hay tres binarios propios que firmar (`Ludiary.exe`, `ludiary-tray.exe`, el instalador). Sin Authenticode, SmartScreen avisará; no se ha probado en otro equipo.
+
+### 46. Cifrado de secretos y rotación de la clave (token de instalación revisado en la decisión 63; formato de la entrada en la decisión 64)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
 - **Algoritmo:** AES-256-GCM de `node:crypto`, con un nonce aleatorio de 12 bytes por cifrado y etiqueta de 16 bytes. Datos asociados (AAD) = `user_id|ámbito|nombre`, de modo que un valor cifrado no se pueda mover a otra fila o a otro conector.
 - **Formato:** texto `v1.<keyId>.<nonce base64url>.<cifrado+etiqueta base64url>`, guardado en la columna `ciphertext` de la tabla `secrets` (decisión 47) junto con `key_id`.
 - **Clave:** 32 bytes aleatorios generados en el primer arranque.
-  - Localhost: se guarda en el Administrador de credenciales con un nombre del tipo `Ludiary/master-key/<keyId>`.
+  - Localhost: se guarda en el Administrador de credenciales con servicio `Ludiary` y cuenta `master-key/<keyId>`. Windows la muestra como credencial genérica con destino `master-key/<keyId>.Ludiary` (por ejemplo, `master-key/1.Ludiary`), según comprobó el prototipo de la decisión 45. El texto original decía `Ludiary/master-key/<keyId>`; era solo una convención de nombres y se alinea con lo real.
   - Docker: variable `LUDIARY_MASTER_KEY`, o un fichero de secreto en `/run/secrets/`, en base64.
   - La aplicación usa un anillo de claves: una activa y, durante la rotación, las anteriores.
 - **Rotación** (botón en Ajustes, y en Docker con `LUDIARY_MASTER_KEY_PREVIOUS`): se crea una clave nueva y se marca como activa, se recifran todos los secretos en una transacción, se comprueba que todos descifran y solo entonces se borra la anterior. Si falla, se deshace la transacción y sigue la clave anterior.
 - **Pérdida de la clave:** los secretos que no descifran se borran y sus tiendas pasan a «hay que volver a conectar» (decisión 14). La biblioteca y los datos del usuario no se tocan.
 - **Contraseña maestra opcional (decisión del usuario; amplía la decisión 14):** por defecto no hay contraseña y la clave vive en el almacén del sistema. En Ajustes el usuario puede activar una contraseña maestra:
-  - La clave maestra se guarda envuelta (cifrada con AES-256-GCM) con una clave derivada de la contraseña mediante `scrypt` de `node:crypto`, con sal aleatoria y parámetros guardados junto al envoltorio. En ese modo, el almacén del sistema solo guarda el envoltorio, nunca la clave en claro.
+  - La clave maestra se guarda envuelta (cifrada con AES-256-GCM) con una clave derivada de la contraseña mediante `scrypt` de `node:crypto`, con sal aleatoria y parámetros guardados junto al envoltorio. En ese modo, el almacén del sistema solo guarda el envoltorio, nunca la clave en claro. El envoltorio va en la misma entrada `master-key/<keyId>` con el prefijo de formato de la decisión 64, para que una versión anterior no lo confunda con una clave ausente.
   - Tras cada arranque, la biblioteca se ve con los datos guardados, pero las tiendas que necesitan tokens quedan en «bloqueado» hasta que el usuario escribe la contraseña en la web. La clave desbloqueada vive solo en memoria.
   - Olvidar la contraseña equivale a perder la clave: se vuelve a conectar las tiendas, sin perder la biblioteca ni los datos del usuario.
   - Activarla, cambiarla o quitarla vuelve a envolver la clave maestra, sin recifrar los secretos.
 - **Lo que no se cifra sino que se guarda como hash:** las sesiones del navegador y el token de instalación se guardan como SHA-256 de un valor aleatorio de 32 bytes. Solo hace falta comprobarlos, no recuperarlos.
+  - *Revisado en la decisión 63 para el token de instalación:* el lanzador y el servidor lo usan como clave HMAC, así que ambos lo necesitan en claro. Vive en el Administrador de credenciales (servicio `Ludiary`, cuenta `install-token`), protegido por Windows para el usuario, nunca en la base de datos ni en la red. Las sesiones del navegador y los enlaces de apertura siguen guardándose como hash.
 
 **Motivo:** AES-GCM es un estándar autenticado, está en Node sin dependencias y el formato versionado permite cambiar de algoritmo más adelante. Alternativas descartadas: libsodium con XChaCha20-Poly1305 (otra dependencia nativa sin ventaja clara aquí); DPAPI directamente para cada secreto (solo existe en Windows y rompe el modo Docker).
 
@@ -1096,7 +1134,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** un rango fijo fuera del dinámico reduce los cambios de puerto entre arranques, y el fichero aparte resuelve el problema de qué se lee primero. Alternativa descartada: guardarlo en la base de datos (el lanzador tendría que abrirla antes del servidor).
 
-### 54. Sesión del navegador: duración y revocación
+### 54. Sesión del navegador: duración y revocación (ampliada en la decisión 63)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -1105,6 +1143,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 - **Duración:** renovación automática con el uso hasta 30 días sin actividad y caducidad absoluta a los 90 días. Al caducar, basta con volver a abrir desde el acceso directo.
 - **Revocación:** botón «Cerrar todas las sesiones del navegador» en Ajustes y en la bandeja. Cambiar el token de instalación (decisión 46) revoca también todas las sesiones.
 - Las sesiones se guardan como hash (decisiones 46 y 47).
+- **Ampliación (decisión 63):** cada sesión solo vale en el puerto en el que se creó; si el servidor cambia de puerto, se revocan todas.
 
 **Motivo:** con un solo usuario en local, una sesión larga evita molestias, y la revocación cubre el caso de perder el control del navegador. Alternativa descartada: una sesión que muere al cerrar el navegador (obligaría a pasar siempre por el acceso directo).
 
@@ -1136,12 +1175,13 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
 - **Copias periódicas, desactivadas por defecto (decisión del usuario; revisa la decisión 18):** el usuario las activa en Ajustes. Activadas, se copia al arrancar si la última copia tiene más de 24 horas y cada 24 horas mientras la aplicación está en marcha, y se conservan las últimas 7 diarias y 4 semanales. Motivo del usuario: la biblioteca se reconstruye sincronizando con las tiendas.
-- **Copia previa a una migración o actualización, siempre activa:** antes de cambiar el esquema o la versión se hace una copia y se conservan las 3 últimas. No es una copia de seguridad del usuario sino la red de seguridad del propio programa: si una migración falla, se restaura y se vuelve a la versión anterior (decisión 58).
+- **Copia previa a una migración o actualización, siempre activa:** antes de cambiar el esquema o la versión se hace una copia en `%LOCALAPPDATA%\Ludiary\backups` (carpeta interna y no configurable; las copias periódicas desactivadas no la afectan) y se conservan las 3 últimas. No es una copia de seguridad del usuario sino la red de seguridad del propio programa: si una migración falla, se restaura y se vuelve a la versión anterior (decisión 58).
 - **Aviso al usuario:** al desactivarse por defecto, los datos que no vienen de las tiendas (favoritos, etiquetas, colecciones y tiempo medido por Ludiary, decisión 36) se pierden con una avería del disco. Ajustes lo explica junto a la opción.
-- **Carpeta por defecto:** `Documentos\Ludiary\Copias`, configurable.
+- **Carpeta por defecto de las copias periódicas:** `Documentos\Ludiary\Copias`, configurable. Solo se crea si el usuario activa las copias periódicas.
 - **Restauración:** en Ajustes. Se elige una copia, se valida con `PRAGMA integrity_check` y se cambia por la base actual con el servidor parado (la actual se guarda primero como copia). Después se arranca de nuevo.
+- **Desinstalar borrando los datos** (pregunta del desinstalador o `/PURGEDATA=1` en modo silencioso) borra toda la carpeta `%LOCALAPPDATA%\Ludiary`, incluidas las copias internas previas a migraciones. Las copias periódicas del usuario (`Documentos\Ludiary\Copias` o la carpeta que haya elegido) no se tocan.
 
-**Motivo:** pocas copias, con poco peso, cubren tanto los errores del usuario como las actualizaciones fallidas. Alternativa descartada: guardar las copias en la carpeta de datos por defecto (se pierden con la misma avería de disco o al desinstalar).
+**Motivo:** pocas copias, con poco peso, cubren tanto los errores del usuario como las actualizaciones fallidas. Alternativa descartada: guardar las **copias periódicas del usuario** en la carpeta de datos por defecto (se pierden con la misma avería de disco o al desinstalar). El descarte no se aplica a las copias internas previas a una migración: son la red de seguridad del propio programa para volver atrás, no sustituyen a las copias del usuario, y por eso sí viven en `%LOCALAPPDATA%\Ludiary\backups`.
 
 ### 58. Actualización y firma de las versiones
 
@@ -1198,6 +1238,172 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo y cuándo se cierra:** depende de cómo funcionen las ubicaciones y el lanzamiento en cada sistema, y no bloquea el MVP. Se cierra al terminar la fase 2, con pruebas en ambos sistemas.
 
+### 62. Instancia única: cerrojo del sistema en la carpeta de datos (concreta la decisión 26)
+
+**Decisión (recomendada, 21 de octubre de 2026, tras la auditoría del prototipo):**
+
+- La instancia única la garantiza un cerrojo que el sistema operativo libera solo cuando muere el proceso, sobre el fichero `instance.lock` de la carpeta de datos (`%LOCALAPPDATA%\Ludiary\`).
+- Se implementa con SQLite, que ya va incluido. Se abre `instance.lock` como base de datos aparte, con el modo de diario por defecto (no WAL) y un tiempo de espera de 2 s, y se ejecuta `BEGIN EXCLUSIVE` sin cerrar nunca la transacción. Si devuelve `SQLITE_BUSY`, otra instancia viva tiene el cerrojo.
+- Puerto `InstanceLock` en `contracts`:
+
+```ts
+/** Single instance per data directory (ADR 62). The OS releases it when the holder process dies. */
+export interface InstanceLock {
+  /** Becomes the single instance. Resolves null if another live process holds the lock. */
+  acquire(): Promise<(() => void) | null>;
+  /** True if a live process holds the lock. Holds it only for an instant, so it never makes a concurrent acquire() fail. */
+  isHeld(): Promise<boolean>;
+}
+```
+
+- La implementación usa el SQLite inyectado y no depende del SO. En el prototipo vive junto a `database.ts` en `runtime`; pasa a `db` cuando exista ese paquete.
+- **Orden del arranque del servidor:** cerrojo → credenciales → base de datos → puerto → `runtime.json` → bandeja. Solo quien tiene el cerrojo lee, crea o regenera credenciales.
+- Se eliminan el fichero `server.lock` con PID, la comparación de antigüedad y la comprobación de estado dentro del cerrojo. Si queda un `server.lock` antiguo, se borra sin leerlo.
+- El servidor que no obtiene el cerrojo sale con el código 3 (decisión 64) sin tocar nada.
+- **`--stop` (lo usa el instalador):**
+  - Si el cerrojo está libre, sale con 0.
+  - Si está tomado, pide la parada autenticada (decisión 63) y espera hasta 15 s a que el cerrojo quede libre. Sale con 0 si queda libre y con 1 si no.
+- El lanzador no usa el cerrojo: reconoce a su servidor con la comprobación de estado más la autenticación de la decisión 63.
+
+**Motivo:** el sistema libera el cerrojo al terminar el proceso, así que no hay cerrojos huérfanos que adivinar ni PID reutilizados, y desaparecen las dos carreras que encontró el auditor (dos servidores sobre la misma base y, en el primer arranque, dos claves maestras). El fichero vive en la carpeta de datos, con permisos solo para el usuario, de modo que otro usuario del equipo no puede ocuparlo ni suplantarlo, y queda ligado justo a lo que protege. Funciona igual en Linux y macOS.
+
+Alternativas descartadas:
+
+- Named pipe `\\.\pipe\Ludiary-…`: el espacio de nombres de las tuberías es común a todo el equipo. Otro usuario puede crearla antes y bloquear el arranque o hacerse pasar por el servidor, y Node no permite fijar su ACL.
+- Abrir un fichero con modo de compartición exclusivo: Node no lo expone de forma documentada.
+- Mantener el fichero con PID: no se puede hacer seguro frente a fallos y PID reutilizados.
+
+**Consecuencias:**
+
+- Supuestos a verificar con pruebas automáticas:
+  - Dos procesos simultáneos dejan un solo servidor.
+  - Tras `taskkill /F` el siguiente arranque obtiene el cerrojo. Windows libera los bloqueos al terminar el proceso, aunque su documentación avisa de que puede tardar un poco.
+  - `isHeld()` en paralelo con `acquire()` no hace fallar a `acquire()`.
+- Las pruebas de instancia única dejan de depender de esperas de 20 s.
+
+### 63. Autenticación entre el lanzador y el servidor local (amplía la decisión 23; revisa el token de instalación de la decisión 46)
+
+**Decisión (recomendada, 21 de octubre de 2026, tras la auditoría del prototipo):**
+
+- **Amenaza considerada:** otro usuario sin privilegios del mismo equipo.
+  - En Windows los puertos de `127.0.0.1` son comunes a todos los usuarios: puede ocupar el puerto guardado cuando Ludiary no está en marcha y responder a `/api/health` como si fuera Ludiary.
+  - No puede leer `%LOCALAPPDATA%\Ludiary` ni el Administrador de credenciales de otro usuario.
+  - Un administrador del equipo queda fuera del alcance.
+- **El token de instalación no viaja nunca.** Es una clave `K` de 32 bytes que comparten el lanzador y el servidor a través del Administrador de credenciales, y solo se usa como clave de HMAC-SHA256. Desaparece la cabecera `x-ludiary-token` y ningún endpoint acepta el token en claro.
+- **Protocolo (dos peticiones, prueba mutua):**
+  1. `POST /api/launcher/challenge`, con cuerpo JSON vacío (`{}`) → `{ nonce }`. El nonce son 32 bytes aleatorios en base64url, de un solo uso y válidos 30 s. Como mucho hay 32 pendientes; al pasar de ahí se descartan los más antiguos.
+  2. `POST /api/launcher/<acción>` con `{ nonce, proof }`. `acción` sale de una lista cerrada: `open-link` y `shutdown`. `proof = base64url(HMAC-SHA256(K, "ludiary-launcher-v1\n" + acción + "\n" + puerto + "\n" + nonce))`. El servidor consume el nonce siempre, aunque la prueba falle, compara en tiempo constante y responde el mismo 401 para un nonce desconocido o una prueba incorrecta.
+  3. Respuesta: `{ result, proof }`. `result` es la URL del enlace en `open-link` y `"ok"` en `shutdown`. `proof = base64url(HMAC-SHA256(K, "ludiary-server-v1\n" + acción + "\n" + puerto + "\n" + nonce + "\n" + result))`.
+  - `puerto` es, en el lanzador, el puerto al que se conecta y, en el servidor, aquel en el que escucha (decisión 28).
+  - Las peticiones a `/api/launcher/*` con cabecera `Origin` se rechazan con 403: nunca vienen de un navegador.
+- **El lanzador comprueba antes de abrir nada:**
+  - La prueba del servidor.
+  - Que la URL sea exactamente `http://127.0.0.1:<puerto>/open?t=` seguido de 43 caracteres base64url.
+  - Si algo falla, ese puerto no es su servidor. Lo registra y sigue como si no hubiera servidor: arranca uno, que encontrará el puerto ocupado y elegirá otro (decisión 28). Relee `K` del almacén en cada intento.
+- La bandeja sigue generando el enlace dentro del proceso (`createOpenUrl`), sin pasar por la red.
+- `/api/status` exige la sesión del navegador y deja de aceptar el token.
+- **Sesión ligada al puerto (amplía la decisión 54):** cada sesión guarda el puerto en el que se creó y solo vale en ese puerto; si el servidor cambia de puerto, se revocan todas. En el prototipo ya se cumple, porque las sesiones viven en memoria y el puerto solo cambia al reiniciar. La versión persistente (decisión 47) guarda el puerto con la sesión.
+- Las funciones que calculan las pruebas (`launcherProof` y `serverProof`) viven en `packages/api` y las usan `api` y `runtime`.
+
+**Motivo:** quien ocupe el puerto no recibe nada que le sirva. La prueba del lanzador está ligada a ese puerto y a un nonce de un solo uso, y el impostor no puede falsificar la respuesta, así que el lanzador nunca abre su página. Eso evita también páginas falsas que pidan la clave de Steam o los códigos de Epic y GOG de la decisión 43. Es lo más simple que cierra a la vez el robo del token y la suplantación del servidor.
+
+Alternativas descartadas:
+
+- Validar solo la URL devuelta: el impostor seguiría recibiendo el token.
+- Que el lanzador genere el enlace con el secreto compartido: no evita abrir la página del impostor; hace falta comprobar igualmente quién responde.
+- Hablar por un named pipe con ACL del usuario: Node no permite fijar la ACL y otro usuario puede ocupar el nombre (decisión 62).
+- Una sola petición con marca de tiempo: se puede repetir contra un servidor recién arrancado, que no conoce los nonces anteriores.
+
+**Consecuencias:**
+
+- El token de instalación se guarda en claro en el Administrador de credenciales (servicio `Ludiary`, cuenta `install-token`), que Windows protege por usuario, y nunca en la base de datos. El «se guarda como hash» de la decisión 46 queda para las sesiones y los enlaces de apertura.
+- Cambiar el token revoca todas las sesiones (decisión 54).
+- Riesgos residuales aceptados:
+  - Pedir un nonce no exige autenticación: otro usuario del equipo puede pedirlos sin parar y desplazar el del lanzador antes de que lo use. Solo molesta (no filtra nada ni da acceso). Por eso `--stop` repite la petición de parada cada segundo durante su espera y el lanzador reintenta cada 250 ms.
+  - Otro usuario puede ocupar puertos libres y forzar cambios de puerto. Es una molestia, no una fuga.
+  - Si el usuario abre a mano una dirección `127.0.0.1` de otro programa (por ejemplo, un marcador antiguo), el navegador le envía la cookie, porque las cookies no distinguen puertos (decisión 29). Con la sesión ligada al puerto, esa cookie no sirve en el servidor real.
+  - Supuesto a verificar: libuv no fija `SO_EXCLUSIVEADDRUSE` en Windows (según los comentarios de su código fuente), y se cuenta con que la seguridad de sockets reforzada de Windows impide a otra cuenta enlazar el mismo puerto ya ocupado con `SO_REUSEADDR`. Se comprueba con una prueba manual desde una segunda cuenta; si falla, habrá que fijar esa opción desde código nativo.
+- En modo servidor (fase 2), el agente local se emparejará con el mismo principio: una clave compartida que nunca viaja en claro.
+
+### 64. Errores fatales visibles y credenciales no reconocidas (amplía las decisiones 35, 45 y 46)
+
+**Decisión (recomendada, 21 de octubre de 2026, tras la auditoría del prototipo):**
+
+- **Quién muestra los errores:** el lanzador, el único papel con el usuario delante. El servidor no abre ventanas: comunica el fallo de arranque con su código de salida, y el lanzador que lo arrancó lo escucha.
+- **Códigos de salida del papel servidor:**
+  - 0: parada normal.
+  - 3: ya hay otra instancia (decisión 62).
+  - 10: clave maestra no reconocida.
+  - 11: almacén de credenciales no disponible.
+  - 12: base de datos no disponible, incluido no poder cargar SQLite.
+  - 13: sin puerto libre.
+  - 1: cualquier otro error.
+- **Espera del lanzador:** mientras siga vivo el servidor que arrancó, espera hasta 60 s (antes, 20) a que responda con la autenticación de la decisión 63. Si el servidor sale con 3, sigue esperando a la otra instancia. Si sale con otro código, o se agota la espera, muestra el mensaje que corresponde y sale con 1.
+- **Cuadro de mensaje desde el auxiliar de Go:** `ludiary-tray.exe --dialog` lee un JSON por la entrada estándar, `{"kind":"error","title":"…","body":"…"}`, y muestra `MessageBoxW` con icono de error, Aceptar y `MB_SETFOREGROUND`. Después escribe `{"result":"ok"}` y termina. Windows traduce el botón; los textos llegan ya traducidos (invariante 6). No hay cuadro de confirmación: con la clave compartimentada no hace falta preguntar nada.
+- Puerto `UserDialogs` en `contracts`:
+
+```ts
+/** Modal messages for errors the user must see, since Ludiary.exe has no console (ADR 64). Texts arrive translated. */
+export interface UserDialogs {
+  showError(title: string, body: string): Promise<void>;
+}
+```
+
+- La implementación `HelperProcessDialogs` vive en `platform-windows`. En `RuntimeDeps` es opcional: sin ella, el fallo solo se registra. Las pruebas inyectan un doble.
+- **Textos:**
+  - Claves `fatal.title`, `fatal.masterKeyUnrecognized`, `fatal.keyStore`, `fatal.database`, `fatal.noPort`, `fatal.timeout` y `fatal.unexpected`, en español e inglés.
+  - Indican la carpeta de registros (`%LOCALAPPDATA%\Ludiary\logs`) y cómo abrir una incidencia (decisión 35).
+  - Un error del papel lanzador que llega a `runLauncher` se escribe en `launcher.log` y muestra `fatal.unexpected`. Un `uncaughtException` fuera de ese camino solo se escribe en `crash.log`, sin cuadro.
+- **Formato de la entrada `master-key/1`:**
+  - Exactamente 32 bytes: la clave en claro (formato actual).
+  - Los formatos futuros, como el envoltorio con contraseña de la decisión 46, empiezan por el prefijo ASCII `LDK` seguido de un byte de versión y siempre miden más de 32 bytes.
+  - Cualquier otra cosa, o un `LDK` de una versión que el programa no conoce, es una entrada no reconocida.
+- **Clave maestra no reconocida (decisión del usuario, 21 de octubre de 2026; sustituye a la pregunta propuesta):** no se pregunta nada. La entrada no reconocida se **compartimenta**:
+  - El servidor recorre `master-key/1`, `master-key/2`… hasta `master-key/16` y usa la primera que reconoce. Una entrada que no reconoce no se toca nunca: queda como compartimento propio.
+  - Si no hay ninguna reconocida, crea la clave nueva en el primer hueco libre. Los secretos cifrados con la clave antigua conservan su `key_id` (decisión 46) y simplemente no se leen con esta versión; sus tiendas quedan en «hay que volver a conectar». No se borran: si se vuelve a una versión que sí reconoce esa clave, siguen ahí.
+  - Solo si los 16 huecos están ocupados por entradas no reconocidas, el servidor sale con 10 y el lanzador muestra `fatal.masterKeyUnrecognized` (pide actualizar Ludiary).
+  - `--purge` (desinstalar borrando datos) elimina todos los huecos.
+- **Compatibilidad entre versiones (decisión del usuario):** que una clave deje de reconocerse no debe ocurrir al cambiar de versión. Cada versión publicada reconoce todos los formatos de clave que hayan escrito las versiones anteriores. Un formato nuevo solo se escribe por una acción explícita del usuario (activar la contraseña maestra de la decisión 46), nunca al actualizar, y la vuelta atrás automática de la decisión 58 solo puede volver a una versión que reconozca los formatos ya escritos. El compartimento es la red de seguridad, no el camino normal.
+- **Token de instalación con un tamaño inesperado:** se regenera sin preguntar y se registra un aviso. No protege datos; regenerarlo solo revoca las sesiones (decisión 54).
+- **Clave maestra ausente:** se crea, como hasta ahora (primer arranque o clave perdida, decisión 46).
+
+**Motivo:** sustituir una clave que no se entiende destruye secretos que una versión posterior sí sabría leer, por ejemplo tras una vuelta atrás de la decisión 58 con la contraseña maestra activada. Bloquear sin salida deja al usuario sin la aplicación. Compartimentarla, como pidió el usuario, cubre los dos casos sin preguntar nada: la aplicación sigue funcionando y la entrada original queda intacta. El código de salida es el canal más simple entre el lanzador y el servidor que acaba de arrancar, sin ficheros nuevos, y el auxiliar de Go ya se distribuye y llama a la API de Windows sin CGO.
+
+Alternativas descartadas:
+
+- Un cuadro desde PowerShell: lento, depende de la política de ejecución y puede abrir una consola.
+- Una página de error en el navegador: necesita un servidor en marcha, que es justo lo que ha fallado.
+- Un módulo nativo propio: una pieza más que compilar y firmar.
+
+**Consecuencias:**
+
+- Supuesto a verificar en las pruebas manuales: que el cuadro aparece en primer plano cuando lo abre el auxiliar lanzado por el lanzador (reglas de primer plano de Windows). Si no, se añade `MB_TOPMOST`.
+- Los fallos del servidor después de arrancar, como perder la bandeja, siguen yendo solo al registro.
+- Los mensajes `fatal.*` son textos de cara al usuario: el documentalista los revisa en ambos idiomas y los recoge en la guía de solución de problemas.
+
+### 65. Ganchos de prueba y opciones de Node en el ejecutable publicado (amplía la decisión 45)
+
+**Decisión (recomendada, 21 de octubre de 2026, tras la auditoría del prototipo):**
+
+- La compilación define con esbuild la constante `__LUDIARY_TEST_HOOKS__`: `true` en la variante de pruebas y `false` en la publicada. Con `false`, `main.ts` borra esas variables de la copia del entorno que recibe todo el programa (y los procesos hijos) antes de leer ninguna, así que los ganchos quedan desactivados. Algunas lecturas siguen en el fichero empaquetado, pero nunca encuentran valor.
+- **Solo en la variante de pruebas:**
+  - `LUDIARY_NATIVE_DIR`, `LUDIARY_TRAY_HELPER`, `LUDIARY_OPEN_URL_FILE` y `LUDIARY_DATA_DIR`.
+  - Un doble de `UserDialogs` (decisión 64) que escribe en el fichero de `LUDIARY_DIALOG_FILE` y responde lo que indique la prueba.
+  - Con `LUDIARY_DATA_DIR`, el servicio de credenciales pasa a ser `Ludiary-test-<8 primeros caracteres hexadecimales del SHA-256 de la ruta>`, para que las pruebas nunca lean, creen ni borren (`--purge`) las credenciales reales del desarrollador.
+- **En la variante publicada** solo queda `LUDIARY_LANG`, útil para soporte. `--selftest --out` puede quedarse: no carga nada externo.
+- **Opciones de Node:**
+  - `"execArgvExtension": "none"` en `sea-config.json`, de modo que se ignora `NODE_OPTIONS`. Según la documentación de SEA de la línea 24, el valor por defecto es `"env"`, que sí lo admite.
+  - En la variante publicada, al arrancar y antes de cualquier conexión o proceso hijo, se borran `NODE_OPTIONS` y `NODE_TLS_REJECT_UNAUTHORIZED` de `process.env`.
+  - `NODE_EXTRA_CA_CERTS` se deja: lo necesitan las redes con proxy corporativo y solo añade certificados.
+- Las pruebas de extremo a extremo con la variante publicada se ejecutan solo en un equipo limpio de CI, sin credenciales reales. El resto usa la variante de pruebas.
+
+**Motivo:** quien puede fijar variables de entorno del usuario ya ejecuta código como él, así que no es una frontera de seguridad. Aun así, quitar los ganchos reduce superficie y evita que un `NODE_OPTIONS` puesto para desarrollo o un `NODE_TLS_REJECT_UNAUTHORIZED=0` olvidado cambien el comportamiento del programa publicado. La separación de credenciales corrige un fallo real del prototipo: una prueba con otra carpeta de datos usa las credenciales reales, y `--purge` las borra.
+
+**Consecuencias:**
+
+- Supuesto a verificar ejecutando el exe: que Node 24.20 respeta `execArgvExtension`. Aparece en la documentación de la línea 24 sin indicar desde qué versión. Si no lo respeta, se anota aquí que el propio proceso sigue leyendo `NODE_OPTIONS` y se mantiene el borrado del entorno para los hijos.
+- CI compila las dos variantes; solo la publicada se firma (decisión 58) y se sube.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -1219,6 +1425,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 - Lanzamiento heterogéneo por tienda: GOG usa línea de comandos y las URI de EA han fallado en algunos juegos.
 - Nombre del proyecto sin comprobar aún en las bases oficiales de marcas (decisión 44).
 - Sin certificado Authenticode, Windows mostrará avisos al instalar (decisión 58).
+- Otros usuarios del mismo equipo comparten los puertos de `127.0.0.1`: mitigado con la autenticación mutua y la sesión ligada al puerto (decisión 63); queda por verificar que no pueden secuestrar un puerto ya ocupado.
 
 ## Hoja de ruta sugerida
 
@@ -1237,4 +1444,4 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Detección del proceso de cada juego: propuesta en la 55. Se cierra durante el conector de Steam, con al menos tres juegos por tienda.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 61 cuando se implemente cada parte.
+- Verificar los supuestos marcados en las decisiones 39 a 65 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta (63), cuadro en primer plano (64) y `execArgvExtension` en Node 24.20 (65).

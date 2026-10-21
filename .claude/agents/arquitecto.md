@@ -59,7 +59,7 @@ La fuente de verdad completa es `docs/adr/ADR.md`. Lo de abajo es la versión co
 ### Sincronización, copias y diagnóstico
 
 - Se sincroniza al abrir la web y con botón manual. Se muestran de inmediato los datos guardados y la sincronización corre en segundo plano con progreso. Cada tienda sincroniza por separado y hay un intervalo mínimo entre sincronizaciones (ADR 12).
-- Copia automática de la base de datos a una carpeta configurable, con el mecanismo de copia segura de SQLite. No incluye la clave de cifrado. Hace falta un punto de restauración documentado (ADR 18).
+- Copias de la base de datos (ADR 18 y 57): las periódicas, desactivadas por defecto, van a una carpeta configurable; la previa a una migración o actualización es siempre automática. Ambas usan el mecanismo de copia segura de SQLite. No incluye la clave de cifrado. Hace falta un punto de restauración documentado (ADR 18).
 - Pruebas con respuestas grabadas sin tokens ni datos personales, más pruebas manuales periódicas contra tiendas reales con cuentas del desarrollador. No hay detección automática de conectores rotos: el fallo se muestra por tienda con un mensaje claro (ADR 19).
 - Registros locales filtrados (sin tokens, claves ni datos personales, incluidos nombres de usuario del sistema en rutas), con tamaño máximo y rotación, exportables desde Ajustes, con enlace a GitHub para abrir una incidencia. Sin telemetría (ADR 35).
 
@@ -72,40 +72,21 @@ La fuente de verdad completa es `docs/adr/ADR.md`. Lo de abajo es la versión co
 - Ejecutable ligero con icono en la bandeja (abrir la web, estado de sincronización, parar). Instalador con acceso directo que comprueba si el servidor ya está en marcha, lo arranca si no y abre la web en el navegador predeterminado. Una sola instancia (ADR 13, 26). Electron o Tauri quedan descartados por ahora.
 - Imagen Docker para el servidor casero, más adelante (ADR 8, 25).
 - Actualización automática al arrancar, desactivable. Versiones firmadas y verificadas antes de instalar; vuelta a la versión anterior si falla (ADR 32).
-- Código abierto para el público general. Licencia recomendada GPL-3.0, no es asesoría legal (ADR 30, 34). Instalación y conexión guiadas, sin pasos técnicos. Proyecto no afiliado a las tiendas.
+- Código abierto para el público general. Licencia GPL-3.0-only, confirmada por el usuario; no es asesoría legal (ADR 30, 34). Instalación y conexión guiadas, sin pasos técnicos. Proyecto no afiliado a las tiendas.
 - Interfaz en español e inglés desde el MVP, con textos fuera del código (ADR 33).
 - Stack: TypeScript (Node) en backend y frontend; Fastify y Drizzle ORM (recomendados, revisables); React con Vite como SPA estática servida por el backend. El núcleo no depende de Fastify ni de Drizzle fuera de sus capas de entrada y de datos (ADR 4, 10, 15).
 - Interfaz para ratón y teclado. Mando y modo televisión fuera del alcance (ADR 37).
 
 ## Decisiones abiertas (tu lista de trabajo)
 
-Prioridad alta, porque bloquean el arranque:
+Revisadas con el usuario el 21 de octubre de 2026: casi todo está decidido (decisiones 38 a 61 del ADR). La lista viva es la sección «Pendiente por decidir» del ADR. Quedan abiertas:
 
-1. Estructura del repositorio: monorepo, módulos y **contrato de los conectores**.
-2. **Modelo de datos detallado**: juego canónico, propiedades, ubicaciones de instalación, DLC, datos del usuario, decisiones de fusión.
-3. Herramienta concreta para generar el ejecutable y el instalador con icono en bandeja.
-4. Algoritmo y formato de los tokens cifrados, y cómo rotar la clave.
+1. Ejecutable, instalador y almacén de claves (decisión 45): se cierra con el prototipo del instalador. La bandeja en Go ya está confirmada.
+2. Detección del proceso de cada juego (decisión 55): se cierra durante el conector de Steam, con juegos reales.
+3. Linux y macOS (decisión 61): se cierra al terminar la fase 2.
+4. Comprobar el nombre «Ludiary» en las bases oficiales de marcas antes de publicar (decisión 44).
 
-Prioridad media:
-
-5. Valor del intervalo mínimo entre sincronizaciones por tienda.
-6. Reglas de normalización de nombres y criterio para considerar dudosa una edición.
-7. Tratamiento de un DLC cuyo juego base no está en la biblioteca.
-8. Dónde se guarda el puerto elegido y qué rango se permite.
-9. Duración de la sesión del navegador y cómo revocarla.
-10. Detección fiable del proceso de cada juego cuando lo lanza su launcher.
-11. Cómo combinar el tiempo de juego propio con el que informan las tiendas.
-
-Prioridad baja o posterior:
-
-12. Frecuencia de las copias y cuántas se conservan.
-13. Herramienta de actualización y firma de las versiones (certificado de firma de código y su coste).
-14. Tamaño máximo y rotación de los registros.
-15. Biblioteca de traducción e idioma o idiomas de la documentación.
-16. Política de contribuciones y cumplimiento de las licencias de las herramientas incluidas en el instalador.
-17. Qué tiendas y funciones se admitirán en Linux y macOS.
-
-No decididos y no listados en el ADR: framework de pruebas (propuesta del tester: Vitest) y gestor de paquetes del monorepo.
+Gestor de paquetes (pnpm, decisión 39) y framework de pruebas (Vitest + Playwright, decisión 48) ya están decididos.
 
 ## Riesgos principales
 

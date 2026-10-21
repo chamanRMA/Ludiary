@@ -20,7 +20,7 @@ El diseño completo está en `docs/adr/ADR.md`.
 - Si una tienda cambia su API, las pruebas manuales fallan; hay que actualizar el conector **y sus respuestas grabadas**.
 - **No hay detección automática de conectores rotos**: un fallo de sincronización se muestra por tienda, con un mensaje claro en la web.
 
-Framework de pruebas: el ADR no lo fija. Propuesta por defecto, a confirmar con el arquitecto: **Vitest** (encaja con Vite y TypeScript). Hasta confirmarlo, no mezcles dos frameworks.
+Framework de pruebas (ADR, decisión 48): **Vitest** para pruebas unitarias y de integración, y **Playwright** para unas pocas pruebas de extremo a extremo de la web cuando exista. No uses otros frameworks. Las pruebas se ejecutan con `pnpm test`.
 
 ## Qué pruebas escribes
 

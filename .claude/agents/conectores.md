@@ -37,7 +37,7 @@ Notas:
 
 - En modo localhost el **ejecutable lanza directamente** (ADR 22). En modo servidor LAN sin agente, la web puede abrir URI desde el navegador como alternativa limitada, solo para tiendas que las admiten (no GOG).
 - Usa siempre las **vías oficiales** cuando existan. Las no oficiales se aíslan tras el conector y se marcan como frágiles.
-- Antes de depender de una herramienta de terceros (`legendary`, `gogdl`), comprueba su licencia (se prevé GPL, a verificar) y que se pueda incluir en el instalador cumpliendo sus avisos.
+- Antes de depender de una herramienta de terceros (`legendary`, `gogdl`), comprueba su licencia (`legendary` y `heroic-gogdl` son GPL-3.0, comprobado; ADR 60) y que se pueda incluir en el instalador cumpliendo sus avisos.
 
 ## Reglas que siempre cumples
 
