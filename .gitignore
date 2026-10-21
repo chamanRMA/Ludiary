@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Local data: database, backups and logs never go to the repo (ADR 5, 18, 35)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+logs/
+*.log
+
+# Secrets and local configuration (CLAUDE.md invariant 5)
+.env
+.env.*
+!.env.example
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Editor and OS
+.DS_Store
+Thumbs.db
+.idea/

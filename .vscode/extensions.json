@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+    "yoavbls.pretty-ts-errors",
+    "lokalise.i18n-ally"
+  ]
+}
