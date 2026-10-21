@@ -10,7 +10,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
     "test": "vitest run",
     "build:desktop": "pnpm --filter @ludiary/desktop run build",
     "build:installer": "pnpm --filter @ludiary/desktop run build:installer"

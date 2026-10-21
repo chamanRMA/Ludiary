@@ -1,0 +1,43 @@
+import { describe, expect, it } from "vitest";
+import { extractValue, safeExternalUrl, validateField } from "./validate";
+
+const steam = { pattern: "^[0-9A-Fa-f]{32}$", maxLength: 40 };
+const hex32 = "0123456789abcdef0123456789ABCDEF";
+
+describe("validateField", () => {
+  it("accepts a 32-character hexadecimal Steam key and trims spaces", () => {
+    expect(validateField(`  ${hex32}\n`, steam)).toEqual({ ok: true, value: hex32 });
+  });
+  it("rejects wrong formats, empty values and too-long values", () => {
+    expect(validateField("zzzz", steam)).toEqual({ ok: false, reason: "format" });
+    expect(validateField(hex32.slice(1), steam)).toEqual({ ok: false, reason: "format" });
+    expect(validateField("   ", steam)).toEqual({ ok: false, reason: "empty" });
+    expect(validateField("a".repeat(41), steam)).toEqual({ ok: false, reason: "too-long" });
+  });
+  it("applies extract before the pattern (ADR 43)", () => {
+    const gog = { pattern: "^[A-Za-z0-9_-]{10,512}$", maxLength: 2048, extract: "url-query:code" } as const;
+    expect(validateField("https://embed.gog.com/on_login_success?origin=client&code=AbCdEf123456", gog)).toEqual({ ok: true, value: "AbCdEf123456" });
+    const epic = { pattern: "^[a-f0-9]{32}$", maxLength: 4096, extract: "json-field:authorizationCode" } as const;
+    expect(validateField(JSON.stringify({ authorizationCode: hex32.toLowerCase() }), epic).ok).toBe(true);
+  });
+  it("does not throw on an invalid pattern", () => {
+    expect(validateField("x", { pattern: "(", maxLength: 5 })).toEqual({ ok: false, reason: "format" });
+  });
+});
+
+describe("extractValue", () => {
+  it("falls back to the raw text when it is not JSON or a URL", () => {
+    expect(extractValue("abc", "json-field:x")).toBe("abc");
+    expect(extractValue("abc", "url-query:code")).toBe("abc");
+  });
+});
+
+describe("safeExternalUrl", () => {
+  it("only lets https through", () => {
+    expect(safeExternalUrl("https://steamcommunity.com/dev/apikey")).toBe("https://steamcommunity.com/dev/apikey");
+    expect(safeExternalUrl("http://example.com")).toBeNull();
+    expect(safeExternalUrl("javascript:alert(1)")).toBeNull();
+    expect(safeExternalUrl("file:///C:/Windows")).toBeNull();
+    expect(safeExternalUrl("not a url")).toBeNull();
+  });
+});

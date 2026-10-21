@@ -1,0 +1,150 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px 16px;
+  background: var(--bg);
+}
+.card {
+  width: 100%;
+  max-width: 760px;
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 600 24px var(--font-display);
+}
+.mark {
+  width: 36px;
+  height: 36px;
+  background: var(--ac);
+  -webkit-mask: url("/logo.svg") center / contain no-repeat;
+  mask: url("/logo.svg") center / contain no-repeat;
+}
+.steps {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 20px;
+  color: var(--mu);
+}
+.num {
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: var(--hi);
+  font-weight: 600;
+  font-size: 13px;
+}
+.current {
+  background: var(--hi);
+  color: var(--tx);
+  font-weight: 600;
+}
+.current .num {
+  background: var(--ac);
+  color: var(--on);
+}
+.past .num {
+  color: var(--ac);
+}
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.body h1 {
+  font-size: 36px;
+  line-height: 1.1;
+}
+.options {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.option {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--ln);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.option input {
+  margin-top: 4px;
+  accent-color: var(--ac);
+}
+.option b {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.option small {
+  display: block;
+  color: var(--mu);
+  font-size: 13px;
+}
+.selected {
+  border-color: var(--ac);
+  background: var(--hi);
+}
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.notice {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, var(--sf));
+}
+.summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ln);
+}
+.foot {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.spacer {
+  flex: 1;
+}

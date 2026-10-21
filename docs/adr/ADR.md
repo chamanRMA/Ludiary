@@ -52,7 +52,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario) |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
@@ -62,7 +62,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 47 | Modelo de datos detallado | Vigente (confirmada por el usuario; migraciones por fases) |
 | 48 | Framework de pruebas | Vigente (confirmada por el usuario) |
 | 49 | Traducción e idiomas de la documentación | Vigente (confirmada por el usuario) |
-| 50 | Intervalos mínimos de sincronización | Vigente (confirmada por el usuario) |
+| 50 | Intervalos mínimos de sincronización | Vigente (confirmada por el usuario); espera de 60 s extendida a todos los escaneos en la 72 |
 | 51 | Normalización de nombres y ediciones dudosas | Vigente (confirmada por el usuario) |
 | 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario) |
 | 53 | Puerto: dónde se guarda y rango permitido | Vigente (confirmada por el usuario) |
@@ -72,7 +72,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18) |
 | 58 | Actualización y firma de las versiones | Vigente (confirmada por el usuario); hereda de la 45 el requisito de validar la actualización con vuelta atrás |
 | 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
-| 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario) |
+| 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario); ampliada en la 70 |
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
 | 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26) |
 | 63 | Autenticación entre el lanzador y el servidor local | Vigente (confirmada por el usuario; amplía la 23 y revisa el token de la 46); URL del enlace revisada en la 66; alcance de la sesión ligada al puerto corregido en la 67 |
@@ -80,6 +80,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 65 | Ganchos de prueba y opciones de Node en el ejecutable publicado | Vigente (recomendada; amplía la 45) |
 | 66 | Dirección de la web: `ludiary.localhost` | Vigente (recomendada; nombre aceptado por el usuario; amplía las 23, 28 y 29 y revisa la URL del enlace de la 63); alcance de la sesión ligada al puerto corregido en la 67 |
 | 67 | Segundo factor ligado al origen y cookie de la dirección alternativa | Vigente (recomendada; amplía las 29 y 54 y corrige las 63 y 66) |
+| 68 | Primera versión de `apps/web`: estructura, datos simulados y CSP | Vigente (recomendada; concreta la 10); portadas e `img-src` revisados en la 71; servir la SPA, librería de esquemas y selector de carpetas concretados en la 72 |
+| 69 | Asistente de primer arranque | Vigente (confirmada por el usuario) |
+| 70 | Fuentes tipográficas empaquetadas (OFL-1.1) | Vigente (confirmada por el usuario; amplía la 60) |
+| 71 | Portadas de Steam desde su CDN | Vigente (qué, confirmado por el usuario; cómo, recomendado; revisa la 68 en portadas y CSP; amplía las 6 y 40) |
+| 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; tres puntos pendientes del usuario; amplía las 40, 42, 47, 50 y 68) |
 
 ## Decisiones
 
@@ -559,7 +564,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71 y 72)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -1090,7 +1095,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 
 **Motivo:** i18next funciona igual en Node y en React, que es justo lo que hace falta para compartir catálogos entre servidor, web y bandeja. Alternativas descartadas: FormatJS / react-intl (centrado en React, poco útil en el servidor); Lingui (exige compilar los catálogos y usar macros).
 
-### 50. Intervalos mínimos de sincronización
+### 50. Intervalos mínimos de sincronización (espera de los escaneos ampliada en la decisión 72)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -1218,7 +1223,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** cabe sin problemas como adjunto de una incidencia de GitHub y cubre varios días de uso. Alternativa descartada: winston (más pesado y sin ventaja aquí).
 
-### 60. Contribuciones y licencias de terceros
+### 60. Contribuciones y licencias de terceros (ampliada en la decisión 70)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -1535,6 +1540,622 @@ Alternativas consideradas:
 - El invariante 4 de `CLAUDE.md` y las fichas del `programador`, el `auditor` y el `tester` añaden que las acciones sensibles del navegador exigen cookie y clave de origen.
 - El documentalista recoge en la guía de solución de problemas el aviso «Vuelve a abrir Ludiary desde el acceso directo o desde la bandeja» y la recomendación sobre la dirección alternativa.
 
+### 68. Primera versión de `apps/web`: estructura, datos simulados y CSP (concreta la decisión 10; portadas e `img-src` revisados en la decisión 71; servir la SPA, librería de esquemas y selector de carpetas concretados en la decisión 72)
+
+**Decisión (recomendada, 21 de octubre de 2026):**
+
+- **Alcance de este primer cambio:** solo interfaz, con datos simulados detrás de una capa de datos que tiene la forma del futuro contrato. **No se toca `packages/api`**: ninguna ruta nueva, ni estática ni de datos. La web se prueba con `vite dev` y `vite preview`. Los valores pegados en los asistentes se validan solo en formato, viven en el estado del componente y se descartan al cambiar de paso; no se guardan en el navegador ni se envían a ningún sitio. Así no se activa la condición de la decisión 67.
+- **Servir la SPA desde la API** se hace en el mismo cambio que la clave de origen (decisión 67), porque los dos tocan `/open` y `/`. Ese cambio incluye: estáticos de `apps/web/dist` como rutas `public`; vuelta a `index.html` para cualquier ruta que no empiece por `/api/`, `/open` ni `/assets/`; la CSP de abajo en la respuesta; sustituir la página de `/` generada en el servidor por la SPA, que pide `/api/status` y, con 401, muestra el texto de «no autorizado»; y cómo viajan los estáticos dentro del ejecutable (carpeta junto a `Ludiary.exe` o recursos del ejecutable único: lo decide el empaquetador entonces).
+- **Enrutado sin librería:** un enrutador propio de unas 50 líneas en `src/app/router.ts`, con la API de historial (`pushState` y `popstate`), patrones con parámetros (`/game/:id`), un `Link` que es un `<a href>` real y, al navegar, vuelta arriba y foco en el `h1` de la página (decisión 37). Lleva prueba unitaria del emparejamiento de rutas. Rutas: `/`, `/library`, `/game/:id`, `/collections`, `/store/:id`, `/local`, `/prices`, `/settings/:section`, `/welcome`.
+- **Estilos:** CSS plano. `src/styles/tokens.css` con las variables del tema claro y oscuro en `:root[data-theme="light|dark"]`, y CSS Modules de Vite (`*.module.css`) por componente. Sin preprocesadores ni librerías de componentes. El tema por defecto sigue `prefers-color-scheme`. Para evitar el parpadeo, un script clásico propio, `public/theme-init.js`, cargado en el `<head>` con `src` (nunca en línea), pone `data-theme` antes de pintar.
+- **Traducciones (decisiones 33 y 49):** i18next y react-i18next en la web. Los catálogos de la web viven en `packages/i18n/locales/web/es.json` y `en.json`, con claves planas con prefijo por área (`common.`, `nav.`, `onboarding.`, `settings.`, `library.`, `stores.`, `services.` y `connectors.<id>.` para los textos simulados de los asistentes, que pasarán a `connectors/<id>/locales/` cuando exista cada conector). Se exportan por `@ludiary/i18n/web`. Configuración de i18next: `keySeparator: false`, `nsSeparator: false` e interpolación con `{` y `}`, la misma sintaxis que los catálogos actuales del servidor, para que la futura migración del servidor a i18next no reescriba catálogos. Idioma inicial: el elegido por el usuario o, si no hay, `pickLocale(navigator.language)`. Una prueba en `packages/i18n/test/` comprueba que cada par es/en tiene las mismas claves.
+- **`packages/api-contract`** se crea ahora, **solo con tipos** y sin librería de esquemas: elegirla (TypeBox, Zod u otra) se decide con la primera ruta real, porque depende de cómo valide Fastify. Nada interno, como fija la decisión 38. Borrador v0:
+
+```ts
+// packages/api-contract/src/index.ts — draft v0 (ADR 68). Types only; schemas come with the first real route.
+export type StoreId = 'steam' | 'gog' | 'epic' | 'ubisoft' | 'ea';   // same values as contracts (ADR 40), redeclared: no internal imports
+export type ServiceId = 'igdb' | 'rawg' | 'itad';
+export type I18nKey = string;
+export type I18nParams = Readonly<Record<string, string | number>>;
+/** Milliseconds UTC (ADR 47). */
+export type Epoch = number;
+
+export interface ApiErrorDto { error: string }                         // current server format
+export interface TranslatedErrorDto { code: string; key: I18nKey; params?: I18nParams }
+
+export type DetectionMode = 'auto-and-manual' | 'manual-only' | 'later'; // ADR 42
+
+export interface SyncStatusDto {
+  operation: 'library' | 'scan';
+  state: 'idle' | 'running' | 'error';
+  lastSuccessAt?: Epoch;
+  nextAllowedAt?: Epoch;
+  progress?: { done: number; total?: number };
+  error?: TranslatedErrorDto;
+}
+
+export interface StoreStatusDto {
+  store: StoreId;
+  access: 'official-api' | 'unofficial-api' | 'local-only';
+  /** 'not-applicable': Ubisoft and EA, no account. */
+  connection: 'connected' | 'expired' | 'disconnected' | 'not-applicable';
+  /** 'installed-only': Steam without key (ADR 43), and Ubisoft and EA. */
+  mode: 'library' | 'installed-only';
+  accountLabel?: string;
+  sync: readonly SyncStatusDto[];
+}
+
+export interface ServiceStatusDto {
+  service: ServiceId;
+  purpose: 'metadata' | 'prices';
+  configured: boolean;
+  /** false while the feature that uses it does not exist (IsThereAnyDeal until phase 3). */
+  available: boolean;
+}
+
+export type WizardTarget = { kind: 'store'; store: StoreId } | { kind: 'service'; service: ServiceId };
+
+/** Wire form of WizardStep (ADR 40, 43). */
+export type WizardStepDto =
+  | { kind: 'info'; id: string; titleKey: I18nKey; bodyKey: I18nKey; params?: I18nParams }
+  | { kind: 'open-external'; id: string; titleKey: I18nKey; bodyKey: I18nKey; url: string; awaits: 'callback' | 'input' }
+  | { kind: 'input'; id: string; titleKey: I18nKey; bodyKey: I18nKey; fields: readonly WizardFieldDto[] };
+
+export interface WizardFieldDto {
+  name: string; labelKey: I18nKey; secret: boolean; pattern?: string; maxLength: number;
+  paste?: boolean;
+  extract?: `json-field:${string}` | `url-query:${string}`;
+}
+
+export type WizardInputDto =
+  | { kind: 'continue' }
+  | { kind: 'fields'; values: Readonly<Record<string, string>> }
+  | { kind: 'callback'; query: Readonly<Record<string, string>> };
+
+export type WizardResponseDto =
+  | WizardStepDto
+  | { kind: 'done'; accountLabel?: string }
+  | { kind: 'rejected'; stepId: string; error: TranslatedErrorDto };   // same step again, with the error shown
+
+export interface OnboardingDto { completedAt: Epoch | null; detection: DetectionMode | null }
+
+export interface ScanRootDto { id: string; origin: 'user' | 'discovered'; path: string; store?: StoreId; enabled: boolean }
+
+export interface SettingsDto {
+  locale: 'system' | 'es' | 'en';
+  detection: DetectionMode | null;
+  scanRoots: readonly ScanRootDto[];
+  backups: { periodic: boolean; folder: string | null };              // ADR 57
+  autoUpdate: boolean;                                                // ADR 32
+}
+
+/** Draft until the library API exists. */
+export interface GameSummaryDto {
+  id: string; title: string; coverUrl?: string; stores: readonly StoreId[];
+  installed: boolean; favorite: boolean; playtimeMinutes: number; lastPlayedAt?: Epoch; tags: readonly string[];
+}
+export interface GameDetailDto extends GameSummaryDto {
+  properties: readonly { id: string; store: StoreId | 'manual'; installed: boolean; installPath?: string;
+                         actions: readonly ('play' | 'open-store-page' | 'install')[] }[];
+  dlc: readonly { id: string; title: string; store: StoreId }[];
+  collections: readonly { id: string; name: string }[];
+}
+```
+
+  Regla: **ninguna respuesta lleva secretos.** De una clave o un token la API solo devuelve si está configurado.
+- **Capa de datos:** `src/data/api.ts` define la interfaz `LudiaryApi` (estado de tiendas y servicios; `startWizard`, `submitWizard`, `cancelWizard` y `disconnect` sobre un `WizardTarget`; `getOnboarding` y `completeOnboarding`; `getSettings` y `updateSettings`; `getLibrary` y `getGame`) y exporta una única instancia. En este cambio es `src/data/mock.ts`, en memoria. Las pantallas no importan el simulador directamente. El simulador descarta los valores recibidos: no los registra, no los guarda y no los devuelve.
+- **Campos de secretos:** `type="password"`, `autoComplete="off"`, `spellCheck={false}`, sin elemento `<form>` (para que los gestores de contraseñas no ofrezcan guardarlos; Intro se maneja con `onKeyDown`). El botón Pegar llama a `navigator.clipboard.readText()` al pulsarlo; si falla o se deniega, enfoca el campo y muestra el texto «Pulsa Ctrl+V» (decisión 43). Se recortan espacios antes de validar. Nunca se escribe un valor en la consola.
+- **Validación en el cliente:** solo de formato, con el `pattern` y `maxLength` del paso. La comprobación real (llamada de prueba) es del servidor. Donde el formato no está publicado se usa un patrón permisivo, para no bloquear claves válidas (supuestos en la decisión 69).
+- **Enlaces externos:** solo URL `https`; la web descarta cualquier otra aunque venga del servidor. Se abren con `<a target="_blank" rel="noopener noreferrer">`. El enlace de OpenID no se abre en el simulador, que avanza el paso al pulsar Continuar; los enlaces a páginas públicas de creación de claves sí.
+- **CSP de la SPA** (la pondrá el servidor; ahora se configura igual en `preview.headers` de Vite para detectar infracciones con `vite preview`):
+  `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
+  - Sin `'unsafe-inline'` en estilos: la prop `style` de React escribe por CSSOM, que la CSP no bloquea; lo que sí se prohíbe es `<style>` en JSX y `dangerouslySetInnerHTML`.
+  - `vite dev` no aplica CSP (su recarga en caliente usa código en línea); por eso la comprobación es con `vite preview`.
+  - Las portadas simuladas son ficheros locales o degradados en CSS. No se enlazan imágenes de CDN de tiendas: por privacidad y por `img-src 'self'`. Cómo llegan las portadas reales (probablemente caché local servida por la API) se decide con los metadatos.
+- **Servidor de desarrollo:** `server.host: '127.0.0.1'`, `strictPort: true`, `preview.host: '127.0.0.1'`. Nunca `--host`.
+- **TypeScript:** `apps/web/tsconfig.json` extiende la base con `lib` `ES2023`, `DOM` y `DOM.Iterable`, `jsx: "react-jsx"` y `types: ["vite/client"]`. El `tsconfig.json` raíz excluye `apps/web`, y el script `typecheck` de la raíz comprueba los dos.
+- **Preferencias de presentación** (tema y menú lateral compactado): `localStorage` con claves `ludiary.theme` y `ludiary.sidebar`, de forma permanente; no son datos del usuario de la decisión 36. Dónde vive el estado del primer arranque y el idioma: decisión 69.
+
+**Motivo:** con datos simulados detrás de la forma del contrato, las pantallas avanzan sin abrir rutas que acepten secretos antes de que exista la clave de origen. Un enrutador propio evita una dependencia para nueve rutas sin anidamiento ni carga de datos. CSS Modules viene con Vite y evita choques de nombres sin dependencias. Las claves planas coinciden con las `I18nKey` completas que envían los conectores (`connectors.steam.…`). Alternativas descartadas: `react-router` 8.5 (dependencia y API de más para este tamaño; revisable si el enrutado crece); Tailwind o una librería de componentes (dependencias y estilo ajeno a un diseño ya aprobado); servir ya la SPA desde la API (obligaría a adelantar la clave de origen o a dejar `/` a medias); enrutado con `#` (evita la vuelta a `index.html`, pero ese coste es de una línea en el servidor).
+
+**Consecuencias:**
+
+- El cambio que sirva la SPA debe añadir los avisos de licencia de sus dependencias empaquetadas: el `build.mjs` actual solo recoge las del ejecutable, a partir del metafile de esbuild.
+- Elegir la librería de esquemas de `api-contract` queda pendiente para la primera ruta real.
+- Añadir carpetas en Ajustes no puede hacerse con un selector del navegador, que no da rutas. Hará falta un selector nativo abierto por el servidor (un puerto nuevo de la plataforma). En el simulador, el botón añade una ruta ficticia. Se decide con el escaneo.
+- El tester añade las pruebas unitarias del enrutador, de la validación de formato y de la paridad de claves; las de Playwright esperan al servidor con datos grabados (decisión 48).
+
+### 69. Asistente de primer arranque
+
+**Decisión (confirmada por el usuario el 21 de octubre de 2026):** al abrir la web sin primer arranque completado, la SPA lleva a `/welcome`. Cinco pasos; todos tienen «Saltar» y el asistente entero «Saltar todo». Terminar o saltar todo lo marca como completado. Se puede repetir desde Ajustes > General.
+
+1. **Bienvenida e idioma:** español o inglés, preseleccionado desde el navegador (decisión 33).
+2. **Detección de instalaciones:** las tres opciones de la decisión 42, con la explicación breve de qué se lee. Con «Configurarlo más tarde», el paso 3 avisa de que Ubisoft y EA no aparecerán.
+3. **Tiendas:** una tarjeta por tienda, con su asistente (el mismo componente que Ajustes > Tiendas).
+   - **Steam:** dos caminos. Completo: inicio de sesión con OpenID, botón que abre `https://steamcommunity.com/dev/apikey`, Pegar con comprobación de formato (32 caracteres hexadecimales, decisión 43) y aviso del perfil público. O **«Steam sin clave: solo instalados»**.
+   - **GOG y Epic:** abrir el login oficial (decisión 43), con el icono de vía no oficial (decisión 40).
+   - **Ubisoft y EA:** sin cuenta; texto de que se detectan instalados.
+4. **Servicios opcionales:** metadatos con IGDB o RAWG (uno de los dos, decisión 6). **RAWG es el recomendado por defecto** (confirmado por el usuario): una sola clave y alta más sencilla; IGDB queda como alternativa.
+   - **IGDB:** abrir `https://dev.twitch.tv/console/apps/create`, con instrucciones: cuenta de Twitch con verificación en dos pasos activada, nombre único, URL de redirección `http://localhost`, una categoría; luego **Manage**, copiar el Client ID y pulsar **New Secret** para el Client Secret. Dos campos con Pegar.
+   - **RAWG:** abrir `https://rawg.io/login/?forward=developer` y pegar la clave. Un campo.
+   - **IsThereAnyDeal:** no aparece en el asistente hasta la fase 3. En Ajustes se ve como «próximamente», sin campo.
+   - **En Ajustes**, las claves de IGDB, RAWG e IsThereAnyDeal van en una sección nueva, **«Servicios»**, junto a «Tiendas» (confirmado por el usuario).
+5. **Listo:** resumen de lo configurado y lo saltado, y botón a la biblioteca.
+
+- **Estado en esta fase sin servidor:** el primer arranque (`completedAt`, `detection`) y el idioma se guardan en `localStorage` (`ludiary.onboarding`, `ludiary.locale`), **solo dentro del simulador de la capa de datos**, para que las pantallas no sepan dónde se guardan. Destino final: tabla `settings` del servidor, ámbito de usuario, claves `onboarding.completedAt`, `detection.mode` y `ui.locale` (decisión 47). Como `localStorage` es por puerto, un cambio de puerto repite el asistente; se acepta mientras dure el simulador. Nunca se guarda un secreto ahí.
+
+**Supuestos (comprobados el 21 de octubre de 2026 salvo donde se indica):**
+
+- Steam: la clave se pide en `https://steamcommunity.com/dev/apikey`, que exige iniciar sesión (`steamcommunity.com/dev` lo confirma). El formato de 32 caracteres hexadecimales y las restricciones de cuentas limitadas no se pudieron ver sin sesión: siguen como supuesto. En el campo de dominio se recomienda `localhost` (supuesto: Valve no lo valida).
+- IGDB: la página de documentación de IGDB devolvió 403 a la consulta automática. Los pasos salen de la documentación de Twitch (registro de aplicaciones: consola, verificación en dos pasos obligatoria, **New Secret** invalida el anterior) y de guías de terceros (RomM: redirección `localhost`). El formato del Client ID y del secreto no está publicado: patrón permisivo `^[A-Za-z0-9]{20,64}$`. El token se obtiene en el servidor con `client_credentials`; el secreto nunca va al navegador.
+- RAWG: la clave se obtiene desde `https://rawg.io/login/?forward=developer` (la página enlaza la ruta relativa). Plan gratuito: hasta 20 000 peticiones al mes, uso no comercial según la tabla de precios (sus condiciones lo contradicen en parte) y **atribución obligatoria con enlace activo a RAWG en cada página que muestre sus datos**. Formato no publicado: patrón permisivo.
+- IsThereAnyDeal (fase 3): la aplicación se registra en `https://isthereanydeal.com/apps/my/`; la clave va en el parámetro `key` o en la cabecera `ITAD-API-Key`. Límite por defecto: 1000 peticiones cada 5 minutos. Piden enlazar o mencionar IsThereAnyDeal, no dar a entender afiliación y no quitar las etiquetas de afiliado. No dicen nada de que cada usuario aporte su clave en una aplicación abierta: hay que preguntarlo a `api@isthereanydeal.com` antes de la fase 3.
+
+**Motivo:** el orden va de lo que no exige nada al usuario (idioma, detección) a lo que exige crear cuentas o claves, para que quien salte el final ya tenga sus juegos instalados visibles. Ocultar IsThereAnyDeal evita pedir una clave para algo que aún no existe.
+
+**Consecuencias:**
+
+- Si se usa RAWG, la ficha y la biblioteca muestran «Datos de RAWG» con enlace (texto traducido).
+- El documentalista prepara guías con capturas de Steam, Twitch (IGDB) y RAWG.
+
+### 70. Fuentes tipográficas empaquetadas (amplía la decisión 60)
+
+**Decisión (confirmada por el usuario el 21 de octubre de 2026; no es asesoría legal):** Fraunces e Inter se empaquetan con la web desde npm, `@fontsource-variable/fraunces` 5.3.0 e `@fontsource-variable/inter` 5.3.0 (licencia `OFL-1.1` en su `package.json`, comprobado ese día). Nunca se cargan de Google Fonts ni de otro CDN (invariante 9). La lista de licencias permitidas de la decisión 60 añade `OFL-1.1`, **solo para ficheros de fuentes** distribuidos como recursos aparte, con su `LICENSE` copiado a los avisos de terceros.
+
+**Motivo:** la OFL permite redistribuir las fuentes con cualquier programa, incluido uno GPL, siempre que viajen con su licencia y no se vendan solas. Fontsource evita copiar ficheros a mano y fija la versión. Alternativas descartadas: Google Fonts (sale tráfico del equipo y lo bloquea la CSP); fuentes del sistema (cambia el diseño aprobado).
+
+**Consecuencias:** el comprobador de licencias de la CI acepta `OFL-1.1` solo en paquetes `@fontsource*`.
+
+### 71. Portadas de Steam desde su CDN (revisa el punto de portadas de la decisión 68; amplía las decisiones 6 y 40)
+
+**Decisión:**
+
+- **Qué (confirmado por el usuario el 21 de octubre de 2026):** los juegos de Steam usan la carátula que da Steam.
+- **Cómo (recomendado):** el navegador carga la imagen directamente del CDN de Steam (opción A). El servidor no descarga ni guarda imágenes.
+  - **Alcance:** solo para juegos canónicos con una propiedad de Steam, es decir, poseídos o detectados en Steam. Si un juego también está en otra tienda, gana la imagen de Steam. Un juego que solo está en GOG o Epic nunca pide nada a Steam, aunque se conozca su AppID por un ID externo. Así Valve no se entera de juegos de otras tiendas (invariante 9). Alcance confirmado por el usuario el 21 de octubre de 2026: solo los juegos que tiene en Steam, no los que solo se venden allí.
+  - **URL por AppID** (las construye el conector de Steam, en `media`):
+    - `coverUrl`: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/<appId>/library_600x900.jpg` (vertical, 600×900).
+    - Respaldo, `heroUrl` en `media`: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/<appId>/header.jpg` (460×215).
+    - Si la tienda da un `header_image` con ruta con hash, se usa ese, siempre que su host esté en `mediaHosts`.
+  - **Contrato:** el manifiesto del conector añade `mediaHosts: readonly string[]`, para Steam `shared.akamai.steamstatic.com`, `shared.cloudflare.steamstatic.com` y `shared.steamstatic.com`. El punto 4 de la decisión 40 pasa a exigir «URL de medios en `https` y con host en `mediaHosts`». `GameSummaryDto` añade `coverFallbackUrl?: string`.
+  - **CSP** (servidor y `preview.headers`; el resto no cambia): `img-src 'self' data: https://shared.akamai.steamstatic.com https://shared.cloudflare.steamstatic.com https://shared.steamstatic.com`. El servidor construye `img-src` a partir de la unión de los `mediaHosts`. Una prueba comprueba que la lista de `vite.config` coincide.
+  - **Referente:** cabecera `Referrer-Policy: no-referrer` en la SPA, en el servidor y en `preview.headers`. Además, `referrerPolicy="no-referrer"` en cada `<img>`, porque `vite dev` no aplica cabeceras. También `loading="lazy"`, `decoding="async"` y sin `crossorigin`.
+  - **Respaldo en la web:** si falla `coverUrl`, se prueba `coverFallbackUrl`, centrada con `object-fit: contain` sobre el degradado. Si también falla, queda el degradado local con el título (el actual). Sin reintentos.
+- **Simulador de `apps/web`:** los juegos de Steam simulados llevan AppID reales y sus dos URL con el formato de arriba. Los de otras tiendas siguen con el degradado.
+
+**Supuestos (comprobados el 21 de octubre de 2026):**
+
+- `appdetails` devuelve `header_image` en `shared.akamai.steamstatic.com/store_item_assets/steam/apps/<appId>/…`, a veces con un segmento de hash (RimWorld, Cyberpunk 2077, Portal 2, Hollow Knight, Disco Elysium, Baldur's Gate 3).
+- La ruta sin hash `…/<appId>/library_600x900.jpg` y `…/<appId>/header.jpg` devolvieron JPEG para Elden Ring, Cyberpunk 2077, Portal 2 y Baldur's Gate 3. Que valga para todos los juegos es un supuesto; el respaldo cubre el fallo.
+- `shared.cloudflare.steamstatic.com` responde con 301 a `shared.steamstatic.com`. La CSP comprueba también el destino de una redirección, por eso se declaran los dos.
+- `cdn.cloudflare.steamstatic.com/steam/apps/…` y `steamcdn-a.akamaihd.net/steam/apps/…` siguen sirviendo, pero son hosts antiguos: no se usan ni se declaran.
+- No hay documentación oficial de estos hosts ni de las rutas. Si Valve las cambia, la web cae al degradado; se corrige en el conector y en la lista de hosts.
+
+**Motivo:** en localhost la petición sale de la misma IP tanto si la hace el navegador como si la hace el servidor, y sin referente ni cookies de terceros Valve no sabe más de lo que ya sabe por la cuenta. La opción B (el servidor descarga, guarda en la carpeta de datos y sirve desde `'self'`) habría exigido una ruta nueva, gestión de la caché, límites de tamaño, validación del tipo de fichero y su limpieza, todo para el mismo resultado visible. Se descarta por ahora. Se revisa si hace falta modo sin conexión o si el modo Docker la necesita.
+
+**Consecuencias:**
+
+- Sin conexión, las portadas de Steam caen al degradado.
+- Las portadas de GOG y Epic, y el respaldo de IGDB o RAWG, seguirán este mismo patrón (`mediaHosts` y CSP derivada) cuando se implementen. Cada host nuevo pasa por el arquitecto.
+- El tester añade una prueba para la validación de `mediaHosts` y otra para la paridad de la CSP.
+- El auditor revisa la CSP y `Referrer-Policy` cuando el servidor sirva la SPA.
+
+### 72. Primer corte vertical de Steam: instalados, biblioteca y lanzamiento (amplía las decisiones 40, 42, 47, 50 y 68)
+
+**Decisión (recomendada, 21 de octubre de 2026; los tres puntos marcados «decide el usuario» quedan con la opción recomendada hasta que responda):**
+
+#### 1. Alcance
+
+- **Entra:** Steam en el modo «Steam sin clave: solo instalados» (decisión 43), de principio a fin:
+  - detección por las ubicaciones del registro y las bibliotecas de Steam (decisión 42) y por carpetas manuales;
+  - biblioteca y ficha reales servidas por la API;
+  - portadas desde el CDN de Steam (decisión 71);
+  - lanzamiento por ID con `steam://rungameid/<appId>`;
+  - asistente de primer arranque (decisión 69) y ajustes de detección (decisión 42) guardados en el servidor;
+  - la SPA servida por el servidor con la clave de origen (decisiones 67 y 68).
+- **Queda fuera, cada parte con su corte:**
+  - **Corte siguiente, cuenta de Steam:** OpenID, API key cifrada (decisión 46, con `SecretCipher`, tabla `secrets` y `store_connections`), `GetOwnedGames`, juegos no instalados, `open-store-page`, DLC de la biblioteca y motor de asistentes.
+  - **Corte 2b, tiempo de juego:** detección del proceso (decisión 55), `play_sessions` y última partida. Va justo después del corte de la cuenta y antes de GOG. Motivo: cerrar la 55 exige pruebas con juegos reales, con lanzador propio y con antitrampas, y elegir entre CIM y una llamada nativa. Ese trabajo no debe bloquear el lanzamiento. La 55 se cierra para Steam en ese corte y se revalida con cada tienda nueva.
+  - Favoritos, etiquetas y colecciones (decisión 36), copias periódicas y restauración (decisión 57), exportación de registros (decisión 59) y persistencia de las sesiones del navegador (ver el punto 10).
+- **Motivo de no meter ya la cuenta:** necesita cifrado de secretos, la ruta de vuelta de OpenID, un `HttpClient` con filtrado de secretos, respuestas grabadas de la API web y el motor de asistentes. Es otro tanto de trabajo, y su superficie de seguridad merece una auditoría propia. El modo solo instalados es un modo de producto confirmado (decisión 43), no un apaño, y valida ya todo el camino de lanzar y escanear, que es el mayor riesgo.
+
+#### 2. Contrato de los conectores (amplía la decisión 40)
+
+- `packages/contracts/src/connector.ts` contiene **todo** el contrato versión 1 de la decisión 40, con las ampliaciones de la 71 y de esta decisión. Son solo tipos y no cuestan nada. Tener el contrato entero evita reescribir la interfaz en cada corte.
+- **Implementado en este corte:** `ScanContext`, `LaunchContext`, `DiscoveryContext`, `ScopedFileReader`, `ConnectorLogger`, `ProgressReporter`, `ConnectorError`, las ubicaciones y la función pura `checkConnectorManifest`.
+- **Solo tipos hasta el corte de la cuenta:** `SyncContext`, `WizardContext`, `HttpClient`, `SecretVault`, `ExternalToolRunner` y `ConnectionWizard`.
+- **Ampliaciones compatibles:** son miembros opcionales o tipos nuevos, y `contractVersion` sigue en 1 porque no hay nada publicado.
+
+```ts
+// packages/contracts/src/connector.ts — additions of ADR 72 to contract version 1 (ADR 40, 71)
+export interface StoreConnector {
+  // ...everything in ADR 40...
+  /** ADR 71. HTTPS hosts of every media URL this connector returns. */
+  readonly mediaHosts: readonly string[];
+  /**
+   * Optional. Reads files under resolved 'scan' locations and returns more scan roots,
+   * e.g. the Steam library folders listed in libraryfolders.vdf. The core validates them
+   * (absolute, existing directory, at most 64), stores them as 'discovered' scan_roots and
+   * shows them in Settings with their own switch (ADR 42).
+   */
+  discoverRoots?(ctx: DiscoveryContext): Promise<readonly ResolvedLocation[]>;
+}
+
+export interface DiscoveryContext extends BaseContext {
+  /** Resolved locations of this connector with purpose 'scan'. */
+  readonly locations: readonly ResolvedLocation[];
+  /** Read-only, confined to those locations. */
+  readonly fs: ScopedFileReader;
+}
+
+export interface InstalledEntry {
+  // ...everything in ADR 40...
+  readonly externalIds?: Readonly<Partial<Record<'igdb' | 'rawg' | 'steamAppId', string>>>;
+  /** Same rules as StoreEntry.media: https and host in mediaHosts (ADR 71). */
+  readonly media?: { readonly coverUrl?: string; readonly heroUrl?: string; readonly iconUrl?: string };
+}
+
+export interface LaunchContext extends BaseContext {
+  readonly launchers: readonly ResolvedLocation[];
+  /**
+   * false when the user did not allow auto-detection (ADR 42): launcher locations were not
+   * looked up, so an empty `launchers` proves nothing and the connector must not report
+   * 'launch.launcher-missing' because of it.
+   */
+  readonly launchersResolved: boolean;
+  /** Confined to the launcher locations and the installPath of the property. */
+  readonly fs: ScopedFileReader;
+}
+
+/** Pure: lists what is wrong in a manifest (runtime refuses the connector at startup if non-empty). */
+export function checkConnectorManifest(c: StoreConnector): readonly string[];
+```
+
+- **`ScopedFileReader`** (semántica que el contrato no fijaba): UTF-8 sin BOM; `readText` como mucho de 1 MiB; `readDir` como mucho de 10 000 entradas. Toda ruta se resuelve con `realpath` y se rechaza si queda fuera de las raíces (`..`, uniones, enlaces simbólicos). Los errores son `ConnectorError` con `scan.root-unreadable`; una ruta fuera de las raíces da `internal`, porque es un fallo del conector. `join` sigue la semántica de rutas del SO.
+- **Manifiesto de Steam en este corte:**
+  - `access: 'official-api'`.
+  - Capacidades: `library: false` (pasa a `true` con la cuenta), `scan: true`, `dlc: 'none'`, `actions: ['play']`, `launchKinds: ['uri']`, `uriSchemes: ['steam']`, `storePlaytime: false`, `price: false`.
+  - `minSyncIntervalMs: 600_000` (decisión 50), `authHosts: []`, `externalTools: []`, `mediaHosts` de la decisión 71, sin `connection` ni `listLibrary`.
+  - `locations`:
+    - `steam-root` (`scan`): `HKCU\Software\Valve\Steam` → `SteamPath`; después `HKLM\SOFTWARE\Valve\Steam` → `InstallPath` con vista de 32 bits; después la carpeta conocida `ProgramFilesX86` + `Steam`.
+    - `steam-client` (`launcher`): `HKCU\Software\Valve\Steam` → `SteamExe`.
+- **Lógica del conector de Steam:**
+  - `discoverRoots` lee `<steam-root>\steamapps\libraryfolders.vdf`, con el formato nuevo (`"0" { "path" … }`) y con el antiguo (`"1" "D:\\SteamLibrary"`). Devuelve cada biblioteca con `declarationId: 'steam-root'` y `tag: 'library'`, incluida la propia carpeta de Steam.
+  - `scanInstalled` acepta como raíz una biblioteca (contiene `steamapps\`) o la propia carpeta `steamapps`. Lee cada `appmanifest_<id>.acf` y saca `appid`, `name` e `installdir`. Informa la entrada solo si existe `steamapps\common\<installdir>`. `installPath` es esa carpeta, `kind: 'game'` y `media` con las dos URL de la decisión 71. Excluye una lista de herramientas mantenida en el código y con pruebas (al menos `228980`, Steamworks Common Redistributables). Si falta `name`, el título es `Steam <appId>`: es un dato, no un texto de la interfaz.
+  - `resolveAction('play')` exige un `storeGameId` de solo dígitos (1 a 10). Si `launchersResolved` es `true` y no hay `steam-client` existente, lanza `launch.launcher-missing`. En otro caso devuelve `{ kind: 'uri', uri: 'steam://rungameid/<appId>' }`. Cualquier otra acción devuelve `null`.
+  - Analizador VDF (KeyValues de texto) propio, en `connectors/steam/src/vdf.ts`:
+    - Cadenas entre comillas con los escapes `\\`, `\"`, `\n` y `\t`, tokens sin comillas y comentarios `//`.
+    - Las condiciones `[$…]` se ignoran.
+    - Claves sin distinguir mayúsculas.
+    - Profundidad máxima de 32.
+    - Una entrada mal formada da `store.unexpected-response` solo para ese fichero, que se registra y se salta.
+  - Se descartan dependencias de npm para VDF porque el formato es pequeño y conviene probar los límites a fondo.
+
+#### 3. Puertos del SO y plataforma
+
+Puertos nuevos en `packages/contracts/src/ports.ts`, de los que la decisión 38 ya preveía tres:
+
+```ts
+/** ADR 38, 40 rule 8. Read-only: implementations never write the registry or launcher files (ADR 42). */
+export interface LocationResolver {
+  /** Every distinct existing path of the declaration on this OS, in source order (deduplicated with LocalFiles.compareKey). */
+  resolve(decl: LocationDeclaration): Promise<readonly ResolvedLocation[]>;
+}
+
+/** Path semantics and confined reading (ADR 38: the core treats paths as opaque strings). */
+export interface LocalFiles {
+  scoped(roots: readonly string[]): ScopedFileReader;
+  /** Absolute, OS separators, no trailing separator; keeps the original case. */
+  normalize(path: string): string;
+  isAbsolute(path: string): boolean;
+  /** True if `path` is `root` or below it, after realpath; case-insensitive on Windows; 'D:\\Games2' is not inside 'D:\\Games'. */
+  isInside(path: string, root: string): Promise<boolean>;
+  /** Equality key for uniqueness (lower-case on Windows). */
+  compareKey(path: string): string;
+  isDirectory(path: string): Promise<boolean>;
+}
+
+/** ADR 40 rule 5: never through a shell; the core validates the spec before calling. */
+export interface ProcessLauncher {
+  /** Kinds this platform can run; runtime refuses a connector whose launchKinds are not all here. */
+  readonly kinds: readonly ('uri' | 'exec')[];
+  /** Hands the URI to the OS handler of its scheme. */
+  openUri(uri: string): Promise<void>;
+  /** Detached, args as a list, no shell. Implemented with the GOG connector; until then `kinds` excludes 'exec'. */
+  exec(spec: { executable: string; args: readonly string[]; cwd?: string }): Promise<void>;
+}
+
+/** Native folder dialog on the user's desktop (localhost only). null if cancelled. Texts arrive translated. */
+export interface FolderPicker {
+  pick(opts: { title: string }): Promise<string | null>;
+}
+
+/** Time for the core, which must not use timers or Date directly (ADR 38). */
+export interface Clock {
+  now(): number;
+  timeout(ms: number): AbortSignal;
+}
+```
+
+- **`LocalFiles`** vive en `packages/platform-node`, que se crea ahora. Es genérico: `node:fs/promises` y `node:path` con la semántica de `process.platform`.
+- **`LocationResolver` de Windows** vive en `platform-windows`:
+  - Las carpetas conocidas salen del entorno (`ProgramFiles(x86)`, `ProgramData`, `LOCALAPPDATA`, `APPDATA`).
+  - El registro se lee con el auxiliar de Go, `ludiary-tray.exe --registry`. Recibe por la entrada estándar `{"queries":[{"hive":"HKCU","key":"…","value":"…","view":"32","kind":"value"}]}` y responde por la salida estándar con un JSON en UTF-8.
+  - El auxiliar abre las claves solo con `KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS` (`golang.org/x/sys/windows/registry`), así que no puede escribir aunque se le pida. Solo admite `HKCU` y `HKLM`.
+  - Las rutas leídas pasan por `LocalFiles.normalize`: `SteamPath` viene con `/` y en minúsculas.
+  - Alternativas descartadas: `reg.exe query` (salida en la página de códigos de la consola, que estropea rutas con caracteres no ASCII, y formato pensado para personas) y un módulo nativo de registro (otro `.node` que compilar, distribuir y firmar).
+- **`ProcessLauncher.openUri` de Windows** usa el mismo mecanismo que `openUrl`, ya validado en el prototipo: `spawn('rundll32.exe', ['url.dll,FileProtocolHandler', uri])`, sin shell, `windowsHide` y `detached`.
+  - Antes, la plataforma valida por su cuenta: `^[a-z][a-z0-9+.-]*:[\x21-\x7E]+$`, sin comillas, sin `%` seguido de algo que no sea hexadecimal, y como mucho 2048 caracteres. La lista de esquemas ya la comprobó el núcleo; esta es la segunda barrera.
+  - `PlatformInfo.openUrl` sigue admitiendo solo `http(s)`: abre el navegador y no es un lanzamiento. Se factoriza la llamada común.
+  - Si en las pruebas manuales `rundll32` no abriera `steam://`, la alternativa es `ludiary-tray.exe --open-uri` con `ShellExecuteW`. Las dos usan la API del sistema, no `cmd /c start`.
+- **`FolderPicker` de Windows:**
+  - Es `ludiary-tray.exe --pick-folder`, con `IFileOpenDialog` y `FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM`. Recibe el título traducido por la entrada estándar y responde `{"path":"…"}` o `{"cancelled":true}`.
+  - Si `IFileOpenDialog` sin CGO resultara demasiado frágil, se usa `SHBrowseForFolderW` con `BIF_NEWDIALOGSTYLE`, que es una llamada simple.
+  - Cierra la parte pendiente de la decisión 68 (**decide el usuario: punto A**).
+
+#### 4. Paquetes nuevos y qué contienen
+
+- **`packages/core`.** Solo importa `contracts`. Define los puertos de persistencia y los casos de uso:
+  - **Arranque:** asegura el único usuario y el dispositivo `local` (decisión 47). Al arrancar pasa a `idle` cualquier `sync_state` que quedara en `running` por un cierre brusco.
+  - **Registro de conectores:** valida `checkConnectorManifest`, que `contractVersion` sea 1 y que `ProcessLauncher.kinds` cubra los `launchKinds`.
+  - **Escaneo:**
+    - La espera es de 60 s desde el último intento, en **todas** las tiendas (amplía la decisión 50, que la fijaba para Ubisoft y EA). Los escaneos siguen sin el suelo de `minSyncIntervalMs` (regla 2 de la decisión 40). Un cambio de ajustes o de carpetas fuerza el escaneo sin esa espera.
+    - Raíces según el modo de detección:
+      - Sin primer arranque completado: no se escanea.
+      - `later`: ninguna raíz, sin llamar al conector, lo que retira las instalaciones detectadas.
+      - `manual-only`: solo las carpetas `user` activadas.
+      - `auto-and-manual`: además, `LocationResolver` → `discoverRoots` → carpetas `discovered` activadas.
+    - Cada conector corre aislado con `Promise.allSettled`, `AbortSignal` y un tiempo máximo de 60 s (`Clock.timeout`). Cualquier excepción que no sea `ConnectorError` pasa a `internal`.
+    - Validación de la regla 4 de la decisión 40:
+      - ID de 1 a 64 caracteres imprimibles y título de 1 a 300 sin caracteres de control.
+      - `installPath` absoluto y dentro de una raíz del contexto (`LocalFiles.isInside`).
+      - Medios en `https` con host en `mediaHosts`.
+      - `launchData` con 16 claves como mucho y valores de 1024 caracteres como mucho.
+      - Como mucho 10 000 entradas.
+      - Una entrada inválida se descarta y se registra; no tumba el escaneo. Un ID repetido se queda con la primera.
+    - **Plan de escaneo**, que el núcleo calcula y `db` aplica en **una** transacción:
+      - Propiedad nueva: se crea su juego canónico.
+      - Propiedad existente: se actualizan título, medios y la instalación del dispositivo.
+      - Instalación que ya no aparece: se borra la fila de `installations` solo si su ruta está bajo una raíz leída con éxito. Las que estén bajo una raíz de `unreadableRoots` se conservan.
+      - Instalación que ya no está bajo ninguna raíz vigente y activada: se borra. Así, desactivar una carpeta retira sus juegos.
+      - Propiedad detectada solo por escaneo (`owned = 0`) que se queda sin instalaciones: recibe `removed_at`. Su canónico deja de verse si todas sus propiedades están retiradas, pero no se borra, así que reaparece con sus datos al reinstalar.
+      - Las carpetas `discovered` que el conector deja de devolver se borran. Las nuevas entran activadas.
+  - **Emparejamiento mínimo** (decisión 51):
+    - `normalizeTitle` completo, con la lista de marcas de edición y sus pruebas, porque `normalized_title` se guarda ya.
+    - Regla de este corte: dos propiedades de **la misma tienda** no se unen nunca (son productos distintos). Con una sola tienda, cada propiedad tiene su canónico.
+    - La unión entre tiendas, `match_decisions` y `duplicate_candidates` llegan con la segunda tienda.
+  - **Biblioteca:** lista de canónicos con alguna propiedad no retirada, con su estado de instalación en este dispositivo y sus portadas. Si hay propiedad de Steam, gana su imagen (decisión 71). Ficha con propiedades y acciones según las capacidades y el estado de instalación.
+  - **Lanzamiento** (regla 5 de la decisión 40 e invariante 3):
+    - Entrada: `canonicalId` y, opcionalmente, `propertyId`, que tiene que ser de ese canónico.
+    - Sin `propertyId`, se elige la primera propiedad instalada en el orden fijo `steam, gog, epic, ubisoft, ea`.
+    - Comprobaciones:
+      - `play` está en `capabilities.actions`.
+      - El tipo está en `launchKinds` y en `ProcessLauncher.kinds`.
+      - Para `uri`, el esquema está en `uriSchemes`.
+      - Para `exec`, se aplica ya la comprobación completa de la regla 5, con pruebas, aunque ninguna plataforma lo ejecute todavía.
+    - Una especificación rechazada se registra con el ID del conector y devuelve `launch.rejected`.
+    - Un segundo lanzamiento del mismo canónico en menos de 5 s devuelve `already-starting` sin lanzar.
+    - La `LaunchSpec` nunca sale del núcleo.
+  - **Ajustes:** primer arranque (`onboarding.completedAt`), `detection.mode` y `ui.locale` en `settings` con ámbito de usuario (decisión 69). Carpetas: listar, activar o desactivar, añadir con `FolderPicker` (un solo diálogo a la vez) y quitar las de origen `user`.
+  - **Errores tipados:** `CoreError` con `code`, `key` y `params`. Códigos: `not-found`, `not-installed`, `action-unavailable`, `launch.rejected`, `launch.launcher-missing`, `busy`, `invalid-input`, `picker-unavailable`, más los de `ConnectorErrorCode` reexpuestos.
+  - **Fachada que consume `api`:**
+
+```ts
+// packages/core/src/index.ts (sketch)
+export interface CoreDeps {
+  connectors: readonly StoreConnector[];
+  library: LibraryRepository; scanRoots: ScanRootRepository; syncState: SyncStateRepository;
+  settings: SettingsRepository; identity: IdentityRepository;
+  files: LocalFiles; locations?: LocationResolver; launcher?: ProcessLauncher; folderPicker?: FolderPicker;
+  clock: Clock; newId: () => string; log: CoreLogger; t: (key: string) => string;
+}
+// locations/launcher/folderPicker absent => the mode cannot scan/launch (ADR 22, 38): capabilities say so.
+export interface LudiaryCore {
+  listLibrary(): Promise<readonly GameSummary[]>;
+  getGame(canonicalId: string): Promise<GameDetail | null>;
+  launch(canonicalId: string, propertyId?: string): Promise<{ status: 'started' | 'already-starting' }>;
+  requestSync(req: { trigger: 'open' | 'manual'; operations?: readonly ('library' | 'scan')[] }): Promise<void>;
+  storeStatus(): Promise<readonly StoreStatus[]>;
+  getSettings(): Promise<Settings>; updateSettings(patch: SettingsPatch): Promise<Settings>;
+  getOnboarding(): Promise<Onboarding>; completeOnboarding(mode: DetectionMode | null): Promise<void>; resetOnboarding(): Promise<void>;
+  setScanRootEnabled(id: string, enabled: boolean): Promise<void>;
+  pickScanRoot(): Promise<ScanRoot | null>; removeScanRoot(id: string): Promise<void>;
+}
+export function createCore(deps: CoreDeps): Promise<LudiaryCore>;
+```
+
+  - `requestSync` solo implementa la operación `scan`. La operación `library` se implementa con el primer conector que tenga `listLibrary`, en el corte de la cuenta: hoy no tendría a quién llamar.
+- **`packages/db`** (Drizzle 0.45.4 sobre `better-sqlite3`, decisión 41):
+  - Pasan aquí `openDatabase` y el cerrojo de instancia (decisión 62).
+  - **Primera migración `0001_library_scan`**, solo con lo que usa este corte (decisión 47):
+    - `users`, `devices`.
+    - `canonical_games`: `id`, `user_id`, `title`, `normalized_title`, `media`, `metadata_source`, `created_at`, `updated_at`.
+    - `game_properties`: `id`, `user_id`, `canonical_game_id`, `store`, `store_game_id`, `kind`, `title`, `normalized_title`, `owned`, `removed_at`, `store_metadata`.
+    - `installations`: con `user_id`, que la tabla de la decisión 47 omitía y su regla general exige.
+    - `scan_roots`: con `tag` y `path_key` (de `LocalFiles.compareKey`) además de las columnas de la decisión 47.
+    - `sync_state`, `settings`.
+    - Índices únicos: (`user_id`, `store`, `store_game_id`), (`property_id`, `device_id`) y (`user_id`, `device_id`, `origin`, `path_key`). Índice por (`user_id`, `normalized_title`).
+    - Las demás tablas y columnas de la 47 llegan con su funcionalidad.
+  - **Migrador propio:**
+    - Aplica el SQL que genera `drizzle-kit` (separado por `--> statement-breakpoint`), incluido en el bundle como texto (`loader: { '.sql': 'text' }` de esbuild). El migrador de Drizzle lee una carpeta del disco, que no existe dentro del SEA.
+    - Tabla `schema_migrations(id, hash, applied_at)` y una transacción por migración.
+    - Si la base ya tiene migraciones aplicadas y hay alguna pendiente, primero hace la copia previa de la decisión 57 (`db.backup()` en `%LOCALAPPDATA%\Ludiary\backups`, conservando 3).
+    - Una base con migraciones que esta versión no conoce (más nueva) no se abre: el servidor sale con 12 (decisión 64) y lo registra. La vuelta a una versión anterior es la de la decisión 58.
+  - Repositorios que implementan los puertos de `core`. Métodos asíncronos en la firma, aunque el controlador sea síncrono, para no atar el núcleo a él.
+- **`packages/platform-node`:** `LocalFiles` y `ScopedFileReader`, y el reloj real. `exec` llega con GOG.
+- **`connectors/steam`:**
+  - `src/` con el manifiesto, `vdf.ts`, `libraryfolders.ts`, `appmanifest.ts`, `scan.ts`, `launch.ts` y `createSteamConnector()`.
+  - `locales/es.json` y `en.json` con `connectors.steam.*`. Los textos simulados de Steam que hoy están en `packages/i18n/locales/web` se mueven aquí (decisión 68).
+  - `fixtures/` con árboles de ficheros sanitizados (ver «Pruebas»).
+  - `packages/i18n` agrega los catálogos con una importación JSON estática por conector (`src/connectors.ts`, una línea por tienda, igual que el registro de `runtime`). La prueba de paridad los cubre.
+- **`packages/connector-testkit`** (solo `contracts`):
+  - `memoryFiles(tree, { os: 'windows' })`: un `ScopedFileReader` y unas rutas de Windows en memoria, con los mismos límites y errores que el real.
+  - `scanContext()`, `discoveryContext()` y `launchContext()`, con registro y progreso que capturan.
+  - `assertConnectorConformance(connector)`: manifiesto válido, hosts de medios sin esquema ni barra, esquemas en minúsculas, `resolveAction` nunca devuelve una URI con otro esquema.
+  - Los dobles de HTTP y de herramientas llegan con el corte de la cuenta.
+
+#### 5. API HTTP
+
+- **Librería de esquemas: TypeBox** (cierra el pendiente de la decisión 68). `api-contract` exporta los esquemas como JSON Schema y los tipos con `Static<>`. Fastify los valida con su Ajv sin adaptadores ni proveedor de tipos: las rutas se tipan con genéricos y `Static`.
+  - Todos los cuerpos y consultas llevan `additionalProperties: false`. Así, un `uri`, `command` o `path` en la petición de lanzar da 400 (invariante 3).
+  - `apps/web` importa `api-contract` solo con `import type`, con `verbatimModuleSyntax` y una regla de ESLint, para que TypeBox no entre en la web.
+  - Supuesto: TypeBox 1.x se publica como `typebox` y la línea 0.34 sigue como `@sinclair/typebox` con soporte largo. Se usa la 1.x si su JSON Schema compila con el Ajv de Fastify 5.12. Si no, la 0.34. Se fija exacta al instalar y se anota aquí.
+  - Alternativas descartadas: Zod (necesita un adaptador a JSON Schema y un proveedor de tipos de terceros) y tipos sin validación (deja la validación de entrada a mano en rutas que lanzan procesos).
+- **Nivel de acceso** (decisión 67) en `config.access` de cada ruta. Un gancho después de `Host` y `Origin` lo aplica, y lo no declarado es `session+key`. El manejador de rutas no encontradas responde 404 JSON sin autenticar y no revela nada.
+
+| Método y ruta | Acceso | Cuerpo o consulta → respuesta |
+|---|---|---|
+| `GET /api/health` | `public` | Igual que hoy. |
+| `POST /api/launcher/challenge`, `POST /api/launcher/:action` | `public` (HMAC, decisión 63) | Igual que hoy. |
+| `GET /open?t=` | `public` | Página mínima con la clave de origen (punto 6). |
+| `GET /open.js` | `public` | Script estático, sin secretos. |
+| Estáticos y vuelta a `index.html` | `public` | Punto 6. |
+| `GET /api/status` | `session` | Igual que hoy (único `session`). |
+| `GET /api/library` | `session+key` | → `GameSummaryDto[]`. |
+| `GET /api/games/:id` | `session+key` | → `GameDetailDto` o 404. |
+| `POST /api/games/:id/launch` | `session+key` | `{ propertyId?: string }` → `202 { status: 'started' \| 'already-starting' }`. |
+| `POST /api/sync` | `session+key` | `{ trigger: 'open' \| 'manual', operations?: ('library' \| 'scan')[] }` → `202 StoreStatusDto[]`. |
+| `GET /api/stores` | `session+key` | → `StoreStatusDto[]`, solo de los conectores registrados. La web consulta cada segundo mientras alguno está en `running`. |
+| `GET /api/onboarding` | `session+key` | → `OnboardingDto`. |
+| `POST /api/onboarding/complete` | `session+key` | `{ detection: DetectionMode \| null }` → 204, y lanza el escaneo. |
+| `POST /api/onboarding/reset` | `session+key` | → 204. |
+| `GET /api/settings`, `PATCH /api/settings` | `session+key` | `{ locale?, detection? }` → `SettingsDto`. |
+| `PATCH /api/scan-roots/:id` | `session+key` | `{ enabled: boolean }` → `ScanRootDto`. |
+| `POST /api/scan-roots/pick` | `session+key` | `{}` → `201 ScanRootDto`, `200 { cancelled: true }` o `409 busy`. |
+| `DELETE /api/scan-roots/:id` | `session+key` | → 204. Solo las de origen `user`. |
+
+- Las lecturas de biblioteca, ficha, tiendas y ajustes quedan en `session+key` y no en `session`: llevan datos personales (juegos y rutas). Hoy no hay ninguna ruta `session` nueva que anotar en la decisión 67.
+- **Errores:** `{ error: string, detail?: TranslatedErrorDto }`. `not-found` da 404, `invalid-input` y la validación de esquema dan 400, `busy` da 409, los demás errores de dominio 422 y lo inesperado 500, sin detalle.
+- **Cambios en `api-contract` respecto al borrador v0:**
+  - Se añaden `LaunchRequestDto`, `LaunchResponseDto`, `SyncRequestDto`, `ScanRootPatchDto`, `SettingsPatchDto` y `ApiErrorDto.detail`.
+  - `ScanRootDto` añade `declarationId?`, `tag?` y `labelKey?`.
+  - En `SettingsDto`, `backups` y `autoUpdate` pasan a ser opcionales: si no vienen, la función no está disponible.
+  - `GameSummaryDto` y `GameDetailDto` quedan como en la decisión 71. `favorite` es `false` y `tags` va vacío hasta su corte.
+
+#### 6. Clave de origen y servir la SPA (decisiones 67 y 68, en el mismo cambio)
+
+- **`SessionStore`:** `redeemOpenLink` devuelve `{ session, originKey }` y guarda el SHA-256 de la clave junto a la sesión, en memoria. `authorize(cookieValues, originKeyHeader)` devuelve `ok`, `no-session` o `no-key`, y recorre todas las cookies con ese nombre (decisión 66), comparando en tiempo constante.
+- **`/open`:**
+  - Responde 200 con el HTML mínimo de la decisión 67: `<meta name="ludiary-origin-key" content="…">`, `<script src="/open.js"></script>` y `<noscript>` con el texto traducido.
+  - CSP `default-src 'none'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`.
+  - Un enlace inválido o caducado responde 403 con una página traducida («Vuelve a abrir Ludiary desde el acceso directo o desde la bandeja»), no con JSON.
+  - `/open.js` se genera en `api` a partir del `appId`: guarda la clave en `localStorage['ludiary.originKey']` y hace `location.replace('/')`. No sale de `apps/web/dist`, para que `/open` funcione aunque falte la web.
+- **Estáticos:**
+  - `runtime` lee una sola vez, al arrancar, la carpeta `web/` y entrega a `api` un mapa en memoria `ruta → { cuerpo, tipo, inmutable }`. Ocupa pocos MB, con las fuentes.
+  - Solo se sirve lo que está en el mapa, así que no hay rutas calculadas a partir de la petición ni recorrido de directorios. Tipos por extensión con una tabla cerrada.
+  - `/assets/*` lleva `Cache-Control: public, max-age=31536000, immutable`; lo demás, `no-store`. Se descarta `@fastify/static` porque una tabla en memoria es más pequeña y no tiene superficie de rutas.
+  - **Vuelta a `index.html`:** solo para `GET` de rutas que no empiezan por `/api/`, `/open` ni `/assets/`.
+  - Si falta la carpeta `web/`, el servidor arranca igual: `/` muestra una página traducida que pide reinstalar, y se registra el error.
+- **Cabeceras de la SPA:** la CSP de la decisión 68, con `img-src` construido por `runtime` a partir de la unión de los `mediaHosts` de los conectores registrados (decisión 71), y `Referrer-Policy: no-referrer`. La página de `/` generada en el servidor desaparece.
+- **La web:**
+  - Un único `fetch` envuelto en `src/data/http.ts` lee `localStorage['ludiary.originKey']` en **cada** petición (sin copiarla en memoria) y la envía en `X-Ludiary-Origin-Key`, con `credentials: 'same-origin'`.
+  - Con `401 origin_key_required`, borra la clave y muestra el aviso traducido de volver a abrir desde el acceso directo.
+  - Con `401 session_required`, muestra «no autorizado».
+  - Al arrancar pide `/api/status`.
+  - El filtro de registros elimina la cabecera (decisión 67).
+
+#### 7. Web: de simulador a API real
+
+- **Sin mezclar datos reales y simulados.** `isSimulated` pasa a ser una constante de compilación (`import.meta.env.VITE_LUDIARY_SIMULATOR === '1'`). `vite dev` y `vite preview` la activan con su script; la compilación que se empaqueta, no. Una prueba comprueba que `dist/` no contiene el simulador.
+- **El cliente real** (`src/data/real.ts`) implementa `LudiaryApi`:
+  - Los métodos sin servidor en este corte (`startWizard`, `submitWizard` y `disconnect` de tiendas y servicios, colecciones, copias, registros, `syncAll` de biblioteca, favoritos y etiquetas) rechazan con `NotAvailableError`.
+  - Las pantallas lo muestran como «Disponible próximamente» con el control desactivado, con texto traducido (**decide el usuario: punto B**).
+  - En la tarjeta de Steam, el camino completo del asistente sale como «próximamente» y el modo solo instalados está activo sin pasos.
+  - `simulateExpiredSession` solo existe en el simulador.
+- **`LudiaryApi`** añade `launchGame(id: string, propertyId?: string): Promise<{ status: 'started' | 'already-starting' }>` (también en el simulador, que no lanza nada). En `pages/Game.tsx`, Jugar lo llama, se desactiva 5 s y muestra «Abriendo en Steam…» o el error traducido.
+- **Al abrir la web** se llama a `POST /api/sync { trigger: 'open' }` (decisión 12). El botón de escanear usa `trigger: 'manual'`. Tras completar el primer arranque o cambiar la detección, el servidor ya escanea solo.
+
+#### 8. Proceso y tiempo de juego
+
+Fuera de este corte, en el corte 2b (punto 1). `installations.executables` no se crea todavía: Steam no lo informa en sus manifiestos y su primer uso es la detección del proceso.
+
+#### 9. Empaquetado
+
+- `apps/web/dist` se copia a una carpeta `web/` junto a `Ludiary.exe` (`apps/desktop/dist/app/web/`), no dentro del SEA:
+  - Las actualizaciones de la decisión 58 ya copian carpetas versionadas enteras.
+  - No hace falta la API de recursos del SEA.
+  - La carpeta del programa ya es de escritura solo para el usuario, igual que el propio exe.
+- `build.mjs` compila antes la web (`pnpm --filter @ludiary/web build`) y genera los avisos de sus dependencias de producción, incluidas las fuentes OFL con su `LICENSE` (decisiones 60 y 70).
+- El instalador incluye `web\*` de forma recursiva.
+- En la variante de pruebas, `LUDIARY_WEB_DIR` redirige la carpeta y se añade a la lista de ganchos de la decisión 65.
+- El auxiliar de Go suma `--registry` y `--pick-folder`, y sus módulos entran en los avisos por el `go list` ya existente.
+- Las migraciones viajan dentro del bundle (punto 4).
+
+#### 10. Lo que no cambia y conviene decir
+
+- Las sesiones del navegador siguen en memoria: no se crea `browser_sessions`.
+  - La decisión 54 se cumple mientras el servidor sigue en marcha.
+  - Tras reiniciar, la clave de origen ya no vale (decisión 67) y el uso normal pasa por el acceso directo. Persistirlas solo mantendría vivo `/api/status`.
+  - Se persisten cuando haya una ruta `session` con valor tras reiniciar, o si el usuario lo pide. El cambio es pequeño.
+- El idioma de la bandeja sigue saliendo del sistema o de `LUDIARY_LANG`. `ui.locale` se aplica a la web.
+
+#### Supuestos de Steam (no hay documentación oficial; se verifican con los juegos reales del desarrollador)
+
+1. `HKCU\Software\Valve\Steam` tiene `SteamPath` (con `/` y en minúsculas) y `SteamExe`. `HKLM\SOFTWARE\WOW6432Node\Valve\Steam` tiene `InstallPath`. Las fuentes son de terceros: NSIS, foros y la página de soporte de Steam con la variante WOW6432Node.
+2. `steamapps\libraryfolders.vdf` usa KeyValues con entradas numeradas `path` y `apps`. Pueden quedar instalaciones con el formato antiguo, de solo rutas.
+3. `appmanifest_<id>.acf` tiene la raíz `AppState` con `appid`, `name`, `installdir` (relativo a `steamapps\common`) y `StateFlags`. El significado de los bits de `StateFlags` no está documentado y no se usa. Contiene `LastOwner` (SteamID64): **nunca entra en fixtures ni en registros**.
+4. Los DLC no tienen manifiesto propio: el escaneo no informa DLC (`dlc: 'none'`).
+5. `steam://rungameid/<id>` arranca el juego, y abre Steam si estaba cerrado. Según la wiki comunitaria de Valve, es igual que `run` pero admite mods y accesos directos ajenos. No hay página oficial de Valve. Se usa `rungameid`, como dice la tabla de la decisión 40.
+6. `rundll32 url.dll,FileProtocolHandler` entrega `steam://` al manejador registrado igual que `http(s)`.
+7. El diálogo de carpetas abierto por el auxiliar, lanzado por un servidor en segundo plano, aparece en primer plano o al menos parpadea en la barra de tareas (reglas de primer plano de Windows, como en la decisión 64). Si queda oculto, se le da una ventana propietaria `TOPMOST`.
+
+**Motivo:** es el corte más pequeño que recorre todas las capas reales (plataforma → conector → núcleo → base de datos → API → web → lanzamiento) con la tienda mejor conocida y sin secretos de terceros. Así se puede auditar la parte más delicada (servir la SPA, la clave de origen y lanzar procesos) sin mezclarla con el cifrado de tokens. Leer el registro y abrir diálogos con el auxiliar de Go reutiliza una pieza ya firmada y distribuida, sin módulos nativos nuevos. `discoverRoots` hace visibles y desactivables las bibliotecas de Steam, que es lo que la decisión 42 promete en Ajustes, sin dar al conector acceso fuera de sus raíces.
+
+**Consecuencias:**
+
+- **Pruebas que pide el corte:**
+  - `connectors/steam`:
+    - VDF: escapes, comentarios, anidamiento, claves sin mayúsculas, BOM, fichero mal formado, límite de profundidad, condiciones.
+    - `libraryfolders`: formatos antiguo y nuevo.
+    - Escaneo sobre fixtures: dos bibliotecas, carpeta `common\<installdir>` ausente, herramienta `228980` excluida, títulos con caracteres no ASCII, appid repetido, raíz que es `steamapps`.
+    - `resolveAction`: solo dígitos, lanzador ausente con y sin `launchersResolved`, acciones distintas de `play`.
+    - URL de medios dentro de `mediaHosts` y conformidad con `connector-testkit`.
+  - Fixtures: comprobación de la decisión 48 ampliada con `LastOwner`, el patrón SteamID64 `7656119\d{10}` y rutas `C:\Users\…`.
+  - `platform-node`:
+    - `..`, rutas absolutas fuera, unión o enlace que escapa (con `realpath`), límites de tamaño y de entradas.
+    - `isInside` sin mayúsculas y la trampa del prefijo (`D:\Games2`), `normalize` con `/`.
+  - `platform-windows`:
+    - Protocolo de `--registry` con un auxiliar doble.
+    - Validación de `openUri` (esquema, caracteres de control, espacios, comillas, `%`, longitud) antes de lanzar nada.
+  - Auxiliar de Go: pruebas en Go del JSON de `--registry` y de que la máscara de acceso es solo de lectura.
+  - `core`:
+    - `normalizeTitle` y las marcas de edición.
+    - Plan de escaneo: nueva, actualizada, desaparecida, raíz ilegible conservada, raíz desactivada retirada, entradas inválidas descartadas, ID repetido.
+    - Los cuatro modos de detección, la espera de 60 s y el escaneo forzado.
+    - Aislamiento con un conector que falla, conversión a `internal`, tiempo máximo con reloj doble y `running` huérfano al arrancar.
+    - Lanzamiento: ID desconocido, no instalado, propiedad de otro canónico, esquema no permitido, tipo fuera de capacidades o de la plataforma, reglas de `exec`, doble clic y que la `LaunchSpec` no aparece en el resultado.
+  - `db`:
+    - Migración desde vacío, repetición sin efecto, base más nueva rechazada, copia previa solo con migraciones ya aplicadas (y se conservan 3).
+    - `user_id` en todas las tablas, claves foráneas, índices únicos y deshacer el plan si falla a medias.
+  - `api`:
+    - Las pruebas de la decisión 67.
+    - Ruta sin nivel → `session+key`.
+    - `/open` sin redirección, CSP y la clave fuera de la URL y de los registros.
+    - Estáticos: solo los del mapa, intentos de recorrido de directorios → 404, la vuelta a `index.html` nunca en `/api/` ni en `/assets/`, y CSP con `img-src` igual a la unión de `mediaHosts`.
+    - Lanzamiento con campos extra → 400 y correspondencia de los errores.
+  - `runtime`:
+    - Conector con otra `contractVersion` o con tipos que la plataforma no ejecuta → rechazado.
+    - Arranque sin carpeta `web/`.
+    - Paridad de la lista de `vite.config.ts` con los `mediaHosts` (decisión 71; vive aquí porque `runtime` es el único que conoce los conectores).
+  - Web:
+    - El envoltorio de `fetch` lee la clave en cada petición y la borra con `origin_key_required`.
+    - `NotAvailableError` se pinta como «próximamente».
+    - Jugar llama a `launchGame`.
+    - `dist/` sin simulador.
+  - `i18n`: paridad incluyendo `connectors/steam/locales`.
+  - Playwright (decisión 48): servidor de `runtime` en modo prueba con un árbol de Steam de fixtures en una carpeta temporal, `LocationResolver` doble y `ProcessLauncher` que graba. Casos: enlace → biblioteca → ficha → Jugar graba `steam://rungameid/<id>`; primer arranque con cada modo; desactivar una carpeta retira sus juegos.
+  - Prueba de humo del exe empaquetado: `/` sirve `index.html` y un `/assets/*`.
+- **Pruebas manuales** (las prepara el tester):
+  - Al menos tres juegos reales de Steam en dos bibliotecas, uno de ellos en una ruta con caracteres no ASCII.
+  - Lanzar con Steam cerrado y abierto.
+  - Steam desinstalado o sin `SteamExe`.
+  - Diálogo de carpetas en primer plano.
+  - Chrome, Edge y Firefox.
+- **Revisión del auditor** antes de cerrar: `/open` y la clave de origen, los estáticos y la CSP, `openUri`, `--registry` y `--pick-folder`, la validación del lanzamiento y las fixtures.
+- Los agentes `programador`, `conectores` y `empaquetador` tienen en este punto su especificación. El `documentalista` actualiza la guía de usuario (detección, carpetas, «próximamente») y la de solución de problemas («Steam no se abre al pulsar Jugar»).
+- Se cierran los pendientes de la decisión 68: librería de esquemas (TypeBox) y selector nativo de carpetas.
+- La decisión 55 sigue en propuesta y se cierra para Steam en el corte 2b.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -1572,7 +2193,8 @@ Sin fase asignada: juegos manuales y personalización de metadatos por el usuari
 Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 
 - Actualizador con vuelta atrás (decisión 58): por implementar y validar en Windows; condición que antes cerraba la 45.
-- Detección del proceso de cada juego: propuesta en la 55. Se cierra durante el conector de Steam, con al menos tres juegos por tienda.
+- Detección del proceso de cada juego: propuesta en la 55. Se cierra para Steam en el corte 2b de la 72 (tiempo de juego, después del corte de la cuenta de Steam y antes de GOG), con al menos tres juegos reales, y se revalida con cada tienda nueva.
+- Tres puntos de producto de la decisión 72: (A) selector nativo de carpetas en este corte o, mientras tanto, ocultar «Solo las carpetas que yo indique»; (B) funciones aún sin servidor mostradas como «Disponible próximamente» u ocultas; (C) confirmar el orden de cortes: cuenta de Steam, tiempo de juego y GOG.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 67 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 72 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

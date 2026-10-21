@@ -1,0 +1,132 @@
+.wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--ln);
+  border-radius: 14px;
+  background: var(--bg);
+}
+.wizard h3,
+.wizard h4 {
+  font: 600 18px var(--font-display);
+  margin: 0;
+}
+.wizard h4:focus {
+  outline: none;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field label {
+  font-weight: 600;
+}
+.fieldRow {
+  display: flex;
+  gap: 8px;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 1px solid var(--ln);
+  background: var(--sf);
+  color: var(--tx);
+  font: 14px var(--font-ui);
+}
+.input[aria-invalid="true"] {
+  border-color: var(--err);
+}
+.field p {
+  min-height: 1.5em;
+  font-size: 13px;
+}
+.buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.note {
+  font-size: 13px;
+  color: var(--mu);
+}
+.rejected {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--err);
+  color: var(--err);
+  font-weight: 500;
+}
+
+/* Settings and onboarding rows for stores and services. */
+.target {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 0;
+  border-top: 1px solid var(--ln);
+}
+.targetHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.targetInfo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 240px;
+}
+.targetInfo b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.targetInfo small {
+  color: var(--mu);
+  font-size: 13px;
+  display: block;
+}
+.unofficial {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: 1px solid var(--ln);
+  background: var(--bg);
+  color: var(--mu);
+  cursor: help;
+  padding: 0;
+}
+.tip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: 300px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--tx);
+  color: var(--bg);
+  font: 400 13px/1.45 var(--font-ui);
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 5;
+}
+.unofficial:hover .tip,
+.unofficial:focus-visible .tip {
+  opacity: 1;
+}
