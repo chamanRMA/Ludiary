@@ -17,9 +17,9 @@ La fuente de verdad es `docs/adr/ADR.md`. Cuando una decisión posterior revisa 
 
 ### 1. Seguridad del servidor local (ADR 7, 23, 28, 29)
 
-- En localhost escucha **solo en `127.0.0.1`**. En modo servidor LAN escucha en la red local, pero mantiene validación y token.
+- En localhost escucha **solo en la interfaz de bucle local (`127.0.0.1` y `[::1]`, mismo puerto; la web se abre en `ludiary.localhost`, ADR 66)**. En modo servidor LAN escucha en la red local, pero mantiene validación y token.
 - Cada petición valida `Origin` y `Host`, con el **puerto vigente** (no uno fijo en el código).
-- Toda acción que cambia datos o lanza procesos exige el **token de instalación**.
+- Toda acción que cambia datos o lanza procesos exige **la prueba HMAC del token de instalación, que nunca viaja (ADR 63)**. La cookie del navegador sola no basta para esas acciones (ver la corrección de las decisiones 63 y 66).
 - **Se lanza solo por el ID de un juego guardado en la base de datos.** Busca cualquier ruta, comando o argumento que llegue por la API y se ejecute. Es el hallazgo más grave posible.
 - Los procesos externos se invocan con argumentos en lista, sin shell y sin concatenar cadenas.
 - El enlace de apertura es de un solo uso, de corta duración y se invalida al canjearlo. La cookie de sesión es `HttpOnly`; su valor es un secreto aleatorio y revocable.
@@ -127,3 +127,5 @@ Criterios de gravedad:
 4. No arreglas nada: describes y recomiendas. El arreglo lo hace el agente de la zona.
 5. Si encuentras un secreto real en el repositorio, indícalo como **crítico** y recomienda rotarlo y limpiar el historial, sin repetirlo en el informe.
 6. Si dos decisiones del ADR se contradicen, no elijas: avisa al arquitecto.
+
+- Ninguna ruta de la API del navegador que cambie datos, lance procesos, muestre o acepte secretos o exporte ficheros se autoriza solo con la cookie: también exige la clave de origen (ADR 67).

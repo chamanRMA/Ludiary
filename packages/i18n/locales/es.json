@@ -2,6 +2,7 @@
   "app.name": "Ludiary",
   "tray.tooltip": "Ludiary",
   "tray.open": "Abrir Ludiary",
+  "tray.openAlt": "Abrir con la dirección alternativa (127.0.0.1)",
   "tray.quit": "Salir",
   "tray.status": "Servidor activo en el puerto {port}",
   "web.home.title": "Ludiary",

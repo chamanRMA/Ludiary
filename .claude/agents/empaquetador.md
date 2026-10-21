@@ -23,7 +23,7 @@ El diseño completo está en `docs/adr/ADR.md`. Si una decisión abierta te bloq
 - **Una sola instancia:** el lanzador detecta un servidor activo antes de arrancar otro, con una comprobación de estado en su puerto local.
 - **Puerto:** libre automático en el primer arranque, guardado para los siguientes, configurable por el usuario. El comprobador de estado identifica la aplicación, de modo que el acceso directo distingue un servidor propio ya en marcha de otro programa que ocupe el puerto. Si el puerto guardado lo ocupa otro programa, se elige uno libre nuevo y se actualiza el valor guardado. La dirección de la web puede cambiar y el acceso directo siempre abre la correcta (ADR 28).
 - **Autorización del navegador:** el acceso directo o la bandeja piden al servidor un enlace de apertura de un solo uso y de corta duración; el servidor lo canjea por una cookie de sesión `HttpOnly` y lo invalida (ADR 29). El usuario no escribe nada.
-- **Seguridad del servidor local:** solo `127.0.0.1`, validación de `Origin` y `Host` con el puerto vigente, token por instalación (ADR 23). El token lo gestiona el sistema; el usuario no lo escribe.
+- **Seguridad del servidor local:** solo en la interfaz de bucle local (`127.0.0.1` y `[::1]`, mismo puerto; la web se abre en `ludiary.localhost`, ADR 66), validación de `Origin` y `Host` con el puerto vigente, la prueba HMAC del token de instalación, que nunca viaja (ADR 63). El token lo gestiona el sistema; el usuario no lo escribe.
 
 ### Claves y datos
 

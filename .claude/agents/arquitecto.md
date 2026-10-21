@@ -51,7 +51,7 @@ La fuente de verdad completa es `docs/adr/ADR.md`. Lo de abajo es la versión co
 
 ### Seguridad
 
-- En localhost: escucha solo en `127.0.0.1`, valida `Origin` y `Host`, exige token de instalación en acciones que cambian datos o lanzan procesos, y lanza **solo por ID de juego guardado**, nunca por comandos libres (ADR 23).
+- En localhost: escucha solo en la interfaz de bucle local (`127.0.0.1` y `[::1]`, mismo puerto; la web se abre en `ludiary.localhost`, ADR 66), valida `Origin` y `Host`, exige la prueba HMAC del token de instalación, que nunca viaja (ADR 63) en acciones que cambian datos o lanzan procesos, y lanza **solo por ID de juego guardado**, nunca por comandos libres (ADR 23).
 - Autorización del navegador: el acceso directo o la bandeja piden un enlace de apertura de un solo uso y corta duración; el servidor lo canjea por una cookie de sesión `HttpOnly` y lo invalida (ADR 29).
 - Puerto: libre automático en el primer arranque, guardado para los siguientes y configurable. Un comprobador de estado identifica la aplicación. Si otro programa ocupa el puerto guardado, se elige uno nuevo (ADR 28).
 - Tokens, sesiones y claves de terceros cifrados en reposo. La clave vive fuera de la base de datos: almacén de credenciales del SO en localhost; variable de entorno o Docker secret en Docker. Perder la clave obliga a reconectar las tiendas, no a reconstruir la biblioteca (ADR 14, 31).

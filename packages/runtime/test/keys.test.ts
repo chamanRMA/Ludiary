@@ -65,7 +65,7 @@ describe("launcher talking to whoever holds the port (ADR 63)", () => {
     });
     const port = await server.listen(0);
     try {
-      expect(await callServer(port, key, "open-link")).toMatch(new RegExp(`^http://127\\.0\\.0\\.1:${port}/open\\?t=`));
+      expect(await callServer(port, key, "open-link")).toMatch(new RegExp(`^http://ludiary\\.localhost:${port}/open\\?t=`));
       expect(await callServer(port, Buffer.alloc(32, 2), "open-link")).toBeNull();
     } finally {
       await server.close();

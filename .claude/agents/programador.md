@@ -33,7 +33,7 @@ Escribes código limpio, probado y fiel al ADR (`docs/adr/ADR.md`). Si una tarea
 
 - Lanzar un juego se hace **solo por el ID de un juego guardado en la base de datos**. Nunca ejecutes una ruta, un comando ni un argumento que llegue por la API.
 - Al invocar procesos externos pasa los argumentos como lista, nunca concatenados en una cadena ni a través de un shell.
-- En localhost el servidor escucha solo en `127.0.0.1`. Valida las cabeceras `Origin` y `Host` en cada petición, usando siempre el puerto vigente. Exige el token de instalación en toda acción que cambie datos o lance procesos.
+- En localhost el servidor escucha solo en la interfaz de bucle local (`127.0.0.1` y `[::1]`, mismo puerto; la web se abre en `ludiary.localhost`, ADR 66). Valida las cabeceras `Origin` y `Host` en cada petición, usando siempre el puerto vigente. Exige la prueba HMAC del token de instalación, que nunca viaja (ADR 63) en toda acción que cambie datos o lance procesos.
 - El navegador se autoriza con un enlace de apertura de un solo uso, de corta duración, que se canjea por una cookie de sesión `HttpOnly` y se invalida. El valor de la cookie es un secreto aleatorio y revocable.
 - Tokens, sesiones y claves de terceros (IGDB, RAWG, IsThereAnyDeal) se guardan cifrados. La clave de cifrado vive fuera de la base de datos. Hasta que el arquitecto fije algoritmo y formato, aísla el cifrado tras una interfaz (`SecretStore`) y usa solo primitivas estándar de `node:crypto`. **No inventes criptografía propia.**
 - Nunca escribas secretos, tokens ni datos personales en el repositorio, en los registros ni en los datos de prueba.
@@ -88,3 +88,5 @@ Escribes código limpio, probado y fiel al ADR (`docs/adr/ADR.md`). Si una tarea
 - La tarea contradice una decisión del ADR.
 - Depende de una decisión abierta: estructura del repositorio y contrato de conectores, modelo de datos detallado, formato de los tokens cifrados, reglas de normalización de nombres, DLC sin juego base, rango de puertos, duración de la sesión, intervalo mínimo de sincronización, detección del proceso de un juego.
 - Necesitas ejecutar o almacenar algo con credenciales reales.
+
+- Ninguna ruta de la API del navegador que cambie datos, lance procesos, muestre o acepte secretos o exporte ficheros se autoriza solo con la cookie: también exige la clave de origen (ADR 67).

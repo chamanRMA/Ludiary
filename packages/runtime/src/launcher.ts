@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { launcherProof, proofsEqual, serverProof, type LauncherAction } from "@ludiary/api";
+import { launcherProof, proofsEqual, serverProof, webHostName, type LauncherAction } from "@ludiary/api";
 import { translate, type MessageKey } from "@ludiary/i18n";
 import { APP_ID, EXIT, INSTALL_TOKEN_NAME, MAX_MASTER_KEY_ID, localeOf, masterKeyName, type RuntimeDeps } from "./deps";
 import { createFileLogger, type Logger } from "./files";
@@ -14,9 +14,12 @@ const STOP_TIMEOUT_MS = 15_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const NONCE = /^[A-Za-z0-9_-]{43}$/;
 
-/** True only for `http://127.0.0.1:<port>/open?t=<base64url>` with nothing else in it. */
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** True only for `http://ludiary.localhost:<port>/open?t=<base64url>` with nothing else in it (ADR 63, 66). */
 export function isOwnOpenUrl(url: unknown, port: number): url is string {
-  return typeof url === "string" && new RegExp(`^http://127\\.0\\.0\\.1:${port}/open\\?t=[A-Za-z0-9_-]{43}$`).test(url);
+  const host = escapeRegExp(webHostName(APP_ID));
+  return typeof url === "string" && new RegExp(`^http://${host}:${port}/open\\?t=[A-Za-z0-9_-]{43}$`).test(url);
 }
 
 /** Re-read on every attempt: a server started a moment ago may have just created it. */

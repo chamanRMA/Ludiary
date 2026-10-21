@@ -110,7 +110,6 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     log("info", `sqlite ${dbStatus.sqliteVersion} journal=${dbStatus.journalMode}`);
 
     const locale = localeOf(deps);
-    const sessions = new SessionStore();
     let exitResolve: (code: number) => void = () => {};
     const exited = new Promise<number>((resolve) => (exitResolve = resolve));
     let tray: TrayHost | null = null;
@@ -121,7 +120,8 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         appId: APP_ID,
         version: deps.version,
         launcherKey: installToken,
-        sessions,
+        // One store per attempt: a link minted while an attempt was half-listening dies with that attempt (ADR 66).
+        sessions: new SessionStore(),
         t: (key) => translate(locale, key),
         getStatus: () => ({
           locale,
@@ -136,7 +136,8 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     const { server, port } = await listenOnAvailablePort(makeServer, saved, log);
     if (saved !== null && saved !== port) log("info", `saved port ${saved} was busy; now using ${port}`);
     writeRuntimeInfo(platform.dataDir, { version: deps.version, port, pid: process.pid });
-    log("info", `listening on 127.0.0.1:${port}`);
+    if (server.ipv6) log("info", `listening on 127.0.0.1 and [::1]:${port}`);
+    else log("warn", `listening on 127.0.0.1:${port} only: this machine has no IPv6 loopback`);
 
     shutdown = async () => {
       if (stopping) return;
@@ -159,14 +160,17 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         items: [
           { id: "status", label: translate(locale, "tray.status", { port }), enabled: false },
           { id: "open", label: translate(locale, "tray.open") },
+          // Plan B of ADR 66 for a browser that does not resolve ludiary.localhost.
+          { id: "open-alt", label: translate(locale, "tray.openAlt") },
           { id: "quit", label: translate(locale, "tray.quit") },
         ],
       });
       const host = deps.createTray();
       host.onClick((id) => {
         if (id === "quit") void shutdown();
-        else if (id === "open" || id === "@default") {
-          platform.openUrl(server.createOpenUrl()).catch((e: Error) => log("error", `open failed: ${e.message}`));
+        else if (id === "open" || id === "@default" || id === "open-alt") {
+          const url = server.createOpenUrl(id === "open-alt" ? "ip" : "name");
+          platform.openUrl(url).catch((e: Error) => log("error", `open failed: ${e.message}`));
         }
       });
       host.onLost((reason) => log("error", `tray lost: ${reason}`));

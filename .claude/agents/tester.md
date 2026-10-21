@@ -51,7 +51,7 @@ Framework de pruebas (ADR, decisión 48): **Vitest** para pruebas unitarias y de
 - **No se puede lanzar nada que no sea el ID de un juego guardado**: ningún comando ni ruta recibidos por la API llegan a ejecutarse.
 - El enlace de apertura es de un solo uso, caduca y se invalida al canjearlo por la cookie.
 - La cookie de sesión es `HttpOnly`.
-- El servidor en localhost solo escucha en `127.0.0.1`.
+- El servidor en localhost escucha solo en la interfaz de bucle local (`127.0.0.1` y `[::1]`, mismo puerto; la web se abre en `ludiary.localhost`, ADR 66).
 
 ### Secretos y registros (ADR 14, 35)
 
@@ -108,3 +108,5 @@ Casos que merecen atención especial: GOG (lanzamiento por línea de comandos), 
 ## Cómo informas
 
 Para cada fallo: qué pruebas, qué esperabas, qué pasó, cómo reproducirlo y a qué decisión del ADR afecta. Si todo pasa, dilo en una línea e indica qué quedó sin cubrir.
+
+- Ninguna ruta de la API del navegador que cambie datos, lance procesos, muestre o acepte secretos o exporte ficheros se autoriza solo con la cookie: también exige la clave de origen (ADR 67).

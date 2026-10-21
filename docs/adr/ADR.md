@@ -35,13 +35,13 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 20 | Emparejamiento de juegos entre tiendas | Vigente (confirmada por el usuario); concretada en la 51 |
 | 21 | DLC y contenidos adicionales | Vigente |
 | 22 | Lanzamiento y escaneo directos en modo localhost | Vigente |
-| 23 | Seguridad local del servidor | Vigente; ampliada en la 63 |
+| 23 | Seguridad local del servidor | Vigente; ampliada en la 63, la 66 y la 67 |
 | 24 | Comparador de precios: IsThereAnyDeal primero | Vigente |
 | 25 | Secuencia: localhost primero, Docker después | Vigente |
 | 26 | Instalador y acceso directo en localhost | Vigente; instancia única concretada en la 62 |
 | 27 | Sistemas operativos del modo localhost | Vigente |
-| 28 | Puerto del servidor local | Vigente |
-| 29 | Autorización del navegador | Vigente (confirmada por el usuario); duración en la 54 |
+| 28 | Puerto del servidor local | Vigente; ampliada en la 66 |
+| 29 | Autorización del navegador | Vigente (confirmada por el usuario); duración en la 54; dirección en la 66; segundo factor ligado al origen en la 67 |
 | 30 | Audiencia y modelo de proyecto | Vigente |
 | 31 | Claves de servicios de terceros | Vigente |
 | 32 | Actualización de la aplicación en modo localhost | Vigente |
@@ -66,7 +66,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 51 | Normalización de nombres y ediciones dudosas | Vigente (confirmada por el usuario) |
 | 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario) |
 | 53 | Puerto: dónde se guarda y rango permitido | Vigente (confirmada por el usuario) |
-| 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63 |
+| 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63; segundo factor y cookie de la dirección alternativa en la 67 |
 | 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
 | 56 | Tiempo de juego propio y tiempo informado por las tiendas | Vigente (confirmada por el usuario) |
 | 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18) |
@@ -75,9 +75,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario) |
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
 | 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26) |
-| 63 | Autenticación entre el lanzador y el servidor local | Vigente (confirmada por el usuario; amplía la 23 y revisa el token de la 46) |
+| 63 | Autenticación entre el lanzador y el servidor local | Vigente (confirmada por el usuario; amplía la 23 y revisa el token de la 46); URL del enlace revisada en la 66; alcance de la sesión ligada al puerto corregido en la 67 |
 | 64 | Errores fatales visibles y credenciales no reconocidas | Vigente (compartimento de claves decidido por el usuario; amplía las 35, 45 y 46) |
 | 65 | Ganchos de prueba y opciones de Node en el ejecutable publicado | Vigente (recomendada; amplía la 45) |
+| 66 | Dirección de la web: `ludiary.localhost` | Vigente (recomendada; nombre aceptado por el usuario; amplía las 23, 28 y 29 y revisa la URL del enlace de la 63); alcance de la sesión ligada al puerto corregido en la 67 |
+| 67 | Segundo factor ligado al origen y cookie de la dirección alternativa | Vigente (recomendada; amplía las 29 y 54 y corrige las 63 y 66) |
 
 ## Decisiones
 
@@ -285,7 +287,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - El agente local futuro es este mismo ejecutable funcionando como cliente de un servidor casero.
 - Las URI de EA han dado fallos en algunos juegos reportados: su conector debe validarse con juegos reales.
 
-### 23. Seguridad local del servidor (amplía la decisión 7; ampliada en la decisión 63)
+### 23. Seguridad local del servidor (amplía la decisión 7; ampliada en las decisiones 63, 66 y 67)
 
 **Decisión:** en modo localhost el servidor escucha solo en `127.0.0.1`, valida las cabeceras `Origin` y `Host` de cada petición, exige un token por instalación en las acciones que cambian datos o lanzan procesos, y lanza juegos únicamente por el ID de un juego guardado en la base de datos, nunca por comandos libres recibidos por la API.
 
@@ -295,7 +297,9 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 
 - En modo servidor LAN se escucha en la red local, pero se mantienen la validación de cabeceras y el token.
 - El token lo gestiona el sistema; el usuario no lo escribe.
-- **Ampliación (decisión 63):** se considera también la amenaza de otro usuario sin privilegios del mismo equipo, que comparte los puertos de `127.0.0.1`. El token de instalación no viaja nunca en claro: el lanzador y el servidor se autentican mutuamente con HMAC-SHA256 sobre un nonce de un solo uso, y el lanzador solo abre un enlace cuya prueba y formato ha comprobado. Las sesiones del navegador quedan ligadas al puerto en el que se crearon.
+- **Ampliación (decisión 63):** se considera también la amenaza de otro usuario sin privilegios del mismo equipo, que comparte los puertos de `127.0.0.1`. El token de instalación no viaja nunca en claro: el lanzador y el servidor se autentican mutuamente con HMAC-SHA256 sobre un nonce de un solo uso, y el lanzador solo abre un enlace cuya prueba y formato ha comprobado. Las sesiones del navegador quedan ligadas al puerto en el que se crearon (alcance corregido en la decisión 67: eso revoca sesiones al cambiar de puerto, pero no impide reutilizar una cookie robada).
+- **Ampliación (decisión 66):** «solo en `127.0.0.1`» pasa a ser «solo en la interfaz de bucle local»: el servidor escucha en `127.0.0.1` y en `[::1]`, en el mismo puerto, y nunca en otra interfaz. `Host` y `Origin` se validan contra una lista cerrada con el nombre `ludiary.localhost` y la dirección `127.0.0.1`, siempre con el puerto vigente.
+- **Ampliación (decisión 67):** el «token por instalación en las acciones que cambian datos o lanzan procesos» se concreta, para el navegador, en dos factores: la cookie de sesión y una clave ligada al origen que la página envía en una cabecera. La cookie sola no autoriza ninguna de esas acciones.
 
 ### 24. Comparador de precios: IsThereAnyDeal primero (revisa la decisión 9)
 
@@ -343,7 +347,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - En Linux y macOS habrá menos tiendas disponibles.
 - El modo servidor en Docker no depende de esta decisión.
 
-### 28. Puerto del servidor local
+### 28. Puerto del servidor local (ampliada en la decisión 66)
 
 **Decisión:** en el primer arranque el servidor elige un puerto libre automáticamente y lo guarda para los siguientes arranques. El usuario puede cambiarlo en la configuración.
 
@@ -353,8 +357,9 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - Si el puerto guardado lo ocupa otro programa, se elige uno libre nuevo y se actualiza el valor guardado.
 - Las comprobaciones de `Origin` y `Host` (decisión 23) deben usar siempre el puerto vigente.
 - La dirección de la web puede cambiar entre instalaciones o tras un conflicto; el acceso directo siempre abre la correcta.
+- **Ampliación (decisión 66):** un puerto solo se da por bueno si se puede abrir a la vez en `127.0.0.1` y en `[::1]`. Si cualquiera de los dos está ocupado, se pasa al siguiente candidato.
 
-### 29. Autorización del navegador (concreta la decisión 23; duración en la decisión 54)
+### 29. Autorización del navegador (concreta la decisión 23; duración en la decisión 54; dirección en la decisión 66; segundo factor en la decisión 67)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** en modo localhost, el acceso directo o la bandeja piden al servidor un enlace de apertura de un solo uso y de corta duración. Al abrirlo, el servidor lo canjea por una cookie de sesión (`HttpOnly`) y lo invalida. A partir de ahí el navegador queda autorizado sin login.
 
@@ -364,6 +369,8 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 
 - Si el usuario borra la cookie o usa otro navegador, vuelve a abrir la web desde el acceso directo o desde la bandeja.
 - Las cookies no distinguen puertos dentro del mismo host: su valor es un secreto de sesión aleatorio y revocable.
+- **Ampliación (decisión 66):** el enlace de apertura y la web usan `http://ludiary.localhost:<puerto>/`. La cookie queda ligada a ese nombre, así que ya no se envía a otros programas de `127.0.0.1` ni de `localhost`. La bandeja ofrece además abrir con `127.0.0.1` como dirección alternativa. Matiz (decisión 67): la cookie sí se envía a `ludiary.localhost:<otro puerto>`, y la de la dirección alternativa a cualquier `127.0.0.1:<puerto>` mientras el navegador siga abierto.
+- **Ampliación (decisión 67):** la cookie sola no autoriza acciones que cambien datos, lancen procesos o muestren o acepten secretos. Hace falta además la clave de origen que se entrega al canjear el enlace.
 - **Modo servidor (decisión del usuario):** el enlace de un solo uso no sirve, porque el navegador no está en el mismo equipo que el servidor. En ese modo se entra con un login local (contraseña o PIN) que se crea en la primera puesta en marcha y que sustituye al enlace; la cookie de sesión es la misma. Los detalles (PIN o contraseña, límite de intentos, recuperación) se concretan en la fase 2, junto con el multiusuario.
 
 ### 30. Audiencia y modelo de proyecto
@@ -920,7 +927,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** el principio de «sin pegar claves a mano» de la decisión 11 se sustituye por «sin escribir nada y sin editar ficheros». Cuando una tienda obliga a trasladar un dato, el asistente lo pide con un botón **Pegar desde el portapapeles** y lo valida en el momento.
 
-- **El botón de pegar:** usa `navigator.clipboard.readText()` al pulsarlo. `http://127.0.0.1` cuenta como contexto seguro (supuesto: los navegadores tratan la dirección de bucle local como potencialmente confiable). Chrome pide permiso de lectura del portapapeles; Firefox muestra un menú «Pegar» en el momento (lectura sin permiso desde Firefox 147, según MDN). Si el navegador lo deniega, se usa el campo normal con Ctrl+V. El valor nunca se guarda en el navegador, se envía al servidor y se cifra (decisión 46).
+- **El botón de pegar:** usa `navigator.clipboard.readText()` al pulsarlo. `http://127.0.0.1` cuenta como contexto seguro (supuesto: los navegadores tratan la dirección de bucle local como potencialmente confiable). Con la decisión 66 la web vive en `http://ludiary.localhost:<puerto>`, que la especificación de contextos seguros también trata como potencialmente confiable (supuesto, se comprueba en la 66). Chrome pide permiso de lectura del portapapeles; Firefox muestra un menú «Pegar» en el momento (lectura sin permiso desde Firefox 147, según MDN). Si el navegador lo deniega, se usa el campo normal con Ctrl+V. El valor nunca se guarda en el navegador, se envía al servidor y se cifra (decisión 46).
 - **Steam:**
   - No existe vía oficial para obtener la API key sin que el usuario la copie. OpenID solo da el SteamID y no hay OAuth para usuarios finales; la clave se crea en `steamcommunity.com/dev/apikey`.
   - Pasos: (1) inicio de sesión con OpenID, sin copiar nada; (2) botón que abre la página de la clave, con instrucciones de qué poner en el campo de dominio; (3) Pegar, comprobación del formato (32 caracteres hexadecimales) y llamada de prueba a `IPlayerService/GetOwnedGames`; (4) si el perfil o los detalles de juego no son públicos, se explica cómo cambiarlo y se reintenta.
@@ -1134,7 +1141,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** un rango fijo fuera del dinámico reduce los cambios de puerto entre arranques, y el fichero aparte resuelve el problema de qué se lee primero. Alternativa descartada: guardarlo en la base de datos (el lanzador tendría que abrirla antes del servidor).
 
-### 54. Sesión del navegador: duración y revocación (ampliada en la decisión 63)
+### 54. Sesión del navegador: duración y revocación (ampliada en las decisiones 63 y 67)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -1144,6 +1151,9 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 - **Revocación:** botón «Cerrar todas las sesiones del navegador» en Ajustes y en la bandeja. Cambiar el token de instalación (decisión 46) revoca también todas las sesiones.
 - Las sesiones se guardan como hash (decisiones 46 y 47).
 - **Ampliación (decisión 63):** cada sesión solo vale en el puerto en el que se creó; si el servidor cambia de puerto, se revocan todas.
+- **Ampliación (decisión 67):**
+  - La cookie de un canje hecho por la dirección alternativa (`127.0.0.1`) no lleva `Max-Age`: es de sesión del navegador. La duración de 30 y 90 días se aplica solo a la dirección principal.
+  - Cada sesión lleva una clave de origen que vive solo en memoria del servidor y muere al pararlo. Las acciones sensibles exigen cookie y clave.
 
 **Motivo:** con un solo usuario en local, una sesión larga evita molestias, y la revocación cubre el caso de perder el control del navegador. Alternativa descartada: una sesión que muere al cerrar el navegador (obligaría a pasar siempre por el acceso directo).
 
@@ -1281,7 +1291,7 @@ Alternativas descartadas:
   - `isHeld()` en paralelo con `acquire()` no hace fallar a `acquire()`.
 - Las pruebas de instancia única dejan de depender de esperas de 20 s.
 
-### 63. Autenticación entre el lanzador y el servidor local (amplía la decisión 23; revisa el token de instalación de la decisión 46)
+### 63. Autenticación entre el lanzador y el servidor local (amplía la decisión 23; revisa el token de instalación de la decisión 46; URL del enlace revisada en la decisión 66; alcance de la sesión ligada al puerto corregido en la decisión 67)
 
 **Decisión (recomendada, 21 de octubre de 2026, tras la auditoría del prototipo):**
 
@@ -1298,11 +1308,12 @@ Alternativas descartadas:
   - Las peticiones a `/api/launcher/*` con cabecera `Origin` se rechazan con 403: nunca vienen de un navegador.
 - **El lanzador comprueba antes de abrir nada:**
   - La prueba del servidor.
-  - Que la URL sea exactamente `http://127.0.0.1:<puerto>/open?t=` seguido de 43 caracteres base64url.
+  - Que la URL sea exactamente `http://127.0.0.1:<puerto>/open?t=` seguido de 43 caracteres base64url. Revisado en la decisión 66: pasa a ser `http://ludiary.localhost:<puerto>/open?t=` seguido de 43 caracteres base64url.
   - Si algo falla, ese puerto no es su servidor. Lo registra y sigue como si no hubiera servidor: arranca uno, que encontrará el puerto ocupado y elegirá otro (decisión 28). Relee `K` del almacén en cada intento.
 - La bandeja sigue generando el enlace dentro del proceso (`createOpenUrl`), sin pasar por la red.
 - `/api/status` exige la sesión del navegador y deja de aceptar el token.
 - **Sesión ligada al puerto (amplía la decisión 54):** cada sesión guarda el puerto en el que se creó y solo vale en ese puerto; si el servidor cambia de puerto, se revocan todas. En el prototipo ya se cumple, porque las sesiones viven en memoria y el puerto solo cambia al reiniciar. La versión persistente (decisión 47) guarda el puerto con la sesión.
+  - **Alcance (corregido en la decisión 67):** esto protege frente a quien ocupe un puerto **antiguo** de Ludiary: lo que el navegador guardó para ese origen (cookie o almacenamiento de la página) deja de valer cuando el servidor se va a otro puerto. **No impide reutilizar una cookie robada:** si otro programa de `ludiary.localhost:<otro puerto>` o `127.0.0.1:<otro puerto>` recibe la cookie, puede enviarla al servidor real en su puerto vigente y el servidor la acepta. Esa reutilización la cierra la clave de origen de la decisión 67.
 - Las funciones que calculan las pruebas (`launcherProof` y `serverProof`) viven en `packages/api` y las usan `api` y `runtime`.
 
 **Motivo:** quien ocupe el puerto no recibe nada que le sirva. La prueba del lanzador está ligada a ese puerto y a un nonce de un solo uso, y el impostor no puede falsificar la respuesta, así que el lanzador nunca abre su página. Eso evita también páginas falsas que pidan la clave de Steam o los códigos de Epic y GOG de la decisión 43. Es lo más simple que cierra a la vez el robo del token y la suplantación del servidor.
@@ -1321,7 +1332,7 @@ Alternativas descartadas:
 - Riesgos residuales aceptados:
   - Pedir un nonce no exige autenticación: otro usuario del equipo puede pedirlos sin parar y desplazar el del lanzador antes de que lo use. Solo molesta (no filtra nada ni da acceso). Por eso `--stop` repite la petición de parada cada segundo durante su espera y el lanzador reintenta cada 250 ms.
   - Otro usuario puede ocupar puertos libres y forzar cambios de puerto. Es una molestia, no una fuga.
-  - Si el usuario abre a mano una dirección `127.0.0.1` de otro programa (por ejemplo, un marcador antiguo), el navegador le envía la cookie, porque las cookies no distinguen puertos (decisión 29). Con la sesión ligada al puerto, esa cookie no sirve en el servidor real.
+  - Si el usuario abre a mano una dirección `127.0.0.1` de otro programa (por ejemplo, un marcador antiguo), el navegador le envía la cookie, porque las cookies no distinguen puertos (decisión 29). Corregido en la decisión 67: el texto original decía que, con la sesión ligada al puerto, esa cookie no servía en el servidor real. Es falso: el otro programa puede reenviarla al puerto vigente y el servidor la acepta. Ni siquiera hace falta que el usuario abra la dirección a mano: cualquier página puede llevar la ventana a `ludiary.localhost:<otro puerto>`, y desde allí una petición al mismo origen ya lleva la cookie. Lo cierra la clave de origen (decisión 67). Hoy el impacto es bajo, porque la sesión solo da acceso a `/api/status`.
   - Supuesto a verificar: libuv no fija `SO_EXCLUSIVEADDRUSE` en Windows (según los comentarios de su código fuente), y se cuenta con que la seguridad de sockets reforzada de Windows impide a otra cuenta enlazar el mismo puerto ya ocupado con `SO_REUSEADDR`. Se comprueba con una prueba manual desde una segunda cuenta; si falla, habrá que fijar esa opción desde código nativo.
 - En modo servidor (fase 2), el agente local se emparejará con el mismo principio: una clave compartida que nunca viaja en claro.
 
@@ -1404,6 +1415,125 @@ Alternativas descartadas:
 - Supuesto a verificar ejecutando el exe: que Node 24.20 respeta `execArgvExtension`. Aparece en la documentación de la línea 24 sin indicar desde qué versión. Si no lo respeta, se anota aquí que el propio proceso sigue leyendo `NODE_OPTIONS` y se mantiene el borrado del entorno para los hijos.
 - CI compila las dos variantes; solo la publicada se firma (decisión 58) y se sube.
 
+### 66. Dirección de la web: `ludiary.localhost` (amplía las decisiones 23, 28 y 29; revisa la URL del enlace de la decisión 63; alcance de la sesión ligada al puerto y cookie de la dirección alternativa corregidos en la decisión 67)
+
+**Decisión (recomendada, 21 de octubre de 2026; el nombre y que el puerto siga visible los ha aceptado el usuario):**
+
+- **Dirección principal:** `http://ludiary.localhost:<puerto>/`. El nombre se deriva del identificador técnico (decisión 44): `<appId en minúsculas>.localhost`. El puerto sigue visible: ocultarlo exigiría el 80, fuera del rango de la decisión 53.
+- **Dónde escucha el servidor:** en `127.0.0.1` y en `[::1]`, en el mismo puerto, y en ninguna otra interfaz.
+  - Un puerto solo vale si se abren las dos direcciones. Si una de ellas da `EADDRINUSE` o `EACCES`, se cierra la otra y se prueba el siguiente candidato (decisión 28).
+  - Única excepción: si `[::1]` no existe en el equipo (`EADDRNOTAVAIL` o `EAFNOSUPPORT`), se sigue solo con `127.0.0.1` y se registra un aviso. En ese caso nadie, ni el navegador ni otro programa, puede usar `[::1]`.
+  - Motivo de seguridad: los navegadores pueden resolver `ludiary.localhost` a `::1` y a `127.0.0.1` (supuesto 3). Si solo escucháramos en `127.0.0.1`, otro usuario del equipo (la amenaza de la decisión 63) podría abrir `[::1]:<puerto>`, recibir el enlace de apertura y canjearlo antes que el navegador, o servir una página falsa que pida la clave de Steam. Ocupar las dos direcciones lo impide.
+- **`Host` aceptado** (lista cerrada, comparación exacta, puerto vigente): `ludiary.localhost:<puerto>` y `127.0.0.1:<puerto>`. El segundo lo usan el lanzador y la comprobación de estado, que hablan por `127.0.0.1` (el resolvedor de Windows no garantiza `*.localhost`), y la dirección alternativa. Se rechaza todo lo demás con 421, incluidos `localhost:<puerto>`, `[::1]:<puerto>` y otros `*.localhost`.
+- **`Origin` aceptado:** `http://ludiary.localhost:<puerto>` y `http://127.0.0.1:<puerto>`. Cualquier otro, incluido `null`, se rechaza con 403. `/api/launcher/*` sigue rechazando cualquier `Origin` (decisión 63).
+- **Enlace de apertura:** `http://ludiary.localhost:<puerto>/open?t=<43 caracteres base64url>`. El lanzador solo abre un enlace con exactamente ese formato (revisa la comprobación de la decisión 63). El protocolo HMAC no cambia: la URL ya va dentro de `result`, que cubre la prueba del servidor.
+- **Dirección alternativa (plan B):** la bandeja tiene la entrada «Abrir con la dirección alternativa (127.0.0.1)». Genera dentro del proceso un enlace `http://127.0.0.1:<puerto>/open?t=…`, sin pasar por la red. El acceso directo siempre abre la dirección principal. La guía de solución de problemas explica cuándo usar la alternativa. Ampliado en la decisión 67: la cookie de ese canje no lleva `Max-Age`.
+- **Cookie:** se mantiene `ludiary_session`, `HttpOnly; SameSite=Strict; Path=/`, sin `Domain`. Al leerla, el servidor acepta la petición si **cualquiera** de las cookies con ese nombre es una sesión válida, no solo la última.
+
+**Motivo:**
+
+- Es la forma estándar de dar nombre a un servicio local sin tocar el fichero `hosts` (que exige permisos de administrador) ni el DNS. La RFC 6761 reserva `.localhost` para el bucle local, y los navegadores lo resuelven ellos mismos (supuestos 1 y 2).
+- **Mejora la seguridad respecto a `127.0.0.1`:**
+  - La cookie es solo de `ludiary.localhost`. Ya no se envía a otros servicios de `127.0.0.1:<otro puerto>` ni de `localhost:<otro puerto>`, como servidores de desarrollo. Sí se envía a `ludiary.localhost:<otro puerto>`, porque las cookies no distinguen puertos. Corregido en la decisión 67: el texto original decía que ese caso ya lo cubría la sesión ligada al puerto (decisión 63), y no es así. Quien escuche en ese otro puerto recibe la cookie y puede reenviarla al servidor real. Lo cierra la clave de origen (decisión 67). Con `127.0.0.1` pasaba lo mismo, así que no es una regresión de esta decisión.
+  - Excepción: la dirección alternativa vuelve a poner la cookie en `127.0.0.1`, y desde allí se envía a cualquier `127.0.0.1:<puerto>`. Por eso esa cookie dura solo lo que dure el navegador abierto (decisión 67).
+  - Otras páginas `*.localhost` son de otro sitio, así que `SameSite=Strict` sí las aísla. Con `127.0.0.1`, cualquier puerto era del mismo sitio (supuesto 4).
+- **DNS rebinding:** sigue cerrado. Una página atacante siempre envía su propio nombre en `Host`, y los navegadores no consultan el DNS para `*.localhost`, así que nadie puede hacer que un dominio suyo apunte a nosotros con nuestro nombre. La lista cerrada de `Host` hace el resto.
+- **Plantar cookies desde otra página `*.localhost`:** si un navegador admitiera `Domain=localhost` (supuesto 4), otro servicio local podría plantar una `ludiary_session` falsa. No puede plantar una válida, porque necesitaría un enlace de apertura y para eso hace falta `K` (decisión 63). Como mucho, la falsa ocultaría la buena. Aceptar cualquier cookie válida con ese nombre lo evita. Ya pasaba igual con `127.0.0.1`, así que no es un riesgo nuevo.
+- **No se cambia el nombre de la cookie:** el prefijo `__Host-` exige `Secure`, y su comportamiento en `http` local no está garantizado en todos los navegadores. Además, no protege frente a otro puerto del mismo nombre, que es el caso que queda. Corregido en la decisión 67: el texto original decía que la defensa frente a ese caso era la sesión ligada al puerto. No lo es; la defensa es la clave de origen de la decisión 67, porque el almacenamiento de la página sí distingue puertos.
+
+Alternativas descartadas:
+
+- Mantener `127.0.0.1`: funciona, pero es menos amigable y comparte cookies con cualquier servicio de `127.0.0.1`.
+- `localhost` sin subdominio: lo usan muchos programas locales y comparte cookies con todos ellos. Además, en Windows a menudo resuelve primero a `::1`.
+- Una entrada en `hosts` o un nombre `.local` propio: exige permisos de administrador o mDNS, y los navegadores no lo tratan como contexto seguro.
+- Detectar automáticamente si el navegador resuelve el nombre, con una página en `127.0.0.1` que pruebe `ludiary.localhost` y redirija: necesita un segundo enlace de un solo uso y peticiones entre orígenes, y solo cubre un caso que no esperamos en los navegadores admitidos. El lanzador no puede comprobarlo, porque no es el navegador.
+- Una opción en Ajustes para elegir la dirección: si el nombre no funciona, el usuario no llega a Ajustes. La bandeja sí es accesible siempre.
+
+**Supuestos** (no verificados en línea al tomar la decisión, porque la búsqueda no estaba disponible; se comprueban a mano antes de dar el cambio por cerrado, ver «Consecuencias»):
+
+1. **Resolución sin DNS del sistema.** Chrome resuelve `localhost` y `*.localhost` al bucle local de forma interna desde hace años, y Edge, Brave, Opera y Vivaldi heredan ese comportamiento de Chromium. Firefox lo hace desde la versión 84 (diciembre de 2020) aproximadamente. Todas las versiones con soporte, incluidas las ESR, son posteriores.
+2. **Proxy.** Chromium no envía al proxy `localhost`, `*.localhost` ni las direcciones de bucle local (reglas de exclusión implícitas). Firefox no envía `localhost` al proxy por defecto. Si algún navegador o un PAC corporativo enviara `ludiary.localhost` a un proxy, la web no cargaría con el nombre y habría que usar la dirección alternativa. Con `127.0.0.1` el riesgo de proxy es el mismo, no mayor.
+3. **IPv6.** Los navegadores resuelven `*.localhost` a `::1` y a `127.0.0.1`, y si una falla prueban la otra (en Chromium, el segundo intento empieza a los 300 ms aproximadamente). Al escuchar en ambas no hay ni espera ni hueco para un impostor.
+4. **Sitio y cookies.** `localhost` no está en la lista de sufijos públicos, así que la regla por defecto lo trata como sufijo y `ludiary.localhost` es un sitio propio, distinto de `otro.localhost`. Cualquier interpretación razonable llega a la misma conclusión. Queda por ver si algún navegador acepta `Domain=localhost` (solo afecta al caso de cookies plantadas, ya mitigado).
+5. **Contexto seguro.** La especificación *Secure Contexts* trata `*.localhost` como potencialmente confiable, y Chrome, Edge y Firefox la siguen: `window.isSecureContext` es `true` y `navigator.clipboard.readText` existe (decisión 43). Si no fuera así en algún navegador, el botón Pegar caería al campo con Ctrl+V que ya prevé la decisión 43, y la dirección alternativa mantiene el contexto seguro.
+6. **Escucha en `[::1]` con Fastify.** Una sola instancia de Fastify puede atender un segundo servidor HTTP de Node (por ejemplo, con `app.routing` o con `serverFactory`), con los mismos ganchos. Las pruebas lo comprueban.
+
+**Consecuencias:**
+
+- El invariante 4 de `CLAUDE.md` y las fichas de los agentes que dicen «solo `127.0.0.1`» pasan a decir «solo en la interfaz de bucle local (`127.0.0.1` y `[::1]`)».
+- La comprobación manual del supuesto de la decisión 63 sobre el secuestro de puertos desde otra cuenta incluye ahora `[::1]`.
+- El permiso del portapapeles de Chrome es por origen: se pide una vez para `ludiary.localhost:<puerto>` y otra vez si cambia el puerto.
+- No hay migración. El prototipo guarda las sesiones en memoria y aún no hay versiones publicadas.
+- **Verificación manual antes de cerrar el cambio**, en Windows 11 con la versión actual de Chrome, Edge y Firefox (y Brave, Opera o Vivaldi si están a mano):
+  - El acceso directo abre `ludiary.localhost:<puerto>` y la sesión funciona.
+  - En la consola, `window.isSecureContext` da `true` y `typeof navigator.clipboard.readText` da `"function"`.
+  - Con un proxy manual inexistente configurado en Windows (por ejemplo, `127.0.0.1:9`), la web sigue cargando.
+  - La entrada de la bandeja abre la dirección alternativa.
+  - Los resultados se anotan aquí y se eliminan los supuestos confirmados.
+  - **Resultado (21 de octubre de 2026):** el usuario hizo la verificación con el instalador del prototipo en Chrome, Edge y Firefox y confirma que todo funciona: el acceso directo abre `ludiary.localhost:<puerto>` con la sesión autorizada, `isSecureContext` es `true` y `navigator.clipboard.readText` existe, y la entrada de la bandeja abre la dirección alternativa. Con eso se dan por confirmados en esos tres navegadores los supuestos de resolución de `*.localhost` y de contexto seguro. Siguen sin comprobar Brave, Opera y Vivaldi, y el secuestro de puertos desde otra cuenta de Windows (decisión 63).
+- El documentalista añade a la guía de solución de problemas el caso «el navegador no abre `ludiary.localhost`» con la dirección alternativa de la bandeja.
+
+### 67. Segundo factor ligado al origen y cookie de la dirección alternativa (amplía las decisiones 29 y 54; corrige el alcance de la sesión ligada al puerto de las decisiones 63 y 66)
+
+**Decisión (recomendada, 21 de octubre de 2026, tras la auditoría de la decisión 66):**
+
+- **Corrección.** Las decisiones 63 y 66 daban por hecho que la sesión ligada al puerto impedía usar la cookie si llegaba a `ludiary.localhost:<otro puerto>` o a `127.0.0.1:<otro puerto>`. No es así:
+  - Ligar la sesión al puerto solo revoca las sesiones cuando el servidor cambia de puerto.
+  - Ataque, por otro usuario del equipo (la amenaza de la decisión 63):
+    1. Escucha en `127.0.0.1:31337` o `[::1]:31337`.
+    2. Una página que visita la víctima lleva la ventana a `http://ludiary.localhost:31337/`. Esa primera navegación entre sitios no lleva la cookie (`SameSite=Strict`).
+    3. La página del atacante, ya servida desde `ludiary.localhost:31337`, hace una petición a su propio origen. Es del mismo sitio y las cookies no distinguen puertos, así que el navegador envía `ludiary_session`.
+    4. El atacante la reenvía desde su proceso a `127.0.0.1:<puerto real>` con `Host: ludiary.localhost:<puerto real>`, sin `Origin`, y el servidor la acepta.
+  - Con `127.0.0.1` pasa igual. `Origin`, `Host`, `SameSite`, el prefijo `__Host-` o cambiar el nombre de la cookie no lo evitan: el atacante reenvía desde fuera del navegador y elige las cabeceras.
+  - **Lo que sí protege ligar al puerto:** lo que el navegador guardó para un origen antiguo de Ludiary (cookie o almacenamiento de la página) deja de valer cuando el servidor se va a otro puerto y otro programa puede ocupar el antiguo. Se mantiene por eso.
+- **Requisito.** Ninguna acción de la API del navegador que **cambie datos, lance procesos, muestre o acepte secretos o exporte ficheros** (registros, copias) se autoriza solo con la cookie. Exige además la **clave de origen**: un secreto por sesión que solo conoce la página servida por el origen real, porque el almacenamiento del navegador es por origen, puerto incluido.
+- **Mecanismo mínimo:**
+  - **Generación:** al canjear el enlace en `/open`, el servidor crea, además del secreto de la cookie, una clave de origen de 32 bytes aleatorios en base64url (43 caracteres). Guarda su SHA-256 junto a la sesión, **solo en memoria**: no se persiste nunca, ni siquiera en la versión persistente de las sesiones (decisión 47). Muere al parar el servidor, al cambiar de puerto y al revocar la sesión.
+  - **Entrega:** `/open` deja de responder con un 302. Responde 200 con una página HTML mínima, con `Cache-Control: no-store` (ya global) y CSP `default-src 'none'; script-src 'self'`, que lleva la cookie en `Set-Cookie` y la clave en `<meta name="ludiary-origin-key" content="…">`. Un script estático propio (`/open.js`, sin secretos) la lee, la guarda y hace `location.replace("/")`, de modo que `/open?t=…` no queda en el historial. Sin JavaScript se muestra un texto traducido que lo explica. La clave nunca va en la URL, ni en la consulta ni en el fragmento.
+  - **Dónde la guarda la página:** en `localStorage`, con la clave `<appId en minúsculas>.originKey` (`ludiary.originKey`). Se elige `localStorage` y no `sessionStorage` porque ambos son por origen, puerto incluido, y en este diseño ofrecen la misma protección (ver «Motivo»); `localStorage` además sirve en pestañas nuevas. La SPA lee la clave en cada petición, sin copiarla en memoria, para recoger siempre la del último canje.
+  - **Cabecera:** `X-Ludiary-Origin-Key` (nombre derivado del identificador técnico, decisión 44). Nunca se acepta en la consulta, en el cuerpo ni en una cookie.
+  - **Comprobación**, en la capa de entrada (decisión 15), después de `Host` y `Origin`:
+    - Se calcula el SHA-256 de la cabecera y se acepta la petición solo si alguna de las cookies `ludiary_session` válidas (decisión 66) es una sesión cuya clave de origen coincide, comparando en tiempo constante.
+    - Falta de cabecera, clave desconocida o clave de otra sesión: la misma respuesta, `401 { error: "origin_key_required" }`.
+    - La cabecera es un secreto: el filtro de registros (decisión 35) la elimina.
+  - **Por defecto, todo:** cada ruta declara su nivel de acceso en su configuración: `public` (`/api/health`, `/open`, `/open.js`, `/api/launcher/*` y los ficheros estáticos de la SPA, que no llevan datos), `session` (solo cookie) o `session+key`. **Una ruta que no declare nada exige `session+key`.** Hoy solo `/api/status` queda en `session`. Cualquier otra ruta de solo lectura que se quiera dejar en `session` se anota aquí con su motivo.
+- **Recarga, pestañas nuevas y reinicios:**
+  - Recargar la pestaña o abrir otra mientras el servidor sigue en marcha: funciona, `localStorage` conserva la clave.
+  - Tras parar o reiniciar el servidor, o tras un cambio de puerto, la clave ya no vale. La SPA recibe `origin_key_required`, borra la clave guardada y muestra un aviso traducido: «Vuelve a abrir Ludiary desde el acceso directo o desde la bandeja». Como el acceso directo arranca el servidor y abre la web (decisión 26), el uso normal no lo nota.
+  - Si la cookie sigue viva pero no hay clave válida, la SPA puede mostrar lo que permita `session`, sin acciones.
+- **Cookie de la dirección alternativa (mitigación).** Cuando el enlace se canjea con `Host: 127.0.0.1:<puerto>`, la cookie se emite **sin `Max-Age`**: es de sesión del navegador. La de la dirección principal mantiene los 90 días de la decisión 54. En la versión persistente de las sesiones (decisión 47), las sesiones canjeadas por `127.0.0.1` no se persisten: viven en memoria y mueren al parar el servidor.
+- **Cuándo se implementa:**
+  - **Ahora:** solo la cookie sin `Max-Age` de la dirección alternativa.
+  - **La clave de origen puede esperar a la SPA**, con una condición estricta: se implementa (comprobación, entrega en `/open`, nivel de acceso por defecto y pruebas) **en el mismo cambio que introduzca la primera ruta del navegador que cambie datos, lance procesos, muestre o acepte secretos o exporte ficheros**, y nunca después. Hoy no existe ninguna: la sesión solo abre `/api/status`. El auditor rechaza cualquier cambio que añada una de esas rutas sin la clave.
+
+**Motivo:**
+
+- La única primitiva del navegador que distingue puertos y que el atacante no puede leer desde su propio origen es el almacenamiento por origen. Un secreto que solo vive allí y viaja en una cabecera cierra la reutilización de la cookie robada. Además, las páginas de otros orígenes no pueden añadir esa cabecera sin una petición previa de CORS que el servidor no responde, así que cubre también la falsificación de peticiones entre sitios.
+- **Que la clave muera con el servidor** cierra el caso que el almacenamiento por origen no cubre: mientras Ludiary está parado, otro usuario puede ocupar su puerto y servir una página que lea el almacenamiento de ese origen. Lo que lea ya no vale. Mientras Ludiary está en marcha, nadie más puede servir su origen, porque ocupa el puerto en `127.0.0.1` y en `[::1]` (decisión 66). Por eso `localStorage` no es más débil que `sessionStorage` aquí, y evita volver al acceso directo en cada pestaña nueva, que es lo que la decisión 54 quería evitar.
+- Se mantiene la cookie `HttpOnly` confirmada por el usuario (decisiones 29 y 54): sigue siendo la sesión de larga duración y, frente a un fallo de inyección de código en la página, obliga a robar dos cosas en lugar de una.
+- La página intermedia con un script propio evita scripts en línea y deja la CSP en `script-src 'self'`.
+
+Alternativas consideradas:
+
+- **`sessionStorage` o memoria, con la vida de la sesión** (propuesta del auditor): misma protección frente a otro puerto, pero cada pestaña nueva exige volver al acceso directo. Con `sessionStorage`, una pestaña abierta que se recargue mientras Ludiary está parado y otro ocupa su puerto entregaría la clave si esta sobreviviera al reinicio. La clave que muere con el servidor cierra ese caso con cualquiera de los dos almacenes, y `localStorage` es más cómodo.
+- **Quitar la cookie y usar solo la clave como credencial en la cabecera:** igual de seguro frente a este ataque y algo más simple, pero revisa las decisiones 29 y 54, confirmadas por el usuario, y pierde la defensa en profundidad de `HttpOnly`. Si en la fase 2 se quiere simplificar, se le propone al usuario.
+- **Firmar cada petición con una clave no exportable de WebCrypto guardada en IndexedDB:** resiste incluso el robo por inyección de código, pero añade complejidad que no compensa con una CSP estricta y un solo usuario local.
+- **Validar `Sec-Fetch-Site`, `Origin` u otras cabeceras del navegador:** no sirve, porque el atacante reenvía desde su proceso y elige las cabeceras.
+
+**Consecuencias:**
+
+- Riesgos residuales aceptados:
+  - **Cookie robada, rutas `session`:** quien la consiga puede seguir usando las rutas de solo cookie. Hoy, solo `/api/status`, que no tiene datos personales.
+  - **Dirección alternativa:** mientras el navegador siga abierto, la cookie de `127.0.0.1` llega a cualquier `127.0.0.1:<puerto>`, incluidos los programas de otros usuarios. Algunos navegadores, con la opción «Continuar donde lo dejaste», restauran las cookies de sesión al reabrirse, así que puede durar más de lo esperado. Con la clave de origen, esa cookie sola solo abre las rutas `session`, y la sesión muere al parar el servidor. La guía de solución de problemas recomienda volver a la dirección principal en cuanto funcione.
+  - **Inyección de código en la propia página:** podría leer la clave y actuar desde la página. Se mitiga con la CSP estricta de la SPA (`script-src 'self'`, sin `unsafe-inline` ni `unsafe-eval`) y con la escapada de textos que ya exige la interfaz.
+- El tester añade, junto con la primera ruta `session+key`:
+  - Cookie válida sin cabecera, cabecera de otra sesión, clave tras reiniciar el servidor (cookie conservada) y clave en la consulta: todas dan `401 origin_key_required`.
+  - Una ruta sin nivel declarado exige `session+key`.
+  - `/open` responde 200 sin redirección y la clave no aparece en la URL ni en los registros.
+  - Canje por `127.0.0.1`: `Set-Cookie` sin `Max-Age`; por `ludiary.localhost`: con `Max-Age`.
+- El invariante 4 de `CLAUDE.md` y las fichas del `programador`, el `auditor` y el `tester` añaden que las acciones sensibles del navegador exigen cookie y clave de origen.
+- El documentalista recoge en la guía de solución de problemas el aviso «Vuelve a abrir Ludiary desde el acceso directo o desde la bandeja» y la recomendación sobre la dirección alternativa.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -1425,7 +1555,7 @@ Alternativas descartadas:
 - Lanzamiento heterogéneo por tienda: GOG usa línea de comandos y las URI de EA han fallado en algunos juegos.
 - Nombre del proyecto sin comprobar aún en las bases oficiales de marcas (decisión 44).
 - Sin certificado Authenticode, Windows mostrará avisos al instalar (decisión 58).
-- Otros usuarios del mismo equipo comparten los puertos de `127.0.0.1`: mitigado con la autenticación mutua y la sesión ligada al puerto (decisión 63); queda por verificar que no pueden secuestrar un puerto ya ocupado.
+- Otros usuarios del mismo equipo comparten los puertos de `127.0.0.1`: mitigado con la autenticación mutua y la sesión ligada al puerto (decisión 63), con la escucha en `127.0.0.1` y `[::1]` a la vez (decisión 66) y con la clave de origen, sin la cual una cookie robada desde otro puerto no autoriza acciones sensibles (decisión 67, pendiente de implementar junto con la primera de esas acciones); queda por verificar que no pueden secuestrar un puerto ya ocupado.
 
 ## Hoja de ruta sugerida
 
@@ -1444,4 +1574,4 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Detección del proceso de cada juego: propuesta en la 55. Se cierra durante el conector de Steam, con al menos tres juegos por tienda.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 65 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta (63), cuadro en primer plano (64) y `execArgvExtension` en Node 24.20 (65).
+- Verificar los supuestos marcados en las decisiones 39 a 67 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
