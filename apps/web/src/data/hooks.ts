@@ -21,18 +21,25 @@ export async function mutate<T>(action: Promise<T>): Promise<T> {
   return result;
 }
 
-/** Loads data from the API; `data` keeps the previous value while reloading (no flicker). */
-export function useQuery<T>(load: () => Promise<T>, deps: readonly unknown[] = []): T | undefined {
+/**
+ * Loads data from the API; `data` keeps the previous value while reloading (no flicker).
+ * `stale` is true until the load started after the latest mutation finishes: decisions such as redirects must wait for it.
+ */
+export function useQueryState<T>(load: () => Promise<T>, deps: readonly unknown[] = []): { data: T | undefined; stale: boolean } {
   const v = useSyncExternalStore(subscribe, () => version);
-  const [data, setData] = useState<T>();
+  const [state, setState] = useState<{ data?: T; version: number }>({ version: -1 });
   useEffect(() => {
     let live = true;
     // A failed load keeps the previous data; the failure itself is shown elsewhere (e.g. the 401 notice).
-    void load().then((d) => live && setData(d), () => undefined);
+    void load().then((d) => live && setState({ data: d, version: v }), () => undefined);
     return () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `load` is recreated each render on purpose
   }, [v, ...deps]);
-  return data;
+  return { data: state.data, stale: state.version !== v };
+}
+
+export function useQuery<T>(load: () => Promise<T>, deps: readonly unknown[] = []): T | undefined {
+  return useQueryState(load, deps).data;
 }

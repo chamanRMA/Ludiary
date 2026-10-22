@@ -1,7 +1,7 @@
 // Persistence ports (ADR 38, 72). Implemented by packages/db. Async in the signature even if the
 // driver is synchronous, so the core is not tied to it. Repositories are scoped to the only user and
 // the local device, which IdentityRepository.ensure creates and returns once at startup.
-import type { StoreId } from "@ludiary/contracts";
+import type { EntryMedia, StoreId } from "@ludiary/contracts";
 import type {
   GameDetail,
   GameSummary,
@@ -29,6 +29,10 @@ export interface LibraryRepository {
   listProperties(store: StoreId): Promise<readonly PropertyRecord[]>;
   /** Installations of this device for one store. */
   listInstallations(store: StoreId): Promise<readonly InstallationRecord[]>;
+  /** ADR 73. storeGameId of non-retired games of the store without media resolved, or resolved before `olderThan`. */
+  listMediaPending(store: StoreId, olderThan: number, limit: number): Promise<readonly string[]>;
+  /** ADR 73. Marks every id of `requested` as resolved at `at`; those missing from `media` get empty media. */
+  setResolvedMedia(store: StoreId, media: ReadonlyMap<string, EntryMedia>, requested: readonly string[], at: number): Promise<void>;
   /** Applies the whole plan in one transaction; rolls everything back if it fails midway. */
   applyScanPlan(plan: ScanPlan): Promise<void>;
 }

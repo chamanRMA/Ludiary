@@ -21,6 +21,8 @@ export interface StoreConnector {
   readonly authHosts: readonly string[];
   /** ADR 71. HTTPS hosts of every media URL this connector returns (bare host names, lower case). */
   readonly mediaHosts: readonly string[];
+  /** ADR 73. Bare lower-case hosts this connector's HttpClient may call (HTTPS, default port). [] if none. */
+  readonly apiHosts: readonly string[];
   /** Launcher/manifest locations the platform resolves for this connector (see LocationDeclaration). */
   readonly locations: readonly LocationDeclaration[];
   /** Bundled external tools this connector may run. */
@@ -39,6 +41,11 @@ export interface StoreConnector {
    * shows them in Settings with their own switch (ADR 42).
    */
   discoverRoots?(ctx: DiscoveryContext): Promise<readonly ResolvedLocation[]>;
+  /**
+   * ADR 73. Optional. Current artwork of stored properties, at most 50 ids per call.
+   * Ids missing from the result: nothing known. Media follow rule 4 (https, host in mediaHosts).
+   */
+  resolveMedia?(storeGameIds: readonly string[], ctx: MediaContext): Promise<ReadonlyMap<string, EntryMedia>>;
   /**
    * Describes how to perform an action on a property already stored in the database.
    * Returns null if the action is not available for it. The core validates and executes
@@ -94,6 +101,11 @@ export interface ScanContext extends BaseContext {
   /** Read-only, confined to roots. Path semantics come from the platform. */
   readonly fs: ScopedFileReader;
   readonly progress: ProgressReporter;
+}
+
+/** ADR 73. The client only reaches this connector's apiHosts. */
+export interface MediaContext extends BaseContext {
+  readonly http: HttpClient;
 }
 
 export interface DiscoveryContext extends BaseContext {
@@ -400,6 +412,8 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[] {
   }
 
   for (const h of c.mediaHosts) if (!HOST_RE.test(h)) problems.push(`mediaHosts: '${h}' is not a bare lower-case host name`);
+  for (const h of c.apiHosts) if (!HOST_RE.test(h)) problems.push(`apiHosts: '${h}' is not a bare lower-case host name`);
+  if (c.resolveMedia && c.apiHosts.length === 0) problems.push("resolveMedia requires apiHosts");
   for (const h of c.authHosts) if (!HOST_RE.test(h)) problems.push(`authHosts: '${h}' is not a bare lower-case host name`);
   for (const s of cap.uriSchemes) if (!SCHEME_RE.test(s)) problems.push(`uriSchemes: '${s}' is not a lower-case scheme`);
 

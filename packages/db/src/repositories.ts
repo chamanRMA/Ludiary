@@ -121,7 +121,12 @@ export function createRepositories(sqlite: Database.Database): Repositories {
     const stores = STORE_ORDER.filter((st) => ps.some((p) => p.store === st));
     // ADR 71: when a Steam property exists its artwork wins.
     const steam = ps.find((p) => p.store === "steam");
-    const media: EntryMedia = steam?.storeMetadata?.media ?? g.media ?? {};
+    const scanned: EntryMedia = steam?.storeMetadata?.media ?? g.media ?? {};
+    const resolved = steam?.storeMetadata?.resolvedMedia; // ADR 73: field by field
+    const media: EntryMedia = {
+      ...(resolved?.coverUrl ?? scanned.coverUrl ? { coverUrl: resolved?.coverUrl ?? scanned.coverUrl } : {}),
+      ...(resolved?.heroUrl ?? scanned.heroUrl ? { heroUrl: resolved?.heroUrl ?? scanned.heroUrl } : {}),
+    };
     return {
       id: g.id,
       title: g.title,
@@ -243,6 +248,55 @@ export function createRepositories(sqlite: Database.Database): Repositories {
         )
         .all()
         .map((r) => toInstallation(r.i));
+    },
+
+    async listMediaPending(store, olderThan, limit) {
+      const s = need();
+      const resolvedAt = sql`json_extract(${gameProperties.storeMetadata}, '$.mediaResolvedAt')`;
+      return db
+        .select({ id: gameProperties.storeGameId })
+        .from(gameProperties)
+        .where(
+          and(
+            eq(gameProperties.userId, s.userId),
+            eq(gameProperties.store, store),
+            eq(gameProperties.kind, "game"),
+            isNull(gameProperties.removedAt),
+            sql`${gameProperties.storeGameId} IS NOT NULL`,
+            sql`(${resolvedAt} IS NULL OR ${resolvedAt} < ${olderThan})`,
+          ),
+        )
+        .orderBy(sql`coalesce(${resolvedAt}, 0)`, asc(gameProperties.storeGameId))
+        .limit(limit)
+        .all()
+        .map((r) => r.id as string);
+    },
+
+    async setResolvedMedia(store, media, requested, at) {
+      const s = need();
+      db.transaction((tx) => {
+        for (const part of chunks(requested)) {
+          const rows = tx
+            .select()
+            .from(gameProperties)
+            .where(
+              and(
+                eq(gameProperties.userId, s.userId),
+                eq(gameProperties.store, store),
+                eq(gameProperties.kind, "game"),
+                inArray(gameProperties.storeGameId, part),
+              ),
+            )
+            .all();
+          for (const r of rows) {
+            const m = media.get(r.storeGameId as string);
+            tx.update(gameProperties)
+              .set({ storeMetadata: { ...(r.storeMetadata ?? {}), resolvedMedia: m ? { ...m } : {}, mediaResolvedAt: at } })
+              .where(and(eq(gameProperties.id, r.id), eq(gameProperties.userId, s.userId)))
+              .run();
+          }
+        }
+      });
     },
 
     async applyScanPlan(plan) {
@@ -481,7 +535,16 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
       .get();
     if (!prop) throw new Error(`Scan plan updates an unknown property ${u.propertyId}`);
     tx.update(gameProperties)
-      .set({ title: e.title, normalizedTitle: e.normalizedTitle, storeMetadata: metadata(e) })
+      // ADR 73: the scan rewrites media and externalIds but keeps what resolveMedia stored.
+      .set({
+        title: e.title,
+        normalizedTitle: e.normalizedTitle,
+        storeMetadata: {
+          ...metadata(e),
+          ...(prop.storeMetadata?.resolvedMedia ? { resolvedMedia: prop.storeMetadata.resolvedMedia } : {}),
+          ...(prop.storeMetadata?.mediaResolvedAt !== undefined ? { mediaResolvedAt: prop.storeMetadata.mediaResolvedAt } : {}),
+        },
+      })
       .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
       .run();
     if (prop.canonicalGameId) {

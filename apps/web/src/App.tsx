@@ -4,7 +4,8 @@ import { AuthNotice } from "./components/AuthNotice";
 import { Layout } from "./components/Layout";
 import { matchRoute, navigate, useLocation, type Params } from "./app/router";
 import { api } from "./data/api";
-import { useQuery } from "./data/hooks";
+import { shouldShowWelcome } from "./app/welcome";
+import { useQueryState } from "./data/hooks";
 import { Game } from "./pages/Game";
 import { Home } from "./pages/Home";
 import { Library } from "./pages/Library";
@@ -38,8 +39,8 @@ export function App() {
 
 function Routes() {
   const { path } = useLocation();
-  const onboarding = useQuery(() => api.getOnboarding());
-  const needsWelcome = onboarding !== undefined && onboarding.completedAt === null && path !== "/welcome";
+  const { data: onboarding, stale } = useQueryState(() => api.getOnboarding());
+  const needsWelcome = shouldShowWelcome(onboarding, stale, path);
 
   useEffect(() => {
     if (needsWelcome) navigate("/welcome", true);

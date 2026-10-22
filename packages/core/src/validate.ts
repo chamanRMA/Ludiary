@@ -13,7 +13,7 @@ const MAX_URL = 2048;
 export const isNonEmptyText = (s: unknown, max: number): s is string =>
   typeof s === "string" && s.trim().length > 0 && s.length <= max && !CONTROL.test(s);
 
-function validateMedia(media: unknown, hosts: readonly string[]): EntryMedia | undefined {
+export function validateMedia(media: unknown, hosts: readonly string[]): EntryMedia | undefined {
   if (!media || typeof media !== "object") return undefined;
   const out: { coverUrl?: string; heroUrl?: string; iconUrl?: string } = {};
   for (const key of ["coverUrl", "heroUrl", "iconUrl"] as const) {

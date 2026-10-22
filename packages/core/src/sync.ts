@@ -6,28 +6,9 @@ import { asKey, toErrorInfo } from "./errors";
 import type { CoreErrorInfo, ScanRootRecord, ScannedEntry, StoreStatus, SyncStateRecord } from "./model";
 import { computeScanPlan, planDiscoveredRoots } from "./scan-plan";
 import { effectiveLocale, readOnboarding, readSettings } from "./settings";
+import { createMediaStep } from "./media";
+import { withTimeout } from "./timeout";
 import { validateDiscoveredRoots, validateEntries, type ValidatedRoot } from "./validate";
-
-function timeoutError(): ConnectorError {
-  return new ConnectorError("internal", "Connector call timed out", { messageKey: asKey("core.errors.timeout") });
-}
-
-/** Races the work against the abort signal, so a connector that ignores the signal cannot hang the scan. */
-async function withTimeout<T>(signal: AbortSignal, work: () => Promise<T>): Promise<T> {
-  if (signal.aborted) throw timeoutError();
-  let onAbort: (() => void) | undefined;
-  const aborted = new Promise<never>((_, reject) => {
-    onAbort = () => reject(timeoutError());
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
-  try {
-    const running = work();
-    running.catch(() => undefined); // a late failure after the timeout must not become an unhandled rejection
-    return await Promise.race([running, aborted]);
-  } finally {
-    if (onAbort) signal.removeEventListener("abort", onAbort);
-  }
-}
 
 export interface SyncService {
   /** Starts scans (all stores or the given ones). Resolves when they are accepted and marked 'running'. */
@@ -38,6 +19,7 @@ export interface SyncService {
 
 export function createSyncService(env: Env): SyncService {
   const { deps } = env;
+  const media = createMediaStep(env);
   const inFlight = new Map<StoreId, Promise<void>>();
   const queued = new Set<StoreId>();
 
@@ -205,7 +187,14 @@ export function createSyncService(env: Env): SyncService {
       discovered,
       sync,
     });
-    await deps.library.applyScanPlan(plan);
+    if (!media.canRun(c)) {
+      await deps.library.applyScanPlan(plan);
+      return;
+    }
+    // ADR 73: the state stays 'running' until the media step ends, so the web sees the covers when it refreshes.
+    await deps.library.applyScanPlan({ ...plan, sync: { ...plan.sync, status: "running", error: null } });
+    await media.run(c, locale, connectorLog(c.id));
+    await deps.syncState.put(plan.sync);
   }
 
   /** Locations -> discoverRoots (ADR 42, 72). Returns null when it could not be done: stored roots are then left as they are. */

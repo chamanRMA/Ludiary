@@ -233,6 +233,80 @@ describe("library reads", () => {
   });
 });
 
+describe("resolved media (ADR 73)", () => {
+  const HASHED = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/abc/library_600x900.jpg";
+  const HERO = "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/abc/header.jpg";
+  const add = (id: string, store: "steam" | "gog" = "steam") =>
+    sqlite
+      .prepare(
+        "INSERT INTO game_properties (id, user_id, canonical_game_id, store, store_game_id, kind, title, normalized_title, owned) VALUES (?, (SELECT id FROM users LIMIT 1), NULL, ?, ?, 'game', 't', 't', 0)",
+      )
+      .run(`x-${id}`, store, id);
+
+  it("the scan keeps what resolveMedia stored, and a later scan does not ask again", async () => {
+    await addPortal();
+    await repos.library.setResolvedMedia("steam", new Map([["620", { coverUrl: HASHED }]]), ["620"], 500);
+    await repos.library.applyScanPlan({
+      ...emptyPlan(20),
+      update: [{ propertyId: "p1", installationId: "i9", entry: entry("620", "Portal 2", "D:/G", { media: { coverUrl: COVER, heroUrl: COVER } }) }],
+    });
+    const stored = JSON.parse((sqlite.prepare("SELECT store_metadata AS m FROM game_properties WHERE id = 'p1'").get() as { m: string }).m);
+    expect(stored).toMatchObject({ resolvedMedia: { coverUrl: HASHED }, mediaResolvedAt: 500, media: { coverUrl: COVER } });
+    expect(await repos.library.listMediaPending("steam", 400, 10)).toEqual([]);
+  });
+
+  it("summary applies the precedence field by field", async () => {
+    await addPortal(); // scan media: coverUrl only
+    expect(await repos.library.listLibrary()).toMatchObject([{ coverUrl: COVER }]);
+    await repos.library.setResolvedMedia("steam", new Map([["620", { heroUrl: HERO }]]), ["620"], 1);
+    const [g] = await repos.library.listLibrary();
+    expect(g).toMatchObject({ coverUrl: COVER, coverFallbackUrl: HERO }); // cover from the scan, hero resolved
+    await repos.library.setResolvedMedia("steam", new Map([["620", { coverUrl: HASHED, heroUrl: HERO }]]), ["620"], 2);
+    expect((await repos.library.getGame("c1"))).toMatchObject({ coverUrl: HASHED, coverFallbackUrl: HERO });
+    await repos.library.setResolvedMedia("steam", new Map(), ["620"], 3); // the store knows nothing: back to the scan
+    expect(await repos.library.listLibrary()).toMatchObject([{ coverUrl: COVER }]);
+  });
+
+  it("listMediaPending: unresolved or older than the limit, only games, not retired, only that store, with a limit", async () => {
+    await addPortal();
+    add("1");
+    add("2");
+    add("3");
+    add("77", "gog");
+    sqlite.prepare("UPDATE game_properties SET kind = 'dlc' WHERE store_game_id = '3'").run();
+    await repos.library.setResolvedMedia("steam", new Map(), ["1"], 100);
+    expect(await repos.library.listMediaPending("steam", 50, 10)).toEqual(["2", "620"]);
+    expect(await repos.library.listMediaPending("steam", 150, 10)).toEqual(["2", "620", "1"]); // never resolved first, then the expired
+    expect(await repos.library.listMediaPending("steam", 150, 2)).toHaveLength(2);
+    await repos.library.applyScanPlan({ ...emptyPlan(5), removeInstallations: ["i1"], retireProperties: ["p1"] });
+    expect(await repos.library.listMediaPending("steam", 50, 10)).toEqual(["2"]);
+  });
+
+  it("setResolvedMedia marks every requested id, empty when absent, and ignores unknown ids", async () => {
+    add("1");
+    add("2");
+    await repos.library.setResolvedMedia("steam", new Map([["1", { coverUrl: HASHED }]]), ["1", "2", "404"], 7);
+    const rows = sqlite.prepare("SELECT store_game_id AS id, store_metadata AS m FROM game_properties ORDER BY store_game_id").all() as { id: string; m: string }[];
+    expect(rows.map((r) => [r.id, JSON.parse(r.m)])).toEqual([
+      ["1", { resolvedMedia: { coverUrl: HASHED }, mediaResolvedAt: 7 }],
+      ["2", { resolvedMedia: {}, mediaResolvedAt: 7 }],
+    ]);
+  });
+
+  it("the new queries filter by user_id", async () => {
+    add("1");
+    sqlite.prepare("INSERT INTO users (id, created_at) VALUES ('other', 1)").run();
+    sqlite
+      .prepare(
+        "INSERT INTO game_properties (id, user_id, canonical_game_id, store, store_game_id, kind, title, normalized_title, owned) VALUES ('foreign', 'other', NULL, 'steam', '99', 'game', 'F', 'f', 1)",
+      )
+      .run();
+    expect(await repos.library.listMediaPending("steam", 50, 10)).toEqual(["1"]);
+    await repos.library.setResolvedMedia("steam", new Map(), ["1", "99"], 9);
+    expect((sqlite.prepare("SELECT store_metadata AS m FROM game_properties WHERE id = 'foreign'").get() as { m: string | null }).m).toBeNull();
+  });
+});
+
 describe("scan roots", () => {
   it("adds user roots once per path key, toggles and removes only user roots", async () => {
     expect(await repos.scanRoots.addUser(root("u1", "D:\\Games"))).toMatchObject({ id: "u1", origin: "user" });

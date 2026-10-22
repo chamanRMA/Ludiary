@@ -105,6 +105,7 @@ export async function checkConnectorConformance(c: StoreConnector, opts: Conform
     }
   };
 
+  for (const h of c.apiHosts) if (h.includes("/") || h.includes(":") || h !== h.toLowerCase()) out.push(`apiHosts: '${h}' has scheme, slash, port or upper case`);
   for (const h of c.mediaHosts) if (h.includes("/") || h.includes(":") || h !== h.toLowerCase()) out.push(`mediaHosts: '${h}' has scheme, slash, port or upper case`);
   for (const s of c.capabilities.uriSchemes) if (s !== s.toLowerCase() || s.includes(":")) out.push(`uriSchemes: '${s}' must be a lower-case scheme without ':'`);
   for (const a of c.capabilities.actions) if (!ALL_ACTIONS.includes(a)) out.push(`unknown action '${a}'`);

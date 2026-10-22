@@ -4,7 +4,7 @@ import type { StoreConnector } from "@ludiary/contracts";
 import { ConnectorRegistrationError, createCore, type CoreLogger, type LudiaryCore } from "@ludiary/core";
 import { createRepositories, DatabaseTooNewError, migrate } from "@ludiary/db";
 import { translate, type ConnectorMessageKey, type MessageKey } from "@ludiary/i18n";
-import { createNodeLocalFiles, systemClock } from "@ludiary/platform-node";
+import { createHttpClient, createNodeLocalFiles, systemClock } from "@ludiary/platform-node";
 import { createConnectors, unionUriSchemes } from "./connectors";
 import { createCoreFacade } from "./core-adapter";
 import { EXIT, localeOf, type RuntimeDeps } from "./deps";
@@ -85,6 +85,7 @@ export async function composeCore(deps: RuntimeDeps, sqlite: SqliteDatabase, log
       ...(locations ? { locations } : {}),
       ...(launcher ? { launcher } : {}),
       ...(deps.folderPicker ? { folderPicker: deps.folderPicker } : {}),
+      http: deps.http ?? ((hosts, signal, log) => createHttpClient({ hosts, signal, log })),
       clock: systemClock,
       newId: randomUUID,
       log: coreLogger(log),

@@ -10,6 +10,10 @@ export interface MediaJson {
 export interface StoreMetadataJson {
   media?: MediaJson;
   externalIds?: Record<string, string>;
+  /** ADR 73: artwork from the connector's resolveMedia; {} when the store knows nothing. Wins over `media`, field by field. */
+  resolvedMedia?: MediaJson;
+  /** ADR 73: epoch ms of the last resolveMedia answer. */
+  mediaResolvedAt?: number;
 }
 
 export const users = sqliteTable("users", {

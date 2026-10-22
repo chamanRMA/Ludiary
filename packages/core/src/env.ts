@@ -1,5 +1,5 @@
 // Public facade types of the core (ADR 72, point 4) and the shared environment of its use-case modules.
-import type { Clock, FolderPicker, LocalFiles, LocationResolver, ProcessLauncher, StoreConnector, StoreId } from "@ludiary/contracts";
+import type { Clock, ConnectorLogger, FolderPicker, HttpClient, LocalFiles, LocationResolver, ProcessLauncher, StoreConnector, StoreId } from "@ludiary/contracts";
 import type {
   CoreLogger,
   DetectionMode,
@@ -22,6 +22,13 @@ import type {
 
 export const SCAN_WAIT_MS = 60_000;
 export const CONNECTOR_TIMEOUT_MS = 60_000;
+/** ADR 73: media step of a scan. */
+export const MEDIA_BATCH = 50;
+export const MEDIA_MAX_BATCHES = 20;
+export const MEDIA_TIMEOUT_MS = 15_000;
+/** Longest wait a store-provided Retry-After can impose on the media step (ADR 73, audit). */
+export const MAX_MEDIA_RETRY_MS = 24 * 3_600_000;
+export const MEDIA_MAX_AGE_MS = 30 * 24 * 3_600_000;
 export const DOUBLE_LAUNCH_MS = 5_000;
 /** Fixed order to pick the property to launch when none is given (ADR 72). */
 export const LAUNCH_ORDER: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
@@ -40,6 +47,8 @@ export interface CoreDeps {
   launcher?: ProcessLauncher;
   /** Absent: the mode cannot open a native folder dialog. */
   folderPicker?: FolderPicker;
+  /** ADR 73. Factory of the HttpClient of one connector (its apiHosts). Absent: no network, no media step. */
+  http?: (hosts: readonly string[], signal: AbortSignal, log: ConnectorLogger) => HttpClient;
   clock: Clock;
   newId: () => string;
   log: CoreLogger;

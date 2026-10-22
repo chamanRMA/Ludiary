@@ -9,6 +9,7 @@ import type {
   TrayHost,
   UserDialogs,
 } from "@ludiary/contracts";
+import type { CoreDeps } from "@ludiary/core";
 import type { SqliteAddon } from "@ludiary/db";
 import { pickLocale, type Locale } from "@ludiary/i18n";
 
@@ -53,6 +54,8 @@ export interface RuntimeDeps {
    * Absent or missing on disk: the server still starts and `/` explains that a reinstall is needed.
    */
   webDir?: string;
+  /** Test seam (ADR 73): replaces the real HttpClient factory, so tests never touch the network. */
+  http?: CoreDeps["http"];
   /** Absent: this mode cannot auto-detect installations (ADR 22, 38); manual folders still work. */
   createLocationResolver?: (files: LocalFiles) => LocationResolver;
   /** Receives the union of the `uriSchemes` of the registered connectors. Absent: this mode cannot launch games. */

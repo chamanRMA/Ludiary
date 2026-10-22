@@ -1,7 +1,7 @@
 import type { StoreConnector } from "@ludiary/contracts";
 import { resolveSteamAction } from "./launch";
 import { STEAM_LOCATIONS, STEAM_NAME_KEY } from "./manifest";
-import { STEAM_MEDIA_HOSTS } from "./media";
+import { resolveSteamMedia, STEAM_API_HOSTS, STEAM_MEDIA_HOSTS } from "./media";
 import { discoverSteamRoots, scanSteamInstalled } from "./scan";
 
 /** Steam connector, "installed only" cut (ADR 72). library switches to true with the account cut. */
@@ -24,10 +24,12 @@ export function createSteamConnector(): StoreConnector {
     minSyncIntervalMs: 600_000,
     authHosts: [],
     mediaHosts: STEAM_MEDIA_HOSTS,
+    apiHosts: STEAM_API_HOSTS,
     locations: STEAM_LOCATIONS,
     externalTools: [],
     scanInstalled: scanSteamInstalled,
     discoverRoots: discoverSteamRoots,
+    resolveMedia: resolveSteamMedia,
     resolveAction: resolveSteamAction,
   };
 }
@@ -38,4 +40,4 @@ export { parseLibraryFolders } from "./libraryfolders";
 export { parseAppManifest, APPID_RE } from "./appmanifest";
 export type { AppManifest } from "./appmanifest";
 export { EXCLUDED_APP_IDS } from "./scan";
-export { steamMedia, STEAM_MEDIA_HOSTS } from "./media";
+export { steamMedia, resolveSteamMedia, STEAM_MEDIA_HOSTS, STEAM_API_HOSTS } from "./media";

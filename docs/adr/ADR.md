@@ -52,7 +52,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
@@ -83,8 +83,9 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 68 | Primera versión de `apps/web`: estructura, datos simulados y CSP | Vigente (recomendada; concreta la 10); portadas e `img-src` revisados en la 71; servir la SPA, librería de esquemas y selector de carpetas concretados en la 72 |
 | 69 | Asistente de primer arranque | Vigente (confirmada por el usuario) |
 | 70 | Fuentes tipográficas empaquetadas (OFL-1.1) | Vigente (confirmada por el usuario; amplía la 60) |
-| 71 | Portadas de Steam desde su CDN | Vigente (qué, confirmado por el usuario; cómo, recomendado; revisa la 68 en portadas y CSP; amplía las 6 y 40) |
+| 71 | Portadas de Steam desde su CDN | Vigente (qué, confirmado por el usuario; cómo, recomendado; revisa la 68 en portadas y CSP; amplía las 6 y 40); URL con hash resueltas en la 73 |
 | 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68) |
+| 73 | Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` | Vigente (recomendada; amplía las 40, 71 y 72) |
 
 ## Decisiones
 
@@ -564,7 +565,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71 y 72)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72 y 73)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -1707,7 +1708,7 @@ export interface GameDetailDto extends GameSummaryDto {
 
 **Consecuencias:** el comprobador de licencias de la CI acepta `OFL-1.1` solo en paquetes `@fontsource*`.
 
-### 71. Portadas de Steam desde su CDN (revisa el punto de portadas de la decisión 68; amplía las decisiones 6 y 40)
+### 71. Portadas de Steam desde su CDN (revisa el punto de portadas de la decisión 68; amplía las decisiones 6 y 40; ampliada en la decisión 73)
 
 **Decisión:**
 
@@ -2199,6 +2200,119 @@ Lo que se fijó al implementar y lo que el programador corrigió a raíz de la r
 - Se cierran los pendientes de la decisión 68: librería de esquemas (TypeBox) y selector nativo de carpetas.
 - La decisión 55 sigue en propuesta y se cierra para Steam en el corte 2b.
 
+### 73. Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` (amplía las decisiones 40, 71 y 72)
+
+**Problema (prueba del usuario con su Steam real, 22 de octubre de 2026):** de 18 juegos, BALL x PIT (2062430) y Europa Universalis V (3450310) se quedan sin portada. Las rutas sin hash de la decisión 71 (`…/apps/<appId>/library_600x900.jpg` y `…/header.jpg`) dan 404 para ellos y 200 para juegos antiguos como 620. Los juegos recientes solo publican sus imágenes bajo un segmento de hash que no se puede deducir del AppID.
+
+**Decisión (recomendada, 22 de octubre de 2026):**
+
+- **Fuente:** el núcleo pide al conector de Steam las URL vigentes con `GET https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=…`, público y sin clave, con `data_request.include_assets: true`. Devuelve, por juego, `assets.asset_url_format` (`steam/apps/<appId>/${FILENAME}?t=…`) y los nombres de fichero `library_capsule` (vertical 600×900) y `header`, con o sin hash. La URL final es `https://shared.akamai.steamstatic.com/store_item_assets/` + `asset_url_format` con `${FILENAME}` sustituido. Se piden varios juegos en una sola petición.
+  - Comprobado el 22 de octubre de 2026: para 3450310 y 2062430 da `library_capsule` con hash (`478711af…/library_600x900.jpg` y `b6cabe19…/library_600x900.jpg`) y la URL resultante devuelve un JPEG; para 620 da `library_600x900.jpg` sin hash; para 228980 y 1 da `success: 15` sin `assets`.
+- **Para todos los juegos de Steam, no solo los que fallan:** el servidor no sabe qué imagen da 404 (la carga el navegador, decisión 71) y no se añaden sondeos al CDN. Con peticiones por lotes, 18 juegos son una petición; y la ruta con hash es la que usa la propia tienda.
+- **Las URL construidas por AppID de la decisión 71 se quedan** como valor inicial y como respaldo mientras no haya respuesta (primer escaneo, sin conexión, juego que `GetItems` no conoce).
+- **Precedencia por campo:** `coverUrl` resuelta > `coverUrl` del escaneo; `heroUrl` resuelta > `heroUrl` del escaneo. `GameSummaryDto` no cambia: `coverUrl` y `coverFallbackUrl` salen de ahí, y la web conserva su cadena de respaldo y el degradado.
+- **Alcance y privacidad (decisión 71 e invariante 9):** solo propiedades de Steam no retiradas, de tipo `game` y con `storeGameId`. Sale hacia Valve la lista de AppID que el usuario tiene en Steam, la misma información que ya recibe su CDN al cargar las portadas y que Valve conoce por la cuenta. La petición la hace el servidor: sin cookies (Node no guarda cookies), sin `Referer` y sin datos del equipo. `context` fijo con `country_code: 'US'` (no se envía la ubicación real) y `language` según `ui.locale` (`spanish` para `es`, `english` en otro caso).
+- **Cuándo:** como paso final de la operación `scan` de cada tienda, dentro de la misma ejecución (el estado sigue en `running` hasta acabar, así que la web ve las portadas al refrescar). Un fallo de este paso se registra como aviso y **no** pone la tienda en error ni cambia el resultado del escaneo.
+  - Pendientes: propiedades sin `mediaResolvedAt` o con más de 30 días.
+  - Lotes de 50 AppID como mucho y 20 lotes por ejecución (el resto queda para la siguiente).
+  - Tiempo máximo de 15 s por ejecución del paso (`Clock.timeout`), aparte de los 60 s del escaneo.
+  - Tras un fallo (red, 429, respuesta inesperada), no se reintenta hasta pasado el mayor entre `minSyncIntervalMs` (10 min para Steam, decisión 50) y `retryAfterMs`. Se guarda en memoria: tras reiniciar se permite un intento.
+  - Una respuesta válida marca **todos** los AppID pedidos con `mediaResolvedAt`; los que no traen `assets` quedan con medios resueltos vacíos y no se vuelven a pedir hasta pasados los 30 días.
+- **Descartadas:**
+  - `appdetails` (opción a del encargo): una petición por juego, límite estricto conocido por la comunidad y sin portada vertical (solo `header_image`). Habría dejado a los juegos recientes con la imagen horizontal.
+  - Caché local del cliente (`appcache\librarycache`, opción b): formato sin documentar, lectura binaria del disco del cliente, una ruta nueva para servir imágenes y su nivel de acceso; es lo que la decisión 71 descartó. Se revisa si hace falta modo sin conexión.
+  - Aceptar el degradado hasta el corte de la cuenta (opción c): el fallo afecta a todo juego reciente y el usuario ya lo ha visto.
+
+#### Contrato (amplía la decisión 40; `contractVersion` sigue en 1)
+
+```ts
+// packages/contracts/src/connector.ts — additions of ADR 73
+export interface StoreConnector {
+  // ...ADR 40, 71, 72...
+  /** ADR 73. Bare lower-case hosts this connector's HttpClient may call (HTTPS, default port). [] if none. */
+  readonly apiHosts: readonly string[];
+  /**
+   * ADR 73. Optional. Current artwork of stored properties, at most 50 ids per call.
+   * Ids missing from the result: nothing known. Media follow rule 4 (https, host in mediaHosts).
+   */
+  resolveMedia?(storeGameIds: readonly string[], ctx: MediaContext): Promise<ReadonlyMap<string, EntryMedia>>;
+}
+
+export interface MediaContext extends BaseContext {
+  readonly http: HttpClient;
+}
+```
+
+- `checkConnectorManifest` añade: cada `apiHosts` es un host desnudo en minúsculas (misma regla que `mediaHosts`), y un conector con `resolveMedia` tiene `apiHosts` no vacío (`listLibrary` no lo exige: Epic y GOG pueden ir solo por herramientas externas). `assertConnectorConformance` comprueba lo mismo.
+- **Steam:** `apiHosts: ['api.steampowered.com']`. `mediaHosts` y la CSP **no cambian**: las URL resueltas siguen en `shared.akamai.steamstatic.com`. La CSP no necesita `connect-src` nuevo porque la petición la hace el servidor.
+- El corte de la cuenta reutiliza `apiHosts` y este `HttpClient` para `GetOwnedGames`, y `resolveMedia` cubre ya los juegos no instalados.
+
+#### `HttpClient` mínimo de este corte
+
+Se implementa ahora la parte de `HttpClient` (decisión 40) que este paso necesita; lo demás llega con la cuenta.
+
+- **Dónde:** `packages/platform-node/src/http.ts`, `createHttpClient(opts: { hosts: readonly string[]; signal: AbortSignal; log: ConnectorLogger; fetch?: typeof fetch; maxBytes?: number }): HttpClient`. `fetch` inyectable solo para pruebas; por defecto el `fetch` global de Node.
+- **El núcleo no hace E/S:** `CoreDeps` añade `http?: (hosts: readonly string[], signal: AbortSignal, log: ConnectorLogger) => HttpClient`. `runtime` lo conecta con `createHttpClient`. Sin `http`, el paso de medios no se ejecuta (pruebas y modos sin red). El núcleo crea un cliente por conector con **sus** `apiHosts`.
+- **Reglas:**
+  - Solo `GET`. `POST` lanza `ConnectorError('internal')`. `shortcut: solo GET, se amplía a POST con cuerpo json/form en el corte de la cuenta.`
+  - URL con `https:`, host exactamente en `hosts`, sin usuario ni contraseña, sin puerto distinto del 443. Si no, `ConnectorError('internal')` sin enviar nada.
+  - `query` se añade con `URLSearchParams`; un `Secret` se revela solo al enviar (`reveal()`), nunca con `String()`.
+  - `redirect: 'error'`: una redirección es `store.unexpected-response` (no se sigue a hosts no declarados).
+  - Respuesta limitada a `maxBytes` (por defecto 2 MiB), leída por flujo; si se supera, `store.unexpected-response`. `json()` que no es JSON: `store.unexpected-response`.
+  - Errores de transporte: `network.timeout` si el `signal` se aborta, `network.unavailable` en otro caso. Los códigos HTTP **no** son errores del cliente: los interpreta el conector.
+  - Registro: `debug` con método, host, ruta, estado y duración. **Nunca** la consulta ni las cabeceras (aquí lleva la lista de juegos, que es dato personal; con la cuenta llevará la API key).
+  - Sin `User-Agent` propio ni cabeceras extra salvo `accept: application/json`.
+- `connector-testkit` adelanta su doble de HTTP: `fakeHttp(handler)` que graba las peticiones y responde con respuestas grabadas, y `mediaContext()`.
+
+#### Lo mínimo que hay que implementar
+
+- `packages/contracts/src/connector.ts`: `apiHosts`, `resolveMedia`, `MediaContext` y las reglas nuevas de `checkConnectorManifest`.
+- `connectors/steam/src/media.ts`: `resolveSteamMedia(ids, ctx)`. Manifiesto con `apiHosts`.
+  - Construye `input_json` con `ids: [{ appid: Number(id) }]`, el `context` de arriba y `data_request: { include_assets: true }`.
+  - `429` → `store.rate-limited` con `retryAfterMs` de `Retry-After`; otro estado distinto de 200 o cuerpo sin `response.store_items` → `store.unexpected-response`.
+  - Por elemento, se acepta solo si `success === 1`, `appid` está entre los pedidos, `asset_url_format` cumple `^steam/apps/<appid>/\$\{FILENAME\}(\?t=\d{1,12})?$` con su propio AppID, y cada nombre de fichero cumple `^(?:[0-9a-f]{40}/)?[a-z0-9_]{1,64}\.jpg$`. Lo que no cumple se salta, sin tumbar el resto.
+  - `library_capsule` → `coverUrl`; `header` → `heroUrl`.
+- `packages/platform-node/src/http.ts`: `createHttpClient` con las reglas de arriba.
+- `packages/core`: paso de medios al final de la operación `scan`, con las reglas de «Cuándo». Valida la salida con la misma función de medios que el escaneo (`validate.ts`) e ignora los ID no pedidos. `CoreDeps.http`.
+- `packages/core` y `packages/db`, puerto de la biblioteca:
+  - `listMediaPending(store, olderThan: number, limit: number): Promise<readonly string[]>` (`storeGameId`).
+  - `setResolvedMedia(store, media: ReadonlyMap<string, EntryMedia>, requested: readonly string[], at: number): Promise<void>`.
+- `packages/db`: **sin migración**. `StoreMetadataJson` añade `resolvedMedia?: MediaJson` y `mediaResolvedAt?: number`. El `update` del plan de escaneo los conserva (hoy reescribe `store_metadata` entero y los borraría). `summary` aplica la precedencia por campo. Filtro de `user_id` en las consultas nuevas (decisión 47).
+- `packages/runtime`: pasa `http` a `createCore`.
+- Web y simulador: sin cambios.
+
+#### Pruebas
+
+- `connectors/steam`, con respuestas grabadas de `GetItems` (datos públicos de juegos, sin datos de cuenta) para 620, 3450310, 2062430 y 228980:
+  - Con hash, sin hash y `success: 15`.
+  - Saltados: `asset_url_format` de otro AppID, nombre con `..` o `/` de más, extensión distinta, host o esquema en el nombre, `appid` no pedido.
+  - `429` con `Retry-After`, `500`, cuerpo que no es JSON y JSON sin `store_items`.
+  - La petición: host `api.steampowered.com`, ruta exacta, `input_json` con exactamente los ID pedidos e `include_assets`, idioma según `locale`.
+  - Conformidad con `apiHosts`.
+- `platform-node` (`http.ts`, con `fetch` doble): `http:`, host no declarado, puerto, credenciales en la URL y `POST` rechazados sin llamar a `fetch`; redirección; límite de bytes; aborto → `network.timeout`; fallo de red → `network.unavailable`; `Secret` revelado en la consulta; el registro no contiene la consulta.
+- `core`: solo Steam y solo pendientes; lotes de 50 y tope de 20; ID ausentes marcados como resueltos vacíos; caducidad de 30 días con reloj doble; tras un fallo, espera de 10 min o `retryAfterMs`; el fallo no cambia el estado del escaneo; medios con host fuera de `mediaHosts` descartados; sin `http` o sin `resolveMedia` no hay paso.
+- `db`: el escaneo conserva `resolvedMedia`; precedencia por campo en `summary`; `listMediaPending` y `setResolvedMedia` filtran por `user_id`.
+- Fixtures: la comprobación de la decisión 48 se aplica también a las respuestas grabadas.
+- **Manual (usuario):** BALL x PIT y Europa Universalis V muestran la portada vertical tras un escaneo; sin red, la biblioteca abre igual y cae a las URL por AppID o al degradado; el registro exportado no contiene AppID ni `input_json`.
+
+#### Supuestos (verificar al implementar)
+
+1. `IStoreBrowseService/GetItems/v1` no aparece en la documentación oficial de Steamworks: lo usa la propia tienda y lo documenta la comunidad. Funciona sin clave (comprobado el 22 de octubre de 2026). Si Valve lo cierra o lo cambia, el paso falla con aviso y quedan las URL por AppID.
+2. Límite de peticiones y número máximo de ID por petición sin documentar. 50 por lote es conservador; se ajusta si responde 429 o error con lotes de 50.
+3. `asset_url_format` acaba en `?t=<número>`; si cambia el formato, la expresión regular salta el elemento (se ve en el registro como elementos saltados, sin la consulta).
+4. Las URL con hash siguen sirviendo tras un cambio de imagen del juego (direccionadas por contenido). Si no, los 30 días de caducidad lo corrigen.
+5. Las imágenes no dependen del país del `context`. Un juego no visible en `US` queda con las URL por AppID.
+6. `GetItems` no exige un `User-Agent` concreto.
+
+**Motivo:** es la única fuente pública sin clave que da la portada vertical con hash, y lo hace por lotes, así que el coste en red es mínimo y una vez resuelto no se repite. Mantiene intactos `mediaHosts`, la CSP y el modelo de la decisión 71 (el navegador carga del CDN, el servidor no sirve imágenes), y no añade tablas. Adelantar un `HttpClient` acotado a `apiHosts` y solo `GET` es poca superficie y es la pieza que el corte de la cuenta necesita de todos modos.
+
+**Consecuencias:**
+
+- Primera salida de red del servidor hacia una tienda. El `auditor` revisa `http.ts` (hosts, redirecciones, límite, registro), la validación de `resolveSteamMedia` y que no salga nada de juegos que no son de Steam.
+- `apiHosts` pasa a ser obligatorio en todos los conectores: los dobles y fixtures existentes añaden `apiHosts: []`.
+- El `documentalista` añade a la guía de solución de problemas que una portada que falta aparece tras el siguiente escaneo con conexión, y menciona en la de privacidad la petición a `api.steampowered.com` con la lista de AppID.
+- Las tiendas futuras siguen el mismo patrón: `apiHosts` declarados y medios resueltos por `resolveMedia` si su escaneo no los da.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -2243,4 +2357,4 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 72 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 73 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

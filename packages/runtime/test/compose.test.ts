@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLocalServer, SessionStore, type LocalServer } from "@ludiary/api";
 import { createSteamConnector } from "@ludiary/connector-steam";
-import type { FolderPicker, PlatformInfo, ProcessLauncher, StoreConnector } from "@ludiary/contracts";
+import { ConnectorError, type FolderPicker, type PlatformInfo, type ProcessLauncher, type StoreConnector } from "@ludiary/contracts";
 import { createSqliteInstanceLock, DatabaseTooNewError, MIGRATIONS, migrate, openDatabase } from "@ludiary/db";
 import { translate } from "@ludiary/i18n";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -54,6 +54,12 @@ function fakeDeps(over: Partial<RuntimeDeps> = {}): RuntimeDeps {
       throw new Error("not used");
     },
     selfCommand: { command: "x", args: [] },
+    // ADR 73: no test reaches the network; the media step fails with a warning.
+    http: () => ({
+      request: async () => {
+        throw new ConnectorError("network.unavailable", "offline");
+      },
+    }),
     ...over,
   };
 }

@@ -2,6 +2,7 @@
 import type {
   Clock,
   ConnectorCapabilities,
+  EntryMedia,
   I18nKey,
   InstalledEntry,
   LocalFiles,
@@ -142,6 +143,21 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
   async listInstallations(store: StoreId) {
     return [...this.installs.values()].filter((i) => this.properties.get(i.propertyId)?.store === store);
   }
+  /** ADR 73: resolved media per storeGameId: [media, resolvedAt]. */
+  resolved = new Map<string, { media: EntryMedia; at: number }>();
+  async listMediaPending(store: StoreId, olderThan: number, limit: number) {
+    return [...this.properties.values()]
+      .filter((p) => p.store === store && p.kind === "game" && p.removedAt === null && p.storeGameId !== null)
+      .map((p) => p.storeGameId as string)
+      .filter((id) => {
+        const r = this.resolved.get(id);
+        return !r || r.at < olderThan;
+      })
+      .slice(0, limit);
+  }
+  async setResolvedMedia(_store: StoreId, media: ReadonlyMap<string, EntryMedia>, requested: readonly string[], at: number) {
+    for (const id of requested) this.resolved.set(id, { media: media.get(id) ?? {}, at });
+  }
   async applyScanPlan(plan: ScanPlan) {
     this.applied.push(plan);
     const inst = (id: string, propertyId: string, e: { installPath: string; launchData: Readonly<Record<string, string>> | null }) => {
@@ -254,6 +270,8 @@ export interface ConnectorOptions {
   discover?: StoreConnector["discoverRoots"];
   resolveAction?: StoreConnector["resolveAction"];
   locations?: StoreConnector["locations"];
+  resolveMedia?: StoreConnector["resolveMedia"];
+  apiHosts?: string[];
 }
 
 export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
@@ -266,6 +284,7 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     minSyncIntervalMs: 600_000,
     authHosts: [],
     mediaHosts: ["shared.akamai.steamstatic.com"],
+    apiHosts: o.apiHosts ?? (o.resolveMedia ? ["api.example.com"] : []),
     locations: o.locations ?? [
       { id: "steam-root", purpose: "scan" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam" }] },
       { id: "steam-client", purpose: "launcher" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam\\steam.exe" }] },
@@ -274,6 +293,7 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     scanInstalled: o.scan ?? (async () => ({ entries: [], unreadableRoots: [] })),
     resolveAction: o.resolveAction ?? (async (p) => ({ kind: "uri", uri: `steam://rungameid/${p.storeGameId}` })),
     ...(o.discover ? { discoverRoots: o.discover } : {}),
+    ...(o.resolveMedia ? { resolveMedia: o.resolveMedia } : {}),
   };
   return base as StoreConnector;
 }
@@ -304,6 +324,7 @@ export async function harness(
     picker?: FolderPicker | null;
     onboarded?: boolean;
     mode?: "auto-and-manual" | "manual-only" | "later" | null;
+    http?: CoreDeps["http"];
   } = {},
 ): Promise<Harness> {
   const store = new MemoryStore();
@@ -331,6 +352,7 @@ export async function harness(
     ...(opts.locations === null || opts.locations === undefined ? {} : { locations: opts.locations }),
     ...(launcher ? { launcher } : {}),
     ...(opts.picker ? { folderPicker: opts.picker } : {}),
+    ...(opts.http ? { http: opts.http } : {}),
     clock,
     newId: ids,
     log: { debug: log("debug"), info: log("info"), warn: log("warn"), error: log("error") },

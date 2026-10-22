@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+
 import { useTranslation } from "react-i18next";
 import { Link } from "../app/Link";
 import { STORE_BRAND } from "../app/stores";
-import { errorText } from "../app/errors";
-import { api, isSimulated } from "../data/api";
+import { useLaunch } from "../app/useLaunch";
+import { api } from "../data/api";
 import { useQuery } from "../data/hooks";
 import { cx, Cover, formatHours, PageTitle, relativeTime } from "../components/bits";
 import ui from "../styles/ui.module.css";
@@ -12,27 +12,12 @@ import { NotFound } from "./NotFound";
 export function Game({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
   const game = useQuery(() => api.getGame(id), [id]);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-  const [launching, setLaunching] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const { launching, message, setMessage, play } = useLaunch();
   if (game === undefined) return null;
   if (game === null) return <NotFound />;
 
   const primary = game.properties.find((p) => p.installed) ?? game.properties[0];
   const storeName = primary && primary.store !== "manual" ? STORE_BRAND[primary.store].name : "";
-
-  // Only the stored ids travel (invariant 3). The button stays disabled for 5 s so a double click cannot start it twice.
-  async function play(gameId: string, title: string, propertyId: string | undefined): Promise<void> {
-    setLaunching(true);
-    timer.current = setTimeout(() => setLaunching(false), 5000);
-    try {
-      await api.launchGame(gameId, propertyId);
-      setMessage({ text: isSimulated ? t("game.playSimulated", { title }) : t("game.launching", { store: storeName }), error: false });
-    } catch (e) {
-      setMessage({ text: errorText(t, e), error: true });
-    }
-  }
 
   return (
     <div className={ui.stack}>
@@ -53,7 +38,7 @@ export function Game({ id }: { id: string }) {
           </div>
           <div className={ui.chips}>
             {game.installed ? (
-              <button type="button" className={cx(ui.btn, ui.primary)} disabled={launching} onClick={() => void play(game.id, game.title, primary?.installed ? primary.id : undefined)}>
+              <button type="button" className={cx(ui.btn, ui.primary)} disabled={launching} onClick={() => void play(game.id, game.title, storeName, primary?.installed ? primary.id : undefined)}>
                 {t("common.play")}
               </button>
             ) : (

@@ -2,12 +2,15 @@ import type {
   ConnectorLogger,
   DiscoveryContext,
   I18nKey,
+  HttpClient,
   LaunchContext,
+  MediaContext,
   ProgressReporter,
   ResolvedLocation,
   ScanContext,
   ScanRoot,
 } from "@ludiary/contracts";
+import { fakeHttp } from "./http";
 import { memoryFiles, type MemoryFiles, type MemoryTree } from "./memory-files";
 
 export interface LogEntry {
@@ -89,6 +92,17 @@ export function launchContext(
     launchersResolved: opts.launchersResolved ?? true,
     fs: files,
     files,
+    log: c.log,
+    signal: opts.signal ?? new AbortController().signal,
+    locale: opts.locale ?? "en",
+    ...c.captured,
+  };
+}
+
+export function mediaContext(opts: Common & { http?: HttpClient } = {}): MediaContext & Captured & { http: HttpClient } {
+  const c = capture();
+  return {
+    http: opts.http ?? fakeHttp(() => ({ status: 500 })),
     log: c.log,
     signal: opts.signal ?? new AbortController().signal,
     locale: opts.locale ?? "en",

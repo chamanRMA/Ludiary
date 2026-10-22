@@ -33,6 +33,11 @@ describe("Steam manifest (ADR 72)", () => {
       ["steam-client", "launcher"],
     ]);
   });
+  it("resolveMedia requires apiHosts", () => {
+    expect(checkConnectorManifest({ ...c, apiHosts: [] }).join()).toMatch(/resolveMedia requires apiHosts/);
+    const { resolveMedia: _r, ...noMedia } = c;
+    expect(checkConnectorManifest({ ...noMedia, apiHosts: [] })).toEqual([]);
+  });
   it("catalogs have the same keys and every key is under connectors.steam.", () => {
     expect(Object.keys(es).sort()).toEqual(Object.keys(en).sort());
     for (const k of Object.keys(en)) expect(k.startsWith("connectors.steam.")).toBe(true);
@@ -53,6 +58,7 @@ describe("Steam manifest (ADR 72)", () => {
     const broken = {
       ...c,
       mediaHosts: ["https://x.com/"],
+      apiHosts: ["Api.Example.com:8443"],
       resolveAction: async () => ({ kind: "uri" as const, uri: "calc://x" }),
     };
     const problems = (
@@ -61,6 +67,7 @@ describe("Steam manifest (ADR 72)", () => {
       })
     ).join("\n");
     expect(problems).toMatch(/mediaHosts/);
+    expect(problems).toMatch(/apiHosts/);
     expect(problems).toMatch(/URI scheme/);
   });
 });
