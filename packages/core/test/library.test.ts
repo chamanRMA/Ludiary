@@ -127,6 +127,17 @@ describe("library operation: plan", () => {
     expect(libState(h)).toMatchObject({ status: "idle" });
   });
 
+  it("accepts a 158-character id and drops a 161-character one (ADR 78)", async () => {
+    const { h, s } = await lib();
+    await syncLibrary(h);
+    s.snapshot = () => ({ complete: true, entries: [owned("10", "Portal"), owned("a".repeat(158), "Long ok"), owned("b".repeat(161), "Too long")] });
+    h.clock.time += 20 * MIN;
+    await syncLibrary(h);
+    const ids = [...h.store.properties.values()].map((p) => p.storeGameId);
+    expect(ids).toContain("a".repeat(158));
+    expect(ids).not.toContain("b".repeat(161));
+  });
+
   it("drops invalid entries, DLC and repeats, and an invalid one makes the snapshot non-authoritative", async () => {
     const { h, s } = await lib();
     await syncLibrary(h);

@@ -75,6 +75,18 @@ describe("WindowsLocationResolver (helper injected)", () => {
     expect(JSON.parse(seen[1] ?? "").queries).toHaveLength(2);
   });
 
+  it("normalizes a forward-slash registry value and returns it when it exists (Epic launcher)", async () => {
+    const epic = {
+      id: "epic-launcher",
+      purpose: "launcher" as const,
+      os: ["windows" as const],
+      sources: [{ kind: "registry-value" as const, hive: "HKLM" as const, key: "SOFTWARE\\Epic Games\\EpicGamesLauncher", value: "AppDataPath" }],
+    };
+    const exe = "E:\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe";
+    const resolver = make({ results: [{ ok: true, values: ["E:/Epic Games/Launcher/Portal/Binaries/Win64/EpicGamesLauncher.exe"] }] }, [exe]);
+    expect(await resolver.resolve(epic)).toEqual([{ declarationId: "epic-launcher", path: exe }]);
+  });
+
   it("drops UNC and device paths before any stat, so no SMB connection is attempted", async () => {
     const checked: string[] = [];
     const runHelper: HelperRunner = async () =>

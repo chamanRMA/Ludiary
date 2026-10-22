@@ -1,0 +1,15 @@
+{
+  "FormatVersion": 0,
+  "bIsIncompleteInstall": true,
+  "AppVersionString": "1.0.0",
+  "LaunchCommand": "",
+  "LaunchExecutable": "TestGame.exe",
+  "ManifestLocation": "D:/Epic Games ñ/TestPart01/.egstore",
+  "DisplayName": "Test Game ñandú",
+  "AppName": "TestPart01",
+  "CatalogNamespace": "000000000000000000000000000000a1",
+  "CatalogItemId": "00000000000000000000000000000003",
+  "InstallLocation": "D:/Epic Games ñ/TestPart01",
+  "MainGameAppName": "TestPart01",
+  "AppCategories": ["public", "games", "applications"]
+}

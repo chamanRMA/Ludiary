@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractValue, safeExternalUrl, validateField } from "./validate";
+import { extractValue, safeExternalUrl, validateField, valuesToSend } from "./validate";
 
 const steam = { pattern: "^[0-9A-Fa-f]{32}$", maxLength: 40 };
 const hex32 = "0123456789abcdef0123456789ABCDEF";
@@ -26,8 +26,15 @@ describe("validateField", () => {
 });
 
 describe("extractValue", () => {
-  it("falls back to the raw text when it is not JSON or a URL", () => {
+  it("json-field: JSON, the part between braces, or the bare value (ADR 78 point 7)", () => {
     expect(extractValue("abc", "json-field:x")).toBe("abc");
+    expect(extractValue('"abc"', "json-field:x")).toBe("abc");
+    expect(extractValue('{"x":"abc"}', "json-field:x")).toBe("abc");
+    expect(extractValue('junk {"x": "abc"} more', "json-field:x")).toBe("abc");
+    expect(extractValue('{"y":"abc"}', "json-field:x")).toBeNull();
+    expect(extractValue('{"x": 1}', "json-field:x")).toBeNull();
+    expect(extractValue("{broken", "json-field:x")).toBeNull();
+    expect(extractValue("12345678901234567890123456789012", "json-field:x")).toBe("12345678901234567890123456789012");
   });
   it("url-query needs an address with the parameter; the text is never echoed back (ADR 77, audit M1)", () => {
     expect(extractValue("abc", "url-query:code")).toBeNull();
@@ -45,5 +52,21 @@ describe("safeExternalUrl", () => {
     expect(safeExternalUrl("javascript:alert(1)")).toBeNull();
     expect(safeExternalUrl("file:///C:/Windows")).toBeNull();
     expect(safeExternalUrl("not a url")).toBeNull();
+  });
+});
+
+describe("valuesToSend", () => {
+  const f = { name: "authorizationCode", pattern: "^[0-9a-f]{32}$", maxLength: 4096, extract: "json-field:authorizationCode" } as const;
+  it("sends the extracted code, never the pasted text", () => {
+    const code = "0".repeat(24) + "0000c0de";
+    const sent = valuesToSend([f], { authorizationCode: `{"redirectUrl":"x","authorizationCode":"${code}","sid":"abc"}` });
+    expect(sent).toEqual({ authorizationCode: code });
+    expect(JSON.stringify(sent)).not.toMatch(/sid|redirectUrl/);
+  });
+  it("sends an empty value, never the pasted text, when the extraction fails", () => {
+    expect(valuesToSend([f], { authorizationCode: '{"sid":"secret-sid"}' })).toEqual({ authorizationCode: "" });
+  });
+  it("leaves fields without extract as typed", () => {
+    expect(valuesToSend([{ name: "k", maxLength: 9 }], { k: "abc" })).toEqual({ k: "abc" });
   });
 });

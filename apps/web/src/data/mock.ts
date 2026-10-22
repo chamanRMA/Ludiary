@@ -80,7 +80,15 @@ const STEPS: Record<string, readonly WizardStepDto[]> = {
     },
   ],
   epic: [
-    { kind: "open-external", id: "login", titleKey: "connectors.epic.login.title", bodyKey: "connectors.epic.login.body", url: EPIC_LOGIN, awaits: "callback" },
+    {
+      kind: "open-external",
+      id: "login",
+      titleKey: "connectors.epic.login.title",
+      bodyKey: "connectors.epic.login.body",
+      url: EPIC_LOGIN,
+      awaits: "input",
+      fields: [field("authorizationCode", "connectors.epic.login.field", "^[0-9a-f]{32}$", 4096, { extract: "json-field:authorizationCode" })],
+    },
   ],
   rawg: [
     {

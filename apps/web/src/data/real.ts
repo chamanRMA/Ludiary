@@ -30,7 +30,7 @@ import { ApiError, type Http } from "./http";
  * detection mode, language and scan roots.
  *
  * Store accounts (ADR 74, 77): `startWizard`, `submitWizard`, `cancelWizard`, `disconnect` and `wizardCallback` for the stores
- * in REAL_WIZARD_STORES (Steam and GOG).
+ * in REAL_WIZARD_STORES (Steam, GOG and Epic).
  *
  * Delegated to `sim`, method by method, and never stored in the server: the same wizard methods for the other
  * stores and services, `getServices`, collections, backups, log export, `simulateExpiredSession`, and the settings the
@@ -58,7 +58,7 @@ function sessionStore(): WizardIdStorage | null {
 }
 
 /** Stores whose wizard is served by the real server (ADR 77 point 8). */
-export const REAL_WIZARD_STORES: readonly StoreId[] = ["steam", "gog"];
+export const REAL_WIZARD_STORES: readonly StoreId[] = ["steam", "gog", "epic"];
 const realStore = (t: WizardTarget): StoreId | null => (t.kind === "store" && REAL_WIZARD_STORES.includes(t.store) ? t.store : null);
 const expired = (): ApiError => new ApiError(404, "not-found", "wizard.expired");
 

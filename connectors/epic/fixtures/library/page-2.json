@@ -1,0 +1,8 @@
+{
+  "records": [
+    { "namespace": "000000000000000000000000000000a1", "catalogItemId": "00000000000000000000000000000003", "appName": "TestTool01" },
+    { "namespace": "000000000000000000000000000000a1", "catalogItemId": "NOT-HEX", "appName": "Broken01" },
+    { "namespace": "000000000000000000000000000000a1", "catalogItemId": "00000000000000000000000000000001", "appName": "TestGame01" }
+  ],
+  "responseMetadata": {}
+}

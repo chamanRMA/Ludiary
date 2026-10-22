@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   fakeHttp,
   FICTIONAL_API_KEY,
+  FICTIONAL_EPIC_VALUES,
   FICTIONAL_GOG_VALUES,
   FICTIONAL_STEAM_ID,
   findPrivacyViolations,
@@ -154,5 +155,26 @@ describe("syncContext and wizardContext (ADR 74)", () => {
     expect(s.locale).toBe("en");
     s.log.info("m");
     expect(s.logs).toHaveLength(1);
+  });
+});
+
+describe("ADR 78 privacy: the fictional Epic values", () => {
+  const find = (content: string): string[] => findPrivacyViolations([{ path: "f", content }]).map((v) => v.rule);
+  it("accepts 24-zero ids and the fictional eg1~ tokens", () => {
+    expect(find("namespace 000000000000000000000000000000a1 id 00000000000000000000000000000001")).toEqual([]);
+    for (const v of FICTIONAL_EPIC_VALUES) expect(find(`"refresh_token": "${v}"`)).toEqual([]);
+  });
+  it("rejects other 32-hex ids and other eg1~ tokens", () => {
+    expect(find("000000000000000000000001000000a1")).toEqual(["32-hex key"]);
+    expect(find("0000000000000000000000000000000a1")).toEqual([]); // 33 chars: not a key shape
+    expect(find("aaaaaaaaaaaaaaaaaaaaaaaa000000a1")).toEqual(["32-hex key"]);
+    expect(find('"access_token": "eg1~real.token.value"')).toContain("credential field");
+    expect(find(`"access_token": "${FICTIONAL_EPIC_VALUES[0]}x"`)).toContain("credential field");
+    expect(find("eg1~real.token.value")).toEqual(["unlisted eg1 token"]);
+    expect(find("eg1~epic-testXtoken")).toEqual(["unlisted eg1 token"]); // the dots of a listed value are literal
+    expect(find(FICTIONAL_EPIC_VALUES[0])).toEqual([]);
+    for (const bad of ["eg1~epic-testXaccessXtoken", "eg1~epic-test.access.token.realSig_part", "eg1~epic-test.access.token_x"]) {
+      expect(find(bad), bad).toContain("unlisted eg1 token");
+    }
   });
 });
