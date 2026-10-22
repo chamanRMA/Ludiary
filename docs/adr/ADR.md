@@ -52,7 +52,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
@@ -84,10 +84,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 69 | Asistente de primer arranque | Vigente (confirmada por el usuario) |
 | 70 | Fuentes tipográficas empaquetadas (OFL-1.1) | Vigente (confirmada por el usuario; amplía la 60) |
 | 71 | Portadas de Steam desde su CDN | Qué, vigente (confirmado por el usuario); cómo, vigente (la alternativa de guardarlas en el equipo se descartó en la 75); revisa la 68 en portadas y CSP; amplía las 6 y 40; URL con hash resueltas en la 73 |
-| 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68) |
+| 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68); orden de cortes y emparejamiento con la segunda tienda revisados en la 76 |
 | 73 | Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` | Vigente (recomendada; amplía las 40, 71 y 72) |
 | 74 | Cuenta de Steam: OpenID, API key cifrada y juegos no instalados | Vigente (recomendada; amplía las 40, 43, 46, 47, 50, 68, 72 y 73); punto 12 decidido por el usuario el 22-10-2026 |
 | 75 | Portadas guardadas en el equipo y servidas por el servidor local | **Descartada** por el usuario el 22-10-2026: la caché del navegador ya las guarda 10 años; la 71 sigue vigente |
+| 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11 pendiente del usuario) |
 
 ## Decisiones
 
@@ -567,7 +568,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73 y 74)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -868,7 +869,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 | Tienda | `access` | `library` | `scan` | Lanzamiento previsto |
 |---|---|---|---|---|
 | Steam | `official-api` | sí | sí | `uri` (`steam`) |
-| GOG | `unofficial-api` | sí | sí | `exec` (cliente de Galaxy) |
+| GOG | `unofficial-api` | sí | sí | ~~`exec` (cliente de Galaxy)~~ `exec` del ejecutable del juego; Galaxy, opcional (revisado en la decisión 76) |
 | Epic | `unofficial-api` | sí | sí | `uri` del launcher de Epic, a verificar |
 | Ubisoft | `local-only` | no | sí | `uri` (`uplay`), a verificar |
 | EA | `local-only` | no | sí | `uri` o `exec`, a validar con juegos reales |
@@ -1744,7 +1745,7 @@ export interface GameDetailDto extends GameSummaryDto {
 - El tester añade una prueba para la validación de `mediaHosts` y otra para la paridad de la CSP.
 - El auditor revisa la CSP y `Referrer-Policy` cuando el servidor sirva la SPA.
 
-### 72. Primer corte vertical de Steam: instalados, biblioteca y lanzamiento (amplía las decisiones 40, 42, 47, 50, 64 y 68)
+### 72. Primer corte vertical de Steam: instalados, biblioteca y lanzamiento (amplía las decisiones 40, 42, 47, 50, 64 y 68; orden de cortes y emparejamiento con la segunda tienda revisados en la decisión 76)
 
 **Decisión (recomendada, 21 de octubre de 2026; puntos del usuario respondidos el mismo día):**
 
@@ -3018,6 +3019,300 @@ export interface CoverFiles {
   - privacidad: el servidor descarga cada portada una vez;
   - solución de problemas: dónde están las portadas, que se pueden borrar sin perder nada y que una que falta aparece tras el siguiente escaneo con conexión.
 
+### 76. Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos (amplía las decisiones 40, 42, 72 y 73; revisa el orden de cortes de la 72 y la fila de GOG de la tabla de la 40)
+
+**Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario encarga «empieza con el conector de GOG». Eso resuelve el punto (C) de la decisión 72: **GOG va antes que el corte 2b** (tiempo de juego), que pasa a ir después. Este corte es el equivalente de la 72 para GOG: lo justo para ver los juegos de GOG instalados y jugarlos, y sobre todo para validar el lanzamiento por línea de comandos (`exec`), el caso más distinto del contrato.
+
+**Punto de partida:** en el PC del usuario no hay GOG Galaxy ni juegos de GOG (no existe `HKLM\SOFTWARE\WOW6432Node\GOG.com`). Todo lo que sigue sobre GOG sale de fuentes públicas y queda como supuesto (lista del final) hasta la prueba manual del punto 9.
+
+#### 1. Alcance
+
+- **Entra:**
+  - detección de los juegos de GOG instalados por el registro (decisión 42) y por carpetas manuales, leyendo los ficheros `goggame-<productId>.info` de cada juego;
+  - lanzamiento **directo del ejecutable del juego** con `ProcessLauncher.exec`, implementado ahora en Windows (punto 4);
+  - portadas verticales desde la API de GamesDB de GOG, sin cuenta (punto 5);
+  - el conector `connectors/gog` registrado en `runtime`, con sus textos, y la CSP ampliada con su host de imágenes.
+- **Queda fuera, cada parte con su corte:**
+  - **Cuenta de GOG:** inicio de sesión con `gogdl` y el flujo de la decisión 43, juegos no instalados, `listLibrary`, `install` y `ExternalToolRunner`. Igual que con Steam, primero se valida el camino de escanear y lanzar, que es el mayor riesgo, sin secretos de terceros.
+  - **DLC:** el escaneo los distingue para **no** mostrarlos como juegos, pero no los informa (`dlc: 'none'`). El núcleo aún los descarta (`validate.ts`) y el modelo no tiene `base_store_game_id`; llegan con la cuenta de GOG o con su propio corte (decisiones 21 y 52).
+  - **Emparejamiento entre tiendas.** La 72 decía que la unión entre tiendas, `match_decisions` y `duplicate_candidates` llegaban «con la segunda tienda». Se aplaza a un corte propio: necesita la interfaz de fusionar y separar (decisión 20, las decisiones manuales prevalecen) y una migración, y sin esa interfaz una fusión automática errónea no tendría arreglo. Consecuencia mientras tanto: un juego instalado en Steam y en GOG sale dos veces, una por tienda. Con solo instalados es poco frecuente; con la cuenta de GOG dejaría de serlo, así que el emparejamiento va antes o junto con ella (punto 11).
+  - **Lanzar a través de GOG Galaxy:** lo decide el usuario (punto 11). Queda descrito en el punto 4 para poder añadirlo sin otra decisión técnica.
+  - **Tiempo de juego** (corte 2b, decisión 55).
+
+#### 2. Contrato (amplía la decisión 40; `contractVersion` sigue en 1)
+
+**No cambia ningún tipo.** Todo lo que necesita GOG ya existe:
+
+- `LaunchSpec` de tipo `exec` y `capabilities.launchKinds: ['exec']` (decisión 40).
+- `registry-subkeys` en `LocationSource`, que el auxiliar de Go ya implementa (lee un valor de cada subclave, como mucho 256).
+- `discoverRoots`, `resolveMedia`, `apiHosts` y `mediaHosts` (decisiones 71 a 73).
+- La regla 5 de la decisión 40 para `exec`, que el núcleo ya comprueba con pruebas desde la 72 (`packages/core/src/launch.ts`, `checkSpec`).
+
+Solo cambian comentarios y una implementación:
+
+```ts
+// packages/contracts/src/ports.ts — ADR 76: comment of ProcessLauncher.exec
+/**
+ * Detached, args as a list, no shell (ADR 40 rule 5). Windows (ADR 76): only an existing local `.exe`,
+ * no verbatim arguments, the child's main window is not hidden. Rejects with ExecError.
+ */
+exec(spec: { executable: string; args: readonly string[]; cwd?: string }): Promise<void>;
+
+// packages/contracts/src/ports.ts — ADR 76, new and small
+export class ExecError extends Error {
+  /** 'rejected': the platform's own check refused the spec. 'denied': the OS refused (e.g. needs administrator). 'failed': anything else. */
+  constructor(readonly reason: "rejected" | "denied" | "failed") { super(`exec ${reason}`); this.name = "ExecError"; }
+}
+```
+
+- Se justifica `ExecError` porque el núcleo tiene que distinguir «Windows no deja abrirlo» (un mensaje útil al usuario) de un fallo genérico. Es una clase nueva, no un cambio de una interfaz existente: `contractVersion` sigue en 1.
+- **`ExecError` no lleva nada más que `reason`** (revisión del auditor): sin `cause`, y su `message` es el fijo de arriba. Nunca copia `message`, `path` ni `spawnargs` del error de Node, que llevan la ruta y los argumentos. Por la misma razón, los `ConnectorError` que lanza `resolveAction` de GOG no llevan rutas, nombres de fichero ni argumentos en `message` ni en `params`: solo el ID del producto.
+- **Rutas canonizadas** (revisión del auditor): `checkSpec` pasa a `exec` el `executable` y el `cwd` ya resueltos con `realpath`, los mismos que comprobó dentro de las raíces, y no el texto que devolvió el conector. El puerto `LocalFiles` (decisión 72, `packages/contracts/src/ports.ts`) añade `realPath(path: string): Promise<string>`, implementado en `platform-node` con `realpath`; `checkSpec` canoniza y **vuelve a comprobar** que el resultado sigue dentro de las raíces. Es una ampliación compatible de un puerto del SO, no del contrato de los conectores: `contractVersion` sigue en 1. Queda una carrera residual entre la comprobación y `CreateProcess` (alguien con escritura en la carpeta del juego cambia una unión en medio); se acepta, porque ese alguien ya puede sustituir el `.exe`.
+- **Instalación aún dentro de una raíz activa** (revisión del auditor; comprobado: hoy `launch.ts` no lo verifica, solo lee `installations`). Si el usuario desactiva o quita una carpeta, o pasa la detección a `later`, el escaneo forzado retira sus juegos, pero ese escaneo puede fallar, ir con retraso o no haber terminado. Se decide: antes de llamar al conector, el núcleo comprueba que `installPath` sigue dentro de alguna raíz **activada** de esa tienda según el modo de detección vigente (las mismas reglas que calculan las raíces del escaneo en la 72). Si no, `not-installed`, sin llamar al conector. Vale para todas las tiendas; para Steam no cambia nada visible.
+- **Núcleo** (`launch.ts`): el `catch` de la llamada a `deps.launcher` traduce `ExecError('denied')` a `CoreError('launch.denied')`, con la clave `game.launchDenied` («Windows no ha permitido abrir el juego. Puede que pida permisos de administrador: ábrelo desde su tienda o desde su acceso directo»); `rejected` a `launch.rejected`, y el resto sigue en `internal`. Se registra solo el conector y el motivo, **nunca** la ruta ni los argumentos (llevan el nombre de usuario si el juego está bajo el perfil, decisión 35).
+- La fila de GOG en la tabla de capacidades de la decisión 40 pasa de «`exec` (cliente de Galaxy)» a «`exec` (ejecutable del juego; Galaxy, opcional según el punto 11)».
+
+#### 3. Escaneo
+
+- **Fuente principal: el fichero `goggame-<productId>.info`** de la carpeta del juego. El registro solo sirve para **encontrar** carpetas.
+  - Motivo: el `.info` está en todas las instalaciones de GOG (Galaxy e instalador sin conexión), sobrevive a reinstalar Windows y a mover la carpeta, y trae todo lo necesario: ID, nombre, tareas de juego y si es un DLC. Es lo que usa `gogdl` para lanzar en Windows (supuesto G3).
+  - El registro solo da, por subclave, el valor que pide la ubicación (`path`). Leer de él `exe`, `launchCommand` o `workingDir` exigiría un tipo nuevo de `LocationSource` que devuelva varios valores por subclave y cambiar el auxiliar de Go, para unos datos que el `.info` ya tiene. Se descarta.
+- **Manifiesto, `locations`:**
+  - `gog-games` (`scan`): `{ kind: 'registry-subkeys', hive: 'HKLM', key: 'SOFTWARE\\GOG.com\\Games', value: 'path', view: '32' }`. Con la vista de 32 bits se lee `WOW6432Node` sin escribirlo en la clave, como recomienda GameFinder (supuesto G1). Devuelve la carpeta de cada juego instalado.
+  - `gog-library` (`scan`): `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'GOG Galaxy\\Games' }`, la biblioteca por defecto de Galaxy (supuesto G2). Cubre un registro vacío o ilegible.
+  - Ninguna ubicación `launcher` en este corte: el lanzamiento directo no la necesita.
+- **`discoverRoots`** convierte carpetas de juego en raíces visibles en Ajustes, una por biblioteca y no una por juego (que llenaría Ajustes y chocaría con el tope de 64 raíces descubiertas de la 72). Sin E/S, solo texto:
+  - De `gog-games`: la carpeta **padre** de cada juego, con `tag: 'library'`. Excepción: si el padre es la raíz de una unidad (`D:\`), se devuelve la propia carpeta del juego con `tag: 'game'`, para no recorrer una unidad entera.
+  - De `gog-library`: la propia carpeta, con `tag: 'library'`.
+  - Sin repetidos (clave en minúsculas, como Steam). El núcleo valida como siempre: absoluta, local, existente y como mucho 64.
+- **`scanInstalled`**, para cada raíz (descubierta o del usuario), con profundidad 1:
+  - Candidatas: la propia raíz y sus subcarpetas directas, como mucho 2000 por raíz. Así vale tanto una carpeta de juego como una carpeta de juegos (`C:\GOG Games`).
+  - En cada candidata, `readDir` y ficheros que cumplan `^goggame-(\d{1,20})\.info$` (sin distinguir mayúsculas). Si no hay ninguno, no es de GOG y se pasa a la siguiente sin leer nada más. Los demás `goggame-*` (`.hashdb`, `.ico`, `galaxyFileList.ini`) no se leen.
+  - Cada `.info` se lee con `readText` (1 MiB como mucho), se quita un BOM inicial si lo hay y se analiza con `JSON.parse`. Campos: `gameId` (cadena de dígitos; si viene como número JSON se acepta y se pasa a texto), `rootGameId` (igual), `name`.
+    - `gameId` distinto del ID del nombre del fichero: se salta y se registra el ID.
+    - `rootGameId` presente y distinto de `gameId`: es un **DLC** (supuesto G5). Se salta y se cuenta en el registro.
+    - En otro caso es un juego: `storeGameId` = `gameId`, `kind: 'game'`, `title` = `name` recortado o `GOG <id>` si falta (un dato, no un texto de la interfaz), `installPath` = la carpeta candidata. Sin `media` (las URL llevan un hash que solo da la API, punto 5) ni `launchData` (punto 4).
+  - Un ID ya visto se salta (el núcleo también lo hace).
+  - Errores, con la misma clasificación que Steam (`isHandled` de `connectors/steam/src/scan.ts`, que se copia; no se comparte un paquete por diez líneas):
+    - JSON mal formado o sin `gameId`: `store.unexpected-response`, se salta ese fichero.
+    - Fichero bloqueado o error de E/S: la raíz cuenta como ilegible y conserva sus instalaciones (punto 11 de la 72).
+    - `PathEscapesRootsError` en una subcarpeta (unión que sale de la raíz): se salta esa candidata. En la propia raíz: raíz ilegible.
+    - Cualquier otro `internal` se propaga (fallo del conector).
+  - En el registro solo van IDs, contadores y códigos, nunca rutas ni títulos.
+- **Sin Galaxy** (instalador sin conexión): si el instalador escribe la misma clave del registro (supuesto G2), el juego aparece solo. Si no, aparece en cuanto el usuario añade su carpeta o la carpeta que lo contiene. La guía de usuario lo explica.
+- **Con «solo carpetas manuales»** (decisión 42): solo raíces `user`; funciona igual, porque el escaneo no depende del registro.
+
+#### 4. Lanzamiento
+
+**Opciones:**
+
+- **A. `exec` directo del ejecutable del juego** (recomendada). Del `.info`, la tarea de juego principal: ejecutable, argumentos y carpeta de trabajo, todo dentro de `installPath`.
+  - Ventajas: funciona sin Galaxy (instalador sin conexión, juegos sin DRM); el ejecutable está siempre dentro de la carpeta del juego, así que el núcleo confina el `exec` a `installPath` sin ubicaciones `launcher`; el proceso es el del juego, lo que simplifica la detección de la decisión 55; no depende de la sintaxis sin documentar de Galaxy; es lo que hacen `gogdl` y Heroic.
+  - Costes: sin Galaxy de por medio no hay sincronización de partidas en la nube antes de jugar, ni superposición, y los logros o el multijugador de los juegos que usan el SDK de Galaxy pueden necesitar Galaxy abierto (supuesto G12). Leer las tareas de un fichero exige partir la cadena de argumentos (abajo).
+- **B. `exec` del cliente de Galaxy:** `GalaxyClient.exe /command=runGame /gameId=<id> /path=<installPath>`, con una ubicación `launcher` (`gog-galaxy-client`). Sintaxis de un hilo del foro de GOG, sin documentación oficial (supuesto G13).
+  - Ventajas: nube, superposición y tiempo de Galaxy.
+  - Costes: exige Galaxy instalado; abre Galaxy (lento, pesado); el foro escribe `/path="<ruta>"`, mientras que Node, al pasar argumentos como lista, entrecomilla el argumento entero (`"/path=C:\…"`) y no se sabe si Galaxy lo acepta: haría falta `windowsVerbatimArguments`, que es justo lo que este diseño prohíbe; y la detección de procesos pierde la relación directa.
+- **C. URI de Galaxy:** descartada. No consta un esquema registrado para lanzar juegos (supuesto G14), como ya decía la decisión 22.
+
+**Se elige A** en este corte. B queda especificada para añadirla si el usuario la pide (punto 11): solo sería otra rama en `resolveAction` y una ubicación `launcher`, sin tocar el contrato.
+
+**`resolveAction` de GOG** (`connectors/gog/src/launch.ts`):
+
+1. Acción distinta de `play`: `null`.
+2. `storeGameId` debe cumplir `^\d{1,20}$`; si no, `action.unsupported` con `connectors.gog.errors.invalidId`.
+3. Lee `<installPath>\goggame-<id>.info` con `ctx.fs` (confinado a `installPath`). Si no existe: `launch.not-installed` con `connectors.gog.errors.infoMissing` (el juego se desinstaló o se movió; el siguiente escaneo lo corrige). JSON mal formado: `store.unexpected-response`.
+4. Tarea: la primera de `playTasks` con `isPrimary === true`, `type` igual a `FileTask` o ausente, y `path` de texto. Si no hay: `action.unsupported` con `connectors.gog.errors.noPlayTask` («Este juego no indica cómo abrirse; ábrelo desde GOG Galaxy»). Las `URLTask` y las tareas no principales se ignoran.
+5. `path` debe ser relativo: sin letra de unidad, sin empezar por `\` o `/`, sin `:` y sin caracteres de control. Si no, `action.unsupported` con `connectors.gog.errors.invalidTask` (la misma clave para un `workingDir` no relativo y para más de 64 argumentos). Debe acabar en `.exe` (sin distinguir mayúsculas); si no (por ejemplo `.bat` o `.lnk`), `action.unsupported` con `connectors.gog.errors.unsupportedExecutable`. `executable` = `ctx.fs.join(installPath, path)`.
+6. `workingDir`: si es texto no vacío, con las mismas reglas que `path`, `cwd` = `ctx.fs.join(installPath, workingDir)`; si no, `cwd` = `installPath`.
+7. `arguments`: si es texto, se parte con `splitWindowsArgs` (abajo); más de 64 argumentos es `action.unsupported` con `connectors.gog.errors.invalidTask`.
+8. Devuelve `{ kind: 'exec', executable, args, cwd }`.
+
+- Se lee el `.info` **al lanzar**, no al escanear: así una actualización del juego que cambie el ejecutable vale enseguida, y no hace falta `launchData`.
+- Un `..` en `path` o `workingDir` no lo filtra el conector: si sale de `installPath`, lo rechaza el núcleo (`launch.rejected`), que es quien confina.
+- **Invariante 3.** La API sigue recibiendo solo IDs. Ejecutable, argumentos y carpeta salen de un fichero local de la carpeta del juego, que el núcleo confina a `installPath`. Quien puede escribir ese `.info` puede también sustituir el propio `.exe`, así que el fichero no añade una vía nueva de ataque. Lo que sí se impide: salir de la carpeta del juego, que **Ludiary añada** un intérprete de órdenes (`cmd.exe`, `shell`) y ejecutar algo que no sea un `.exe`. El `.exe` y sus argumentos son los que dice el `.info`: si la tarea de un juego abre a su vez otro programa, eso es cosa del juego, como al abrirlo desde Galaxy.
+- **Para la guía:** `CreateProcess` no pasa por SmartScreen ni mira la marca de la web (MOTW), a diferencia de un doble clic en el Explorador. Abrir un juego desde Ludiary no muestra esos avisos; el documentalista lo menciona en la guía de seguridad.
+
+**`splitWindowsArgs(s: string): string[]`** (`connectors/gog/src/args.ts`, pura): parte la cadena con las reglas del CRT universal de Microsoft (UCRT, las de `CommandLineToArgvW` desde 2008) para los argumentos que siguen al programa: los espacios y tabuladores separan fuera de comillas; `"` abre o cierra; 2n barras inversas seguidas de `"` dan n barras y abren o cierran; 2n+1 barras seguidas de `"` dan n barras y una comilla literal; las barras que no van delante de una comilla son literales; dentro de comillas, `""` es una comilla literal. Node (libuv) vuelve a entrecomillar cada argumento con esas mismas reglas al crear el proceso, así que un juego que lea sus argumentos con el CRT recibe lo mismo que con Galaxy (supuesto G10).
+
+**Núcleo:** ninguna regla nueva. `checkSpec` ya comprueba lo de la regla 5: tipo en `launchKinds` y en `ProcessLauncher.kinds`, `executable` absoluto, existente, no carpeta y dentro de `installPath` (GOG no declara `launcher`), argumentos sin caracteres de control (64 como mucho, 8192 caracteres cada uno), y `cwd` absoluto, carpeta y dentro de las mismas raíces.
+
+**Plataforma, segunda barrera** (`packages/platform-windows/src/process-launcher.ts`, `exec`), antes de crear nada; cualquier fallo es `ExecError('rejected')`:
+
+- `executable`: ruta absoluta con letra de unidad (`^[A-Za-z]:\\`), local (sin UNC ni `\\?\` o `\\.\`), sin caracteres de control ni `"`, con extensión `.exe` sin distinguir mayúsculas, y que exista como fichero (`stat`). Se rechazan expresamente `.bat` y `.cmd`: Node exige un intérprete de órdenes para ellos desde la corrección de CVE-2024-27980, y eso es lo que no se quiere.
+- Además (revisión del auditor), para `executable` y `cwd`: ningún `:` después de la posición 1 (flujos alternativos `fichero:flujo`); ningún componente que sea un nombre reservado de dispositivo (`CON`, `PRN`, `AUX`, `NUL`, `COM0` a `COM9`, `LPT0` a `LPT9`, sin distinguir mayúsculas y también con extensión, como `nul.exe`); ningún componente acabado en punto o en espacio (Windows los recorta y la ruta comprobada no sería la ejecutada).
+- `cwd`, si viene: mismas reglas de ruta, y que sea carpeta.
+- **Unidades de red mapeadas y `subst`** (corregido tras la auditoría del código, 22-10-2026): `subst` se admite, porque `realPath` lo resuelve a la unidad real. Las **unidades de red mapeadas no se admiten** para `exec`: en Windows `realPath` (`GetFinalPathNameByHandle`) convierte `Z:\…` en `\\servidor\recurso\…`, el núcleo pasa esa ruta canonizada y la plataforma rechaza las UNC, así que Jugar da `launch.rejected`. Falla del lado seguro y no se añade código para distinguirlo. Supuesto sin verificar en un equipo real (no hay unidad mapeada en el del usuario). Si algún usuario lo necesita, se decide aparte.
+- Cada argumento sin caracteres de control (incluido NUL), y la línea de órdenes resultante (ejecutable más argumentos entrecomillados) de 32 000 caracteres como mucho (el límite de `CreateProcess` es 32 767).
+
+**Implementación de `exec` en Windows:**
+
+```ts
+spawn(executable, args, {
+  cwd,                         // installPath when the task has no workingDir
+  detached: true,              // the game outlives the server
+  stdio: "ignore",
+  windowsHide: false,          // see below
+  env: childEnv(process.env),  // without LUDIARY_* and NODE_* (case-insensitive)
+  // shell and windowsVerbatimArguments are never set (default false)
+});
+// resolve on 'spawn' (then unref), reject on 'error'
+```
+
+- **`windowsHide: false`**, a diferencia de `openUri`: `windowsHide` pide a Windows `SW_HIDE` en el arranque, y un juego que respete ese valor en su primer `ShowWindow` arrancaría con la ventana oculta. Para `rundll32` da igual; para un juego, no.
+- **Entorno:** el juego hereda el del usuario, sin las variables cuyo nombre empiece por `LUDIARY_` (ganchos de prueba, decisión 65) o `NODE_`, comparando sin distinguir mayúsculas (en Windows `node_options` y `NODE_OPTIONS` son la misma). Las demás pasan tal cual, como si se abriera desde el Explorador. **Regla general:** ningún secreto viaja por el entorno de un proceso que se pueda lanzar como juego; en Docker, la clave por variable de entorno (decisión 14) no aplica porque ese modo no lanza.
+- **Consola:** con `detached`, un ejecutable de consola (por ejemplo DOSBox) podría arrancar sin ventana de consola (supuesto G16). Se comprueba en el punto 9. Si falla, se resuelve en una decisión aparte con el auxiliar de Go y `CREATE_NEW_CONSOLE`; nunca con un intérprete de órdenes.
+- **El juego sobrevive al servidor:** el servidor no corre dentro de un Job object con `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` (ni lo crea el lanzador, decisión 45), así que parar Ludiary no cierra el juego. Se comprueba en el punto 9.
+- **Errores de `spawn`:** la plataforma solo mira `err.code`. `EACCES` y `EPERM` dan `ExecError('denied')` (entre ellos, un ejecutable que exige administrador: `CreateProcess` no muestra el aviso de UAC; supuesto G11); los demás, `ExecError('failed')`. No se reintenta con `ShellExecute` en este corte: una elevación lanzada desde un servidor en segundo plano merece su propia decisión.
+- `kinds` pasa a `['uri', 'exec']`. Desaparece el `shortcut` de la 72 («`kinds` excluye `exec`»).
+
+#### 5. Portadas
+
+- **Entra en este corte**, porque hay una vía razonable sin cuenta y la biblioteca de GOG sin portadas se vería rota.
+- **Fuente: GamesDB de GOG**, la que usa Galaxy 2.0. `GET https://gamesdb.gog.com/platforms/gog/external_releases/<productId>`, sin cuenta ni clave. De la respuesta se usan `game.vertical_cover.url_format` → `coverUrl` y `game.background.url_format` → `heroUrl`. El formato es `https://images.gog.com/<hash>{formatter}.{ext}?namespace=gamesdb`; se sustituye `{formatter}` por la cadena vacía y `{ext}` por `jpg`.
+  - Comprobado el 22 de octubre de 2026 con Beneath a Steel Sky (1207658695): la URL resultante devuelve un JPEG vertical de unos 923×1300.
+  - **Descartadas:** `api.gog.com/v2/games/<id>` (su `boxArtImage` es una miniatura de tienda de unos 170×240 con la banda «FREE» incrustada) y `api.gog.com/products/<id>` (sin portada vertical; logos e iconos en `images-1` a `images-4.gog-statics.com`).
+- **Manifiesto:** `apiHosts: ['gamesdb.gog.com']`, `mediaHosts: ['images.gog.com']`. La CSP de la SPA y la lista de `vite.config.ts` añaden `https://images.gog.com` (la prueba de paridad de la 71 lo exige). Si `images.gog.com` redirige a otro host, la CSP lo bloquearía y la portada caería al degradado; se añade el destino tras comprobarlo (supuesto G9).
+- **`resolveMedia`** (`connectors/gog/src/media.ts`):
+  - Antes de pedir nada, cada ID se revalida con `^\d{1,20}$`; uno que no cumpla se omite sin petición (nunca se mete en la ruta).
+  - Una petición por ID (GamesDB no admite lotes), como mucho **6 a la vez**, para que un lote de 50 quepa en los 15 s del paso de medios de la 73 (supuesto G8). Con la primera respuesta 429 no se lanzan más peticiones y `resolveMedia` lanza `store.rate-limited` en seguida.
+  - Cada petición tiene un tiempo máximo de 8 s, aplicado por el conector al esperar la respuesta; el `signal` del contexto sigue cortando todo a los 15 s.
+  - **Limitación aceptada (implementación, 22-10-2026):** `HttpClient.request` no admite `signal`, `timeout` ni `maxBytes` por petición, y no se amplía el contrato por esto. Por eso, tras un 429 o al vencer los 8 s, las peticiones que ya estaban en vuelo no se cancelan en el socket: terminan solas y su resultado se descarta. El tope de respuesta es el de 2 MiB del cliente de medios del núcleo (decisión 73), no los 512 KiB que propuso el auditor; una respuesta de GamesDB ocupa unos pocos KB. Se revisa si GamesDB responde 429 con frecuencia o si otra tienda necesita cancelar peticiones.
+  - Por respuesta:
+    - 200: se valida que `vertical_cover.url_format` y `background.url_format` cumplan `^https://images\.gog\.com/[0-9a-f]{64}\{formatter\}\.\{ext\}(\?namespace=gamesdb)?$`. El que no cumpla, o falte, se omite. La URL final se vuelve a comprobar con `^https://images\.gog\.com/[0-9a-f]{64}\.jpg(\?namespace=gamesdb)?$`.
+    - 404: el ID no está en GamesDB. Queda fuera del mapa: el núcleo lo marca resuelto y vacío, y no lo vuelve a pedir en 30 días.
+    - 429: `store.rate-limited` con `Retry-After`, para todo el lote.
+    - Cualquier otro estado, un cuerpo que no es JSON o un JSON sin `game`: `store.unexpected-response` para todo el lote. Lanzar en vez de omitir importa: el núcleo marca resueltos todos los ID pedidos si la llamada vuelve bien, y un fallo pasajero dejaría el juego sin portada 30 días.
+  - Sin cabeceras propias; el `HttpClient` de la 73 pone `accept: application/json` y no sigue redirecciones.
+- **Núcleo:** sin cambios. El paso de medios de la 73 ya es genérico por conector (`media.ts`).
+- **Privacidad (invariante 9):** solo propiedades de GOG. Salen hacia GOG **todos** los IDs de GOG detectados en el equipo, uno por petición, y la IP del usuario; sin cookies (Node no las guarda) y sin `User-Agent` propio. GOG recibe lo mismo que vería Galaxy. El documentalista lo añade a la guía de privacidad.
+
+#### 6. Manifiesto de GOG
+
+```ts
+// connectors/gog/src/index.ts (sketch)
+export function createGogConnector(): StoreConnector {
+  return {
+    contractVersion: 1,
+    id: "gog",
+    nameKey: "connectors.gog.name" as I18nKey,
+    access: "unofficial-api",          // GamesDB now, gogdl with the account; shows the fragility icon (ADR 40)
+    capabilities: {
+      library: false, scan: true, dlc: "none",
+      actions: ["play"], launchKinds: ["exec"], uriSchemes: [],
+      storePlaytime: false, price: false,
+    },
+    minSyncIntervalMs: 1_800_000,      // ADR 50
+    authHosts: [], apiHosts: ["gamesdb.gog.com"], mediaHosts: ["images.gog.com"],
+    locations: GOG_LOCATIONS,          // gog-games, gog-library (point 3)
+    externalTools: [],                 // gogdl arrives with the account cut
+    scanInstalled: scanGogInstalled,
+    discoverRoots: discoverGogRoots,
+    resolveMedia: resolveGogMedia,
+    resolveAction: resolveGogAction,
+  };
+}
+```
+
+- `checkConnectorManifest` lo acepta tal cual: `play` con un tipo, sin `uri` ni esquemas, `resolveMedia` con `apiHosts`.
+- **Paquete `connectors/gog`** (`@ludiary/connector-gog`, `"private": true`), con la misma forma que `connectors/steam`: `src/` (`manifest.ts`, `info.ts`, `args.ts`, `scan.ts`, `launch.ts`, `media.ts`, `index.ts`), `locales/es.json` y `en.json` (`connectors.gog.*`), `fixtures/` y pruebas con `connector-testkit`.
+- **`runtime`:** `createConnectors()` devuelve `[createSteamConnector(), createGogConnector()]`. `packages/i18n/src/connectors.ts` añade su línea.
+- **Web:** la tarjeta de GOG queda como quedó la de Steam en la 72 (apartado 7): modo solo instalados activo y sin pasos; el asistente de cuenta sigue en el simulador. Jugar usa `game.launching` con `{store}` = GOG. El error nuevo `game.launchDenied` y las claves `connectors.gog.errors.*` se traducen en los dos idiomas.
+
+#### 7. Proceso y tiempo de juego
+
+Fuera de este corte (corte 2b). No se informa `executables` (el núcleo aún no lo guarda, punto 8 de la 72). Cuando llegue el 2b, GOG le da dos ventajas: el ejecutable lanzado está en `installPath` y es el del juego. La 55 se revalida con GOG en ese corte.
+
+#### 8. Pruebas automáticas
+
+Fixtures **inventadas**: IDs de producto ficticios (`1000000001`, `1000000002`…), títulos inventados y rutas bajo `C:\Games` o `D:\GOG Games`, nunca `C:\Users\…`. La comprobación de fixtures de la decisión 48 se aplica igual. La única respuesta grabada real es la pública de GamesDB para 1207658695 (datos de catálogo, sin datos de cuenta).
+
+- **`connectors/gog`:**
+  - `.info`: con y sin BOM, JSON roto, sin `gameId`, `gameId` distinto del nombre del fichero, `rootGameId` igual, distinto (DLC) y ausente, sin `name`, título no ASCII.
+  - `scanInstalled` con `memoryFiles`: raíz que es una carpeta de juego; raíz que es una carpeta de juegos; juego con dos DLC en la misma carpeta (sale solo el juego); carpeta sin `.info`; ID repetido en dos raíces; fichero bloqueado (raíz ilegible y se conserva); unión que escapa en una subcarpeta (se salta) y en la raíz (ilegible); tope de 2000 subcarpetas; `goggame-*.hashdb` y `.ico` ignorados.
+  - `discoverRoots`: padres agrupados, raíz de unidad → carpeta del juego con `tag: 'game'`, repetidos sin distinguir mayúsculas, `gog-library` tal cual.
+  - `splitWindowsArgs`: tabla con los casos de las reglas de arriba (comillas, `""` dentro de comillas, barras pares e impares ante comilla, barras sueltas, espacios y tabuladores de más, cadena vacía) y una prueba de ida y vuelta con el entrecomillado de libuv (`quote_cmd_arg`, reimplementado en la prueba) sobre esos casos.
+  - `resolveAction`: elige la tarea principal entre varias; ignora `URLTask` y no principales; sin tarea principal; `path` absoluto, con unidad, UNC o `:`; `.bat`, `.lnk`; `workingDir` vacío → `installPath`; más de 64 argumentos; `.info` ausente → `launch.not-installed`; ID no numérico; acciones distintas de `play` → `null`; ningún `ConnectorError` lanzado lleva una ruta, un nombre de fichero o un argumento en `message` ni en `params`.
+  - `resolveMedia` con `fakeHttp`: 200 con las dos imágenes; `vertical_cover` nulo; `url_format` de otro host, con hash corto o con otra forma; 404 → fuera del mapa; 429 con `Retry-After` que no lanza más peticiones y devuelve en seguida; petición que tarda más de 8 s; 500 y cuerpo que no es JSON → lanza; ID que no cumple `^\d{1,20}$` → sin petición; como mucho 6 peticiones en vuelo; host y ruta exactos.
+  - `assertConnectorConformance`.
+- **`platform-windows`** (`exec` con `spawn` doble): ruta relativa, UNC, `\\?\`, sin `.exe`, `.bat`, `.cmd`, inexistente, carpeta, `"` o control en la ruta, NUL en un argumento, `cwd` que no es carpeta, línea demasiado larga, `:` tras la posición 1 (`C:\Games\x.exe:flujo`), nombres reservados (`C:\Games\CON\x.exe`, `C:\Games\nul.exe`, `COM1`, `LPT9`, en mayúsculas y minúsculas) y componentes acabados en punto o espacio, en `executable` y en `cwd` → `ExecError('rejected')` **sin llamar** a `spawn`; las opciones exactas (`detached`, `stdio: 'ignore'`, `windowsHide: false`, sin `shell` ni `windowsVerbatimArguments`, `cwd`); entorno sin `LUDIARY_*` ni `NODE_*` en cualquier combinación de mayúsculas (`node_options`, `Ludiary_Test`); `EACCES` y `EPERM` → `denied`; otro error → `failed`; el `ExecError` resultante no tiene `cause` y su `message` no contiene la ruta ni los argumentos aunque el error de Node sí los lleve (`path`, `spawnargs`); `kinds` incluye `exec`.
+- **`core`:** un conector doble con `exec`: lanza con `executable` y `cwd` dentro de `installPath`; rechaza fuera (también con `..`); `exec` recibe las rutas de `realPath`, no las del conector, y una unión dentro de `installPath` que tras canonizar sale de las raíces se rechaza; instalación cuya raíz se desactivó o quitó (o modo `later`) antes del siguiente escaneo → `not-installed` sin llamar al conector; `ExecError('denied')` → `launch.denied`; el registro de un lanzamiento no contiene la ruta ni los argumentos. Con Steam y GOG instalados para el mismo canónico no hay caso todavía (sin emparejamiento), pero sí: dos canónicos distintos, cada uno lanza con su conector.
+- **`runtime`:** `createConnectors` registra los dos; la paridad de la CSP con `images.gog.com`; una plataforma sin `exec` rechaza el conector de GOG al arrancar (regla de la 72).
+- **`i18n`:** paridad con `connectors/gog/locales`.
+- **Playwright:** árbol de GOG de fixtures en una carpeta temporal (con un `.exe` de prueba vacío), `LocationResolver` doble que devuelve la carpeta del juego y `ProcessLauncher` que graba. Casos: la biblioteca muestra el juego de GOG con el icono de API no oficial en Ajustes; Jugar graba un `exec` con el ejecutable, los argumentos partidos y el `cwd` esperados.
+
+#### 9. Prueba manual (la prepara el tester; la hace el usuario)
+
+- **Preparación:** instalar GOG Galaxy desde gog.com, iniciar sesión, añadir a la cuenta **Beneath a Steel Sky** (producto 1207658695, gratuito: etiqueta «Free Game» en la API de GOG el 22 de octubre de 2026) e instalarlo desde Galaxy en una biblioteca con espacios y un carácter no ASCII, por ejemplo `D:\Juegos GOG Ñ`. Se elige porque es gratuito y, previsiblemente, se abre con ScummVM con argumentos entre comillas, lo que prueba `splitWindowsArgs` (supuesto G15).
+- **Qué comprobar:**
+  1. `reg query "HKLM\SOFTWARE\WOW6432Node\GOG.com\Games" /s`: existe la subclave `1207658695` con `path` apuntando a la carpeta (G1).
+  2. En la carpeta existe `goggame-1207658695.info`. Copiar al ADR, saneados, sus campos `gameId`, `rootGameId`, `name` y la tarea principal (`type`, `path`, `arguments`, `workingDir`) para cerrar G3 a G5 y G15.
+  3. Ludiary, con autodetección: Ajustes muestra la biblioteca como carpeta detectada de GOG; tras el escaneo, el juego aparece con portada vertical (G7, G9).
+  4. Jugar con Galaxy **cerrado**: el juego arranca, en primer plano y con su ventana visible; Galaxy no se abre. Repetir con Galaxy abierto.
+  5. Con «solo carpetas manuales», añadir la carpeta de la biblioteca: el juego aparece igual.
+  6. Desinstalar desde Galaxy y escanear: el juego desaparece.
+  7. Opcional: descargar el instalador sin conexión de BASS desde la biblioteca de gog.com, instalarlo en otra carpeta sin Galaxy y ver si aparece solo (G2).
+  8. Opcional, si el usuario tiene un juego de GOG con DLC instalado: el DLC no sale como juego (G5).
+  9. El registro exportado no contiene la ruta de la biblioteca ni los argumentos del juego.
+  10. Con el juego abierto, parar Ludiary desde la bandeja (o con `--stop`): el juego sigue abierto. Volver a abrir Ludiary con el juego aún abierto: arranca en el mismo puerto y la biblioteca funciona.
+  11. Si BASS (o el juego de prueba) usa DOSBox u otro programa de consola, comprobar que su ventana aparece (G16). Si no hay ninguno de consola entre los juegos de prueba, se anota como sin comprobar.
+
+#### 10. Orden de implementación y trabajo en paralelo
+
+1. **Primero** (`programador`, pequeño): comentario de `ProcessLauncher.exec` y `ExecError` en `contracts`; `launch.denied` en `core` con su clave.
+2. **En paralelo:**
+   - `conectores`: `connectors/gog` completo contra `connector-testkit` (puntos 3 a 6 y sus pruebas).
+   - `programador` o `empaquetador`: `exec` en `platform-windows` con su segunda barrera y sus pruebas.
+   - `auditor`: revisión de este diseño (`exec`, `splitWindowsArgs`, confinamiento a `installPath`, `windowsHide`, entorno del hijo) antes de que haya código.
+3. **Después:** registro en `runtime`, CSP y `vite.config.ts`, textos, Playwright y revisión del `auditor` sobre el código.
+4. **Al final:** prueba manual del usuario (punto 9), con los supuestos cerrados en este ADR, y el `documentalista`: guía de usuario (GOG detectado solo; añadir la carpeta si se usó el instalador sin conexión en un sitio no estándar; que Jugar abre el juego sin pasar por Galaxy), privacidad (petición a GamesDB con los IDs de GOG) y solución de problemas («Windows no ha permitido abrir el juego», «Este juego no indica cómo abrirse»).
+
+#### 11. Lo que decide el usuario
+
+1. **Cómo se abre un juego de GOG:**
+   - (a) siempre directo, sin Galaxy (recomendado en este corte: funciona con y sin Galaxy, es lo más rápido y no depende de una sintaxis sin documentar). Coste: las partidas en la nube de GOG no se sincronizan al abrir desde Ludiary, y algunos juegos pueden querer Galaxy abierto para logros o multijugador;
+   - (b) a través de Galaxy si está instalado, y directo si no (opción B del punto 4). Coste: abre Galaxy cada vez y depende de que Galaxy acepte el argumento `/path` tal como lo entrecomilla Node, que solo se sabe probándolo;
+   - (c) un ajuste por tienda para elegir, con (a) por defecto. Coste: una pantalla y un ajuste más.
+2. **Qué va después de este corte:** (a) el corte 2b, tiempo de juego, que cierra la 55 con Steam y GOG a la vez (recomendado: el lanzamiento ya está validado en las dos tiendas); (b) la cuenta de GOG junto con el emparejamiento entre tiendas; (c) el emparejamiento solo, antes de cualquier cuenta nueva.
+
+#### Supuestos de GOG (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
+
+- **G1:** cada producto instalado tiene una subclave de `HKLM\SOFTWARE\GOG.com\Games` (en `WOW6432Node`, vista de 32 bits) con el ID como nombre y, entre otros, los valores `path`, `gameID`, `gameName`, `exe`, `launchCommand` y `dependsOn`. Fuentes: wiki de GameFinder («every sub-key … is a game», y que se use la vista del registro y no `WOW6432Node` en la clave) y un hilo del foro de GameSave Manager. Sin documentación de GOG.
+- **G2 (sin verificar):** el instalador sin conexión escribe la misma clave, y la biblioteca por defecto de Galaxy es `C:\Program Files (x86)\GOG Galaxy\Games`.
+- **G3:** en Windows, `goggame-<id>.info` está en la raíz de la carpeta del juego. Comprobado en el código de `gogdl` (`launch.py`, `load_game_info`), que lo lee ahí.
+- **G4:** el `.info` tiene `playTasks` con `isPrimary`, `path` y `workingDir` relativos a la carpeta del juego, y `arguments` como una sola cadena. Comprobado en `gogdl` (que usa esos campos) y en la documentación de GOG para desarrolladores («This path is relative to the game root directory»; dos tipos de tarea, de fichero y de URL). El nombre `type` con valores `FileTask` y `URLTask` sale de foros de GOG.
+- **G5 (sin verificar):** el `.info` tiene `gameId`, `rootGameId` y `name`, y cada DLC instalado deja su propio `.info` en la carpeta del juego base con `rootGameId` igual al del juego. `gogdl` no los usa.
+- **G6 (sin verificar):** algunos juegos antiguos pueden no tener `playTasks`. Si pasa, Jugar muestra «Este juego no indica cómo abrirse»; la alternativa sería leer `exe` del registro, que exige el tipo de ubicación descartado en el punto 3.
+- **G7:** GamesDB (`gamesdb.gog.com/platforms/gog/external_releases/<id>`) responde sin cuenta con `game.vertical_cover.url_format` en `images.gog.com`. Comprobado el 22 de octubre de 2026 con 1207658695. API no oficial: si cambia, el paso de medios falla con aviso y queda el degradado.
+- **G8 (sin verificar):** GamesDB da 404 para un ID desconocido, y su límite de peticiones tolera 6 en paralelo. Si da 429 o el lote no cabe en 15 s, se baja la concurrencia o el tamaño del lote.
+- **G9 (sin verificar):** `images.gog.com` sirve sin redirigir a otro host.
+- **G10:** el entrecomillado de Node (libuv) es la inversa de las reglas del CRT de Microsoft. Un juego que analice a mano su línea de órdenes podría ver otras comillas si sus argumentos las llevan; quien lea `GetCommandLineW` ve la línea tal como la vuelve a entrecomillar libuv, no la cadena original del `.info`. La prueba de BASS lo cubre en parte.
+- **G11 (sin verificar):** `spawn` de un ejecutable que exige administrador falla con `EACCES` (`ERROR_ELEVATION_REQUIRED` traducido por libuv).
+- **G12 (sin verificar):** los juegos de GOG no necesitan Galaxy para arrancar (sin DRM); los que usan su SDK pueden necesitarlo para logros o multijugador.
+- **G13:** `GalaxyClient.exe /command=runGame /gameId=<id> /path="<ruta>"` arranca un juego. Solo foros de GOG y de Lutris. No se usa salvo que el usuario elija (b) o (c) en el punto 11.1.
+- **G14:** Galaxy no registra un esquema de URI para lanzar juegos. Hilo antiguo del foro de GOG; no se usa.
+- **G15 (sin verificar):** Beneath a Steel Sky se abre con ScummVM y una tarea con argumentos entre comillas.
+- **G16 (sin verificar):** con `detached: true`, un ejecutable de consola (DOSBox) puede arrancar sin ventana de consola visible. Si pasa, decisión aparte con el auxiliar de Go y `CREATE_NEW_CONSOLE`; nunca un intérprete de órdenes.
+
+**Prueba manual del usuario (22 de octubre de 2026, Windows 11, Galaxy instalado, juego Cold Waters 1512372112 en `F:\GOG Galaxy\Games ñ\Cold Waters`):** «funciona como un tiro». Ludiary lo detectó solo, con la biblioteca en una unidad y carpeta no estándar con «ñ». Portada y Jugar: incluidos en ese «funciona», sin detalle paso a paso. Comprobado además, solo leyendo:
+- **G1, confirmado:** la subclave `1512372112` está en `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games` (no existe `HKLM\SOFTWARE\GOG.com\Games` sin `WOW6432Node`), con `path`, `gameID`, `gameName`, `exe`, `launchCommand`, `launchParam`, `workingDir`, `dependsOn` y `DLC`, entre otros.
+- **G3, confirmado:** `goggame-1512372112.info` está en la raíz de la carpeta del juego, junto a `.hashdb`, `.ico` y `.script`.
+- **G4, confirmado:** la tarea principal es `{"type":"FileTask","isPrimary":true,"category":"game","path":"ColdWaters.exe"}`, relativa y sin `arguments` ni `workingDir`. Hay además tareas `FileTask` de documento (un PDF) y `URLTask`, sin `isPrimary`, que el conector no usa.
+- **G5, en parte:** el `.info` del juego base tiene `gameId`, `rootGameId` (igual a `gameId`) y `name`. Los DLC siguen sin probar.
+- **G2:** la biblioteca de Galaxy del usuario no es la predeterminada y se encontró por el registro; la carpeta predeterminada y el instalador sin conexión siguen sin probar.
+- Sin probar en esta pasada: G6, G8, G9, G10/G15 con argumentos (Cold Waters no lleva), G11, G12 sin Galaxy, G16 y los pasos 9 a 11 de la guía.
+
+Fuentes consultadas el 22 de octubre de 2026: [GameFinder, GOG Galaxy](https://github.com/erri120/GameFinder/wiki/GOG-Galaxy); [foro de GameSave Manager](https://forum.gamesave-manager.com/viewtopic.php?t=76&p=207); [`gogdl`, `launch.py`](https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/launch.py); [GOG, tareas de Build Creator](https://docs.gog.com/bc-tasks/); [foro de GOG, lanzar un juego de Galaxy desde fuera](https://gog.com/forum/general/how_to_open_a_specific_galaxy_launcher_game_via_external_link); [foro de Lutris](https://forums.lutris.net/t/how-to-add-gog-galaxy-features-to-no-mans-sky-or-any-gog-game-i-guess/20531); respuestas de `api.gog.com/v2/games/1207658695`, `api.gog.com/products/1207658695` y `gamesdb.gog.com/platforms/gog/external_releases/1207658695`.
+
+**Motivo:** es el corte más pequeño que valida `exec` de principio a fin con la tienda que lo necesita, sin secretos de terceros y **sin cambiar el contrato**: el registro, `discoverRoots`, `resolveMedia` y la regla 5 ya existían. Usar el `.info` como fuente única hace que el mismo código sirva para Galaxy, para el instalador sin conexión y para carpetas manuales. Lanzar el ejecutable del juego confina el `exec` a la carpeta del juego, que es la barrera más fuerte que permite el contrato, y evita depender de la sintaxis sin documentar de Galaxy. Alternativas descartadas: el registro como fuente de datos (un tipo nuevo de ubicación y cambios en el auxiliar para datos que ya da el `.info`); una raíz por juego (Ajustes lleno y tope de 64); `windowsVerbatimArguments` con la cadena del `.info` tal cual (pasaría al proceso texto sin validar argumento a argumento y abre la puerta a reglas de comillas propias); `api.gog.com` para las portadas (sin portada vertical útil).
+
+**Consecuencias:**
+
+- Primera ejecución de un `.exe` arbitrario del disco del usuario. El `auditor` revisa antes de cerrar: `exec` y su segunda barrera, `splitWindowsArgs`, que el `exec` no pueda salir de `installPath`, las opciones de `spawn`, el entorno del hijo, que el registro no lleve rutas ni argumentos, la CSP y las fixtures.
+- Segunda tienda con salida de red (`gamesdb.gog.com`) y segundo host de imágenes en la CSP.
+- El punto (C) de la decisión 72 queda resuelto: GOG antes del corte 2b.
+- La afirmación de la 72 de que el emparejamiento llega «con la segunda tienda» queda revisada: llega en su propio corte (punto 1).
+- Los agentes `conectores`, `programador` y `empaquetador` tienen aquí su especificación; el `tester` prepara la prueba manual del punto 9; el `documentalista` actualiza las guías del punto 10.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -3055,12 +3350,13 @@ Sin fase asignada: juegos manuales y personalización de metadatos por el usuari
 Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 
 - Actualizador con vuelta atrás (decisión 58): por implementar y validar en Windows; condición que antes cerraba la 45.
-- Detección del proceso de cada juego: propuesta en la 55. Se cierra para Steam en el corte 2b de la 72 (tiempo de juego, después del corte de la cuenta de Steam y antes de GOG), con al menos tres juegos reales, y se revalida con cada tienda nueva.
-- Puntos de producto de la decisión 72 (A y B ya decididos por el usuario):
-  - (C) Orden de los cortes siguientes: tras probar el primer corte se encargó el de la cuenta de Steam (decisión 74, 22 de octubre de 2026). Queda por confirmar que después van el tiempo de juego (corte 2b) y GOG, como propone la 72.
+- Detección del proceso de cada juego: propuesta en la 55. Se cierra en el corte 2b de la 72 (tiempo de juego), que pasa a ir **después** del primer corte de GOG (decisión 76), con al menos tres juegos reales, y se revalida con cada tienda nueva.
+- Puntos de producto de la decisión 72: A y B decididos por el usuario. (C), orden de los cortes, **resuelto** el 22-10-2026: tras la cuenta de Steam (74) el usuario encargó GOG (76), antes del corte 2b.
+- Decisión 76, punto 11 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste) y qué corte va después (2b, cuenta de GOG con emparejamiento, o emparejamiento solo).
+- Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 73 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 76 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

@@ -1,0 +1,8 @@
+{
+  "connectors.gog.name": "GOG",
+  "connectors.gog.errors.invalidId": "This GOG game has an invalid identifier and cannot be launched.",
+  "connectors.gog.errors.infoMissing": "Ludiary cannot find this game's files. It may have been uninstalled or moved: scan again.",
+  "connectors.gog.errors.noPlayTask": "This game does not say how to open it. Open it from GOG Galaxy.",
+  "connectors.gog.errors.invalidTask": "The game's launch data is not valid, so Ludiary will not open it. Open it from GOG Galaxy.",
+  "connectors.gog.errors.unsupportedExecutable": "This game opens with something other than a program (.exe), which Ludiary does not launch. Open it from GOG Galaxy."
+}

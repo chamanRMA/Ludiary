@@ -1,0 +1,15 @@
+{
+  "external_id": "1207658695",
+  "game": {
+    "title": {
+      "*": "Beneath a Steel Sky",
+      "en-US": "Beneath a Steel Sky"
+    },
+    "vertical_cover": {
+      "url_format": "https://images.gog.com/cfa2550bbfd27506a0b5099423aab3cc0cbfb1ae2edcef4d32a6faa38e7721a6{formatter}.{ext}?namespace=gamesdb"
+    },
+    "background": {
+      "url_format": "https://images.gog.com/2ddb74da4bb18466ea716abfa56674d48858483f6a07e94f16792b4304e16b0c{formatter}.{ext}?namespace=gamesdb"
+    }
+  }
+}

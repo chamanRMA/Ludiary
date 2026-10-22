@@ -1,6 +1,7 @@
 // Scan and synchronization (ADR 40 rules 1-4, ADR 42, 50, 72).
 import { ConnectorError } from "@ludiary/contracts";
 import type { ConnectorLogger, ResolvedLocation, ScanRoot, StoreConnector, StoreId } from "@ludiary/contracts";
+import { storedActiveRoots } from "./active-roots";
 import { connectorLogger, LIBRARY_MAX_BYTES, syncContext } from "./contexts";
 import {
   AUTO_SYNC_DEFAULT_MS,
@@ -281,11 +282,11 @@ export function createSyncService(env: Env): SyncService {
 
     try {
       if (mode !== "later") {
-        for (const r of stored) if (r.origin === "user" && r.enabled) roots.push({ origin: "user", path: r.path });
+        for (const r of storedActiveRoots(mode, stored, c.id)) if (r.origin === "user") roots.push({ origin: "user", path: r.path });
 
         // ADR 72: 'manual-only' scans only the user's folders. Stored discovered folders count only in 'auto-and-manual'.
         let discoveredActive: readonly ScanRootRecord[] =
-          mode === "auto-and-manual" ? stored.filter((r) => r.origin === "discovered" && r.store === c.id && r.enabled) : [];
+          storedActiveRoots(mode, stored, c.id).filter((r) => r.origin === "discovered");
         if (mode === "auto-and-manual" && deps.locations) {
           const found = await discover(c, signal, locale, log);
           if (found) {

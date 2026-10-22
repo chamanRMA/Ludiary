@@ -72,6 +72,9 @@ export class FakeFiles implements LocalFiles {
     const r = this.compareKey(root);
     return a === r || a.startsWith(r.endsWith("\\") ? r : `${r}\\`);
   }
+  async realPath(p: string) {
+    return this.normalize(p);
+  }
   async isDirectory(p: string) {
     return this.dirs.has(this.compareKey(p));
   }

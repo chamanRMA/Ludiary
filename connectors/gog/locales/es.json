@@ -1,0 +1,8 @@
+{
+  "connectors.gog.name": "GOG",
+  "connectors.gog.errors.invalidId": "Este juego de GOG tiene un identificador no válido y no se puede abrir.",
+  "connectors.gog.errors.infoMissing": "Ludiary no encuentra los archivos de este juego. Puede que se haya desinstalado o movido: escanea de nuevo.",
+  "connectors.gog.errors.noPlayTask": "Este juego no indica cómo abrirse. Ábrelo desde GOG Galaxy.",
+  "connectors.gog.errors.invalidTask": "Los datos de arranque del juego no son válidos, así que Ludiary no lo abrirá. Ábrelo desde GOG Galaxy.",
+  "connectors.gog.errors.unsupportedExecutable": "Este juego se abre con algo que no es un programa (.exe), y Ludiary no lo lanza. Ábrelo desde GOG Galaxy."
+}

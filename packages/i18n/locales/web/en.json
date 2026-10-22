@@ -250,6 +250,7 @@
   "notFound.home": "Back to home",
   "auth.originKeyRequired": "Ludiary does not recognize this tab. Open it again from the desktop shortcut or the tray icon.",
   "auth.sessionRequired": "Not authorized. Open Ludiary from the desktop shortcut or the tray icon.",
+  "game.launchDenied": "Windows did not allow the game to open. It may ask for administrator rights: open it from its store or from its shortcut.",
   "game.launching": "Opening in {store}…",
   "errors.generic": "Something went wrong. Please try again.",
   "errors.unreachable": "Cannot reach Ludiary. Check that it is still running (tray icon).",

@@ -21,7 +21,7 @@ const CONNECTOR_CODES = [
   "action.unsupported",
   "internal",
 ];
-const CORE_CODES = ["not-found", "not-installed", "action-unavailable", "launch.rejected", "busy", "invalid-input", "picker-unavailable", "timeout"];
+const CORE_CODES = ["not-found", "not-installed", "action-unavailable", "launch.rejected", "launch.denied", "busy", "invalid-input", "picker-unavailable", "timeout"];
 const WEB_KEYS = ["web.open.title", "web.open.noscript", "web.open.invalid.title", "web.open.invalid.body", "web.missing.title", "web.missing.body"];
 
 it("every connector and core error code, the folder dialog title and the pages of the API have a text in es and en (ADR 72)", () => {

@@ -250,6 +250,7 @@
   "notFound.home": "Volver al inicio",
   "auth.originKeyRequired": "Ludiary no reconoce esta pestaña. Vuelve a abrirla desde el acceso directo o desde el icono de la bandeja.",
   "auth.sessionRequired": "No autorizado. Abre Ludiary desde el acceso directo o desde el icono de la bandeja.",
+  "game.launchDenied": "Windows no ha permitido abrir el juego. Puede que pida permisos de administrador: ábrelo desde su tienda o desde su acceso directo.",
   "game.launching": "Abriendo en {store}…",
   "errors.generic": "Algo ha salido mal. Inténtalo de nuevo.",
   "errors.unreachable": "No se puede conectar con Ludiary. Comprueba que sigue en marcha (icono de la bandeja).",

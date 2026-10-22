@@ -9,6 +9,7 @@ const CORE_CODES: readonly string[] = [
   "not-installed",
   "action-unavailable",
   "launch.rejected",
+  "launch.denied",
   "launch.launcher-missing",
   "busy",
   "invalid-input",
