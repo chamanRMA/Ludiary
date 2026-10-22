@@ -10,6 +10,7 @@ export type CoreErrorCode =
   | "not-installed"
   | "action-unavailable"
   | "launch.rejected"
+  | "launch.denied"
   | "launch.launcher-missing"
   | "busy"
   | "invalid-input"

@@ -6,6 +6,7 @@ export { createHelperRunner, type DisposableHelperRunner, type HelperRunner } fr
 export { WindowsLocationResolver, type WindowsLocationResolverOptions } from "./location-resolver";
 export { HelperProcessFolderPicker, parsePickFolderResponse } from "./folder-picker";
 export {
+  childEnv,
   createWindowsProcessLauncher,
   validateLaunchUri,
   openWithShellHandler,

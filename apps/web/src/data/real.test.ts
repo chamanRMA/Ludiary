@@ -118,12 +118,12 @@ describe("real client: point B, the rest comes from the simulator", () => {
     const names = ["getServices", "startWizard", "submitWizard", "cancelWizard", "disconnect", "getCollections", "createBackup", "exportLogs", "simulateExpiredSession"] as const;
     for (const name of names) vi.spyOn(sim as LudiaryApi, name);
     const api = createRealApi(http, sim, null);
-    const gog = { kind: "store", store: "gog" } as const;
+    const epic = { kind: "store", store: "epic" } as const;
     await api.getServices();
-    await api.startWizard(gog);
-    await api.submitWizard(gog, { kind: "continue" });
-    await api.cancelWizard(gog);
-    await api.disconnect(gog);
+    await api.startWizard(epic);
+    await api.submitWizard(epic, { kind: "continue" });
+    await api.cancelWizard(epic);
+    await api.disconnect(epic);
     await api.getCollections();
     await api.createBackup();
     await api.exportLogs();
@@ -162,15 +162,18 @@ describe("real client: point B, the rest comes from the simulator", () => {
     const real = [
       { store: "steam", access: "official-api", connection: "disconnected", mode: "installed-only", sync: [{ operation: "scan", state: "idle", lastSuccessAt: 5_000 }] },
       { store: "gog", access: "unofficial-api", connection: "disconnected", mode: "library", sync: [] },
+      { store: "epic", access: "unofficial-api", connection: "disconnected", mode: "library", sync: [] },
     ];
     const { http } = fakeHttp(() => real);
     const sim = createMockApi(memory());
     const api = createRealApi(http, sim);
     expect((await api.getStores())[0]).toMatchObject({ connection: "disconnected", mode: "installed-only" });
 
+    await sim.simulateExpiredSession("epic");
+    expect((await api.getStores())[2]).toMatchObject({ connection: "expired" });
+    // Steam (ADR 74) and GOG (ADR 77) are real: a simulated state never overlays them
     await sim.simulateExpiredSession("gog");
-    expect((await api.getStores())[1]).toMatchObject({ connection: "expired" });
-    // Steam is real now (ADR 74): a simulated wizard never overlays it
+    expect((await api.getStores())[1]).toEqual(real[1]);
     const steam = { kind: "store", store: "steam" } as const;
     await sim.startWizard(steam);
     await sim.submitWizard(steam, { kind: "fields", values: { mode: "installed-only" } });
@@ -225,6 +228,59 @@ describe("real client: point B, the rest comes from the simulator", () => {
     store.set("ludiary.wizardId.steam", "w2");
     await mk().cancelWizard(steam);
     expect(log).toEqual(['POST /api/wizards/w9/callback {"query":{}}', "DELETE /api/wizards/w2"]);
+  });
+
+  it("gog account (ADR 77): wizard and disconnect go to the API, the id lives only in memory", async () => {
+    const store = new Map<string, string>();
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) };
+    store.set("ludiary.wizardId.steam", "ws"); // a Steam wizard in flight must survive GOG's
+    const login = { kind: "open-external", id: "login", titleKey: "a", bodyKey: "b", url: "https://auth.gog.com/auth", awaits: "input" };
+    let submits = 0;
+    const { http, log } = fakeHttp((_m, p) => {
+      if (p === "/api/stores/gog/wizard") return { wizardId: "g1", response: login };
+      if (p === "/api/wizards/g1/submit") return ++submits === 1 ? { kind: "rejected", errorKey: "connectors.gog.error.code" } : { kind: "done", accountLabel: "TestUser" };
+      return undefined;
+    });
+    const sim = createMockApi(memory());
+    vi.spyOn(sim as LudiaryApi, "startWizard");
+    const api = createRealApi(http, sim, storage);
+    const gog = { kind: "store", store: "gog" } as const;
+    await expect(api.startWizard(gog)).resolves.toEqual(login);
+    expect([...store.keys()]).toEqual(["ludiary.wizardId.steam"]); // nothing new in sessionStorage
+    const values = { redirectUrl: "https://embed.gog.com/on_login_success?origin=client&code=x" };
+    await api.submitWizard(gog, { kind: "fields", values });
+    await expect(api.submitWizard(gog, { kind: "fields", values })).resolves.toEqual({ kind: "done", accountLabel: "TestUser" });
+    expect(store.get("ludiary.wizardId.steam")).toBe("ws"); // GOG's done did not forget Steam's id
+    await api.disconnect(gog);
+    await expect(api.wizardCallback("gog", {})).resolves.toBeNull(); // the return page is Steam's only
+    expect(log).toEqual([
+      "POST /api/stores/gog/wizard {}",
+      `POST /api/wizards/g1/submit {"stepId":"login","input":{"kind":"fields","values":${JSON.stringify(values)}}}`,
+      `POST /api/wizards/g1/submit {"stepId":"login","input":{"kind":"fields","values":${JSON.stringify(values)}}}`,
+      "DELETE /api/stores/gog/connection",
+    ]);
+    expect(sim.startWizard).not.toHaveBeenCalled();
+  });
+
+  it("gog account: no wizard in memory means expired, and cancelling GOG never deletes Steam's wizard", async () => {
+    const store = new Map([["ludiary.wizardId.steam", "ws"]]);
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: () => undefined, removeItem: (k: string) => void store.delete(k) };
+    const { http, log } = fakeHttp(() => undefined);
+    const api = createRealApi(http, createMockApi(memory()), storage);
+    const gog = { kind: "store", store: "gog" } as const;
+    await expect(api.submitWizard(gog, { kind: "continue" })).rejects.toMatchObject({ key: "wizard.expired" });
+    await api.cancelWizard(gog);
+    expect(store.get("ludiary.wizardId.steam")).toBe("ws");
+    expect(log).toEqual([]);
+  });
+
+  it("getStores keeps the real state of GOG on top of a simulated connection", async () => {
+    const real = [{ store: "gog", access: "unofficial-api", connection: "expired", mode: "library", sync: [] }];
+    const sim = createMockApi(memory());
+    await sim.startWizard({ kind: "store", store: "gog" });
+    await sim.submitWizard({ kind: "store", store: "gog" }, { kind: "continue" });
+    const api = createRealApi(fakeHttp(() => real).http, sim);
+    await expect(api.getStores()).resolves.toEqual(real);
   });
 
   it("maintenance: scan and sync times come from the real stores, the backup time from the simulator", async () => {

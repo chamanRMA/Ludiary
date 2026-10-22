@@ -231,6 +231,17 @@ describe("library reads", () => {
     });
     expect((await repos.library.listLibrary()).map((g) => g.title)).toEqual(["Alpha", "Beta"]);
   });
+
+  it("a game with no Steam property shows the artwork its other store resolved (ADR 76)", async () => {
+    const GOG_COVER = "https://images.gog.com/" + "a".repeat(64) + ".jpg?namespace=gamesdb";
+    await repos.library.applyScanPlan({
+      ...emptyPlan(1),
+      store: "gog",
+      create: [{ canonicalId: "cg", propertyId: "pg", installationId: "ig", entry: entry("1512372112", "Cold Waters", "F:\\G\\CW") }],
+    });
+    await repos.library.setResolvedMedia("gog", new Map([["1512372112", { coverUrl: GOG_COVER }]]), ["1512372112"], 2);
+    expect(await repos.library.listLibrary()).toMatchObject([{ title: "Cold Waters", coverUrl: GOG_COVER }]);
+  });
 });
 
 describe("resolved media (ADR 73)", () => {

@@ -103,7 +103,7 @@ function stepFields(step: WizardStep): readonly WizardField[] | null {
 }
 
 /** Applies `extract`, trims and checks maxLength and the anchored pattern. null means the value is not acceptable. */
-function cleanField(f: WizardField, raw: string): string | null {
+function cleanField(f: WizardField, raw: string, hosts: readonly string[]): string | null {
   let value = raw;
   if (f.extract) {
     const [kind, name] = [f.extract.slice(0, f.extract.indexOf(":")), f.extract.slice(f.extract.indexOf(":") + 1)];
@@ -113,7 +113,10 @@ function cleanField(f: WizardField, raw: string): string | null {
         if (typeof v !== "string") return null;
         value = v;
       } else {
-        const v = new URL(value).searchParams.get(name);
+        const url = new URL(value);
+        // ADR 77 audit M1: only a page of the store's own hosts can hand a code over.
+        if (url.protocol !== "https:" || url.username !== "" || url.password !== "" || !hosts.includes(url.hostname)) return null;
+        const v = url.searchParams.get(name);
         if (v === null) return null;
         value = v;
       }
@@ -145,7 +148,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
   }
 
   async function context(s: Session, signal: AbortSignal): Promise<WizardContext> {
-    return { ...(await syncContext(env, s.connector, signal)), callbackUrl: s.callbackUrl, wizardState: memoryVault(s.state), now: () => deps.clock.now() };
+    return { ...(await syncContext(env, s.connector, signal, { epoch: "bump" })), callbackUrl: s.callbackUrl, wizardState: memoryVault(s.state), now: () => deps.clock.now() };
   }
 
   async function finish(s: Session, done: WizardDone): Promise<WizardResponse> {
@@ -258,7 +261,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
         const values: Record<string, string> = {};
         for (const f of fields) {
           const raw = input.values[f.name];
-          const clean = typeof raw === "string" ? cleanField(f, raw) : null;
+          const clean = typeof raw === "string" ? cleanField(f, raw, [...s.connector.authHosts, ...s.connector.apiHosts]) : null;
           if (clean === null) return rejectedCode(step.id, "invalid-input", { field: f.name });
           values[f.name] = clean;
         }

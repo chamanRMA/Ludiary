@@ -1,7 +1,10 @@
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
+import type { Stats } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { ExecError } from "@ludiary/contracts";
 import {
+  childEnv,
   createWindowsProcessLauncher,
   createHelperRunner,
   HelperProcessFolderPicker,
@@ -51,10 +54,8 @@ describe("openUri", () => {
     expect(calls[0]?.command).toBe("C:\\Windows\\System32\\rundll32.exe");
   });
 
-  it("kinds has uri only and exec rejects", async () => {
-    const launcher = createWindowsProcessLauncher({ allowedSchemes: ["steam"], spawn: fakeSpawn().spawn });
-    expect(launcher.kinds).toEqual(["uri"]);
-    await expect(launcher.exec({ executable: "C:\\x.exe", args: [] })).rejects.toThrow();
+  it("kinds has uri and exec", () => {
+    expect(createWindowsProcessLauncher({ allowedSchemes: [] }).kinds).toEqual(["uri", "exec"]);
   });
 
   const bad: [string, string][] = [
@@ -139,5 +140,112 @@ describe("helper runner dispose (a dialog must not outlive the server)", () => {
     expect(Date.now() - started).toBeLessThan(20_000);
     await expect(runner(["-e", "0"], "")).rejects.toThrow(/disposed/);
     runner.dispose(); // idempotent
+  });
+});
+
+describe("exec (ADR 76 second barrier)", () => {
+  const GAME = "D:\\GOG Games\\Demo";
+  const EXE = `${GAME}\\demo.exe`;
+  // Fake disk: EXE is a file, GAME a folder.
+  const stat = (async (p: string) => {
+    if (p === EXE) return { isFile: () => true, isDirectory: () => false } as Stats;
+    if (p === GAME) return { isFile: () => false, isDirectory: () => true } as Stats;
+    throw Object.assign(new Error("missing"), { code: "ENOENT" });
+  }) as never;
+  const make = (spawn: SpawnFn = fakeSpawn().spawn, env: NodeJS.ProcessEnv = {}) =>
+    createWindowsProcessLauncher({ allowedSchemes: [], spawn, stat, env });
+  const reason = async (p: Promise<void>) => ((await p.then(() => null, (e: unknown) => e)) as ExecError | null)?.reason;
+
+  it.each([
+    ["relative path", { executable: "demo.exe", args: [] }],
+    ["drive-relative", { executable: "D:demo.exe", args: [] }],
+    ["forward slashes", { executable: "D:/GOG Games/Demo/demo.exe", args: [] }],
+    ["UNC", { executable: "\\\\srv\\share\\demo.exe", args: [] }],
+    ["verbatim", { executable: `\\\\?\\${EXE}`, args: [] }],
+    ["device", { executable: `\\\\.\\${EXE}`, args: [] }],
+    ["not an exe", { executable: `${GAME}\\demo.dll`, args: [] }],
+    ["bat", { executable: `${GAME}\\demo.bat`, args: [] }],
+    ["cmd", { executable: `${GAME}\\demo.CMD`, args: [] }],
+    ["missing", { executable: `${GAME}\\other.exe`, args: [] }],
+    ["folder named .exe", { executable: GAME + ".exe", args: [] }],
+    ["quote in the path", { executable: `${GAME}\\de"mo.exe`, args: [] }],
+    ["control character in the path", { executable: `${GAME}\\demo\n.exe`, args: [] }],
+    ["NUL in an argument", { executable: EXE, args: ["a\0b"] }],
+    ["control character in an argument", { executable: EXE, args: ["a\nb"] }],
+    ["cwd that is a file", { executable: EXE, args: [], cwd: EXE }],
+    ["cwd relative", { executable: EXE, args: [], cwd: "Demo" }],
+    ["cwd UNC", { executable: EXE, args: [], cwd: "\\\\srv\\share" }],
+    ["mixed separators", { executable: `${GAME}/demo.exe`, args: [] }],
+    ["conin$", { executable: `D:\\conin$\\demo.exe`, args: [] }],
+    ["reserved superscript", { executable: `D:\\com¹.txt\\demo.exe`, args: [] }],
+    ["reserved with trailing space before the extension", { executable: `D:\\nul .txt\\demo.exe`, args: [] }],
+    ["alternate data stream", { executable: `${EXE}:evil.exe`, args: [] }],
+    ["alternate data stream in cwd", { executable: EXE, args: [], cwd: `${GAME}:s` }],
+    ["reserved name", { executable: `${GAME}\\NUL.exe`, args: [] }],
+    ["reserved name as a folder", { executable: `D:\\com1\\demo.exe`, args: [] }],
+    ["reserved name with extension", { executable: `D:\\lpt9.txt\\demo.exe`, args: [] }],
+    ["component ending in a dot", { executable: `D:\\GOG Games.\\demo.exe`, args: [] }],
+    ["component ending in a space", { executable: `D:\\GOG \\demo.exe`, args: [] }],
+    ["parent component", { executable: `${GAME}\\..\\demo.exe`, args: [] }],
+    ["command line too long", { executable: EXE, args: Array.from({ length: 5 }, () => "x".repeat(7000)) }],
+  ])("rejects %s without spawning", async (_n, spec) => {
+    const { spawn, calls } = fakeSpawn();
+    expect(await reason(make(spawn).exec(spec))).toBe("rejected");
+    expect(calls).toEqual([]);
+  });
+
+  it("spawns with exactly the safe options and strips LUDIARY_* and NODE_OPTIONS from the env", async () => {
+    const { spawn, calls } = fakeSpawn();
+    const env = { PATH: "C:\\x", LUDIARY_TEST_HOOK: "1", ludiary_other: "1", Node_Options: "--inspect", node_extra: "1", KEEP: "y" };
+    await make(spawn, env).exec({ executable: EXE, args: ["-a", "b c"], cwd: GAME });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command).toBe(EXE);
+    expect(calls[0]?.args).toEqual(["-a", "b c"]);
+    expect(calls[0]?.options).toEqual({ cwd: GAME, detached: true, stdio: "ignore", windowsHide: false, env: { PATH: "C:\\x", KEEP: "y" } });
+    expect(calls[0]?.options).not.toHaveProperty("shell");
+    expect(calls[0]?.options).not.toHaveProperty("windowsVerbatimArguments");
+  });
+
+  it("calls unref after the spawn event", async () => {
+    let unref = 0;
+    const spawn: SpawnFn = () => {
+      const child = new EventEmitter() as ChildProcess;
+      child.unref = () => void unref++;
+      queueMicrotask(() => child.emit("spawn"));
+      return child;
+    };
+    await make(spawn).exec({ executable: EXE, args: [] });
+    expect(unref).toBe(1);
+  });
+
+  const failing = (code: string): SpawnFn => () => {
+    const child = new EventEmitter() as ChildProcess;
+    queueMicrotask(() => child.emit("error", Object.assign(new Error("x"), { code })));
+    return child;
+  };
+  it("maps EACCES and EPERM to denied and anything else to failed", async () => {
+    expect(await reason(make(failing("EACCES")).exec({ executable: EXE, args: [] }))).toBe("denied");
+    expect(await reason(make(failing("EPERM")).exec({ executable: EXE, args: [] }))).toBe("denied");
+    expect(await reason(make(failing("ENOENT")).exec({ executable: EXE, args: [] }))).toBe("failed");
+    const throws: SpawnFn = () => {
+      throw new Error("boom");
+    };
+    expect(await reason(make(throws).exec({ executable: EXE, args: [] }))).toBe("failed");
+  });
+
+  it("the ExecError carries neither the path nor the arguments of the failed spawn", async () => {
+    const spawn: SpawnFn = () => {
+      const child = new EventEmitter() as ChildProcess;
+      queueMicrotask(() => child.emit("error", Object.assign(new Error(`spawn ${EXE} EACCES`), { code: "EACCES", path: EXE, spawnargs: ["--token=secret"] })));
+      return child;
+    };
+    const err = (await make(spawn).exec({ executable: EXE, args: ["--token=secret"] }).then(() => null, (e: unknown) => e)) as ExecError;
+    expect(err.reason).toBe("denied");
+    expect(err.cause).toBeUndefined();
+    expect(JSON.stringify({ ...err, message: err.message, stack: err.stack })).not.toMatch(/GOG|secret|demo/);
+  });
+
+  it("childEnv keeps everything else", () => {
+    expect(childEnv({ A: "1", LUDIARY_X: "2" })).toEqual({ A: "1" });
   });
 });

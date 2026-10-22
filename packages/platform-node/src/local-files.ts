@@ -203,5 +203,5 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
     return win ? /^[a-z]:[\\/]/i.test(value) : p.isAbsolute(value);
   };
 
-  return { scoped, normalize, isAbsolute, isInside, compareKey, isDirectory, isLocalPath };
+  return { scoped, normalize, isAbsolute, isInside, compareKey, isDirectory, isLocalPath, realPath: realpathLoose };
 }
