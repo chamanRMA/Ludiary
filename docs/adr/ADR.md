@@ -83,10 +83,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 68 | Primera versión de `apps/web`: estructura, datos simulados y CSP | Vigente (recomendada; concreta la 10); portadas e `img-src` revisados en la 71; servir la SPA, librería de esquemas y selector de carpetas concretados en la 72 |
 | 69 | Asistente de primer arranque | Vigente (confirmada por el usuario) |
 | 70 | Fuentes tipográficas empaquetadas (OFL-1.1) | Vigente (confirmada por el usuario; amplía la 60) |
-| 71 | Portadas de Steam desde su CDN | Vigente (qué, confirmado por el usuario; cómo, recomendado; revisa la 68 en portadas y CSP; amplía las 6 y 40); URL con hash resueltas en la 73 |
+| 71 | Portadas de Steam desde su CDN | Qué, vigente (confirmado por el usuario); cómo, vigente (la alternativa de guardarlas en el equipo se descartó en la 75); revisa la 68 en portadas y CSP; amplía las 6 y 40; URL con hash resueltas en la 73 |
 | 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68) |
 | 73 | Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` | Vigente (recomendada; amplía las 40, 71 y 72) |
 | 74 | Cuenta de Steam: OpenID, API key cifrada y juegos no instalados | Vigente (recomendada; amplía las 40, 43, 46, 47, 50, 68, 72 y 73); punto 12 decidido por el usuario el 22-10-2026 |
+| 75 | Portadas guardadas en el equipo y servidas por el servidor local | **Descartada** por el usuario el 22-10-2026: la caché del navegador ya las guarda 10 años; la 71 sigue vigente |
 
 ## Decisiones
 
@@ -2791,6 +2792,229 @@ export function makeSecret(value: string): Secret;
 - `apiHosts` de Steam incluye `steamcommunity.com`, solo para `check_authentication`. `mediaHosts` y la CSP no cambian: la verificación la hace el servidor.
 - El documentalista actualiza las guías del punto 11.
 - Si el usuario elige (b) en el punto 12.2, `store_connections.account_label` ya existe y no hace falta migración.
+
+### 75. Portadas guardadas en el equipo y servidas por el servidor local (descartada)
+
+**Estado: descartada por el usuario el 22 de octubre de 2026. No se implementa; la decisión 71 sigue vigente tal cual.** Se conserva el diseño de abajo como alternativa estudiada, por si en el futuro hiciera falta (por ejemplo, ver las portadas tras borrar los datos del navegador o desde otro navegador).
+
+**Motivo del descarte:** la petición era no tener que llamar a Steam cada vez. Comprobado el 22-10-2026 con `curl -sI` sobre `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/library_600x900.jpg`: Steam sirve las portadas con `Cache-Control: public, max-age=315103098` (unos 10 años, `Expires` en 2036), `ETag` y `Last-Modified`. El navegador descarga cada portada **una sola vez** y la sigue mostrando sin conexión; solo vuelve a pedirla si se borra su caché o se usa otro navegador. Las direcciones (`GetItems`, decisión 73) solo se consultan para juegos nuevos o cada 30 días. Con eso, el código de esta decisión (ruta nueva con nivel `session`, validación de imágenes, limpieza, carpeta de 50–100 MB por cada 1000 juegos y otra auditoría) no compensa.
+
+**Petición del usuario (22 de octubre de 2026):** que Ludiary guarde las portadas en el equipo, «para no tener que llamar a Steam cada vez para sacar imágenes».
+
+**Decisión (recomendada, 22 de octubre de 2026):**
+
+#### 1. Qué pasa hoy
+
+- **El servidor de Ludiary no descarga imágenes.** Solo llama a `GetItems` (decisión 73) para las propiedades pendientes: las que no tienen `mediaResolvedAt` o lo tienen con más de 30 días. Lo hace al final de un escaneo o de una sincronización de biblioteca, en lotes de 50. Con la biblioteca ya resuelta, abrir la web no hace ninguna llamada a `GetItems`.
+- **El navegador carga cada portada del CDN de Steam** (decisión 71). Si la vuelve a pedir depende de su caché HTTP y de las cabeceras que envía Steam: mientras la copia sigue fresca no sale nada; cuando caduca, el navegador vuelve a preguntar a Steam o la descarga de nuevo. Si se borra la caché del navegador, se cambia de navegador o falta espacio, se descargan otra vez. Sin conexión y con la copia caducada, sale el degradado.
+- **La percepción del usuario es correcta en parte.** No hay una llamada a Steam por cada imagen en cada visita, pero las portadas dependen de la caché del navegador, que Ludiary no controla, y sin conexión pueden desaparecer.
+- **Supuesto sin verificar:** no se pudieron leer las cabeceras de caché de `shared.akamai.steamstatic.com`, porque la herramienta de consulta no muestra cabeceras. Quien implemente lo comprueba con `curl -sI https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/library_600x900.jpg` y lo anota aquí. No cambia la decisión: la caché local no depende de esas cabeceras. Medido el 22 de octubre de 2026: esa portada (620) ocupa 51,5 KB.
+
+#### 2. Quién descarga, cuándo y qué
+
+- **El servidor**, desde el núcleo, con el `HttpClient` de la decisión 73 creado con los **`mediaHosts`** del conector dueño de la propiedad, no con sus `apiHosts`. Así no se toca la lista de ningún conector. Se conservan las reglas: solo `https`, hosts exactos, sin redirecciones (una redirección cuenta como fallo y no se sigue), tope de 2 MiB por respuesta y el `signal` del paso.
+- **Cuándo:** un **paso de portadas** justo después del paso de medios de la decisión 73, en la misma ejecución y en la misma cola por tienda. Se ejecuta al final del escaneo y tras una sincronización de biblioteca correcta, y un fallo nunca cambia el resultado de la operación.
+  - Pendientes: propiedades no retiradas, de tipo `game`, con URL de medios efectiva (la precedencia por campo de la 73) y en alguno de estos casos:
+    - sin copia;
+    - con una URL distinta de la que se copió (nueva ruta con hash o nuevo `?t=`);
+    - con su fichero ausente del disco;
+    - con un fallo de hace más de 30 días.
+  - Descargas en serie, como mucho 300 por ejecución y 30 s en total (`Clock.timeout`). Lo que no entre queda para la siguiente ejecución, y mientras tanto el navegador sigue usando el CDN.
+  - Por propiedad se guarda **una sola imagen**: se prueba la portada vertical (`coverUrl`) y, si responde 403, 404 o 410, la horizontal (`heroUrl`). Si ninguna existe o lo recibido no es una imagen admitida, se anota el fallo y no se reintenta hasta pasados 30 días o hasta que cambie la URL.
+  - Un 429, un 5xx, un error de red o el tiempo agotado paran el paso: no se reintenta hasta pasado el mayor entre `minSyncIntervalMs` y `Retry-After` (como mucho un día), en memoria, igual que el paso de medios.
+- **Petición:** `GET` con `accept: image/jpeg, image/png, image/webp` y nada más. El tipo de contenido que responda el CDN no se usa: decide la firma de los primeros bytes.
+- **Alcance (invariante 9 y decisión 71):** solo las URL que ya están en la base y que ya validó `validateMedia` contra los `mediaHosts` del conector de esa propiedad. Un juego que solo es de GOG o de Epic nunca pide nada a Steam.
+- **Descartadas:**
+  - Descargar la primera vez que la web pide la imagen: mete llamadas de red en una petición del navegador y obliga a gestionar la concurrencia y los tiempos en la ruta.
+  - Una cola permanente en segundo plano: las ejecuciones de escaneo y sincronización ya son la cola, y tienen su orden y sus límites.
+
+#### 3. Dónde y cuánto
+
+- **Carpeta:** `%LOCALAPPDATA%\Ludiary\covers\` (`join(platform.dataDir, 'covers')`), plana, sin subcarpetas.
+- **Nombre:** `<sha256 del contenido en hexadecimal>.<jpg|png|webp>`. El nombre sale solo de los bytes, nunca de la URL ni de la petición. Dos juegos con la misma imagen comparten fichero.
+- **Escritura atómica:** primero `<nombre>.tmp` y después `rename`.
+- **En la base, sin migración:** `StoreMetadataJson` (decisión 73) añade `cover`, en la misma propiedad que da los medios (hoy la de Steam):
+
+```ts
+// packages/db/src/schema.ts — StoreMetadataJson, addition of ADR 75
+cover?:
+  | { url: string; file: string; kind: 'cover' | 'hero'; at: number } // url = coverUrl tried first (change key)
+  | { url: string; failedAt: number };                                  // neither image usable
+```
+
+  - Los `update` del plan de escaneo y de `applyLibraryPlan` conservan `cover`, igual que `resolvedMedia` (decisiones 73 y 74).
+- **Tamaño:** como mucho 2 MiB por fichero. No hay tope total: con unos 50 a 100 KB por portada de Steam, 1000 juegos ocupan del orden de 50 a 100 MB. `shortcut: sin tope total, se añade uno si alguien pasa de 10 000 juegos o lo pide.`
+- **Limpieza:** al final de cada paso de portadas se borran los ficheros de la carpeta que cumplen `^[0-9a-f]{64}\.(jpg|png|webp)$` y que no usa ninguna propiedad no retirada del usuario, y también los `.tmp` sobrantes. No se toca nada que no cumpla el patrón y no se recorren subcarpetas. Desconectar Steam no retira propiedades (decisión 74, punto 12), así que sus portadas se quedan.
+- **Copias de seguridad (decisión 57):** no se incluyen. Se pueden regenerar y la copia es solo de la base de SQLite. Si se restaura una base que apunta a ficheros que ya no existen, el paso siguiente los descarga de nuevo (caso «fichero ausente») y mientras tanto la web usa el CDN.
+- **Desinstalar:** «borrar los datos» ya elimina toda la carpeta `%LOCALAPPDATA%\Ludiary` (decisión 57), portadas incluidas. Sin esa opción se conservan, como la base.
+
+#### 4. Cómo se sirven
+
+- **Ruta:** `GET /api/games/:id/cover`.
+  - `:id` con patrón UUID y consulta `v` opcional con `^[0-9a-f]{16}$`, que solo sirve para la caché del navegador. Cualquier otro campo da 400 (`additionalProperties: false`).
+  - El núcleo busca el canónico **filtrando por `user_id`** y toma `cover.file` de la propiedad que da los medios. El nombre se valida otra vez con el patrón antes de unirlo a la carpeta. Si falta la fila, el fichero o el nombre no cumple el patrón: `404` JSON.
+- **Nivel de acceso: `session`** (anotado en la decisión 67). Un `<img>` envía la cookie del mismo sitio pero no puede añadir `X-Ludiary-Origin-Key`. Se acepta porque:
+  - solo devuelve una imagen pública de la tienda, sin datos del equipo;
+  - el `:id` es un UUID aleatorio que solo se conoce por rutas `session+key`, así que quien robe la cookie (la amenaza de la decisión 67) no puede probar juegos para saber qué tiene el usuario;
+  - una página de otro sitio no recibe la cookie (`SameSite=Strict`) y la respuesta lleva `Cross-Origin-Resource-Policy: same-origin`.
+  - Descartado: `fetch` con la cabecera y `blob:`. Pierde la caché HTTP, obliga a añadir `blob:` a `img-src` y suma código en la web.
+- **Cabeceras de la respuesta:**
+  - `Content-Type` según la extensión guardada, con una tabla cerrada de tres tipos;
+  - `X-Content-Type-Options: nosniff` (ya global);
+  - `Cache-Control: private, max-age=31536000, immutable`, que sustituye al `no-store` global solo en esta ruta. El fichero de una URL con `v` nunca cambia;
+  - `Content-Security-Policy: default-src 'none'; sandbox`, por si alguien abre la imagen como documento;
+  - `Cross-Origin-Resource-Policy: same-origin`.
+- **DTO:** `GameSummaryDto` y `GameDetailDto` no cambian de forma. `summary` (en `db`) rellena:
+  - copia de tipo `cover`: `coverUrl = /api/games/<id>/cover?v=<16 primeros caracteres del nombre>` y `coverFallbackUrl` = `heroUrl` del CDN, como hoy;
+  - copia de tipo `hero`: sin `coverUrl`, y `coverFallbackUrl` = la ruta local;
+  - sin copia o con fallo: las URL del CDN de hoy.
+- **CSP:** sin cambios. `'self'` ya cubre la ruta local, y los hosts del CDN **se quedan** en `img-src` como respaldo mientras falte la copia (ver punto 9, pregunta 1).
+- **Web:** una línea en `Cover` (`apps/web/src/components/bits.tsx`): la clase `coverContain` se aplica cuando `src === game.coverFallbackUrl`, no cuando `failed > 0`, para que una copia de tipo `hero` se pinte centrada. El simulador no cambia.
+
+#### 5. Respaldo
+
+Si la descarga falla o aún no se ha hecho, todo sigue como hoy: el CDN de Steam (`coverUrl`, luego `coverFallbackUrl`) y, al final, el degradado con el título. Si la ruta local da 404, por ejemplo porque se borró la carpeta, la web pasa al siguiente eslabón.
+
+#### 6. Seguridad
+
+- Se admiten **solo JPEG, PNG y WebP**, por firma:
+  - JPEG: `FF D8 FF`;
+  - PNG: `89 50 4E 47 0D 0A 1A 0A`;
+  - WebP: `RIFF` en los bytes 0 a 3 y `WEBP` en los bytes 8 a 11.
+- Nunca se admiten SVG, GIF ni HTML. Un cuerpo que no cumple ninguna firma no se escribe en el disco y cuenta como fallo de esa propiedad.
+- La imagen no se decodifica en el servidor, para no añadir dependencias. Las firmas, el tope de 2 MiB, el tipo cerrado al servir, `nosniff` y la CSP con `sandbox` bastan para que nunca se sirva como otra cosa.
+- No hay recorrido de directorios: el nombre sale del SHA-256 de los bytes y se valida con el patrón al escribir, al servir y al limpiar. El `:id` de la ruta solo se usa como clave de la base.
+- **Registros:** la ruta de una URL del CDN lleva el AppID, y la lista de juegos es un dato personal (decisión 73). El `HttpClient` de este paso se crea con una opción nueva, `logPath: false`, para registrar solo método, host, estado y duración. El paso resume en un `info` con recuentos (descargadas, fallidas y borradas), sin AppID ni URL.
+
+#### 7. Privacidad (invariante 9)
+
+- **Hoy** el navegador pide cada imagen al CDN cuando su caché lo necesita, con la IP del equipo y su `User-Agent`, sin referente (`no-referrer`) y sin `crossorigin`.
+- **Con este cambio** la pide el servidor, desde la misma IP, **una vez por imagen** mientras la URL no cambie, sin cookies, sin referente y con el `User-Agent` por defecto de Node, sin datos del navegador. Valve recibe lo mismo que ya recibía (qué AppID tiene el usuario en Steam) y menos veces. Mientras falte la copia, el navegador sigue usando el CDN como hoy.
+- No sale nada hacia hosts nuevos.
+
+#### 8. Alternativas más pequeñas
+
+- **Alargar la caché del navegador:** no se puede. La duración la fijan las cabeceras de Steam, y el servidor de Ludiary no está en medio.
+- **Service Worker que guarde las imágenes en Cache Storage:**
+  - funcionaría sin conexión para lo ya visto, pero el almacenamiento va por origen, puerto incluido: `ludiary.localhost:<puerto>` y `127.0.0.1:<puerto>` tendrían copias distintas, y un cambio de puerto (decisión 28) lo vaciaría;
+  - el navegador puede borrarlo cuando le falte espacio, y cada navegador y perfil vuelve a descargar;
+  - las respuestas de otro origen sin CORS son opacas, ocupan más cuota y no se pueden validar;
+  - añade `worker-src`, el ciclo de vida del worker y otra superficie en la página.
+  - No cumple «no llamar a Steam cada vez» de forma fiable y no es más simple.
+- **Leer la caché del cliente de Steam** (`appcache\librarycache`): ya descartada en la decisión 73. No está documentada, no sirve para Ubisoft, EA, GOG ni Epic y también necesita la ruta para servir imágenes.
+- La descarga en el servidor es además lo que pedirá el modo Docker (fase 2), así que no se hace dos veces.
+
+#### 9. Lo que decide el usuario
+
+1. **Respaldo en el navegador mientras falta la copia** (por ejemplo, en el primer escaneo o con un fallo):
+   - (a) **la web carga la imagen del CDN de Steam, como hoy, hasta tener la copia** (recomendado: nunca se ve peor que ahora);
+   - (b) el navegador nunca llama a Steam: solo degradado hasta que el servidor la descarga, y los hosts del CDN salen de `img-src`. Es más privado y la CSP queda en `'self'`, pero con bibliotecas grandes se ven degradados durante varias aperturas.
+2. **Portadas en las copias de seguridad periódicas:**
+   - (a) **no se incluyen; se vuelven a descargar** (recomendado: la copia sigue siendo un fichero pequeño);
+   - (b) se incluyen.
+
+#### 10. Lo mínimo que hay que implementar
+
+- `packages/contracts/src/connector.ts`: la respuesta de `HttpClient` añade `bytes(): Promise<Uint8Array>`. `contractVersion` sigue en 1, porque es un cambio aditivo.
+- `packages/connector-testkit`: `fakeHttp` implementa `bytes()`.
+- `packages/platform-node/src/http.ts`:
+  - `readLimited` devuelve `Buffer`; `text()` y `json()` lo decodifican, y `bytes()` lo entrega tal cual;
+  - opción `logPath?: false`;
+  - `CoreDeps.http` pasa `logPath` en sus `opts`, junto a `maxBytes`.
+- `packages/platform-node/src/covers.ts` (nuevo): `createCoverFiles(dir)`, que implementa el puerto del núcleo:
+
+```ts
+// packages/core/src/ports.ts — ADR 75
+export type CoverType = 'image/jpeg' | 'image/png' | 'image/webp';
+export interface CoverFiles {
+  /** Sniffs JPEG/PNG/WebP by magic bytes (anything else → null); writes <sha256>.<ext> via .tmp + rename. */
+  save(bytes: Uint8Array): Promise<string | null>;
+  /** null if the name fails ^[0-9a-f]{64}\.(jpg|png|webp)$ or the file is missing. */
+  read(file: string): Promise<{ body: Uint8Array; type: CoverType } | null>;
+  list(): Promise<ReadonlySet<string>>;
+  /** Deletes pattern-matching files not in keep, and leftover .tmp. Returns how many. */
+  prune(keep: ReadonlySet<string>): Promise<number>;
+}
+```
+
+- `packages/core`:
+  - `CoreDeps.covers?: CoverFiles`; sin él, no hay paso de portadas;
+  - `src/covers.ts`, con el paso del punto 2, llamado desde `media.ts` al terminar el paso de medios;
+  - constantes en `env.ts`: 300 descargas, 30 s y 30 días;
+  - `readCover(canonicalId)` → `{ body, type } | null`.
+- `packages/db` (repositorio de la biblioteca, todo filtrado por `user_id`):
+  - `listCoverPending(store, { retryBefore, present, limit })` → `{ propertyId, urls: [cover?, hero?] }[]`, con la precedencia de la 73;
+  - `setCover(propertyId, value)`;
+  - `listCoverFiles()`, con los ficheros de propiedades no retiradas;
+  - `getCoverFile(canonicalId)`;
+  - en `summary`, las reglas del DTO del punto 4;
+  - que se conserve `cover` en los tres `update` que hoy conservan `resolvedMedia`.
+  - Sin migración.
+- `packages/runtime`: `createCoverFiles(join(dataDir, 'covers'))` en `compose.ts` y `readCover` en `core-adapter.ts`.
+- `packages/api`: la ruta del punto 4, con `config.access: 'session'` y sus cabeceras.
+- `apps/web`: la línea de `Cover`.
+- **Sin cambios:** CSP, `vite.config.ts`, `mediaHosts`, `apiHosts`, conectores y `api-contract` (salvo el esquema de la ruta nueva, si se declara allí).
+
+#### 11. Pruebas
+
+- **`platform-node`:**
+  - `covers.ts`:
+    - las tres firmas se guardan con su extensión;
+    - SVG, HTML, GIF, vacío y un JPEG cortado a 2 bytes → `null`, sin fichero;
+    - el mismo contenido da el mismo nombre;
+    - escritura con `.tmp` y `rename`;
+    - `read` rechaza `../x.jpg`, mayúsculas, otra extensión y rutas absolutas;
+    - `prune` borra lo no usado y los `.tmp`, y respeta los ficheros que no cumplen el patrón.
+  - `http.ts`: `bytes()` con contenido binario, el tope de bytes en `bytes()` y que con `logPath: false` el registro no lleva la ruta.
+- **`core`** (`fakeHttp` y un `CoverFiles` doble):
+  - solo pendientes, con los cuatro casos;
+  - portada 404 → `hero`; las dos 404 → fallo, sin reintento antes de 30 días (reloj doble) y con reintento si cambia la URL;
+  - no imagen → fallo;
+  - 429 o 5xx paran el paso y esperan;
+  - tope de 300 y de 30 s;
+  - el cliente se crea con `mediaHosts` y nunca con `apiHosts`;
+  - el fallo no cambia el estado de la operación;
+  - sin `covers` o sin `http` no hay paso;
+  - `prune` recibe los ficheros en uso;
+  - una propiedad solo de otra tienda no pide nada a los hosts de Steam.
+- **`db`:**
+  - el escaneo y la biblioteca conservan `cover`;
+  - `summary` con copia `cover`, copia `hero`, fallo y sin copia;
+  - `listCoverPending` con fichero ausente y con URL cambiada;
+  - filtro de `user_id` en todo lo nuevo.
+- **`api`:**
+  - la ruta con cookie y sin clave → 200 con las cabeceras del punto 4;
+  - sin cookie → 401;
+  - `:id` que no es UUID, `v` mal formado o un campo de más → 400;
+  - canónico de otro usuario, sin copia o con un nombre manipulado en la base → 404;
+  - el tipo sale de la tabla aunque la base diga otra cosa.
+- **Web:** `Cover` aplica `coverContain` al pintar `coverFallbackUrl` aunque sea el primer eslabón.
+- **Playwright:** con un CDN doble, tras el escaneo la biblioteca pide las portadas a `/api/games/…/cover` y ninguna a hosts externos.
+- **Manual (usuario):** tras un escaneo con conexión, desconectar la red, borrar la caché del navegador y reabrir: se ven las 18 portadas, incluidas BALL x PIT y Europa Universalis V. Borrar la carpeta `covers` y escanear: vuelven. El registro exportado no contiene AppID ni URL del CDN.
+
+**Motivo:**
+
+- Es la única opción que cumple lo que pide el usuario: cada imagen se pide una vez y se ve sin conexión, sin depender de la caché del navegador, del puerto ni del navegador que se use.
+- Reutiliza piezas que ya existen:
+  - el `HttpClient` acotado, ahora con los `mediaHosts`;
+  - el paso de medios, con su cola, su espera tras fallos y su validación;
+  - el JSON de `store_metadata`, sin migración;
+  - las URL del CDN, que pasan a ser el respaldo, con la web y su cadena de respaldo casi sin cambios.
+- Lo que la decisión 71 temía de la opción B (ruta nueva, caché, límites, validación y limpieza) queda acotado a dos ficheros nuevos y una ruta.
+
+**Consecuencias:**
+
+- La decisión 71 queda revisada en el «cómo»: el servidor sí descarga, guarda y sirve imágenes. El «qué» (la carátula de Steam, solo para juegos que el usuario tiene en Steam) no cambia.
+- `/api/games/:id/cover` es la segunda ruta `session`, anotada en la decisión 67.
+- Las portadas de GOG, Epic, IGDB o RAWG usarán el mismo paso cuando existan, con los `mediaHosts` de su conector o proveedor.
+- El `auditor` revisa antes de cerrar:
+  - `covers.ts` (firmas, nombres y limpieza);
+  - la ruta, su nivel de acceso y sus cabeceras;
+  - que el cliente de descarga solo usa `mediaHosts`;
+  - que el registro no lleva rutas del CDN.
+- El `documentalista` actualiza:
+  - privacidad: el servidor descarga cada portada una vez;
+  - solución de problemas: dónde están las portadas, que se pueden borrar sin perder nada y que una que falta aparece tras el siguiente escaneo con conexión.
 
 ## Arquitectura resultante
 
