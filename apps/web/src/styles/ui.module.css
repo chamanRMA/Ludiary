@@ -198,13 +198,13 @@
   color: var(--tx);
   text-decoration: none;
   font-weight: 600;
-  /* At most 3 lines, always reserving all 3 so cards in a row line up */
+  /* At most 2 lines, always reserving both so cards in a row line up */
   line-height: 1.4;
-  min-height: calc(3 * 1.4em);
+  min-height: calc(2 * 1.4em);
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
 }
