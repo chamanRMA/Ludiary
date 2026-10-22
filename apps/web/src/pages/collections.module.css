@@ -1,0 +1,114 @@
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.head p {
+  margin: 8px 0 0;
+}
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.card {
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: 16px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  height: 180px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--hi);
+}
+.mosaic > * {
+  border-radius: 0;
+  height: auto !important;
+}
+.info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 6px 4px;
+}
+.name {
+  display: block;
+  font: 600 20px/1.2 var(--font-display);
+  margin: 0;
+}
+.dots {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.dots i {
+  margin: 0;
+}
+.new {
+  composes: card;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 2px dashed var(--ln);
+  color: var(--mu);
+  font: inherit;
+  font-weight: 500;
+  min-height: 260px;
+  cursor: pointer;
+}
+.new:hover {
+  color: var(--tx);
+  border-color: var(--ac);
+}
+.tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tags > span {
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 16px;
+}
+.tags em {
+  font-style: normal;
+  color: var(--mu);
+  margin-left: 6px;
+}
+.note {
+  margin: 0;
+  font-size: 13px;
+  max-width: 640px;
+}
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "response": {
+    "players": [
+      {
+        "steamid": "76561190000000000",
+        "communityvisibilitystate": 3,
+        "profilestate": 1,
+        "personaname": "TestPersona",
+        "profileurl": "https://steamcommunity.com/profiles/76561190000000000/",
+        "avatar": "https://avatars.steamstatic.com/0000000000000000000000000000000000000000.jpg",
+        "avatarfull": "https://avatars.steamstatic.com/0000000000000000000000000000000000000000_full.jpg",
+        "personastate": 1,
+        "realname": "Fictional Person",
+        "loccountrycode": "ZZ",
+        "timecreated": 1300000000
+      }
+    ]
+  }
+}

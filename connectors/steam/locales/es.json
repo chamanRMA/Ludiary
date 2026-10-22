@@ -1,0 +1,23 @@
+{
+  "connectors.steam.name": "Steam",
+  "connectors.steam.choose.title": "Elige cómo usar Steam",
+  "connectors.steam.choose.body": "Con una clave gratuita de Steam, Ludiary ve toda tu biblioteca. Sin clave, solo muestra los juegos que tienes instalados en este equipo.",
+  "connectors.steam.choose.noKey": "Steam sin clave: solo instalados",
+  "connectors.steam.login.title": "Inicia sesión en Steam",
+  "connectors.steam.login.body": "Entra con tu cuenta de Steam. Ludiary solo recibe tu identificador público; nunca ve tu contraseña.",
+  "connectors.steam.login.cancelled": "Cancelaste el inicio de sesión en Steam. Vuelve a intentarlo cuando quieras conectar.",
+  "connectors.steam.apikey.title": "Crea tu clave de Steam",
+  "connectors.steam.apikey.body": "La clave es un código gratuito que permite a Ludiary leer tu biblioteca. Son unos segundos.\nPulsa «Abrir la página»: Steam se abre en una pestaña nueva. Inicia sesión si te lo pide.\nEn «Domain Name» (nombre de dominio) escribe: localhost\nMarca que aceptas las condiciones y pulsa «Register».\nCopia el código que aparece junto a «Key» (32 letras y números).\nVuelve a esta pestaña y pulsa «Pegar».",
+  "connectors.steam.apikey.field": "Clave de Steam",
+  "connectors.steam.profile.title": "Haz públicos tus juegos",
+  "connectors.steam.profile.body": "Para que Ludiary vea tus juegos, tu perfil de Steam y los detalles de juego deben ser públicos.\nEn Steam, abre tu perfil y pulsa «Editar perfil».\nEntra en «Configuración de privacidad».\nPon «Mi perfil» y «Detalles de juego» en «Público».",
+  "connectors.steam.error.format": "Esa clave no parece correcta. Debe tener 32 letras y números (de la A a la F y del 0 al 9), sin espacios.",
+  "connectors.steam.error.key": "Steam no acepta esa clave. Comprueba que la copiaste entera y que no está revocada, e inténtalo de nuevo.",
+  "connectors.steam.error.openid": "Steam no pudo confirmar tu inicio de sesión. Empieza de nuevo.",
+  "connectors.steam.error.privateProfile": "Tus detalles de juego son privados y Ludiary no puede ver tus juegos. Pon «Detalles de juego» en «Público» en la privacidad de Steam.",
+  "connectors.steam.error.sessionExpired": "Steam ha cerrado la sesión. Vuelve a conectar la cuenta.",
+  "connectors.steam.disconnect.revokeHint": "Ludiary borra la clave. Para anularla en Steam, pulsa Revoke en steamcommunity.com/dev/apikey.",
+  "connectors.steam.errors.malformedFile": "Steam tiene un fichero que Ludiary no puede leer. Ese juego se omite.",
+  "connectors.steam.errors.invalidAppId": "Este juego de Steam tiene un identificador no válido y no se puede lanzar.",
+  "connectors.steam.errors.launcherMissing": "No se encontró Steam en este equipo. Instálalo o comprueba que se detecta en Ajustes."
+}

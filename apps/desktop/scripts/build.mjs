@@ -1,13 +1,14 @@
 // Builds the Windows distribution folder: apps/desktop/dist/app
 //   Ludiary.exe              Node single executable (SEA) with the esbuild bundle injected
 //   native/*.node            native addons loaded with process.dlopen (ADR 41, 45)
-//   bin/ludiary-tray.exe     Go tray helper (CGO_ENABLED=0)
+//   bin/ludiary-tray.exe     Go helper: tray, dialogs, --registry, --pick-folder (CGO_ENABLED=0)
+//   web/                     compiled SPA (apps/web/dist) loaded into memory by the server (ADR 72)
 //   licenses/                notices of everything shipped (ADR 34, 60)
 //
 // Usage: node apps/desktop/scripts/build.mjs   (needs Node 24, Go, pnpm install done)
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, copyFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync, copyFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,8 +31,24 @@ const testHooks = process.env.LUDIARY_TEST_HOOKS === "1";
 const expectedNode = `v${readFileSync(join(root, ".node-version"), "utf8").trim()}`;
 if (process.version !== expectedNode) throw new Error(`build with Node ${expectedNode} (.node-version), not ${process.version}`);
 
+// 0. The web, WITHOUT the simulator (ADR 72 point 7): VITE_LUDIARY_SIMULATOR must not be defined for a packaged build.
+const webDir = join(root, "apps/web");
+{
+  const webEnv = { ...process.env };
+  delete webEnv.VITE_LUDIARY_SIMULATOR;
+  const pnpmJs = process.env.npm_execpath; // set when this script runs through pnpm
+  if (pnpmJs && /pnpm/i.test(pnpmJs)) {
+    execFileSync(process.execPath, [pnpmJs, "--filter", "@ludiary/web", "run", "build"], { cwd: root, env: webEnv, stdio: "inherit" });
+  } else {
+    // Same command without the pnpm wrapper (no shell is needed for a .cmd this way).
+    const viteBin = join(dirname(createRequire(join(webDir, "package.json")).resolve("vite/package.json")), "bin/vite.js");
+    execFileSync(process.execPath, [viteBin, "build"], { cwd: webDir, env: webEnv, stdio: "inherit" });
+  }
+  if (!existsSync(join(webDir, "dist/index.html"))) throw new Error("the web build did not produce apps/web/dist/index.html");
+}
+
 rmSync(dist, { recursive: true, force: true });
-for (const d of [buildDir, appDir, join(appDir, "native"), join(appDir, "bin"), join(appDir, "licenses")]) mkdirSync(d, { recursive: true });
+for (const d of [buildDir, appDir, join(appDir, "native"), join(appDir, "bin"), join(appDir, "licenses"), join(appDir, "web")]) mkdirSync(d, { recursive: true });
 
 // 1. Bundle (single CommonJS file, no dynamic requires of our own code: ADR 38).
 const result = await build({
@@ -110,10 +127,13 @@ console.log("exe patched");
 const requireFromPlatform = createRequire(join(root, "packages/platform-windows/package.json"));
 const keyringDir = dirname(requireFromPlatform.resolve("@napi-rs/keyring/package.json"));
 const keyringWin = dirname(createRequire(join(keyringDir, "package.json")).resolve("@napi-rs/keyring-win32-x64-msvc/package.json"));
-const sqliteDir = dirname(createRequire(join(root, "packages/runtime/package.json")).resolve("better-sqlite3/package.json"));
+const sqliteDir = dirname(createRequire(join(root, "packages/db/package.json")).resolve("better-sqlite3/package.json"));
 copyFileSync(join(sqliteDir, "prebuilds/win32-x64.node"), join(appDir, "native/better_sqlite3.node"));
 const keyringNode = readdirSync(keyringWin).find((f) => f.endsWith(".node"));
 copyFileSync(join(keyringWin, keyringNode), join(appDir, "native/keyring.win32-x64-msvc.node"));
+
+// 5b. The compiled web next to the executable (not inside the SEA: ADR 72 point 9).
+cpSync(join(webDir, "dist"), join(appDir, "web"), { recursive: true });
 
 // 6. Go tray helper, no CGO.
 const goEnv = { ...process.env, CGO_ENABLED: "0", GOOS: "windows", GOARCH: "amd64" };
@@ -138,6 +158,30 @@ const addPackage = (dir, label) => {
 for (const input of Object.keys(result.metafile.inputs)) {
   const m = input.replaceAll("\\", "/").match(/^(.*node_modules\/(?:@[^/]+\/)?[^/]+)\//);
   if (m) addPackage(resolve(root, m[1]), "npm: ");
+}
+// Production dependencies of the web that end up in its bundle (ADR 72, 70): the closure of `dependencies`, which can
+// only over-report, plus the OFL-1.1 font packages with their LICENSE.
+{
+  const findPackage = (name, fromDir) => {
+    for (let dir = realpathSync(fromDir); ; dir = dirname(dir)) {
+      const candidate = join(dir, "node_modules", name);
+      if (existsSync(join(candidate, "package.json"))) return realpathSync(candidate);
+      if (dirname(dir) === dir) throw new Error(`cannot find ${name} from ${fromDir}`);
+    }
+  };
+  const visited = new Set();
+  const walk = (dir) => {
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    for (const dep of Object.keys(pkg.dependencies ?? {})) {
+      if (dep.startsWith("@ludiary/")) continue; // our own code: api-contract and i18n are types and catalogs
+      const depDir = findPackage(dep, dir);
+      if (visited.has(depDir)) continue;
+      visited.add(depDir);
+      addPackage(depDir, "web: ");
+      walk(depDir);
+    }
+  };
+  walk(webDir);
 }
 addPackage(sqliteDir, "native: ");
 addPackage(keyringDir, "native: ");

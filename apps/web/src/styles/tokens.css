@@ -1,0 +1,45 @@
+/* Design tokens from the approved mockups (ADR 68). */
+:root {
+  --font-ui: "Inter Variable", system-ui, sans-serif;
+  --font-display: "Fraunces Variable", Georgia, serif;
+  --warn: #f2b84b;
+  --warn-ink: #161015;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #faf6ee;
+  --sf: #ffffff;
+  --ln: #e6dfd0;
+  --tx: #17261f;
+  --mu: #5c6b62;
+  --ac: #14503b;
+  --on: #ffffff;
+  --hi: #efe8d8;
+  --ch: #f1eadb;
+  --pl: #e4dccb;
+  --cr: #17261f;
+  --ink: #161015;
+  --mu2: #55645b;
+  --focus: #14503b;
+  --err: #a32a2a;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1512;
+  --sf: #18201b;
+  --ln: #27332b;
+  --tx: #e8eee9;
+  --mu: #9fb0a5;
+  --ac: #5cc79a;
+  --on: #07140e;
+  --hi: #243029;
+  --ch: #070607;
+  --pl: #292229;
+  --cr: #f7f4ee;
+  --ink: #161015;
+  --mu2: #b5aeb2;
+  --focus: #ffffff;
+  --err: #ff8f8f;
+}

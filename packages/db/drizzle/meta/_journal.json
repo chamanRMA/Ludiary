@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1792607769858,
+      "tag": "0000_library_scan",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792661109434,
+      "tag": "0001_store_account",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792678421667,
+      "tag": "0002_recheck_steam_media",
+      "breakpoints": true
+    }
+  ]
+}

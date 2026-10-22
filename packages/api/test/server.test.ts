@@ -1,39 +1,18 @@
 import { randomBytes } from "node:crypto";
-import { createServer, request } from "node:http";
+import { createServer } from "node:http";
 import { connect, type AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import { launcherProof, serverProof } from "../src/proofs";
-import { createLocalServer, type LocalServer } from "../src/server";
+import { createLocalServer, type LocalServer, type LocalServerDeps } from "../src/server";
+import { fakeCore, send } from "./helpers";
 import { OPEN_LINK_TTL_MS, SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, SessionStore } from "../src/sessions";
 
 const KEY = randomBytes(32);
 
-interface Res {
-  status: number;
-  headers: Record<string, string | string[] | undefined>;
-  json: () => Record<string, unknown>;
-}
-
-// node:http instead of fetch: fetch does not let us forge the Host header.
-function send(
-  port: number,
-  path: string,
-  opts: { method?: string; headers?: Record<string, string>; body?: unknown; via?: "127.0.0.1" | "::1" } = {},
-): Promise<Res> {
-  return new Promise((resolve, reject) => {
-    const payload = opts.body === undefined ? undefined : JSON.stringify(opts.body);
-    const headers: Record<string, string> = { host: `127.0.0.1:${port}`, ...opts.headers };
-    if (payload !== undefined) headers["content-type"] = "application/json";
-    const req = request({ host: opts.via ?? "127.0.0.1", port, path, method: opts.method ?? "GET", headers }, (res) => {
-      let text = "";
-      res.setEncoding("utf8");
-      res.on("data", (c: string) => (text += c));
-      res.on("end", () => resolve({ status: res.statusCode ?? 0, headers: res.headers, json: () => JSON.parse(text) }));
-    });
-    req.on("error", reject);
-    req.end(payload);
-  });
-}
+const minimalDeps = (): LocalServerDeps => ({
+  appId: "Ludiary", version: "t", launcherKey: KEY, sessions: new SessionStore(), t: (k) => k, getStatus: () => ({}),
+  onShutdownRequested: () => {}, core: fakeCore(), webAssets: new Map(), mediaHosts: [],
+});
 
 let server: LocalServer | null = null;
 let shutdowns = 0;
@@ -52,6 +31,9 @@ async function start(sessions = new SessionStore()): Promise<number> {
     t: (key) => key,
     getStatus: () => ({}),
     onShutdownRequested: () => shutdowns++,
+    core: fakeCore(),
+    webAssets: new Map(),
+    mediaHosts: [],
   });
   return server.listen(0);
 }
@@ -158,10 +140,10 @@ describe("local server guards (ADR 23)", () => {
         throw new Error("could not open the test socket");
       }
       const port = (squatter.address() as AddressInfo).port;
-      const candidate = createLocalServer({ appId: "Ludiary", version: "t", launcherKey: KEY, sessions: new SessionStore(), t: (k) => k, getStatus: () => ({}), onShutdownRequested: () => {} });
+      const candidate = createLocalServer(minimalDeps());
       await expect(candidate.listen(port), taken).rejects.toMatchObject({ code: "EADDRINUSE" });
       await new Promise((r) => squatter.close(r));
-      const again = createLocalServer({ appId: "Ludiary", version: "t", launcherKey: KEY, sessions: new SessionStore(), t: (k) => k, getStatus: () => ({}), onShutdownRequested: () => {} });
+      const again = createLocalServer(minimalDeps());
       expect(await again.listen(port)).toBe(port); // the failed attempt released what it had opened
       await again.close();
     }
@@ -172,7 +154,7 @@ describe("local server guards (ADR 23)", () => {
     const url = new URL(server!.createOpenUrl());
     const real = String((await send(port, url.pathname + url.search)).headers["set-cookie"]).split(";")[0]!;
     for (const cookie of [`ludiary_session=planted; ${real}`, `${real}; ludiary_session=planted`]) {
-      expect((await send(port, "/", { headers: { cookie } })).status).toBe(200);
+      expect((await send(port, "/api/status", { headers: { cookie } })).status).toBe(200);
     }
   });
 
@@ -189,22 +171,21 @@ describe("local server guards (ADR 23)", () => {
     const byIp = new URL(server!.createOpenUrl("ip"));
     expect(byName.host).toBe(`ludiary.localhost:${port}`);
     expect(byIp.host).toBe(`127.0.0.1:${port}`);
-    expect((await send(port, byName.pathname + byName.search, { headers: { host: byName.host } })).status).toBe(302);
-    expect((await send(port, byIp.pathname + byIp.search, { headers: { host: byIp.host } })).status).toBe(302);
+    expect((await send(port, byName.pathname + byName.search, { headers: { host: byName.host } })).status).toBe(200);
+    expect((await send(port, byIp.pathname + byIp.search, { headers: { host: byIp.host } })).status).toBe(200);
   });
 
   it("redeems an open link only once, for an HttpOnly SameSite=Strict cookie", async () => {
     const port = await start();
     const url = new URL(server!.createOpenUrl());
     const first = await send(port, url.pathname + url.search);
-    expect(first.status).toBe(302);
+    expect(first.status).toBe(200); // ADR 67: no redirect
     const cookie = String(first.headers["set-cookie"]);
     expect(cookie).toMatch(/HttpOnly/);
     expect(cookie).toMatch(/SameSite=Strict/);
     expect((await send(port, url.pathname + url.search)).status).toBe(403);
     const session = cookie.split(";")[0]!;
-    expect((await send(port, "/", { headers: { cookie: session } })).status).toBe(200);
-    expect((await send(port, "/")).status).toBe(401);
+    expect((await send(port, "/api/status", { headers: { cookie: session } })).status).toBe(200);
     expect((await send(port, "/api/status")).status).toBe(401);
   });
 });
@@ -256,8 +237,8 @@ describe("session store (ADR 29, 54)", () => {
     now += OPEN_LINK_TTL_MS + 1;
     expect(store.redeemOpenLink(late)).toBeNull();
 
-    const session = store.redeemOpenLink(store.createOpenLink());
-    expect(session).not.toBeNull();
+    const session = store.redeemOpenLink(store.createOpenLink())?.session;
+    expect(session).toBeDefined();
     now += SESSION_IDLE_MS - 1;
     expect(store.touch(session!)).toBe(true); // renews the idle window
     now += SESSION_IDLE_MS + 1;
@@ -267,7 +248,7 @@ describe("session store (ADR 29, 54)", () => {
   it("ends a session after 90 days even if it is used every day", () => {
     let now = 1_000_000;
     const store = new SessionStore(() => now);
-    const session = store.redeemOpenLink(store.createOpenLink())!;
+    const session = store.redeemOpenLink(store.createOpenLink())!.session;
     const day = 24 * 3600_000;
     for (let d = 1; d <= 90; d++) {
       now += day;

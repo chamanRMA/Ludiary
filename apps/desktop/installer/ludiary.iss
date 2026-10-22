@@ -51,6 +51,11 @@ Source: "{#SourceDir}\version.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\native\*"; DestDir: "{app}\native"; Flags: ignoreversion
 Source: "{#SourceDir}\bin\*"; DestDir: "{app}\bin"; Flags: ignoreversion
 Source: "{#SourceDir}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
+Source: "{#SourceDir}\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[InstallDelete]
+; Hashed asset names change between versions: remove the old web folder before copying the new one.
+Type: filesandordirs; Name: "{app}\web"
 
 [Icons]
 Name: "{autoprograms}\Ludiary"; Filename: "{app}\Ludiary.exe"; WorkingDir: "{app}"

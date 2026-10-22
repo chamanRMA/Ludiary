@@ -3,24 +3,16 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { createLocalServer, SessionStore, type LocalServer } from "@ludiary/api";
 import type { KeyStore, TrayHost, TrayState } from "@ludiary/contracts";
+import { createSqliteInstanceLock, openDatabase } from "@ludiary/db";
 import { translate } from "@ludiary/i18n";
-import { openDatabase, readDatabaseStatus } from "./database";
+import { composeCore, FatalError, migrateDatabase } from "./compose";
+import { unionMediaHosts } from "./connectors";
 import { APP_ID, EXIT, INSTALL_TOKEN_NAME, MAX_MASTER_KEY_ID, localeOf, masterKeyName, type RuntimeDeps } from "./deps";
 import { createFileLogger, readRuntimeInfo, writeRuntimeInfo, type Logger } from "./files";
-import { createSqliteInstanceLock } from "./instance-lock";
 import { candidatePorts } from "./ports";
+import { loadWebAssets } from "./web-assets";
 
 const KEY_BYTES = 32;
-
-/** An error that already knows which exit code the launcher should report (ADR 64). */
-class FatalError extends Error {
-  constructor(
-    readonly exitCode: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
 
 /** Runs one startup step and maps any failure to its exit code. */
 async function step<T>(exitCode: number, what: string, fn: () => T | Promise<T>): Promise<T> {
@@ -99,6 +91,8 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
   rmSync(join(platform.dataDir, "server.lock"), { force: true }); // file lock of the first prototype, no longer used
 
   let shutdown: () => Promise<void> = async () => {};
+  let closeDb: () => void = () => {};
+  let waitForScans: () => Promise<void> = async () => {};
   try {
     const keyStore = deps.createKeyStore(APP_ID);
     const masterKey = await step(EXIT.keyStore, "credential store", () => loadMasterKey(keyStore, log));
@@ -106,8 +100,21 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     log("info", `master key ${masterKeyName(masterKey.id)} ${masterKey.origin}`);
 
     const db = await step(EXIT.database, "database", () => openDatabase(join(platform.dataDir, "ludiary.db"), deps.sqliteAddon));
-    const dbStatus = readDatabaseStatus(db);
+    const dbStatus = {
+      sqliteVersion: (db.prepare("SELECT sqlite_version() AS v").get() as { v: string }).v,
+      journalMode: String(db.pragma("journal_mode", { simple: true })),
+    };
     log("info", `sqlite ${dbStatus.sqliteVersion} journal=${dbStatus.journalMode}`);
+    let dbOpen = true;
+    closeDb = () => {
+      if (dbOpen) db.close();
+      dbOpen = false;
+    };
+    await migrateDatabase(db, join(platform.dataDir, "backups"), log); // FatalError(12) on failure or newer database
+    const { core, facade, connectors } = await composeCore(deps, db, log, masterKey);
+    waitForScans = () => core.whenIdle();
+    const mediaHosts = unionMediaHosts(connectors);
+    const webAssets = loadWebAssets(deps.webDir, log); // once, at startup (ADR 72 point 6)
 
     const locale = localeOf(deps);
     let exitResolve: (code: number) => void = () => {};
@@ -130,6 +137,10 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
           tray: tray !== null,
         }),
         onShutdownRequested: () => void shutdown(),
+        core: facade,
+        webAssets,
+        mediaHosts,
+        onInternalError: (err) => log("error", `internal error in a route: ${(err as Error).stack ?? String(err)}`),
       });
 
     const saved = readRuntimeInfo(platform.dataDir)?.port ?? null;
@@ -147,7 +158,10 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       setTimeout(() => process.exit(EXIT.ok), 5_000).unref();
       await tray?.stop().catch(() => {});
       await server.close().catch(() => {});
-      db.close();
+      // A scan in flight must not find the database closed; the 5 s safety net above bounds the wait.
+      await Promise.race([waitForScans(), new Promise((r) => setTimeout(r, 3_000))]).catch(() => {});
+      closeDb();
+      deps.dispose?.(); // kills helper processes that outlive the server, e.g. an open folder dialog
       writeRuntimeInfo(platform.dataDir, { version: deps.version, port, pid: null });
       release?.();
       release = null;
@@ -190,6 +204,8 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
   } catch (e) {
     log("error", `fatal: ${(e as Error).stack ?? String(e)}`);
     await shutdown();
+    closeDb();
+    deps.dispose?.();
     release?.();
     return e instanceof FatalError ? e.exitCode : EXIT.error;
   }

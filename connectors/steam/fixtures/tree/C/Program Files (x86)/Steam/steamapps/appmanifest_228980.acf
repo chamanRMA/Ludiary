@@ -1,0 +1,10 @@
+"AppState"
+{
+	"appid"		"228980"
+	"Universe"		"1"
+	"name"		"Steamworks Common Redistributables"
+	"StateFlags"		"4"
+	"installdir"		"Steamworks Shared"
+	"SizeOnDisk"		"1000000"
+	"buildid"		"1"
+}

@@ -71,6 +71,16 @@ func main() {
 		os.Exit(runDialog())
 	}
 
+	// ADR 72: read-only registry lookups and the native folder dialog, both JSON over stdin/stdout.
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "--registry":
+			os.Exit(handleRegistry(os.Stdin, os.Stdout))
+		case "--pick-folder":
+			os.Exit(handlePickFolder(os.Stdin, os.Stdout))
+		}
+	}
+
 	tray := systray.New()
 	tray.SetIcon(iconPNG).SetTooltip("Ludiary")
 	tray.OnClick(func() { send(map[string]any{"type": "click", "id": defaultClickID}) })

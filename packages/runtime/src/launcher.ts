@@ -6,7 +6,7 @@ import { translate, type MessageKey } from "@ludiary/i18n";
 import { APP_ID, EXIT, INSTALL_TOKEN_NAME, MAX_MASTER_KEY_ID, localeOf, masterKeyName, type RuntimeDeps } from "./deps";
 import { createFileLogger, type Logger } from "./files";
 import { findRunningServer } from "./health";
-import { createSqliteInstanceLock } from "./instance-lock";
+import { createSqliteInstanceLock } from "@ludiary/db";
 
 /** How long the shortcut waits for a server it started (ADR 64: Defender may scan the exe for a while). */
 const START_TIMEOUT_MS = 60_000;
@@ -77,6 +77,7 @@ const FATAL_MESSAGES: Partial<Record<number, MessageKey>> = {
   [EXIT.masterKeyUnrecognized]: "fatal.masterKeyUnrecognized",
   [EXIT.keyStore]: "fatal.keyStore",
   [EXIT.database]: "fatal.database",
+  [EXIT.databaseTooNew]: "fatal.databaseTooNew",
   [EXIT.noPort]: "fatal.noPort",
 };
 

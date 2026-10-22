@@ -1,0 +1,10 @@
+"AppState"
+{
+	"appid"		"400"
+	"Universe"		"1"
+	"name"		"Portal"
+	"StateFlags"		"4"
+	"installdir"		"Portal"
+	"SizeOnDisk"		"1000000"
+	"buildid"		"1"
+}
