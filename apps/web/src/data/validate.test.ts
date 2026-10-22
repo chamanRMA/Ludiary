@@ -28,7 +28,13 @@ describe("validateField", () => {
 describe("extractValue", () => {
   it("falls back to the raw text when it is not JSON or a URL", () => {
     expect(extractValue("abc", "json-field:x")).toBe("abc");
-    expect(extractValue("abc", "url-query:code")).toBe("abc");
+  });
+  it("url-query needs an address with the parameter; the text is never echoed back (ADR 77, audit M1)", () => {
+    expect(extractValue("abc", "url-query:code")).toBeNull();
+    expect(extractValue("https://embed.gog.com/x?origin=client", "url-query:code")).toBeNull();
+    expect(extractValue("https://embed.gog.com/x?code=abc_1", "url-query:code")).toBe("abc_1");
+    expect(validateField("abcdefghij12345", { maxLength: 100, extract: "url-query:code" })).toEqual({ ok: false, reason: "format" });
+    expect(validateField("https://embed.gog.com/x?code=abcdefghij", { maxLength: 100, extract: "url-query:code" })).toEqual({ ok: true, value: "abcdefghij" });
   });
 });
 

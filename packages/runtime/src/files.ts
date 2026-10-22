@@ -50,6 +50,8 @@ function userName(): string {
 // shortcut: a key right after "%3D" (encoded "=") joins the D to the run and is missed; no code path logs encoded queries.
 const STEAM_KEY = /(?<![0-9A-Fa-f])[0-9A-Fa-f]{32}(?![0-9A-Fa-f])/g;
 const STEAM_ID = /(?<!\d)7656119\d{10}(?!\d)/g;
+// ADR 77 point 5: long opaque tokens (GOG refresh tokens, client secrets). Same net as above, for 64+ char runs.
+const LONG_TOKEN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{64,}(?![A-Za-z0-9_-])/g; // not \b: a token may start or end with "-"
 
 /** Builds the redaction patterns for one home folder and user name (exported for tests). */
 export function makeRedactor(home: string, user: string): (text: string) => string {
@@ -64,7 +66,8 @@ export function makeRedactor(home: string, user: string): (text: string) => stri
     let out = homePattern ? text.replace(homePattern, "~") : text;
     if (userPattern) out = out.replace(userPattern, "<user>");
     // ADR 74 point 6: the net under Secret. A Steam Web API key (32 hex) and a SteamID64 are never written to a log.
-    return out.replace(STEAM_KEY, "[redacted]").replace(STEAM_ID, "[redacted]");
+    // Long tokens first: a hex run inside one must not split it below the 64-char threshold.
+    return out.replace(LONG_TOKEN, "[redacted]").replace(STEAM_KEY, "[redacted]").replace(STEAM_ID, "[redacted]");
   };
 }
 

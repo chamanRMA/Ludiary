@@ -4,5 +4,12 @@
   "connectors.gog.errors.infoMissing": "Ludiary no encuentra los archivos de este juego. Puede que se haya desinstalado o movido: escanea de nuevo.",
   "connectors.gog.errors.noPlayTask": "Este juego no indica cómo abrirse. Ábrelo desde GOG Galaxy.",
   "connectors.gog.errors.invalidTask": "Los datos de arranque del juego no son válidos, así que Ludiary no lo abrirá. Ábrelo desde GOG Galaxy.",
-  "connectors.gog.errors.unsupportedExecutable": "Este juego se abre con algo que no es un programa (.exe), y Ludiary no lo lanza. Ábrelo desde GOG Galaxy."
+  "connectors.gog.errors.unsupportedExecutable": "Este juego se abre con algo que no es un programa (.exe), y Ludiary no lo lanza. Ábrelo desde GOG Galaxy.",
+  "connectors.gog.login.title": "Inicia sesión en GOG",
+  "connectors.gog.login.body": "Pulsa «Abrir la página»: GOG se abre en una pestaña nueva. Inicia sesión allí; Ludiary nunca ve tu contraseña.\nAl terminar verás una página casi en blanco: copia su dirección completa de la barra del navegador.\nVuelve a esta pestaña y pulsa «Pegar».",
+  "connectors.gog.login.field": "Dirección de la página final",
+  "connectors.gog.error.code": "El código ha caducado o ya se usó. Vuelve a iniciar sesión y pega la dirección nueva.",
+  "connectors.gog.error.expired": "GOG ha cerrado la sesión. Vuelve a conectar la cuenta.",
+  "connectors.gog.errors.galaxyMissing": "Para instalar este juego hace falta GOG Galaxy. Instálalo desde gog.com o descarga el instalador desde tu biblioteca de gog.com.",
+  "connectors.gog.disconnect.hint": "Ludiary borra su sesión de GOG de este equipo. Para cerrar todas las sesiones, cambia la contraseña en gog.com."
 }

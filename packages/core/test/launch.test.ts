@@ -187,10 +187,11 @@ describe("exec checks (not used by any platform yet)", () => {
     expect(h.execs).toEqual([{ executable: `${GAME}\\g.exe`, args: ["--a", "b c"], cwd: GAME }]);
   });
 
-  it("runs the resolved launcher client", async () => {
+  it("never runs a file inside a launcher location: it is readable, not an exec destination (ADR 77, audit A1)", async () => {
     const h = await execHarness(() => ({ kind: "exec", executable: CLIENT, args: ["/command=runGame"] }));
     seed(h, "steam", "1");
-    expect(await h.core.launch("c1")).toEqual({ status: "started" });
+    expect((await rejection(h.core.launch("c1"))).code).toBe("launch.rejected");
+    expect(h.execs).toEqual([]);
   });
 
   it("does not trust launcher locations when detection was not allowed", async () => {

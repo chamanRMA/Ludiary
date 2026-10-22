@@ -2,7 +2,7 @@
 import { ConnectorError } from "@ludiary/contracts";
 import type { ConnectorLogger, ResolvedLocation, ScanRoot, StoreConnector, StoreId } from "@ludiary/contracts";
 import { storedActiveRoots } from "./active-roots";
-import { connectorLogger, LIBRARY_MAX_BYTES, syncContext } from "./contexts";
+import { connectorLogger, epochOf, LIBRARY_MAX_BYTES, syncContext } from "./contexts";
 import {
   AUTO_SYNC_DEFAULT_MS,
   AUTO_SYNC_MS,
@@ -160,8 +160,9 @@ export function createSyncService(env: Env): SyncService {
     let retryAfterMs = 0;
     let authLost = false;
 
+    const epoch = epochOf(env, c.id);
     try {
-      const ctx = await syncContext(env, c, signal, { maxBytes: LIBRARY_MAX_BYTES });
+      const ctx = await syncContext(env, c, signal, { maxBytes: LIBRARY_MAX_BYTES, epoch: "guard" });
       const snapshot = await withTimeout(signal, () => listLibrary.call(c, ctx));
       if (!snapshot || typeof snapshot !== "object") throw new ConnectorError("store.unexpected-response", "listLibrary returned nothing");
       const valid = validateLibraryEntries({ entries: snapshot.entries, connector: c, log: deps.log });
@@ -181,6 +182,9 @@ export function createSyncService(env: Env): SyncService {
       deps.log.warn("Library sync failed", { connector: c.id, code: error.code });
     }
 
+    // Disconnected or reconnected while the call was in flight: write nothing, the state belongs to the new session.
+    if (epochOf(env, c.id) !== epoch) return;
+
     const wait = Math.max(c.minSyncIntervalMs, Math.min(retryAfterMs, MAX_BACKOFF_MS));
     if (error) {
       // A failed sync changes nothing in the library; an authentication failure only flips the connection (ADR 74 point 9).
@@ -198,6 +202,7 @@ export function createSyncService(env: Env): SyncService {
       return;
     }
 
+    if (epochOf(env, c.id) !== epoch) return;
     const at = deps.clock.now();
     const sync: SyncStateRecord = { ...base, nextAllowedAt: t0 + c.minSyncIntervalMs, lastSuccessAt: at, status: "idle", error: null };
     const plan = computeLibraryPlan({

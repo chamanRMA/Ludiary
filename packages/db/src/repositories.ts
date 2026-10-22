@@ -140,10 +140,12 @@ export function createRepositories(sqlite: Database.Database): Repositories {
     connected: ReadonlySet<string>,
   ): GameSummary {
     const stores = STORE_ORDER.filter((st) => ps.some((p) => p.store === st));
-    // ADR 71: when a Steam property exists its artwork wins.
-    const steam = ps.find((p) => p.store === "steam");
-    const scanned: EntryMedia = steam?.storeMetadata?.media ?? g.media ?? {};
-    const resolved = steam?.storeMetadata?.resolvedMedia; // ADR 73: field by field
+    // ADR 71: when a Steam property exists its artwork wins; otherwise the first store, in STORE_ORDER, that has some (ADR 76).
+    const art =
+      ps.find((p) => p.store === "steam") ??
+      STORE_ORDER.map((st) => ps.find((p) => p.store === st && (p.storeMetadata?.resolvedMedia || p.storeMetadata?.media))).find(Boolean);
+    const scanned: EntryMedia = art?.storeMetadata?.media ?? g.media ?? {};
+    const resolved = art?.storeMetadata?.resolvedMedia; // ADR 73: field by field
     const media: EntryMedia = {
       ...(resolved?.coverUrl ?? scanned.coverUrl ? { coverUrl: resolved?.coverUrl ?? scanned.coverUrl } : {}),
       ...(resolved?.heroUrl ?? scanned.heroUrl ? { heroUrl: resolved?.heroUrl ?? scanned.heroUrl } : {}),

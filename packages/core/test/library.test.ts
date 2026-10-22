@@ -357,6 +357,36 @@ describe("disconnect (ADR 74 point 9, point 12.1)", () => {
     expect((await h.core.storeStatus())[0]).toMatchObject({ connection: "disconnected", mode: "installed-only" });
   });
 
+  it("a token rotation that ends after the disconnect stores nothing and writes no state (ADR 77, audit A2)", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    let setError: unknown = null;
+    const { h } = await lib({
+      harness: { cipher: fakeCipher(1) },
+      connector: {
+        library: async (ctx: SyncContext) => {
+          await gate;
+          try {
+            await ctx.secrets.set("refreshToken", "rotated"); // the late write of a refreshed token
+          } catch (e) {
+            setError = e;
+            throw e;
+          }
+          return { complete: true, entries: [owned("10", "Portal")] };
+        },
+      },
+    });
+    await h.core.requestSync({ trigger: "manual", operations: ["library"] });
+    await h.core.disconnect("steam");
+    release();
+    await h.core.whenIdle();
+    expect([...h.store.secretRows.keys()].filter((k) => k.startsWith("store:steam|"))).toEqual([]);
+    expect(setError).toMatchObject({ code: "auth.required" });
+    expect(h.store.sync.has("steam:library")).toBe(false);
+    expect(h.store.connectionRows.has("steam")).toBe(false);
+    expect(await titles(h)).toEqual([]); // the dropped result did not touch the library
+  });
+
   it("a connector that fails to disconnect cannot stop the wipe; a store without connection is not-found", async () => {
     const { h } = await lib({
       connector: {

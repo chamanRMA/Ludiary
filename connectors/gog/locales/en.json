@@ -4,5 +4,12 @@
   "connectors.gog.errors.infoMissing": "Ludiary cannot find this game's files. It may have been uninstalled or moved: scan again.",
   "connectors.gog.errors.noPlayTask": "This game does not say how to open it. Open it from GOG Galaxy.",
   "connectors.gog.errors.invalidTask": "The game's launch data is not valid, so Ludiary will not open it. Open it from GOG Galaxy.",
-  "connectors.gog.errors.unsupportedExecutable": "This game opens with something other than a program (.exe), which Ludiary does not launch. Open it from GOG Galaxy."
+  "connectors.gog.errors.unsupportedExecutable": "This game opens with something other than a program (.exe), which Ludiary does not launch. Open it from GOG Galaxy.",
+  "connectors.gog.login.title": "Sign in to GOG",
+  "connectors.gog.login.body": "Press “Open the page”: GOG opens in a new tab. Sign in there; Ludiary never sees your password.\nWhen it finishes you will see an almost blank page: copy its full address from the browser bar.\nCome back to this tab and press “Paste”.",
+  "connectors.gog.login.field": "Address of the final page",
+  "connectors.gog.error.code": "The code has expired or was already used. Sign in again and paste the new address.",
+  "connectors.gog.error.expired": "GOG has signed you out. Reconnect the account.",
+  "connectors.gog.errors.galaxyMissing": "GOG Galaxy is needed to install this game. Install it from gog.com or download the installer from your gog.com library.",
+  "connectors.gog.disconnect.hint": "Ludiary deletes its GOG session from this computer. To sign out everywhere, change your password at gog.com."
 }

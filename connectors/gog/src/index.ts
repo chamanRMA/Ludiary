@@ -1,10 +1,12 @@
 import type { StoreConnector } from "@ludiary/contracts";
 import { resolveGogAction } from "./launch";
-import { GOG_LOCATIONS, GOG_NAME_KEY } from "./manifest";
+import { GOG_GALAXY_CLIENT, GOG_LOCATIONS, GOG_NAME_KEY } from "./manifest";
+import { listGogLibrary } from "./library";
+import { gogConnection } from "./wizard";
 import { GOG_API_HOSTS, GOG_MEDIA_HOSTS, resolveGogMedia } from "./media";
 import { discoverGogRoots, scanGogInstalled } from "./scan";
 
-/** GOG connector, first cut (ADR 76): installed games, GamesDB covers and direct exec launch. No account yet. */
+/** GOG connector: installed games, GamesDB covers and direct exec launch (ADR 76), and the account cut (ADR 77). */
 export function createGogConnector(): StoreConnector {
   return {
     contractVersion: 1,
@@ -12,21 +14,23 @@ export function createGogConnector(): StoreConnector {
     nameKey: GOG_NAME_KEY,
     access: "unofficial-api",
     capabilities: {
-      library: false,
+      library: true,
       scan: true,
       dlc: "none",
-      actions: ["play"],
-      launchKinds: ["exec"],
-      uriSchemes: [],
+      actions: ["play", "install"],
+      launchKinds: ["exec", "uri"],
+      uriSchemes: ["goggalaxy"],
       storePlaytime: false,
       price: false,
     },
     minSyncIntervalMs: 1_800_000,
-    authHosts: [],
+    authHosts: ["auth.gog.com"],
     apiHosts: GOG_API_HOSTS,
     mediaHosts: GOG_MEDIA_HOSTS,
-    locations: GOG_LOCATIONS,
+    locations: [...GOG_LOCATIONS, GOG_GALAXY_CLIENT],
     externalTools: [],
+    connection: gogConnection,
+    listLibrary: listGogLibrary,
     scanInstalled: scanGogInstalled,
     discoverRoots: discoverGogRoots,
     resolveMedia: resolveGogMedia,
@@ -34,6 +38,9 @@ export function createGogConnector(): StoreConnector {
   };
 }
 
+export { gogConnection } from "./wizard";
+export { listGogLibrary } from "./library";
+export { GOG_LOGIN_URL, GOG_REDIRECT_URI } from "./auth";
 export { splitWindowsArgs } from "./args";
 export { parseGogInfo } from "./info";
 export type { GogInfo, GogPlayTask } from "./info";

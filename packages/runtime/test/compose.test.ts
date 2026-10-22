@@ -239,7 +239,7 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
 
   it("unions the media hosts and URI schemes of the registered connectors", () => {
     const connectors = createConnectors();
-    expect(unionUriSchemes(connectors)).toEqual(["steam"]);
+    expect(unionUriSchemes(connectors)).toEqual(["goggalaxy", "steam"]); // ADR 77: GOG declares goggalaxy for install
     expect(connectors.map((c) => c.id)).toEqual(["steam", "gog"]);
     expect(unionMediaHosts(connectors)).toEqual([
       "images.gog.com",

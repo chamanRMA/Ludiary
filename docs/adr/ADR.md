@@ -52,7 +52,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
@@ -88,7 +88,8 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 73 | Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` | Vigente (recomendada; amplía las 40, 71 y 72) |
 | 74 | Cuenta de Steam: OpenID, API key cifrada y juegos no instalados | Vigente (recomendada; amplía las 40, 43, 46, 47, 50, 68, 72 y 73); punto 12 decidido por el usuario el 22-10-2026 |
 | 75 | Portadas guardadas en el equipo y servidas por el servidor local | **Descartada** por el usuario el 22-10-2026: la caché del navegador ya las guarda 10 años; la 71 sigue vigente |
-| 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11 pendiente del usuario) |
+| 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11.1 pendiente del usuario; punto 11.2 resuelto en la 77); vía de la cuenta y orden del emparejamiento revisados en la 77 |
+| 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
 
 ## Decisiones
 
@@ -568,7 +569,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -856,7 +857,7 @@ Reglas del lado del núcleo:
 2. **Intervalo mínimo.** Antes de sincronizar una tienda, el núcleo aplica el mayor entre `minSyncIntervalMs` y el valor configurado (pendiente), contado desde el último intento. Vale para la sincronización automática y para el botón manual; si no toca aún, la interfaz muestra cuándo estará disponible. Los escaneos locales no están sujetos a este intervalo.
 3. **Instantáneas.** Con `complete: false`, el núcleo añade y actualiza propiedades pero no da de baja las ausentes. El emparejamiento con juegos canónicos (decisión 20) y el tratamiento de los DLC son del núcleo; el conector solo informa de `kind` y `baseStoreGameId` cuando la tienda los da.
 4. **Validación de salidas.** El núcleo valida todo lo que devuelve un conector: identificadores no vacíos y de longitud acotada, `installPath` dentro de una raíz del contexto, URL de medios en `https`, URL del asistente en `authHosts`.
-5. **Lanzamiento (invariante 3).** La API solo recibe el ID de un juego canónico guardado y, opcionalmente, el ID de una de sus propiedades; el núcleo carga la `StoredProperty` de la base de datos y llama a `resolveAction`. Antes de ejecutar, el núcleo comprueba: que la acción y el tipo están en las capacidades; para `uri`, que el esquema está en `uriSchemes`; para `exec`, que `executable` es una ruta absoluta existente dentro de `installPath` de esa propiedad o de una ubicación resuelta de tipo `launcher`, y que ningún argumento contiene caracteres de control. `ProcessLauncher` ejecuta sin shell, con argumentos como lista, y abre las URI con la API del sistema, no con `cmd /c start`. La `LaunchSpec` no sale nunca por la API; la única excepción futura es el modo servidor sin agente (decisión 22), que devuelve al navegador solo especificaciones `uri` con esquema permitido.
+5. **Lanzamiento (invariante 3).** La API solo recibe el ID de un juego canónico guardado y, opcionalmente, el ID de una de sus propiedades; el núcleo carga la `StoredProperty` de la base de datos y llama a `resolveAction`. Antes de ejecutar, el núcleo comprueba: que la acción y el tipo están en las capacidades; para `uri`, que el esquema está en `uriSchemes`; para `exec`, que `executable` es una ruta absoluta existente dentro de `installPath` de esa propiedad ~~o de una ubicación resuelta de tipo `launcher`~~ (revisado en la decisión 77: las ubicaciones `launcher` no amplían el confinamiento; solo vale `installPath`), y que ningún argumento contiene caracteres de control. `ProcessLauncher` ejecuta sin shell, con argumentos como lista, y abre las URI con la API del sistema, no con `cmd /c start`. La `LaunchSpec` no sale nunca por la API; la única excepción futura es el modo servidor sin agente (decisión 22), que devuelve al navegador solo especificaciones `uri` con esquema permitido.
 6. **Secretos.** Los conectores guardan y leen sus tokens solo con `secrets`; el cifrado (algoritmo pendiente) y la clave (decisión 14) son del núcleo y de la plataforma. Los `Secret` no se pueden imprimir por accidente y el registro filtra además cualquier valor que coincida con un secreto conocido.
 7. **Herramientas externas.** `legendary` y `gogdl` las ejecuta el núcleo con su directorio de configuración en una carpeta temporal privada, rehidratada desde el almacén cifrado y borrada al terminar. Comprobado en octubre de 2026: `legendary` deriva su directorio de configuración de `XDG_CONFIG_HOME` (así lo usa Heroic, PR #2803), y `gogdl` recibe la ruta del JSON donde guarda sus tokens. El nombre exacto del argumento de `gogdl` está por confirmar con su ayuda en línea.
 8. **Ubicaciones descubiertas.** Los conectores declaran en `locations` qué valores de registro o carpetas conocidas necesitan (por ejemplo, el directorio de Steam o los manifiestos del launcher de EA). La plataforma los resuelve de forma genérica, sin saber nada de tiendas. Solo se resuelven si el usuario aceptó la autodetección (decisión 42). Ajustes muestra las ubicaciones detectadas junto a sus carpetas y permite desactivarlas.
@@ -1718,6 +1719,7 @@ export interface GameDetailDto extends GameSummaryDto {
 - **Qué (confirmado por el usuario el 21 de octubre de 2026):** los juegos de Steam usan la carátula que da Steam.
 - **Cómo (recomendado):** el navegador carga la imagen directamente del CDN de Steam (opción A). El servidor no descarga ni guarda imágenes.
   - **Alcance:** solo para juegos canónicos con una propiedad de Steam, es decir, poseídos o detectados en Steam. Si un juego también está en otra tienda, gana la imagen de Steam. Un juego que solo está en GOG o Epic nunca pide nada a Steam, aunque se conozca su AppID por un ID externo. Así Valve no se entera de juegos de otras tiendas (invariante 9). Alcance confirmado por el usuario el 21 de octubre de 2026: solo los juegos que tiene en Steam, no los que solo se venden allí.
+  - **Corrección del 22-10-2026 (prueba del usuario con la cuenta de GOG, decisión 77):** las portadas de GOG se resolvían y guardaban, pero no se veían, porque el resumen del juego en `packages/db` solo leía los medios de la propiedad de Steam. Ahora, si no hay propiedad de Steam, se usan los de la primera tienda, en el orden fijo `steam, gog, epic, ubisoft, ea`, que tenga medios. Steam sigue ganando cuando existe.
   - **URL por AppID** (las construye el conector de Steam, en `media`):
     - `coverUrl`: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/<appId>/library_600x900.jpg` (vertical, 600×900).
     - Respaldo, `heroUrl` en `media`: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/<appId>/header.jpg` (460×215).
@@ -3019,7 +3021,7 @@ export interface CoverFiles {
   - privacidad: el servidor descarga cada portada una vez;
   - solución de problemas: dónde están las portadas, que se pueden borrar sin perder nada y que una que falta aparece tras el siguiente escaneo con conexión.
 
-### 76. Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos (amplía las decisiones 40, 42, 72 y 73; revisa el orden de cortes de la 72 y la fila de GOG de la tabla de la 40)
+### 76. Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos (amplía las decisiones 40, 42, 72 y 73; revisa el orden de cortes de la 72 y la fila de GOG de la tabla de la 40; vía de la cuenta, orden del emparejamiento y el `..` del punto 4 revisados en la decisión 77)
 
 **Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario encarga «empieza con el conector de GOG». Eso resuelve el punto (C) de la decisión 72: **GOG va antes que el corte 2b** (tiempo de juego), que pasa a ir después. Este corte es el equivalente de la 72 para GOG: lo justo para ver los juegos de GOG instalados y jugarlos, y sobre todo para validar el lanzamiento por línea de comandos (`exec`), el caso más distinto del contrato.
 
@@ -3128,7 +3130,7 @@ export class ExecError extends Error {
 8. Devuelve `{ kind: 'exec', executable, args, cwd }`.
 
 - Se lee el `.info` **al lanzar**, no al escanear: así una actualización del juego que cambie el ejecutable vale enseguida, y no hace falta `launchData`.
-- Un `..` en `path` o `workingDir` no lo filtra el conector: si sale de `installPath`, lo rechaza el núcleo (`launch.rejected`), que es quien confina.
+- ~~Un `..` en `path` o `workingDir` no lo filtra el conector~~ (revisado en la decisión 77, A1: el conector lo rechaza con `invalidTask`). Si aun así una ruta sale de `installPath`, la rechaza el núcleo (`launch.rejected`), que es quien confina.
 - **Invariante 3.** La API sigue recibiendo solo IDs. Ejecutable, argumentos y carpeta salen de un fichero local de la carpeta del juego, que el núcleo confina a `installPath`. Quien puede escribir ese `.info` puede también sustituir el propio `.exe`, así que el fichero no añade una vía nueva de ataque. Lo que sí se impide: salir de la carpeta del juego, que **Ludiary añada** un intérprete de órdenes (`cmd.exe`, `shell`) y ejecutar algo que no sea un `.exe`. El `.exe` y sus argumentos son los que dice el `.info`: si la tarea de un juego abre a su vez otro programa, eso es cosa del juego, como al abrirlo desde Galaxy.
 - **Para la guía:** `CreateProcess` no pasa por SmartScreen ni mira la marca de la web (MOTW), a diferencia de un doble clic en el Explorador. Abrir un juego desde Ludiary no muestra esos avisos; el documentalista lo menciona en la guía de seguridad.
 
@@ -3313,6 +3315,331 @@ Fuentes consultadas el 22 de octubre de 2026: [GameFinder, GOG Galaxy](https://g
 - La afirmación de la 72 de que el emparejamiento llega «con la segunda tienda» queda revisada: llega en su propio corte (punto 1).
 - Los agentes `conectores`, `programador` y `empaquetador` tienen aquí su especificación; el `tester` prepara la prueba manual del punto 9; el `documentalista` actualiza las guías del punto 10.
 
+### 77. Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados (amplía las decisiones 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40 y, de la 76, la vía de la cuenta y el orden del emparejamiento)
+
+**Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario pide ver los juegos de su cuenta de GOG y decide hacer este corte **ahora, antes del corte 2b** (tiempo de juego). Eso responde al punto 11.2 de la decisión 76 con la opción (b), **pero sin el emparejamiento entre tiendas**. Es el equivalente de la 74 para GOG y reutiliza todo lo que la 74 dejó hecho: motor de asistentes, `SecretCipher`, tabla `secrets`, `store_connections`, paso con campo y Pegar, `HttpClient` con lista de hosts y `maxBytes`, operación `library` del núcleo, `install`, desconectar y velo gris.
+
+**Punto de partida:** el corte de la 76 funciona con el Galaxy real del usuario (Cold Waters, 1512372112). Lo que sigue sobre la cuenta sale de fuentes públicas y de dos peticiones sin cuenta a `api.gog.com` hechas el 22-10-2026. Queda como supuesto (lista del final) hasta la prueba manual del punto 10.
+
+#### 1. Alcance
+
+- **Entra:**
+  - el asistente de GOG de la decisión 43: abrir el login oficial de GOG, Pegar la dirección final y canjear el código;
+  - la sesión de GOG (solo el refresh token) cifrada en `secrets`, y su renovación en cada sincronización;
+  - `listLibrary` con los juegos poseídos, para mostrar los no instalados con la acción `install`;
+  - `install`, que abre la ficha del juego en GOG Galaxy;
+  - desconectar y el estado `expired`, con el velo gris de la 74;
+  - el nombre de la cuenta («Conectado como …»), con el mismo criterio que el usuario eligió para Steam (punto 12).
+- **Fuera, cada parte con su motivo:**
+  - **Emparejamiento entre tiendas** (decisión del usuario). No es imprescindible: un juego poseído en Steam y en GOG sale dos veces, una por tienda, cada una con su insignia y sus acciones. No se pierde ningún dato y nada se fusiona mal. El corte del emparejamiento tendrá que unir también los datos del usuario de los dos canónicos, pero ese problema ya existe hoy con los instalados. Revisa la frase de la 76 («el emparejamiento va antes o junto con ella»).
+  - **`gogdl` y `ExternalToolRunner`** (punto 2).
+  - **DLC.** `user/data/games` los incluye y el catálogo dice cuáles son (`game_type: "dlc"`), pero el núcleo aún los descarta y el modelo no tiene `base_store_game_id` (decisiones 21, 52 y 76). Se saltan y se cuentan en el registro; `dlc` sigue en `'none'`.
+  - **Tiempo de juego de GOG** (`gameplay.gog.com`, que usa Heroic): `storePlaytime` sigue en `false`. Va con el corte 2b o con uno propio.
+  - **Portadas en `listLibrary`.** No se piden aquí: el paso de medios de la 73 ya resuelve con GamesDB (decisión 76, punto 5) todas las propiedades sin medios, también las no instaladas.
+  - **Ventana integrada de login** (mejora prevista en la 43).
+
+#### 2. Vía de acceso: HTTP directo frente a `gogdl`
+
+- **A. HTTP directo desde el conector con el `HttpClient` de la 74** (se elige).
+  - Ventajas:
+    - todo son cuatro peticiones `GET` sencillas (canje, renovación, biblioteca y catálogo);
+    - no hay binario nuevo que empaquetar, firmar y actualizar (`gogdl` es Python empaquetado con PyInstaller);
+    - no hace falta el `ExternalToolRunner`: carpeta temporal privada, rehidratarla desde el almacén y volver a cifrarla (regla 7 de la 40), que es la pieza más delicada que quedaba por construir;
+    - los tokens nunca tocan el disco en claro;
+    - las respuestas grabadas se prueban con el `fakeHttp` que ya existe.
+  - Coste: el conector reimplementa el canje y la renovación, unas 60 líneas. Si GOG cambia el flujo, hay que seguir a `gogdl` a mano.
+- **B. `gogdl auth --code <código>` como herramienta externa** (regla 7 de la 40).
+  - Ventaja: se hereda el mantenimiento de Heroic.
+  - Costes: el binario, el `ExternalToolRunner` completo, analizar su salida estándar (que lleva los tokens) y una licencia GPL-3.0 más que cumplir al distribuir. Es compatible con la nuestra, pero obliga a publicar su código correspondiente con cada versión. Todo eso para cuatro peticiones.
+- **Revisa para GOG la regla 7 de la decisión 40:** GOG no usa `gogdl` y su manifiesto mantiene `externalTools: []`. `ExternalToolId` conserva `'gogdl'`, sin cambiar el tipo, por si algún día se descargan juegos. La regla sigue igual para `legendary` (Epic).
+
+**Identificador de cliente.** GOG no ofrece un registro OAuth público para aplicaciones de terceros (supuesto GA1). Se usa el identificador de cliente de Galaxy (`client_id` `46899977096215655` y su `client_secret`, documentados en gogapidocs). Es lo mismo que hacen `gogdl`, Heroic, Lutris y Comet.
+
+- **Invariante 8.** La vía oficial que existe es el login de GOG, y se usa: el usuario escribe su contraseña y su segundo factor en `auth.gog.com`, nunca en Ludiary. No se toca ninguna sesión de Galaxy ni del navegador (decisión 43). Lo que no es oficial es presentarse ante GOG con el identificador de Galaxy. Por eso el conector sigue con `access: 'unofficial-api'` y su icono de fragilidad (decisión 40).
+- **Riesgo legal y de condiciones de uso (no es asesoría legal).** GOG podría considerar que suplantar a su cliente infringe sus condiciones, o cambiar el secreto o bloquearlo. La tolerancia actual se deduce del uso público y prolongado por parte de Heroic, Lutris y Playnite, sin que conste una prohibición expresa (supuesto GA1). Mitigación: el fallo queda aislado en el conector (invariante 2), el escaneo y Jugar siguen funcionando sin cuenta, la guía lo explica y el proyecto no se declara afiliado. Si GOG publicara un registro de aplicaciones, se migra a él con una decisión nueva.
+- **El `client_secret` de Galaxy no es un secreto del invariante 5.** Es el mismo en todas las instalaciones de Galaxy y está publicado en su binario y en varios repositorios públicos. Sin el login del usuario no da acceso a nada. Va como constante en `connectors/gog/src/auth.ts`, con un comentario que lo explica. El ADR no copia su valor (está en la fuente citada). El `auditor` lo confirma, y si se usa un escáner de secretos en el repositorio, esa constante va en su lista de excepciones.
+
+#### 3. Flujo de login y canje
+
+- **Ida (la URL la construye el conector y es fija):** `https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2`.
+  - La vuelta llega a una página de GOG, nunca al servidor local (decisión 43). Por eso no se usa `callbackUrl`, ni `/connect/return`, ni `sessionStorage`.
+  - El enlace se abre en **pestaña nueva**, la regla general de la 68: el paso espera un campo, no una vuelta.
+- **Al terminar el login**, el navegador queda en `https://embed.gog.com/on_login_success?origin=client&code=<código>` (supuesto GA2). El usuario copia la dirección y pulsa Pegar. El núcleo aplica `extract: 'url-query:code'` y valida el resultado (decisión 74, punto 5).
+- **Canje** (`connectors/gog/src/auth.ts`, `exchangeCode`): `GET https://auth.gog.com/token` con la consulta `client_id`, `client_secret`, `grant_type=authorization_code`, `code` (como `Secret`) y `redirect_uri`, que debe ser exactamente la de la ida.
+  - 200 con JSON y `access_token` y `refresh_token` de texto que cumplen `^[A-Za-z0-9_-]{64,4096}$` (revisión del auditor, M2; supuesto GA13): correcto. Si no cumplen: `store.unexpected-response`.
+  - 400 o 401 (código caducado, ya usado o mal copiado; supuesto GA7): `auth.invalid` con la clave `connectors.gog.error.code` («El código ha caducado o ya se usó. Vuelve a iniciar sesión y pega la dirección nueva»). El núcleo responde `rejected` y el usuario sigue en el mismo paso, con el mismo enlace.
+  - 429: `store.rate-limited`. Cualquier otro estado, o un JSON sin esos campos: `store.unexpected-response`.
+  - Se ignoran `user_id`, `session_id` y `expires_in`: el identificador de cuenta no se guarda en ningún sitio.
+- **Repetición:** un código solo vale una vez en GOG, y el asistente ya caduca a los 15 minutos (decisión 74). No hace falta nada más.
+
+#### 4. Pasos del asistente de GOG
+
+| Id | Tipo | Qué hace |
+|---|---|---|
+| `login` | `open-external`, `awaits: 'input'`, con campo | La URL del punto 3. Cuerpo: «Inicia sesión en GOG en la pestaña nueva. Al terminar verás una página casi en blanco: copia su dirección completa de la barra y pulsa Pegar». Campo `redirectUrl`: `secret: true`, `paste: true`, `extract: 'url-query:code'`, `pattern: '^[A-Za-z0-9_-]{10,512}$'` (supuesto GA12) y `maxLength: 2048`. |
+
+- Un solo paso, el que ya pinta el simulador (`apps/web/src/data/mock.ts`). Sin paso `choose`: «solo instalados» ya es el modo de GOG sin conexión (decisión 76), y cancelar lo deja así.
+- **Al enviar `redirectUrl`:**
+  1. Canje (punto 3).
+  2. `secrets.set('refreshToken', …)`.
+  3. Nombre de la cuenta, sin que un fallo bloquee: `GET https://embed.gog.com/userData.json` con `authorization: Bearer <access_token>`. Se lee **solo** `username`, se quitan los caracteres de control, se recorta a 64 y se devuelve como `accountLabel`. Cualquier fallo da `done` sin nombre («Conectado») y un registro con solo el código. La respuesta trae también el correo y otros datos: no se guardan ni se registran, y el objeto se descarta enseguida (supuesto GA10).
+  4. `done`.
+- No hay llamada de prueba aparte: el canje correcto ya prueba la sesión, y `done` lanza la primera sincronización forzada (decisión 74), cuyo error se ve en la tarjeta de GOG.
+- El token de acceso del canje se usa solo para el paso 3 y se descarta.
+
+#### 5. Sesión y tokens (decisión 46, mínimo de este corte)
+
+- **Qué se guarda:** solo `refreshToken`, cifrado en `secrets` con el ámbito `store:gog` (decisión 74, punto 6). El token de acceso, que dura unos 3600 s (supuesto GA3), **no se guarda nunca**. Vive en memoria durante una operación y luego se descarta.
+  - Motivo: la sincronización va como mucho cada 30 minutos y casi siempre con más espacio (decisión 50). Guardar el token de acceso solo ahorraría una petición a cambio de un segundo secreto que proteger y de lógica de caducidad.
+- **Renovación** (`refreshSession`, al principio de cada `listLibrary`): `GET https://auth.gog.com/token` con la consulta `client_id`, `client_secret`, `grant_type=refresh_token` y `refresh_token` (como `Secret`).
+  - 200 válido (mismas reglas que el canje): **lo primero** es `secrets.set('refreshToken', <nuevo>)`, y después se usa el token de acceso. GOG entrega un refresh token nuevo y el anterior puede dejar de valer (supuesto GA4). Si se usara antes de guardarlo y el proceso cayera, la sesión se perdería.
+  - 400, 401 o 403 (sesión revocada, caducada o cambio de contraseña; supuesto GA7): `auth.expired` con la clave `connectors.gog.error.expired`. El núcleo pone `store_connections.status = 'expired'` y no toca la biblioteca (decisión 74, punto 7). La fila del secreto no se borra: reconectar la sobrescribe.
+  - 429: `store.rate-limited` con `Retry-After`. Error de red: su código, **sin** pasar a `expired`. Cualquier otro estado: `store.unexpected-response`.
+  - Sin `refreshToken` legible (clave perdida o compartimento): `auth.required`, y la tienda se ve `expired`, como en Steam.
+- **Concurrencia:** solo `listLibrary` renueva, y la cola por tienda del núcleo nunca ejecuta dos operaciones `library` de GOG a la vez (decisión 74). `install`, `play`, el escaneo y los medios no usan la sesión.
+- **`connection.status`** es local, sin red: `connected` si se lee `refreshToken`; si no, `expired`. Se combina con `store_connections.status` como en la 74.
+- **Nunca salen:** los tokens y el código no aparecen en ninguna respuesta de la API, en ningún registro (el `HttpClient` no registra consulta, cabeceras ni cuerpo; decisión 74, punto 8), en ningún `message` ni `params` de un `ConnectorError`, ni en el `wizardState` en ningún momento (revisión del auditor, B4): el canje y el `set` ocurren en el mismo envío. La cabecera `authorization` se construye como `makeSecret('Bearer ' + token.reveal())` y se revela solo al enviar.
+- **Redactor** (`makeRedactor`, `runtime/src/files.ts`): añade `(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{64,}(?![A-Za-z0-9_-])` → `[redacted]` (revisión del auditor, M2). Por construcción es un superconjunto de los tokens que el conector acepta (`^[A-Za-z0-9_-]{64,4096}$`): un token aceptado nunca escapa al redactor. Es la red bajo `Secret` para tokens opacos largos, y tapa también el `client_secret` (supuesto GA13). Se acepta que tape algún hash de 64 caracteres, como ya se aceptó con la clave de Steam.
+
+#### 6. Biblioteca
+
+- **Opciones:**
+  - **A. `embed.gog.com/user/data/games` más `api.gog.com/products?ids=` por lotes** (se elige). La primera da los ID poseídos con el token. La segunda, **sin token**, da el título y el tipo de hasta 50 productos por petición. Con 500 juegos son unas 12 peticiones.
+  - B. `embed.gog.com/account/getFilteredProducts?mediaType=1&page=N`: títulos paginados en una sola fuente, pero Lutris la llama con las cookies de una sesión web y no consta que acepte el token (sin verificar). Se descarta.
+  - C. `galaxy-library.gog.com/users/<user_id>/releases` (Heroic): paginada con `page_token`, pero sin títulos. Obliga a una petición a GamesDB por juego (cientos), necesita el `user_id` y mezcla otras plataformas. Se descarta.
+- **`listLibrary`** (`connectors/gog/src/library.ts`):
+  1. `refreshSession` (punto 5).
+  2. `GET https://embed.gog.com/user/data/games` con `authorization: Bearer`.
+     - 401 o 403: `auth.expired`. Una redirección (3xx; el cliente no las sigue) o cualquier otro estado distinto de 200: `store.unexpected-response` (supuesto GA7). 429: `store.rate-limited`.
+     - Cuerpo `{ "owned": [ … ] }`. Cada elemento es un entero, o una cadena de dígitos, de 1 a 20 cifras; el resto se salta y se cuenta. Sin `owned` como lista: `store.unexpected-response`. Más de 50 000 ID: `store.unexpected-response` (el tope de entradas de la 74).
+     - Incluye juegos, DLC, packs y quizá películas, ocultos incluidos (supuesto GA5). Se quitan los repetidos.
+  3. Lotes de 50, **en serie**: `GET https://api.gog.com/products` con `ids=<id,id,…>`, sin token y sin cabeceras propias.
+     - 200 con una lista. Por elemento:
+       - `id` (número o cadena de dígitos) que esté en el lote pedido; si no, se salta;
+       - `title` de texto, sin caracteres de control, recortado y como mucho 300 caracteres (el límite del núcleo; corregido tras la auditoría del código, que vio el 500 inicial, también en Steam, chocar con él y dejar `complete` en falso); si falta, `GOG <id>`;
+       - `game_type === "game"` → `{ storeGameId, kind: 'game', title }`, sin `media` ni `externalIds`;
+       - `dlc`, `pack` u otro valor: se salta y se cuenta por tipo en el registro.
+     - Un ID pedido que no vuelve (producto retirado del catálogo, película o ID desconocido; supuesto GA6) se salta y se cuenta. **No** hace la instantánea parcial: se sabe que se posee, pero no se puede mostrar.
+       - `shortcut:` un juego retirado del catálogo no aparece y, si estaba guardado, se da de baja. Si la prueba manual muestra juegos poseídos que faltan, el respaldo es pedir esos ID a GamesDB (`title`, `type`), que ya está en `apiHosts`.
+     - 429: `store.rate-limited` con `Retry-After`. Cualquier otro estado o un cuerpo que no es una lista: `store.unexpected-response` para toda la sincronización. La biblioteca no se toca, y así un lote fallido nunca da de baja juegos.
+  4. `complete: true` si todas las peticiones fueron correctas y no se saltó ningún elemento mal formado de `owned`, con la misma regla que Steam.
+- **Tiempo:** en serie caben unos 2000 juegos en los 60 s de la operación (decisión 74). Si un usuario real se acerca a ese límite, se pasa a 2 lotes en paralelo.
+- **Núcleo:** sin cambios. La operación `library` de la 74 es genérica por conector. El intervalo es el de la 50 y la 74: un suelo de 30 minutos, 12 horas al abrir la web y el doble del suelo tras un error. Mismo ID de producto que el `.info` = misma propiedad, por el índice único. El título de la API sustituye al `name` del `.info` en las propiedades poseídas (regla de la 74). La guarda de la instantánea vacía también vale aquí.
+- **Portadas:** el paso de medios que sigue a una sincronización correcta (decisión 73) pide a GamesDB las propiedades nuevas, como mucho 1000 por pasada (20 lotes de 50). Con una biblioteca grande, la primera pasada es la mayor carga sobre GamesDB hasta ahora (supuesto G8 de la 76). Si responde 429, el paso ya se para y lo reintenta más tarde, sin tocar nada.
+
+#### 7. Instalar
+
+- **Opciones:**
+  - **A. `goggalaxy://openGameView/<productId>`** (se elige). Abre la ficha del juego en Galaxy, con su botón Instalar. Es lo que usa Playnite cuando no puede pedir la instalación directamente (supuesto GA8). No instala nada sin que el usuario lo confirme.
+  - B. `GalaxyClient.exe /gameId=<id> /command=installGame` (Playnite, con Galaxy abierto). Tiene la misma sintaxis sin documentar y el mismo problema de comillas que la opción B del punto 4 de la 76. Se descarta.
+  - C. Abrir la ficha `https://www.gog.com/game/<slug>` (`links.product_card`). Hoy no cabe en el contrato: `uriSchemes` prohíbe `https` (`checkConnectorManifest`), y el slug habría que guardarlo. Haría falta una decisión nueva. Queda como pregunta al usuario para cuando no hay Galaxy (punto 12.2).
+- **`resolveAction('install')`** (`connectors/gog/src/launch.ts`):
+  - mismo control de `^\d{1,20}$`;
+  - si `ctx.launchersResolved`, busca la ubicación `gog-galaxy-client` y comprueba que existe `GalaxyClient.exe` dentro (`ctx.fs.exists(ctx.fs.join(path, 'GalaxyClient.exe'))`). Si no está: `launch.launcher-missing` con la clave `connectors.gog.errors.galaxyMissing` («Para instalar este juego hace falta GOG Galaxy. Instálalo desde gog.com o descarga el instalador desde tu biblioteca de gog.com»);
+  - devuelve `{ kind: 'uri', uri: 'goggalaxy://openGameView/<id>' }`.
+  - Es la misma forma que Steam.
+- **`play` no cambia** (decisión 76): `exec` directo.
+- **Ubicación nueva** (`locations`), `gog-galaxy-client` (`launcher`): `{ kind: 'registry-value', hive: 'HKLM', key: 'SOFTWARE\\GOG.com\\GalaxyClient\\paths', value: 'client', view: '32' }`, la carpeta del cliente según Playnite (supuesto GA9).
+  - ~~Efecto secundario: la regla 5 de la 40 permite un `exec` también dentro de las ubicaciones `launcher`. Se acepta, porque el conector nunca lo construye.~~ **Revisado tras el auditor (A1):** la carpeta de Galaxy incluye su biblioteca por defecto, así que esa ampliación dejaba lanzar cualquier `.exe` de otros juegos. Se decide: las ubicaciones `launcher` **no amplían** el confinamiento del `exec`; el núcleo (`checkSpec`) solo acepta `executable` y `cwd` dentro de `installPath` de la propiedad (revisa la regla 5 de la 40). Las ubicaciones `launcher` siguen sirviendo para comprobar que un cliente existe y para las URI. Si un día se lanza a través de Galaxy (punto 11.1 de la 76), hará falta una regla propia con el ejecutable exacto del cliente, en una decisión nueva.
+- La web pinta «Instalar» y, al pulsar, «Abriendo GOG Galaxy…» (`game.installing` con `{store}`).
+
+#### 8. Manifiesto y contrato (`contractVersion` sigue en 1)
+
+**No cambia ningún tipo ni ninguna regla del contrato.** Cambia solo el manifiesto de GOG:
+
+```ts
+// connectors/gog/src/index.ts — ADR 77 (changes over ADR 76)
+capabilities: {
+  library: true, scan: true, dlc: "none",
+  actions: ["play", "install"], launchKinds: ["exec", "uri"], uriSchemes: ["goggalaxy"],
+  storePlaytime: false, price: false,
+},
+authHosts: ["auth.gog.com"],
+apiHosts: ["auth.gog.com", "embed.gog.com", "api.gog.com", "gamesdb.gog.com"],
+mediaHosts: ["images.gog.com"],                    // unchanged; CSP unchanged
+locations: [...GOG_LOCATIONS, GOG_GALAXY_CLIENT],  // point 7
+externalTools: [],                                 // point 2
+connection: gogConnection,                         // wizard.ts
+listLibrary: listGogLibrary,                       // library.ts
+```
+
+- `checkConnectorManifest` lo acepta tal cual: tiene `connection` con `authHosts`, `library` con `apiHosts`, y `uri` con un esquema que no está prohibido.
+- **Ficheros nuevos** en `connectors/gog/src`: `auth.ts` (URL de ida, canje, renovación y constantes de cliente), `wizard.ts` y `library.ts`. `launch.ts` y `manifest.ts` crecen. Claves nuevas en `locales/`:
+  - `connectors.gog.login.title`, `connectors.gog.login.body` y `connectors.gog.login.field` (ya las usa el simulador);
+  - `connectors.gog.error.code` y `connectors.gog.error.expired`;
+  - `connectors.gog.errors.galaxyMissing`;
+  - `connectors.gog.disconnect.hint`.
+- **Web** (`apps/web/src/data/real.ts`): `isSteam` pasa a ser «tienda con asistente real», con la lista cerrada `['steam', 'gog']`. La ruta pasa a ser `/api/stores/${store}/wizard` y `disconnect` va a `/api/stores/${store}/connection`. El `wizardId` de GOG vive solo en memoria: sin redirección no hace falta `sessionStorage`, que sigue siendo exclusivo de Steam. `getStores` deja de superponer el estado simulado también sobre GOG. `ConnectWizard` ya pinta el paso con enlace y campo (el de la clave de Steam). Lo único nuevo es que el enlace de GOG abre en pestaña nueva, que ya es el comportamiento por defecto.
+- **Núcleo, `api`, `db` y `platform-*`:** sin cambios de código previstos. La 74 ya los dejó genéricos por tienda. Si al implementar aparece algo específico de Steam en el núcleo (por ejemplo, el título que sigue a la propiedad «de Steam»), se generaliza a «de la propiedad poseída» sin otra decisión.
+
+#### 9. Desconectar y caducidad
+
+- **Igual que la 74, con la opción (c) que eligió el usuario** (punto 12.1 de la 74), que se aplica a GOG con el mismo criterio:
+  1. `connection.disconnect` borra `refreshToken`;
+  2. el núcleo borra el ámbito `store:gog`, la fila de `store_connections` y el `sync_state` de `library`;
+  3. las propiedades no se tocan, y los juegos no instalados quedan con el velo gris (`unsynced`), con el texto de la tienda.
+- **Sin revocación remota:** no consta un punto de GOG para revocar un refresh token (sin verificar). `connectors.gog.disconnect.hint` dice lo verificable: «Ludiary borra su sesión de GOG de este equipo. Para cerrar todas las sesiones, cambia la contraseña en gog.com». No se promete más.
+- **Sesión caducada o revocada:** la renovación falla (punto 5), la tienda pasa a `expired`, la biblioteca se queda como estaba con el velo, y la tarjeta muestra «Hay que volver a conectar». Reconectar sobrescribe el secreto. La duración de un refresh token sin usar no consta (supuesto GA4): quien no abra Ludiary en mucho tiempo puede tener que reconectar.
+- **Clave maestra perdida o compartimento:** igual que Steam: `expired`, sin red y sin tocar la biblioteca.
+
+#### 10. Pruebas
+
+- **Fixtures inventadas:**
+  - código `gog-test-auth-code-0001`;
+  - tokens `gog-test-access-token` y `gog-test-refresh-token`, y para la rotación `gog-test-refresh-token-2`;
+  - `user_id` `10000000000000001`;
+  - `username` `TestUser`, sin campo de correo;
+  - ID de producto `1000000001`… como en la 76.
+  - La única respuesta real es la pública del catálogo, `api.gog.com/products?ids=1207658695,1512372112,1120912052` (datos de catálogo, un juego y un DLC).
+- **Comprobación de privacidad** (`packages/connector-testkit/src/privacy.ts`): añade a `ALLOWED` las constantes de los tres tokens y del código, como hizo la 74 con Steam. La regla «credential field» ya rechaza cualquier otro `access_token`, `refresh_token` o `client_secret` con valor. Por eso las pruebas comparan la URL pedida con la constante importada de `auth.ts` y **no** escriben el `client_secret` en ningún fichero de `fixtures/`.
+- **`connectors/gog`:**
+  - URL de ida exacta: host, `client_id`, `redirect_uri` codificada, `response_type` y `layout`.
+  - Canje:
+    - consulta exacta, con el código como `Secret` y la misma `redirect_uri`;
+    - 400 y 401 → `auth.invalid` con `connectors.gog.error.code`;
+    - 429;
+    - 500;
+    - JSON sin `refresh_token` o con un token que no cumple el patrón;
+    - éxito → un solo `secrets.set('refreshToken')` y `done`.
+  - Nombre:
+    - solo `username`, saneado y recortado;
+    - un fallo de `userData.json` → `done` sin nombre;
+    - el correo de la respuesta no aparece en el resultado ni en el registro.
+  - Renovación:
+    - `set` del token nuevo **antes** de la petición a `embed.gog.com` (orden comprobado con el doble);
+    - 400, 401 y 403 → `auth.expired`;
+    - error de red → no es `auth.*`;
+    - sin `refreshToken` → `auth.required`.
+  - `listLibrary`:
+    - `owned` con enteros y cadenas, repetidos, valores no numéricos (`complete: false`) y más de 50 000;
+    - lotes de 50 exactos y en serie;
+    - `game_type` `game`, `dlc` y `pack`;
+    - ID que no vuelve (no cambia `complete`);
+    - `id` fuera del lote;
+    - título ausente → `GOG <id>`;
+    - 3xx, 401, 429 y 500 en cada petición;
+    - cuerpo que no es una lista;
+    - la cabecera `authorization` va solo a `embed.gog.com`, nunca a `api.gog.com`.
+  - `resolveAction('install')`:
+    - URI exacta;
+    - Galaxy ausente con `launchersResolved` → `launch.launcher-missing`;
+    - sin resolver → URI;
+    - ID no numérico.
+  - `play` sin cambios.
+  - `assertConnectorConformance` con el manifiesto nuevo.
+  - Ningún `ConnectorError` lleva un token, el código o el nombre de la cuenta.
+- **`runtime`:** el redactor tapa un token opaco de 64 caracteres o más dentro de un mensaje.
+- **`core`:** un conector doble de segunda tienda con `library` recorre el camino de la 74 sin código nuevo: `connected` → sincronización forzada → no instalados con `install` → desconectar → velo. Además, `auth.expired` en `listLibrary` → `expired`.
+- **`api`:** la búsqueda sobre todas las respuestas de la prueba de la 74 se amplía a los tokens y al código de GOG.
+- **Web:** `real.ts` envía GOG a la API (`/api/stores/gog/wizard`) sin `sessionStorage`, y Epic sigue en el simulador.
+- **Playwright:** asistente de GOG contra un GOG doble (canje, `user/data/games` y `products` grabados) → juegos no instalados → Instalar graba `goggalaxy://openGameView/<id>`. Desconectar los deja con velo.
+- **Guía manual** (`docs/manual-tests/gog.md`; la prepara el `tester` y la hace el usuario). Se añade una sección «Account (ADR 77)» con estos pasos:
+  1. Conectar desde Ajustes en Chrome, Edge y Firefox: el login abre en pestaña nueva, la página final tiene `code=` en la dirección, y Pegar la acepta (GA2, GA12). Anotar solo la forma del código (longitud y caracteres), nunca el código.
+  2. «Conectado como <nombre>» (GA10).
+  3. Juegos no instalados en la biblioteca: el número coincide con la biblioteca de gog.com sin contar DLC; los ocultos en gog.com aparecen (GA5); ningún juego poseído falta (GA6). Si falta alguno, anotar su ID.
+  4. Cold Waters (instalado) sale una sola vez, con el título de la API, y su DLC (OST) no sale.
+  5. Instalar un juego no instalado con Galaxy instalado: se abre su ficha en Galaxy (GA8). `reg query "HKLM\SOFTWARE\WOW6432Node\GOG.com\GalaxyClient\paths"` tiene `client` (GA9). Comprobar también si `HKCU\Software\Classes\goggalaxy` o `HKLM\SOFTWARE\Classes\goggalaxy` existe.
+  6. Sincronizar dos veces separadas por más de 30 minutos: sigue conectado (renovación y rotación, GA4).
+  7. Cerrar sesiones o cambiar la contraseña en gog.com y sincronizar: `expired` y «Hay que volver a conectar»; reconectar (GA7).
+  8. Desconectar: velo gris en los no instalados; Cold Waters sigue jugable.
+  9. El registro exportado no contiene `code=`, `Bearer`, tokens, `client_secret`, el nombre de la cuenta ni el correo.
+  10. Opcional: con Galaxy desinstalado, Instalar muestra «Para instalar este juego hace falta GOG Galaxy».
+
+#### 11. Orden de implementación y trabajo en paralelo
+
+1. **Primero** (`tester` o `programador`, pequeño): las constantes inventadas en `privacy.ts`. No hay cambios en `contracts` ni en `api-contract`.
+2. **En paralelo:**
+   - `conectores`: `auth.ts`, `wizard.ts`, `library.ts`, `install` en `launch.ts`, la ubicación nueva, el manifiesto, los textos, las fixtures y sus pruebas, todo contra `connector-testkit`.
+   - `programador`: `real.ts` (punto 8), el patrón del redactor y la prueba de `core` con un conector doble de segunda tienda.
+   - `auditor`: revisión de este diseño antes del código: el identificador de Galaxy en el repositorio, el orden de guardado en la renovación, la cabecera `Bearer` como `Secret`, el redactor y la ubicación `launcher` nueva.
+3. **Después:** registro en `runtime` (el manifiesto cambia, el conector es el mismo), Playwright y la revisión del `auditor` sobre el código.
+4. **Al final:**
+   - prueba manual del usuario (punto 10);
+   - el `documentalista`:
+     - guía de conexión con capturas («copia la dirección de la página casi en blanco»);
+     - privacidad: qué sale hacia GOG (el código, los tokens, la lista de ID a `api.gog.com` sin token y a GamesDB) y que el nombre se guarda en el equipo;
+     - aviso de vía no oficial y de las condiciones de uso;
+     - solución de problemas: «El código ha caducado», «Hay que volver a conectar» y «Hace falta GOG Galaxy».
+
+#### 12. Lo que decide el usuario
+
+**Aplicado por defecto (22-10-2026), salvo que el usuario diga otra cosa:** 12.1 (a), «Conectado como <nombre>»; 12.2 (a), mensaje si no hay Galaxy.
+
+1. **Nombre de la cuenta:**
+   - (a) «Conectado como <nombre>», con solo `username` de `userData.json`, como eligió para Steam (recomendado por coherencia; se aplica si no dice otra cosa);
+   - (b) solo «Conectado», sin la llamada a `userData.json` (que además lleva el correo en la respuesta, aunque no se guarde).
+2. **Instalar sin GOG Galaxy en el equipo:**
+   - (a) mensaje «Hace falta GOG Galaxy» (recomendado en este corte: cero código nuevo);
+   - (b) abrir en el navegador la ficha del juego en gog.com. Necesita una decisión nueva: permitir `https` a hosts concretos en las acciones y guardar el slug.
+3. Sigue pendiente el punto 11.1 de la 76: cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste). Este corte no lo cambia.
+
+#### 13. Revisión del auditor sobre el diseño (22 de octubre de 2026)
+
+**Confirmado por el auditor:** el `client_secret` público de Galaxy queda fuera del invariante 5, con las condiciones del punto 2: constante solo en `auth.ts`, sin copiarlo al ADR ni a las fixtures, y en la lista de excepciones de un escáner de secretos.
+
+- **A1. `exec` y ubicaciones `launcher`.** Resuelto en el punto 7: las ubicaciones `launcher` no amplían el confinamiento; solo vale `installPath` (revisa la regla 5 de la 40). Además, el conector de GOG **rechaza `..`** como componente de `path` y de `workingDir` (`action.unsupported` con `connectors.gog.errors.invalidTask`). Revisa la frase del punto 4 de la 76 («un `..` no lo filtra el conector»). El núcleo sigue confinando igual: son dos barreras.
+- **A2. Carrera entre desconectar o reconectar y la rotación del refresh token.** Una operación `library` en curso podía guardar un token rotado después de desconectar, o pisar el token de una reconexión. Vale para **todas las tiendas**:
+  - El núcleo mantiene una **época por tienda**, un contador en memoria (no hace falta migración: al reiniciar no queda ninguna operación viva). La incrementan `disconnect` y cada envío al asistente de esa tienda antes de llamar a `submit`, que es donde ocurre el canje.
+  - Cada operación `library` guarda la época al empezar. El `secrets` de su `SyncContext` **rechaza `set` y `delete`** si la época cambió, con un error del núcleo que el conector no captura.
+  - Con la época cambiada, el núcleo **descarta** el resultado: no aplica el plan, no escribe `sync_state` ni cambia `store_connections.status`. Solo registra el código.
+  - Si `secrets.set` falla después de que GOG rotara el token, el conector **propaga el error**, sin tragárselo ni seguir con el token de acceso. La sincronización falla con su código, y si GOG ya invalidó el token anterior (GA4), la siguiente pasa a `expired`.
+- **M1. `extract: 'url-query:…'`.** `cleanField` (`packages/core/src/wizards.ts`) solo acepta una URL `https`, sin usuario ni contraseña (`username` y `password` vacíos) y con host en `authHosts ∪ apiHosts` del conector. Si no, el valor no se acepta. Para GOG, la página final está en `embed.gog.com`, que es de `apiHosts`. La web (`apps/web/src/data/validate.ts`) marca error de formato si lo pegado no es una URL con ese parámetro, en vez de validar el texto tal cual. Posible mejora, no ahora: un `extractFrom` con la ruta exacta (`/on_login_success`).
+- **M2. Forma de los tokens.** Aceptación `^[A-Za-z0-9_-]{64,4096}$` y redactor superconjunto (puntos 3 y 5, supuesto GA13).
+- **B1.** Una prueba del repositorio comprueba que el valor del `client_secret` solo aparece en `connectors/gog/src/auth.ts`.
+- **B2.** Los ID que llegan como número JSON (`owned` y `id` del catálogo) se aceptan solo si `Number.isSafeInteger` y son positivos. Si no, se saltan: un número mayor que 2⁵³ ya perdió dígitos al analizarlo. Las cadenas de dígitos siguen con `^\d{1,20}$`.
+- **B3.** Solo se usa el `client_id` (y su secreto) de Galaxy. **No** se imitan su `User-Agent` ni otras cabeceras de Galaxy: el `HttpClient` no pone cabeceras propias.
+- **B4.** Los tokens y el código no pasan por el `wizardState` en ningún momento (punto 5).
+- **B5.** Para el `documentalista`, en la guía de privacidad: al conectar, Ludiary pide `userData.json`, cuya respuesta trae el correo y el ID de la cuenta además del nombre. Solo se guarda el nombre; lo demás se descarta en memoria y nunca se registra.
+- **Pruebas añadidas por la revisión:**
+  - época cambiada durante una sincronización (desconectar y reconectar a mitad) → ni `set`, ni plan, ni `sync_state`;
+  - `set` que falla tras rotar → error;
+  - `..` en `path` y en `workingDir`;
+  - `checkSpec` rechaza un `exec` dentro de una ubicación `launcher` y fuera de `installPath`;
+  - `cleanField` con `http`, credenciales en la URL u otro host;
+  - ID numéricos no seguros;
+  - la prueba B1.
+
+#### Supuestos de la cuenta de GOG (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
+
+- **GA1 (sin verificar):** GOG no tiene registro OAuth público para terceros y tolera el uso del identificador de cliente de Galaxy por clientes de terceros. Solo consta el uso público de `gogdl` y Heroic, Lutris, Playnite y Comet. No se ha encontrado ninguna declaración de GOG a favor ni en contra.
+- **GA2:** login en `auth.gog.com/auth` con `client_id`, `redirect_uri=https://embed.gog.com/on_login_success?origin=client`, `response_type=code` y `layout=client2`, y la vuelta con `code` en la consulta. Lo confirman gogapidocs, `gogdl` y Lutris. Falta probarlo con la cuenta del usuario.
+- **GA3:** `GET auth.gog.com/token` con `grant_type=authorization_code` o `refresh_token` responde JSON con `access_token`, `refresh_token`, `expires_in` (3600), `token_type`, `user_id` y `session_id`. Lo confirman gogapidocs y `gogdl` (`auth.py`).
+- **GA4 (sin verificar):** cada renovación entrega un refresh token nuevo, y el anterior deja de valer o puede dejar de valer. No consta cuánto dura uno sin usar.
+- **GA5:** `embed.gog.com/user/data/games` acepta `Authorization: Bearer` y devuelve `owned` con los ID numéricos de todo lo poseído. El uso del token y la forma de la respuesta los confirman `gogdl` (`api.py`) y gogapidocs. Que incluya ocultos, DLC y películas está **sin verificar**.
+- **GA6:** `api.gog.com/products?ids=` admite hasta 50 ID (gogapidocs) y devuelve una lista con `id`, `title`, `slug`, `game_type` y `links`. Un ID desconocido no aparece. Comprobado el 22-10-2026 con 1207658695 y 1512372112 (`game`), 1120912052 (`dlc`) y 1000000001 (ausente). Sin verificar: el valor `pack`, y si los productos retirados del catálogo siguen apareciendo.
+- **GA7 (sin verificar):** un código o un refresh token inválidos dan 400 o 401 en `auth.gog.com/token`, y un token caducado da 401 en `embed.gog.com` (y no una redirección al login).
+- **GA8 (en parte):** Galaxy registra el esquema `goggalaxy`, y `goggalaxy://openGameView/<id>` abre la ficha del juego. **Comprobado el 22-10-2026 en el equipo del usuario:** el esquema está registrado con la orden `"…\GalaxyClient.exe" /urlProtocol="%1"`. Falta ver que `openGameView` abre la ficha (paso 5 de la guía). Fuente: el controlador de instalación de Playnite (`GogGameController.cs`). Afina el supuesto G14 de la 76: no hay URI para **lanzar**, pero sí para abrir la ficha.
+- **GA9 (confirmado el 22-10-2026 en el equipo del usuario):** la carpeta del cliente está en `HKLM\SOFTWARE\WOW6432Node\GOG.com\GalaxyClient\paths`, valor `client`, y dentro está `GalaxyClient.exe` (Playnite, `Gog.cs`).
+- **GA10 (sin verificar con el token):** `embed.gog.com/userData.json` devuelve `username`, además de `userId` y `email` (gogapidocs; Lutris lo usa para comprobar la conexión).
+- **GA11 (sin verificar):** los límites de peticiones de `embed.gog.com` y `api.gog.com` no están documentados. Este corte hace unas 2 + N/50 peticiones cada 30 minutos como mucho.
+- **GA12 (sin verificar):** el código cumple `^[A-Za-z0-9_-]{10,512}$`. Si la prueba manual muestra otros caracteres, se amplía el patrón en el conector y en el simulador.
+- **GA13 (sin verificar):** los tokens de GOG son cadenas opacas de 64 a 4096 caracteres de `[A-Za-z0-9_-]`. Si no lo son, el conector los rechaza (`store.unexpected-response`), y nunca se guarda un token que el redactor no tape. Si la prueba manual muestra otra forma, se cambian **a la vez** el patrón de aceptación y el del redactor, manteniendo el segundo como superconjunto del primero.
+
+Fuentes consultadas el 22 de octubre de 2026: [gogapidocs, autenticación](https://gogapidocs.readthedocs.io/en/latest/auth.html); [gogapidocs, cuenta](https://gogapidocs.readthedocs.io/en/latest/account.html); [gogapidocs, listados](https://gogapidocs.readthedocs.io/en/latest/listing.html); [gogapidocs, Galaxy (`products?ids`)](https://gogapidocs.readthedocs.io/en/latest/galaxy.html); [`gogdl`, `auth.py`](https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/auth.py) y [`api.py`](https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/api.py); [Heroic, `gog/library.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/main/src/backend/storeManagers/gog/library.ts) y [`gog/user.ts`](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/main/src/backend/storeManagers/gog/user.ts); [Lutris, `services/gog.py`](https://github.com/lutris/lutris/blob/master/lutris/services/gog.py); [Playnite, `GogGameController.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/GogLibrary/GogGameController.cs) y [`Gog.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/GogLibrary/Gog.cs); [Comet](https://github.com/quantenzitrone/comet); respuestas de `api.gog.com/products?ids=1207658695,1512372112,1000000001` y `?ids=1120912052`.
+
+**Motivo:** es el mínimo que cierra el camino de la cuenta de GOG de la decisión 43 **sin tocar el contrato, el núcleo ni la base de datos**: la 74 dejó genéricos el motor de asistentes, el almacén cifrado, la operación `library`, `install`, desconectar y el velo, y el paso con enlace, campo y extracción ya lo pinta la web. HTTP directo evita el binario de `gogdl` y el `ExternalToolRunner` para cuatro peticiones. Guardar solo el refresh token deja un único secreto por tienda, y el orden «guardar y luego usar» evita perder la sesión cuando GOG rota el token. La biblioteca con `user/data/games` más el catálogo por lotes cuesta unas pocas peticiones y no necesita guardar el identificador de cuenta. Alternativas descartadas:
+
+- `gogdl` como herramienta externa (punto 2);
+- `getFilteredProducts` (no consta que acepte el token) y `galaxy-library` (sin títulos, una petición por juego) para la biblioteca;
+- guardar también el token de acceso y su caducidad (un secreto más para ahorrar una petición cada 30 minutos o más);
+- `GalaxyClient.exe /command=installGame` (sintaxis sin documentar y comillas);
+- hacer el emparejamiento en este corte (decisión del usuario; no es imprescindible, punto 1).
+
+**Consecuencias:**
+
+- Primer secreto de GOG y primer refresh token con rotación. Antes de cerrar, el `auditor` revisa:
+  - `auth.ts`, incluido el orden de guardado en la renovación;
+  - la constante del cliente de Galaxy en el repositorio;
+  - la cabecera `Bearer` como `Secret`;
+  - el redactor;
+  - la ubicación `launcher` nueva;
+  - las fixtures y la lista de excepciones de privacidad.
+- La regla 7 de la decisión 40 queda revisada para GOG: no se ejecuta `gogdl`. La 76 queda revisada en dos frases de su punto 1: la cuenta no usa `gogdl` ni `ExternalToolRunner`, y el emparejamiento no va «antes o junto con» la cuenta, sino en su propio corte, después.
+- El punto 11.2 de la 76 queda resuelto: cuenta de GOG ahora y sin emparejamiento; el corte 2b va después.
+- `apiHosts` de GOG pasa a cuatro hosts; `mediaHosts` y la CSP no cambian.
+- Los juegos poseídos en Steam y en GOG salen duplicados hasta el corte del emparejamiento. La guía lo dice.
+- El `documentalista` actualiza las guías del punto 11; el `tester` amplía `docs/manual-tests/gog.md` (punto 10).
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -3352,11 +3679,13 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Actualizador con vuelta atrás (decisión 58): por implementar y validar en Windows; condición que antes cerraba la 45.
 - Detección del proceso de cada juego: propuesta en la 55. Se cierra en el corte 2b de la 72 (tiempo de juego), que pasa a ir **después** del primer corte de GOG (decisión 76), con al menos tres juegos reales, y se revalida con cada tienda nueva.
 - Puntos de producto de la decisión 72: A y B decididos por el usuario. (C), orden de los cortes, **resuelto** el 22-10-2026: tras la cuenta de Steam (74) el usuario encargó GOG (76), antes del corte 2b.
-- Decisión 76, punto 11 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste) y qué corte va después (2b, cuenta de GOG con emparejamiento, o emparejamiento solo).
+- Decisión 76, punto 11.1 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste). El punto 11.2 queda **resuelto** el 22-10-2026: el usuario eligió (b), la cuenta de GOG ahora, pero sin el emparejamiento, que va en su propio corte; el corte 2b va después (decisión 77).
+- Decisión 77: punto 12 aplicado por defecto («Conectado como <nombre>» y mensaje si no hay Galaxy); el usuario puede cambiarlo. Prueba manual de la cuenta (punto 10) para cerrar los supuestos GA1 a GA13, y revisión del `auditor` antes y después del código.
+- Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 76 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 77 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

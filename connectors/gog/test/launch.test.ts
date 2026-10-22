@@ -69,6 +69,29 @@ describe("resolveAction (ADR 76)", () => {
     }
     expect(await c.resolveAction(prop(null), "play", launchContext({}))).toBeNull();
     const ctx = launchContext({ tree: { [`${GAME}\\goggame-1000000001.info`]: gameInfo("1000000001") }, installPaths: [GAME] });
-    for (const a of ["install", "open-store-page"] as const) expect(await c.resolveAction(prop("1000000001"), a, ctx)).toBeNull();
+    expect(await c.resolveAction(prop("1000000001"), "open-store-page", ctx)).toBeNull();
+  });
+  it("a '..' segment in path or workingDir is invalidTask", async () => {
+    for (const t of [task("..\\..\\GalaxyClient.exe"), task("a/../../b.exe"), task("a.exe", { workingDir: "..\\x" })]) {
+      await expect(play([t])).rejects.toMatchObject({ code: "action.unsupported", ...key("invalidTask") });
+    }
+  });
+});
+
+describe("resolveAction install (ADR 77, point 7)", () => {
+  const GALAXY = "F:\\GOG Galaxy";
+  const galaxy = [{ declarationId: "gog-galaxy-client", path: GALAXY }];
+  const install = (id: string, ctx: ReturnType<typeof launchContext>) => c.resolveAction(prop(id, null), "install", ctx);
+  it("opens the game page in Galaxy", async () => {
+    const ctx = launchContext({ launchers: galaxy, tree: { [`${GALAXY}\\GalaxyClient.exe`]: "" } });
+    expect(await install("1512372112", ctx)).toEqual({ kind: "uri", uri: "goggalaxy://openGameView/1512372112" });
+  });
+  it("Galaxy missing with launchersResolved is launcher-missing; unresolved still gives the URI", async () => {
+    await expect(install("1", launchContext({}))).rejects.toMatchObject({ code: "launch.launcher-missing", ...key("galaxyMissing") });
+    await expect(install("1", launchContext({ launchers: galaxy }))).rejects.toMatchObject({ code: "launch.launcher-missing" });
+    expect(await install("1", launchContext({ launchersResolved: false }))).toEqual({ kind: "uri", uri: "goggalaxy://openGameView/1" });
+  });
+  it("non-numeric id", async () => {
+    await expect(install("1;calc", launchContext({ launchersResolved: false }))).rejects.toMatchObject(key("invalidId"));
   });
 });

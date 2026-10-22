@@ -2,7 +2,7 @@
 import { ConnectorError, type EntryMedia, type MediaContext } from "@ludiary/contracts";
 import { PRODUCT_ID_RE } from "./info";
 
-export const GOG_API_HOSTS: readonly string[] = ["gamesdb.gog.com"];
+export const GOG_API_HOSTS: readonly string[] = ["auth.gog.com", "embed.gog.com", "api.gog.com", "gamesdb.gog.com"];
 export const GOG_MEDIA_HOSTS: readonly string[] = ["images.gog.com"];
 
 const URL_BASE = "https://gamesdb.gog.com/platforms/gog/external_releases/";
@@ -14,7 +14,7 @@ const CONCURRENCY = 6; // so a batch of 50 fits the 15 s of the media step (ADR 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** Retry-After in seconds (the HTTP-date form is ignored). */
-function retryAfterMs(headers: Readonly<Record<string, string>>): number | undefined {
+export function retryAfterMs(headers: Readonly<Record<string, string>>): number | undefined {
   const raw = Object.entries(headers).find(([k]) => k.toLowerCase() === "retry-after")?.[1];
   if (raw === undefined || !/^\d{1,6}$/.test(raw.trim())) return undefined;
   return Number(raw.trim()) * 1000;

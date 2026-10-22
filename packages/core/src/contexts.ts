@@ -38,14 +38,51 @@ export function memoryVault(map: Map<string, string>): SecretVault {
   };
 }
 
-export async function syncContext(env: Env, c: StoreConnector, signal: AbortSignal, opts: { maxBytes?: number } = {}): Promise<SyncContext> {
+// Session epoch per store (ADR 77, audit A2). Disconnecting, or a wizard step that stores a secret, starts a new one;
+// a library operation that began in an older epoch can no longer write secrets, so a late token rotation cannot
+// resurrect a session the user just removed. Memory only.
+const epochs = new WeakMap<Env, Map<StoreId, number>>();
+export function epochOf(env: Env, store: StoreId): number {
+  return epochs.get(env)?.get(store) ?? 0;
+}
+export function bumpEpoch(env: Env, store: StoreId): void {
+  const m = epochs.get(env) ?? new Map<StoreId, number>();
+  epochs.set(env, m);
+  m.set(store, (m.get(store) ?? 0) + 1);
+}
+
+/** Wraps the store vault: `guard` refuses `set` once the epoch moved on; `bump` starts a new epoch on every `set`. */
+function epochVault(env: Env, store: StoreId, mode: "guard" | "bump"): SecretVault {
+  const vault = env.vaultFor(store);
+  const started = epochOf(env, store);
+  return {
+    get: (name) => vault.get(name),
+    delete: (name) => vault.delete(name),
+    async set(name, value) {
+      // shortcut: check-then-write is atomic only because cipher.encrypt and SecretRepository.put are synchronous;
+      // if either becomes async, move the epoch check into the vault right before put.
+      // shortcut: `bump` does not check that its wizard is still live; a cancelled wizard's late set could overwrite
+      // a newer one's token (needs a full GOG login inside the race), add an isLive() check if that ever matters.
+      if (mode === "bump") bumpEpoch(env, store);
+      else if (epochOf(env, store) !== started) throw new ConnectorError("auth.required", "The session changed during the operation");
+      await vault.set(name, value);
+    },
+  };
+}
+
+export async function syncContext(
+  env: Env,
+  c: StoreConnector,
+  signal: AbortSignal,
+  opts: { maxBytes?: number; epoch?: "guard" | "bump" } = {},
+): Promise<SyncContext> {
   const log = connectorLogger(env, c.id);
   return {
     signal,
     log,
     locale: await effectiveLocale(env),
     http: env.deps.http ? env.deps.http(c.apiHosts, signal, log, opts.maxBytes ? { maxBytes: opts.maxBytes } : undefined) : offline,
-    secrets: env.vaultFor(c.id),
+    secrets: opts.epoch ? epochVault(env, c.id, opts.epoch) : env.vaultFor(c.id),
     tools: {
       async run() {
         throw new ConnectorError("tool.missing", "No external tools in this cut (ADR 74)");

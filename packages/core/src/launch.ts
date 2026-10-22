@@ -154,7 +154,9 @@ export function createLaunchService(env: Env): LaunchService {
           if (!(await insideAny(deps.files, installation.installPath, active))) throw new CoreError("not-installed", "The install folder is no longer scanned");
         }
         const { launchers, resolved } = await resolveLauncherLocations(connector);
-        const allowedRoots = [...(installation ? [installation.installPath] : []), ...launchers.map((l) => l.path)];
+        // Launcher locations are readable by the connector (ctx.fs) but never a destination for exec (ADR 77, audit A1).
+        const execRoots = installation ? [installation.installPath] : [];
+        const allowedRoots = [...execRoots, ...launchers.map((l) => l.path)];
         const ctx: LaunchContext = {
           signal: deps.clock.timeout(30_000),
           log: {
@@ -186,7 +188,7 @@ export function createLaunchService(env: Env): LaunchService {
         }
         if (spec === null) throw new CoreError("action-unavailable", `The connector has no ${action} action for this property`);
 
-        const safe = await checkSpec(connector, spec, allowedRoots);
+        const safe = await checkSpec(connector, spec, execRoots);
         try {
           if (safe.kind === "uri") await deps.launcher.openUri(safe.uri);
           else await deps.launcher.exec({ executable: safe.executable, args: safe.args, ...(safe.cwd !== undefined ? { cwd: safe.cwd } : {}) });

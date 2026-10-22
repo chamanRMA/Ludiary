@@ -2,6 +2,14 @@ import type { I18nKey, LocationDeclaration } from "@ludiary/contracts";
 
 export const GOG_NAME_KEY = "connectors.gog.name" as I18nKey;
 
+/** Galaxy's folder, to prove it is installed before Install (ADR 77, point 7; GA9). */
+export const GOG_GALAXY_CLIENT: LocationDeclaration = {
+  id: "gog-galaxy-client",
+  purpose: "launcher",
+  os: ["windows"],
+  sources: [{ kind: "registry-value", hive: "HKLM", key: "SOFTWARE\\GOG.com\\GalaxyClient\\paths", value: "client", view: "32" }],
+};
+
 // The registry only finds game folders; the data comes from goggame-<id>.info (ADR 76, point 3).
 export const GOG_LOCATIONS: readonly LocationDeclaration[] = [
   {

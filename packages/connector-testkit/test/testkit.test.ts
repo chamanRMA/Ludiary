@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   fakeHttp,
   FICTIONAL_API_KEY,
+  FICTIONAL_GOG_VALUES,
   FICTIONAL_STEAM_ID,
   findPrivacyViolations,
   memoryFiles,
@@ -87,6 +88,22 @@ describe("ADR 74 privacy: only the two fictional values are accepted", () => {
   });
   it("a 40-hex hash is not mistaken for a key", () => {
     expect(find("a".repeat(40))).toEqual([]);
+  });
+});
+
+describe("ADR 77 privacy: the fictional GOG values", () => {
+  const find = (content: string): string[] => findPrivacyViolations([{ path: "f", content }]).map((v) => v.rule);
+  it("accepts the four fictional values as credential fields", () => {
+    for (const v of FICTIONAL_GOG_VALUES) {
+      expect(find(`"refresh_token": "${v}"`)).toEqual([]);
+      expect(find(`"access_token":"${v}"`)).toEqual([]);
+    }
+    expect(find("code=gog-test-auth-code-0001")).toEqual([]);
+  });
+  it("rejects any other token value, even one that extends a fictional one", () => {
+    expect(find('"refresh_token": "real-looking-token-value"')).toEqual(["credential field"]);
+    expect(find('"refresh_token": "gog-test-refresh-token-3"')).toEqual(["credential field"]);
+    expect(find('"client_secret": "0123abcd"')).toEqual(["credential field"]);
   });
 });
 

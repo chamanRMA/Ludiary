@@ -6,7 +6,7 @@ export type FieldCheck =
   | { ok: false; reason: "empty" | "too-long" | "format" };
 
 /** Pulls the useful part out of a pasted JSON or URL (ADR 43). Falls back to the raw text. */
-export function extractValue(raw: string, extract: WizardFieldDto["extract"]): string {
+export function extractValue(raw: string, extract: WizardFieldDto["extract"]): string | null {
   if (!extract) return raw;
   const sep = extract.indexOf(":");
   const kind = extract.slice(0, sep);
@@ -16,9 +16,11 @@ export function extractValue(raw: string, extract: WizardFieldDto["extract"]): s
       const field = (JSON.parse(raw) as Record<string, unknown>)[name];
       return typeof field === "string" ? field : raw;
     }
-    if (kind === "url-query") return new URL(raw).searchParams.get(name) ?? raw;
+    // ADR 77 audit M1: a pasted address must be an address with the parameter; never echo the text back.
+    if (kind === "url-query") return new URL(raw).searchParams.get(name);
   } catch {
-    /* not JSON / not a URL: the user may have pasted the bare value */
+    if (kind === "url-query") return null;
+    /* not JSON: the user may have pasted the bare value */
   }
   return raw;
 }
@@ -31,7 +33,9 @@ export function validateField(
   const trimmed = raw.trim();
   if (trimmed === "") return { ok: false, reason: "empty" };
   if (trimmed.length > field.maxLength) return { ok: false, reason: "too-long" };
-  const value = extractValue(trimmed, field.extract).trim();
+  const extracted = extractValue(trimmed, field.extract);
+  if (extracted === null) return { ok: false, reason: "format" };
+  const value = extracted.trim();
   if (field.pattern !== undefined) {
     let matches = false;
     try {
