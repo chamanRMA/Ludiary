@@ -1,63 +1,222 @@
 // Scan and synchronization (ADR 40 rules 1-4, ADR 42, 50, 72).
 import { ConnectorError } from "@ludiary/contracts";
 import type { ConnectorLogger, ResolvedLocation, ScanRoot, StoreConnector, StoreId } from "@ludiary/contracts";
-import { CONNECTOR_TIMEOUT_MS, SCAN_WAIT_MS, type Env } from "./env";
+import { connectorLogger, LIBRARY_MAX_BYTES, syncContext } from "./contexts";
+import {
+  AUTO_SYNC_DEFAULT_MS,
+  AUTO_SYNC_MS,
+  CONNECTOR_TIMEOUT_MS,
+  ERROR_BACKOFF_FACTOR,
+  LIBRARY_TIMEOUT_MS,
+  MAX_BACKOFF_MS,
+  SCAN_WAIT_MS,
+  type Env,
+} from "./env";
 import { asKey, toErrorInfo } from "./errors";
-import type { CoreErrorInfo, ScanRootRecord, ScannedEntry, StoreStatus, SyncStateRecord } from "./model";
+import { computeLibraryPlan } from "./library-plan";
+import type { CoreErrorInfo, LibraryEntry, ScanRootRecord, ScannedEntry, StoreStatus, SyncOperation, SyncStateRecord } from "./model";
 import { computeScanPlan, planDiscoveredRoots } from "./scan-plan";
 import { effectiveLocale, readOnboarding, readSettings } from "./settings";
 import { createMediaStep } from "./media";
 import { withTimeout } from "./timeout";
-import { validateDiscoveredRoots, validateEntries, type ValidatedRoot } from "./validate";
+import { validateDiscoveredRoots, validateEntries, validateLibraryEntries, type ValidatedRoot } from "./validate";
+
+export interface ScheduleOptions {
+  stores?: readonly StoreId[];
+  /** true: no waits (the user changed something, or a store was just connected). */
+  force: boolean;
+  /** Decides the library timing when not forced (ADR 50). Defaults to 'manual'. */
+  trigger?: "open" | "manual";
+  /** Defaults to ['scan']. 'library' runs first when both are asked (ADR 74). */
+  operations?: readonly SyncOperation[];
+}
 
 export interface SyncService {
-  /** Starts scans (all stores or the given ones). Resolves when they are accepted and marked 'running'. */
-  schedule(opts: { stores?: readonly StoreId[]; force: boolean }): Promise<void>;
+  /** Starts the operations (all stores or the given ones). Resolves when they are accepted and marked 'running'. */
+  schedule(opts: ScheduleOptions): Promise<void>;
   whenIdle(): Promise<void>;
   storeStatus(): Promise<readonly StoreStatus[]>;
 }
+
+const STATUS_TIMEOUT_MS = 10_000;
+const LIBRARY_AUTH_CODES: readonly string[] = ["auth.invalid", "auth.expired", "auth.required"];
 
 export function createSyncService(env: Env): SyncService {
   const { deps } = env;
   const media = createMediaStep(env);
   const inFlight = new Map<StoreId, Promise<void>>();
-  const queued = new Set<StoreId>();
+  const queued = new Map<StoreId, Set<SyncOperation>>();
 
-  const connectorLog = (id: StoreId): ConnectorLogger => ({
-    debug: (m, f) => deps.log.debug(m, { connector: id, ...f }),
-    info: (m, f) => deps.log.info(m, { connector: id, ...f }),
-    warn: (m, f) => deps.log.warn(m, { connector: id, ...f }),
-  });
+  const connectorLog = (id: StoreId): ConnectorLogger => connectorLogger(env, id);
 
-  async function schedule(opts: { stores?: readonly StoreId[]; force: boolean }): Promise<void> {
+  async function libraryEligible(c: StoreConnector): Promise<boolean> {
+    if (!c.capabilities.library || !c.listLibrary || !deps.http) return false;
+    return (await deps.connections.get(c.id))?.status === "connected";
+  }
+
+  async function schedule(opts: ScheduleOptions): Promise<void> {
     const onboarding = await readOnboarding(env);
     if (onboarding.completedAt === null) return; // ADR 72: nothing is scanned before the first run is completed
+    const ops = new Set<SyncOperation>(opts.operations ?? ["scan"]);
+    const trigger = opts.trigger ?? "manual";
     const accepted: Promise<void>[] = [];
     for (const c of env.connectors.values()) {
-      if (!c.capabilities.scan || !c.scanInstalled) continue;
       if (opts.stores && !opts.stores.includes(c.id)) continue;
+      const mine = new Set<SyncOperation>();
+      if (ops.has("scan") && c.capabilities.scan && c.scanInstalled) mine.add("scan");
+      if (ops.has("library") && (await libraryEligible(c))) mine.add("library");
+      if (mine.size === 0) continue;
       if (inFlight.has(c.id)) {
-        if (opts.force) queued.add(c.id);
+        if (opts.force) queued.set(c.id, new Set([...(queued.get(c.id) ?? []), ...mine]));
         continue;
       }
       let markAccepted: () => void = () => undefined;
       accepted.push(new Promise<void>((resolve) => (markAccepted = resolve)));
       inFlight.set(
         c.id,
-        runLoop(c, opts.force, markAccepted).finally(() => inFlight.delete(c.id)),
+        runLoop(c, mine, opts.force, trigger, markAccepted).finally(() => inFlight.delete(c.id)),
       );
     }
     await Promise.all(accepted);
   }
 
-  async function runLoop(c: StoreConnector, force: boolean, accepted: () => void): Promise<void> {
-    let first = true;
+  async function runLoop(c: StoreConnector, first: Set<SyncOperation>, force: boolean, trigger: "open" | "manual", accepted: () => void): Promise<void> {
+    let ops = first;
+    let firstRun = true;
     do {
       queued.delete(c.id);
-      await runScan(c, force || !first, first ? accepted : () => undefined);
-      first = false;
-    } while (queued.has(c.id));
+      // ADR 74: 'library' before 'scan', never at the same time, so their writes to properties do not cross.
+      if (ops.has("library")) await runLibrary(c, force || !firstRun, trigger, accepted);
+      if (ops.has("scan")) await runScan(c, force || !firstRun, accepted);
+      firstRun = false;
+      ops = queued.get(c.id) ?? new Set();
+    } while (ops.size > 0);
     accepted();
+  }
+
+  function libraryDue(c: StoreConnector, prev: SyncStateRecord | null, now: number, trigger: "open" | "manual"): boolean {
+    if (!prev || prev.lastAttemptAt === null) return true;
+    const floor = c.minSyncIntervalMs;
+    if (now < prev.lastAttemptAt + floor) return false; // the floor holds for the manual button too
+    if (trigger === "manual") return true;
+    if (prev.status === "error") return now >= prev.lastAttemptAt + Math.min(ERROR_BACKOFF_FACTOR * floor, MAX_BACKOFF_MS);
+    if (prev.lastSuccessAt === null) return true;
+    return now - prev.lastSuccessAt > (AUTO_SYNC_MS[c.id] ?? AUTO_SYNC_DEFAULT_MS);
+  }
+
+  async function runLibrary(c: StoreConnector, force: boolean, trigger: "open" | "manual", accepted: () => void): Promise<void> {
+    const base = { store: c.id, operation: "library" } as const;
+    let prev: SyncStateRecord | null = null;
+    let t0 = 0;
+    try {
+      prev = await deps.syncState.get(c.id, "library");
+      t0 = deps.clock.now();
+      if (!force && !libraryDue(c, prev, t0, trigger)) {
+        accepted();
+        return;
+      }
+      if (!(await libraryEligible(c))) {
+        accepted();
+        return;
+      }
+      await deps.syncState.put({
+        ...base,
+        lastAttemptAt: t0,
+        lastSuccessAt: prev?.lastSuccessAt ?? null,
+        status: "running",
+        error: null,
+        nextAllowedAt: t0 + c.minSyncIntervalMs,
+      });
+      accepted();
+      await doLibrary(c, t0, prev);
+    } catch (e) {
+      deps.log.error("Library sync failed while saving", { connector: c.id, error: e instanceof Error ? e.name : "unknown" });
+      accepted();
+      try {
+        await deps.syncState.put({
+          ...base,
+          lastAttemptAt: t0,
+          lastSuccessAt: prev?.lastSuccessAt ?? null,
+          status: "error",
+          error: toErrorInfo(e),
+          nextAllowedAt: t0 + c.minSyncIntervalMs,
+        });
+      } catch {
+        /* the database is gone; the startup reset handles a stuck 'running' */
+      }
+    }
+  }
+
+  async function doLibrary(c: StoreConnector, t0: number, prev: SyncStateRecord | null): Promise<void> {
+    const listLibrary = c.listLibrary;
+    if (!listLibrary) return;
+    const log = connectorLog(c.id);
+    const signal = deps.clock.timeout(LIBRARY_TIMEOUT_MS);
+    const base = { store: c.id, operation: "library", lastAttemptAt: t0 } as const;
+    let entries: LibraryEntry[] = [];
+    let complete = false;
+    let error: CoreErrorInfo | null = null;
+    let retryAfterMs = 0;
+    let authLost = false;
+
+    try {
+      const ctx = await syncContext(env, c, signal, { maxBytes: LIBRARY_MAX_BYTES });
+      const snapshot = await withTimeout(signal, () => listLibrary.call(c, ctx));
+      if (!snapshot || typeof snapshot !== "object") throw new ConnectorError("store.unexpected-response", "listLibrary returned nothing");
+      const valid = validateLibraryEntries({ entries: snapshot.entries, connector: c, log: deps.log });
+      entries = valid.entries;
+      complete = snapshot.complete === true && !valid.lossy;
+      // Steam sometimes answers an empty list for a public profile (ADR 74, S5): never let that empty the library.
+      if (complete && entries.length === 0 && (await deps.library.countOwned(c.id)) > 0) {
+        complete = false;
+        deps.log.warn("The store returned an empty library; kept what was owned", { connector: c.id });
+      }
+    } catch (e) {
+      error = toErrorInfo(e);
+      if (e instanceof ConnectorError) {
+        retryAfterMs = e.details.retryAfterMs ?? 0;
+        authLost = LIBRARY_AUTH_CODES.includes(e.code);
+      }
+      deps.log.warn("Library sync failed", { connector: c.id, code: error.code });
+    }
+
+    const wait = Math.max(c.minSyncIntervalMs, Math.min(retryAfterMs, MAX_BACKOFF_MS));
+    if (error) {
+      // A failed sync changes nothing in the library; an authentication failure only flips the connection (ADR 74 point 9).
+      if (authLost) await deps.connections.setStatus(c.id, "expired");
+      await deps.syncState.put({ ...base, nextAllowedAt: t0 + wait, lastSuccessAt: prev?.lastSuccessAt ?? null, status: "error", error });
+      return;
+    }
+
+    // Disconnected (or expired) while the call was in flight: the result is dropped.
+    const connection = await deps.connections.get(c.id);
+    if (!connection) return;
+    if (connection.status !== "connected") {
+      const lost = toErrorInfo(new ConnectorError("auth.expired", "The connection expired during the sync"));
+      await deps.syncState.put({ ...base, nextAllowedAt: t0 + wait, lastSuccessAt: prev?.lastSuccessAt ?? null, status: "error", error: lost });
+      return;
+    }
+
+    const at = deps.clock.now();
+    const sync: SyncStateRecord = { ...base, nextAllowedAt: t0 + c.minSyncIntervalMs, lastSuccessAt: at, status: "idle", error: null };
+    const plan = computeLibraryPlan({
+      store: c.id,
+      at,
+      newId: deps.newId,
+      entries,
+      complete,
+      properties: await deps.library.listProperties(c.id),
+      installations: await deps.library.listInstallations(c.id),
+      sync,
+    });
+    if (!media.canRun(c)) {
+      await deps.library.applyLibraryPlan(plan);
+      return;
+    }
+    // ADR 73: 'running' until the media step ends, as in the scan.
+    await deps.library.applyLibraryPlan({ ...plan, sync: { ...plan.sync, status: "running", error: null } });
+    await media.run(c, await effectiveLocale(env), log);
+    await deps.syncState.put(plan.sync);
   }
 
   async function runScan(c: StoreConnector, force: boolean, accepted: () => void): Promise<void> {
@@ -230,14 +389,34 @@ export function createSyncService(env: Env): SyncService {
       while (inFlight.size > 0) await Promise.allSettled([...inFlight.values()]);
     },
     async storeStatus() {
-      const states = await deps.syncState.list();
-      return [...env.connectors.values()].map(
-        (c): StoreStatus => ({
-          store: c.id,
-          access: c.access,
-          connection: c.connection ? "disconnected" : "not-applicable",
-          mode: "installed-only",
-          sync: states.filter((s) => s.store === c.id),
+      const [states, rows] = await Promise.all([deps.syncState.list(), deps.connections.list()]);
+      const byStore = new Map(rows.map((r) => [r.store, r]));
+      return Promise.all(
+        [...env.connectors.values()].map(async (c): Promise<StoreStatus> => {
+          const sync = states.filter((st) => st.store === c.id);
+          const wizard = c.connection;
+          const row = byStore.get(c.id);
+          if (!wizard) return { store: c.id, access: c.access, connection: "not-applicable", mode: "installed-only", sync };
+          if (!row) return { store: c.id, access: c.access, connection: "disconnected", mode: "installed-only", sync };
+          // ADR 74 point 6: the row says one thing, the connector another (it reads its secrets, no network). Any 'expired' wins.
+          let state: "connected" | "expired" = row.status;
+          let label = row.accountLabel;
+          try {
+            const signal = deps.clock.timeout(STATUS_TIMEOUT_MS);
+            const st = await withTimeout(signal, async () => wizard.status(await syncContext(env, c, signal)));
+            if (st.state !== "connected") state = "expired";
+            label = label ?? st.accountLabel ?? null;
+          } catch {
+            deps.log.warn("Could not check the connection", { connector: c.id });
+          }
+          return {
+            store: c.id,
+            access: c.access,
+            connection: state,
+            mode: state === "connected" ? "library" : "installed-only",
+            ...(label ? { accountLabel: label } : {}),
+            sync,
+          };
         }),
       );
     },

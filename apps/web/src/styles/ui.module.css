@@ -209,6 +209,9 @@
   height: 100%;
   object-fit: cover;
 }
+.unsynced {
+  filter: grayscale(1) opacity(0.55); /* ADR 74 point 12: grey veil, the sheet stays reachable */
+}
 .coverContain {
   object-fit: contain;
 }

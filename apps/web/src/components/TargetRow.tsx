@@ -1,6 +1,7 @@
 import type { ServiceStatusDto, StoreStatusDto } from "@ludiary/api-contract";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { errorText } from "../app/errors";
 import { STORE_BRAND } from "../app/stores";
 import { api } from "../data/api";
 import { mutate } from "../data/hooks";
@@ -18,6 +19,8 @@ type Props = { store: StoreStatusDto; service?: never } | { service: ServiceStat
 export function TargetRow(props: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
   const tipId = useId();
   const target = props.store ? ({ kind: "store", store: props.store.store } as const) : ({ kind: "service", service: props.service.service } as const);
   const id = props.store ? props.store.store : props.service.service;
@@ -84,18 +87,33 @@ export function TargetRow(props: Props) {
         </div>
         <span className={cx(ui.chip, chip.tone && ui[chip.tone])}>{chip.text}</span>
         <div className={ui.actions}>
-          {canConnect && !open && (
+          {canConnect && !open && !confirming && (
             <button type="button" className={cx(ui.btn, ui.small, (!connected || expired) && ui.primary)} onClick={() => setOpen(true)}>
               {expired ? t("common.reconnect") : connected ? t("common.change") : t("common.connect")}
             </button>
           )}
-          {canConnect && connected && !open && (
-            <button type="button" className={cx(ui.btn, ui.small)} onClick={() => void mutate(api.disconnect(target))}>
+          {canConnect && connected && !open && !confirming && (
+            <button type="button" className={cx(ui.btn, ui.small)} onClick={() => { setDisconnectError(null); setConfirming(true); }}>
               {t("common.disconnect")}
             </button>
           )}
         </div>
       </div>
+      {confirming && (
+        <div className={styles.wizard} role="group" aria-label={t("stores.disconnect.confirm", { name })}>
+          <p>{t("stores.disconnect.confirm", { name })}</p>
+          {id === "steam" && <p className={ui.muted}>{t("connectors.steam.disconnect.revokeHint")}</p>}
+          {disconnectError && <p role="alert">{disconnectError}</p>}
+          <div className={styles.buttons}>
+            <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void mutate(api.disconnect(target)).then(() => setConfirming(false), (e: unknown) => setDisconnectError(errorText(t, e)))}>
+              {t("common.disconnect")}
+            </button>
+            <button type="button" className={ui.btn} onClick={() => setConfirming(false)} autoFocus>
+              {t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
       {open && <ConnectWizard target={target} onDone={() => setOpen(false)} onCancel={() => setOpen(false)} />}
     </div>
   );

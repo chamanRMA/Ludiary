@@ -9,8 +9,9 @@ import { OPEN_CSP, openScript, spaCsp, type WebAssets } from "./web";
 import {
   EmptyObjectSchema, GameDetailSchema, GameSummarySchema, IdParamsSchema, LaunchRequestSchema,
   LaunchResponseSchema, OnboardingCompleteSchema, OnboardingSchema, PickCancelledSchema, ScanRootPatchSchema,
-  ScanRootSchema, SettingsPatchSchema, SettingsSchema, StoreStatusSchema, SyncRequestSchema,
-  type IdParams, type LaunchRequestDto, type OnboardingCompleteDto, type ScanRootPatchDto, type SettingsPatchDto,
+  ScanRootSchema, SettingsPatchSchema, SettingsSchema, StoreParamsSchema, StoreStatusSchema, SyncRequestSchema,
+  WizardCallbackSchema, WizardIdParamsSchema, WizardSubmitSchema,
+  type IdParams, type LaunchRequestDto, type StoreParams, type WizardCallbackDto, type WizardIdParams, type WizardSubmitDto, type OnboardingCompleteDto, type ScanRootPatchDto, type SettingsPatchDto,
   type SyncRequestDto,
 } from "@ludiary/api-contract";
 
@@ -264,7 +265,7 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     { schema: { params: IdParamsSchema, querystring: noQuery, body: LaunchRequestSchema, response: { 202: LaunchResponseSchema } } },
     async (req, reply) => {
       // Only the stored game id travels (invariant 3): the core resolves what to run.
-      const result = await core.launch(req.params.id, req.body.propertyId);
+      const result = await core.launch(req.params.id, req.body.propertyId, req.body.action);
       return reply.code(202).send({ status: result.status });
     },
   );
@@ -336,6 +337,45 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     async (_req, reply) => {
       const root = await core.pickScanRoot();
       return root ? reply.code(201).send(root) : reply.code(200).send({ cancelled: true });
+    },
+  );
+
+  // ---- Wizards and disconnect (ADR 74, point 5). All 'session+key'. The response bodies are not schema-filtered:
+  // the core builds them from validated connector output (ADR 74, validation of what the connector returns).
+  // returnBase comes from the Host that the onRequest hook already checked against the closed list (ADR 66): never from the request body.
+  app.post<{ Params: StoreParams }>(
+    "/api/stores/:store/wizard",
+    { schema: { params: StoreParamsSchema, querystring: noQuery, body: EmptyObjectSchema } },
+    async (req, reply) => reply.code(201).send(await core.startWizard(req.params.store, `http://${req.headers.host}`)),
+  );
+
+  app.post<{ Params: WizardIdParams; Body: WizardSubmitDto }>(
+    "/api/wizards/:wizardId/submit",
+    { schema: { params: WizardIdParamsSchema, querystring: noQuery, body: WizardSubmitSchema } },
+    async (req) => core.submitWizard(req.params.wizardId, req.body.stepId, req.body.input),
+  );
+
+  app.post<{ Params: WizardIdParams; Body: WizardCallbackDto }>(
+    "/api/wizards/:wizardId/callback",
+    { schema: { params: WizardIdParamsSchema, querystring: noQuery, body: WizardCallbackSchema } },
+    async (req) => core.wizardCallback(req.params.wizardId, req.body.query),
+  );
+
+  app.delete<{ Params: WizardIdParams }>(
+    "/api/wizards/:wizardId",
+    { schema: { params: WizardIdParamsSchema, querystring: noQuery } },
+    async (req, reply) => {
+      await core.cancelWizard(req.params.wizardId);
+      return reply.code(204).send();
+    },
+  );
+
+  app.delete<{ Params: StoreParams }>(
+    "/api/stores/:store/connection",
+    { schema: { params: StoreParamsSchema, querystring: noQuery } },
+    async (req, reply) => {
+      await core.disconnect(req.params.store);
+      return reply.code(204).send();
     },
   );
 

@@ -2,9 +2,10 @@
 import { checkConnectorManifest } from "@ludiary/contracts";
 import type { GameAction, StoreConnector, StoreId } from "@ludiary/contracts";
 import type { CoreCapabilities, CoreDeps, Env, LudiaryCore } from "./env";
-import { CoreError } from "./errors";
+import { CoreError, toErrorInfo } from "./errors";
+import { withTimeout } from "./timeout";
 import { createLaunchService } from "./launch";
-import type { GameDetail, ScanRootRecord } from "./model";
+import type { GameDetail, GameSummary, ScanRootRecord } from "./model";
 import {
   completeOnboarding,
   readOnboarding,
@@ -14,6 +15,9 @@ import {
   writeSettings,
 } from "./settings";
 import { createSyncService } from "./sync";
+import { storeScope, createVaultFactory } from "./vault";
+import { createWizardEngine } from "./wizards";
+import { syncContext } from "./contexts";
 
 /** A connector was refused at startup (ADR 40 rule 11, ADR 72). `problems` are English, for developers. */
 export class ConnectorRegistrationError extends Error {
@@ -48,8 +52,12 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
   const reset = await deps.syncState.resetRunning();
   if (reset > 0) deps.log.warn("Reset interrupted syncs to idle", { count: reset });
 
-  const env: Env = { deps, connectors, userId, deviceId };
+  const env: Env = { deps, connectors, userId, deviceId, vaultFor: () => {
+    throw new Error("vault factory not ready");
+  } };
+  env.vaultFor = createVaultFactory(env);
   const sync = createSyncService(env);
+  const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }));
   const launch = createLaunchService(env);
   const capabilities: CoreCapabilities = {
     canScan: true,
@@ -58,42 +66,81 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
   };
   let picking = false;
 
+  /** ADR 74: the repository proposes the main action from the data; the core drops it where the mode or the stores cannot do it. */
+  const withMainAction = <T extends GameSummary>(game: T): T => {
+    const proposed = game.mainAction ?? null;
+    const ok = proposed !== null && deps.launcher !== undefined && game.stores.some((st) => connectors.get(st)?.capabilities.actions.includes(proposed));
+    return { ...game, mainAction: ok ? proposed : null };
+  };
+
   const withActions = (game: GameDetail): GameDetail => ({
-    ...game,
+    ...withMainAction(game),
     properties: game.properties.map((p) => {
       const c = p.store === "manual" ? undefined : connectors.get(p.store);
       const actions: GameAction[] = [];
       if (c) {
-        // The main action (ADR 16): play if installed (and this mode can launch), otherwise open the store page.
+        // The main action (ADR 16): play if installed (and this mode can launch), otherwise install if owned, otherwise open the store page.
         if (p.installed && deps.launcher && c.capabilities.actions.includes("play")) actions.push("play");
-        else if (!p.installed && c.capabilities.actions.includes("open-store-page")) actions.push("open-store-page");
+        else if (!p.installed) {
+          if (p.owned && deps.launcher && c.capabilities.actions.includes("install")) actions.push("install");
+          if (c.capabilities.actions.includes("open-store-page")) actions.push("open-store-page");
+        }
       }
       return { ...p, actions };
     }),
   });
+
+  const connectorOf = (store: StoreId): StoreConnector => {
+    const c = typeof store === "string" ? connectors.get(store) : undefined;
+    if (!c || !c.connection) throw new CoreError("not-found", "This store has no connection");
+    return c;
+  };
 
   /** Changes of settings or folders force a scan without the 60 s wait (ADR 72). */
   const rescan = (stores?: readonly StoreId[]) => sync.schedule({ ...(stores ? { stores } : {}), force: true });
 
   return {
     capabilities,
-    listLibrary: () => deps.library.listLibrary(),
+    async listLibrary() {
+      return (await deps.library.listLibrary()).map(withMainAction);
+    },
     async getGame(canonicalId) {
       if (typeof canonicalId !== "string" || canonicalId === "") throw new CoreError("invalid-input", "Missing game id");
       const g = await deps.library.getGame(canonicalId);
       return g ? withActions(g) : null;
     },
-    launch: (canonicalId, propertyId) => launch.launch(canonicalId, propertyId),
+    launch: (canonicalId, propertyId, action) => launch.launch(canonicalId, propertyId, action),
+    startWizard: (store, returnBase) => wizards.start(store, returnBase),
+    submitWizard: (wizardId, stepId, input) => wizards.submit(wizardId, stepId, input),
+    wizardCallback: (wizardId, query) => wizards.callback(wizardId, query),
+    cancelWizard: async (wizardId) => wizards.cancel(wizardId),
+
+    /**
+     * ADR 74 point 9 and the user's answer to point 12.1: the connector wipes its secrets, then the whole scope, the
+     * connection and the library sync state go. Properties and canonical games are NOT touched: the games stay,
+     * veiled as unsynced, and come back to normal on reconnection.
+     */
+    async disconnect(store) {
+      const c = connectorOf(store);
+      wizards.cancelStore(store);
+      const signal = deps.clock.timeout(30_000);
+      try {
+        await withTimeout(signal, async () => c.connection!.disconnect(await syncContext(env, c, signal)));
+      } catch (e) {
+        // The connector could not clean its own secrets (or tool sessions): the core still wipes the scope.
+        deps.log.warn("The connector could not disconnect cleanly", { connector: store, code: toErrorInfo(e).code });
+      }
+      await deps.secrets.deleteScope(storeScope(store));
+      await deps.connections.delete(store);
+      await deps.syncState.delete(store, "library");
+    },
 
     async requestSync(req) {
       if (!req || (req.trigger !== "open" && req.trigger !== "manual")) throw new CoreError("invalid-input", "Unknown sync trigger");
       for (const op of req.operations ?? []) {
         if (op !== "library" && op !== "scan") throw new CoreError("invalid-input", "Unknown sync operation");
       }
-      const ops = req.operations ?? ["library", "scan"];
-      // 'library' has no connector to call until the account cut (ADR 72): only 'scan' does something.
-      if (!ops.includes("scan")) return;
-      await sync.schedule({ force: false });
+      await sync.schedule({ force: false, trigger: req.trigger, operations: req.operations ?? ["library", "scan"] });
     },
     whenIdle: () => sync.whenIdle(),
     storeStatus: () => sync.storeStatus(),
@@ -107,7 +154,8 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     getOnboarding: () => readOnboarding(env),
     async completeOnboarding(mode) {
       await completeOnboarding(env, mode);
-      await rescan();
+      // A store connected during the first run could not sync before this point (ADR 74).
+      await sync.schedule({ force: true, operations: ["library", "scan"] });
     },
     resetOnboarding: () => resetOnboarding(env),
 

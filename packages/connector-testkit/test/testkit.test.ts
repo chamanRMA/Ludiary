@@ -1,6 +1,19 @@
-import { ConnectorError } from "@ludiary/contracts";
+import { ConnectorError, makeSecret } from "@ludiary/contracts";
 import { describe, expect, it } from "vitest";
-import { findPrivacyViolations, memoryFiles, READ_TEXT_MAX_BYTES, scanContext } from "../src";
+import {
+  fakeHttp,
+  FICTIONAL_API_KEY,
+  FICTIONAL_STEAM_ID,
+  findPrivacyViolations,
+  memoryFiles,
+  READ_TEXT_MAX_BYTES,
+  scanContext,
+  sentForm,
+  sentHeaders,
+  sentQuery,
+  syncContext,
+  wizardContext,
+} from "../src";
 
 describe("memoryFiles", () => {
   const tree = { "C:\\Games\\A\\a.txt": "hi", "D:\\Lib\\": "", "C:\\Games2\\x.txt": "x" };
@@ -53,5 +66,76 @@ describe("findPrivacyViolations", () => {
     expect(find("a@b.com")).toEqual(["email address"]);
     expect(find('"access_token": "abcdef123456"')).toContain("credential field");
     expect(find("clean text, D:\\SteamLibrary")).toEqual([]);
+  });
+});
+
+describe("ADR 74 privacy: only the two fictional values are accepted", () => {
+  const find = (content: string): string[] => findPrivacyViolations([{ path: "f", content }]).map((v) => v.rule);
+  it("accepts the fictional SteamID and key, also as an api key field", () => {
+    expect(find(`"steamid": "${FICTIONAL_STEAM_ID}"`)).toEqual([]);
+    expect(find(`/openid/id/${FICTIONAL_STEAM_ID}`)).toEqual([]);
+    expect(find(`"apiKey": "${FICTIONAL_API_KEY}"`)).toEqual([]);
+    expect(find(`key=${FICTIONAL_API_KEY}`)).toEqual([]);
+  });
+  it("rejects any other SteamID or 32-hex value, even next to the fictional one", () => {
+    expect(find("76561190000000001")).toEqual(["SteamID64"]);
+    expect(find(FICTIONAL_STEAM_ID + "1")).toEqual(["SteamID64"]);
+    expect(find("0123456789abcdef0123456789abcdee")).toEqual(["32-hex key"]);
+    expect(find("0123456789ABCDEF0123456789ABCDEF")).toEqual(["32-hex key"]);
+    expect(find(FICTIONAL_API_KEY + "0")).toEqual([]); // 33 chars: not a key shape
+    expect(find(`${FICTIONAL_STEAM_ID} 76561190000000002`)).toEqual(["SteamID64"]);
+  });
+  it("a 40-hex hash is not mistaken for a key", () => {
+    expect(find("a".repeat(40))).toEqual([]);
+  });
+});
+
+describe("fakeHttp (ADR 74)", () => {
+  const ok = () => ({ status: 200, body: "x" });
+  it("reveals secrets of form, query and headers for assertions only", async () => {
+    const http = fakeHttp(ok);
+    await http.request({
+      method: "POST",
+      url: "https://a.example/p",
+      headers: { "x-webapi-key": makeSecret("K") },
+      query: { q: makeSecret("Q"), n: 1 },
+      body: { form: { f: makeSecret("F"), g: "G" } },
+    });
+    const r = http.requests[0]!;
+    expect(sentForm(r)).toEqual({ f: "F", g: "G" });
+    expect(sentQuery(r)).toEqual({ q: "Q", n: "1" });
+    expect(sentHeaders(r)).toEqual({ "x-webapi-key": "K" });
+    expect(JSON.stringify(r)).not.toMatch(/[KQF]"/);
+  });
+  it("rejects like the real client: GET with body, bad headers, other hosts", async () => {
+    const http = fakeHttp(ok, { hosts: ["a.example"] });
+    const bad = [
+      { method: "GET" as const, url: "https://a.example/", body: { json: {} } },
+      { method: "GET" as const, url: "https://a.example/", headers: { Cookie: "x" } },
+      { method: "GET" as const, url: "https://a.example/", headers: { cookie: "x" } },
+      { method: "GET" as const, url: "https://a.example/", headers: { "x-a": "a\r\nb: c" } },
+      { method: "GET" as const, url: "https://b.example/" },
+      { method: "GET" as const, url: "http://a.example/" },
+    ];
+    for (const req of bad) await expect(http.request(req)).rejects.toMatchObject({ code: "internal" });
+    expect((await http.request({ method: "GET", url: "https://a.example/" })).status).toBe(200);
+  });
+});
+
+describe("syncContext and wizardContext (ADR 74)", () => {
+  it("give an in-memory vault, a tool double that fails with tool.missing and a fixed clock", async () => {
+    const ctx = wizardContext({ secrets: { a: "1" }, state: { s: "2" }, now: 42 });
+    expect((await ctx.secrets.get("a"))?.reveal()).toBe("1");
+    expect(String(await ctx.secrets.get("a"))).toBe("[redacted]");
+    expect(await ctx.secrets.get("nope")).toBeNull();
+    await ctx.wizardState.set("t", makeSecret("3"));
+    expect(ctx.wizardState.values.get("t")).toBe("3");
+    expect(ctx.now()).toBe(42);
+    expect(ctx.callbackUrl).toMatch(/^http:\/\/ludiary\.localhost:\d+\/connect\/return\?w=/);
+    await expect(ctx.tools.run("legendary", [])).rejects.toMatchObject({ code: "tool.missing" });
+    const s = syncContext();
+    expect(s.locale).toBe("en");
+    s.log.info("m");
+    expect(s.logs).toHaveLength(1);
   });
 });

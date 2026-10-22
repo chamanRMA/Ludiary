@@ -12,10 +12,18 @@ describe("resolveAction", () => {
   it("play -> steam://rungameid/<appId>", async () => {
     expect(await c.resolveAction(prop("620"), "play", withClient())).toEqual({ kind: "uri", uri: "steam://rungameid/620" });
   });
-  it("other actions are not available", async () => {
-    for (const a of ["open-store-page", "install"] as const) {
-      expect(await c.resolveAction(prop("620"), a, withClient())).toBeNull();
+  it("install -> steam://install/<appId> (ADR 74)", async () => {
+    expect(await c.resolveAction(prop("620"), "install", withClient())).toEqual({ kind: "uri", uri: "steam://install/620" });
+    expect(await c.resolveAction(prop(null), "install", withClient())).toBeNull();
+    for (const id of ["abc", "1;calc", "../1", "12345678901", ""]) {
+      await expect(c.resolveAction(prop(id), "install", withClient())).rejects.toMatchObject({ code: "action.unsupported" });
     }
+    await expect(c.resolveAction(prop("1"), "install", launchContext({ launchers: [] }))).rejects.toMatchObject({
+      code: "launch.launcher-missing",
+    });
+  });
+  it("open-store-page is not available", async () => {
+    expect(await c.resolveAction(prop("620"), "open-store-page", withClient())).toBeNull();
   });
   it("a property without id gives null; non-numeric ids are refused", async () => {
     expect(await c.resolveAction(prop(null), "play", withClient())).toBeNull();

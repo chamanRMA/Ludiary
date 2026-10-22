@@ -1,5 +1,6 @@
 // Repositories that implement the persistence ports of @ludiary/core (ADR 38, 72) over Drizzle + better-sqlite3.
 // Methods are async in the signature although the driver is synchronous, so the core is not tied to it.
+import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type Database from "better-sqlite3";
@@ -7,21 +8,25 @@ import type { EntryMedia, I18nKey, StoreId } from "@ludiary/contracts";
 import type {
   GameDetail,
   GameSummary,
+  ConnectionRepository,
   IdentityRepository,
   InstallationRecord,
   LaunchTarget,
+  LibraryPlan,
   LibraryRepository,
   PropertyRecord,
   ScanPlan,
   ScanRootRecord,
   ScanRootRepository,
+  SecretRepository,
   SettingsRepository,
+  StoreConnectionRecord,
   SyncOperation,
   SyncStateRecord,
   SyncStateRepository,
 } from "@ludiary/core";
 import * as schema from "./schema";
-import { canonicalGames, devices, gameProperties, installations, scanRoots, settings, syncState, users } from "./schema";
+import { canonicalGames, devices, gameProperties, installations, scanRoots, secrets as secretsTable, settings, storeConnections, syncState, users } from "./schema";
 
 type Db = BetterSQLite3Database<typeof schema>;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -34,6 +39,8 @@ export interface Repositories {
   scanRoots: ScanRootRepository;
   syncState: SyncStateRepository;
   settings: SettingsRepository;
+  secrets: SecretRepository;
+  connections: ConnectionRepository;
 }
 
 interface Scope {
@@ -90,6 +97,8 @@ export function createRepositories(sqlite: Database.Database): Repositories {
     store: r.store as PropertyRecord["store"],
     storeGameId: r.storeGameId,
     kind: r.kind as "game" | "dlc",
+    storePlaytimeMinutes: r.storePlaytimeMinutes,
+    storeLastPlayedAt: r.storeLastPlayedAt,
     title: r.title,
     normalizedTitle: r.normalizedTitle,
     owned: r.owned === 1,
@@ -113,10 +122,22 @@ export function createRepositories(sqlite: Database.Database): Repositories {
         .map((i) => [i.propertyId, i]),
     );
 
+  /** Stores whose connection is `connected` (ADR 74). Any other store, with or without a row, does not sync. */
+  const connectedStores = (s: Scope): ReadonlySet<string> =>
+    new Set(
+      db
+        .select({ store: storeConnections.store })
+        .from(storeConnections)
+        .where(and(eq(storeConnections.userId, s.userId), eq(storeConnections.status, "connected")))
+        .all()
+        .map((r) => r.store),
+    );
+
   function summary(
     g: typeof canonicalGames.$inferSelect,
     ps: (typeof gameProperties.$inferSelect)[],
     installed: ReadonlySet<string>,
+    connected: ReadonlySet<string>,
   ): GameSummary {
     const stores = STORE_ORDER.filter((st) => ps.some((p) => p.store === st));
     // ADR 71: when a Steam property exists its artwork wins.
@@ -127,16 +148,25 @@ export function createRepositories(sqlite: Database.Database): Repositories {
       ...(resolved?.coverUrl ?? scanned.coverUrl ? { coverUrl: resolved?.coverUrl ?? scanned.coverUrl } : {}),
       ...(resolved?.heroUrl ?? scanned.heroUrl ? { heroUrl: resolved?.heroUrl ?? scanned.heroUrl } : {}),
     };
+    const isInstalled = ps.some((p) => installed.has(p.id));
+    // ADR 56, 74: per property the larger of the store's time and ours (ours is 0 until cut 2b); per game the sum.
+    const playtimeMinutes = ps.reduce((sum, p) => sum + (p.storePlaytimeMinutes ?? 0), 0);
+    const lastPlayedAt = ps.reduce<number | null>((m, p) => (p.storeLastPlayedAt !== null && (m === null || p.storeLastPlayedAt > m) ? p.storeLastPlayedAt : m), null);
     return {
       id: g.id,
       title: g.title,
       ...(media.coverUrl ? { coverUrl: media.coverUrl } : {}),
       ...(media.heroUrl ? { coverFallbackUrl: media.heroUrl } : {}),
       stores,
-      installed: ps.some((p) => installed.has(p.id)),
+      installed: isInstalled,
       favorite: false,
-      playtimeMinutes: 0,
+      playtimeMinutes,
+      ...(lastPlayedAt !== null ? { lastPlayedAt } : {}),
       tags: [],
+      // The core narrows mainAction by connector capabilities and mode (it knows them; the repository does not).
+      mainAction: isInstalled ? "play" : ps.some((p) => p.owned === 1) ? "install" : null,
+      // ADR 74 point 12: computed on read. An installed game never has the veil.
+      unsynced: !isInstalled && ps.length > 0 && ps.every((p) => p.store !== "manual" && !connected.has(p.store)),
     };
   }
 
@@ -149,6 +179,7 @@ export function createRepositories(sqlite: Database.Database): Repositories {
         .where(and(eq(gameProperties.userId, s.userId), isNull(gameProperties.removedAt), eq(gameProperties.kind, "game")))
         .all();
       const installed = new Set(installsOfDevice(s).keys());
+      const connected = connectedStores(s);
       const byCanonical = new Map<string, (typeof props)[number][]>();
       for (const p of props) {
         if (!p.canonicalGameId) continue;
@@ -165,7 +196,7 @@ export function createRepositories(sqlite: Database.Database): Repositories {
       const out: GameSummary[] = [];
       for (const g of games) {
         const ps = byCanonical.get(g.id);
-        if (ps && ps.length > 0) out.push(summary(g, ps, installed));
+        if (ps && ps.length > 0) out.push(summary(g, ps, installed, connected));
       }
       return out;
     },
@@ -187,7 +218,7 @@ export function createRepositories(sqlite: Database.Database): Repositories {
       if (games.length === 0) return null;
       const inst = installsOfDevice(s);
       const detail: GameDetail = {
-        ...summary(g, games, new Set(inst.keys())),
+        ...summary(g, games, new Set(inst.keys()), connectedStores(s)),
         // The core fills `actions` from the connector capabilities; the repository does not know them.
         properties: games.map((p) => {
           const i = inst.get(p.id);
@@ -195,6 +226,7 @@ export function createRepositories(sqlite: Database.Database): Repositories {
             id: p.id,
             store: p.store as StoreId | "manual",
             installed: i !== undefined,
+            owned: p.owned === 1,
             ...(i ? { installPath: i.installPath } : {}),
             actions: [],
           };
@@ -299,6 +331,27 @@ export function createRepositories(sqlite: Database.Database): Repositories {
       });
     },
 
+    async applyLibraryPlan(plan) {
+      const s = need();
+      db.transaction((tx) => applyLibrary(tx, s, plan));
+    },
+    async countOwned(store) {
+      const s = need();
+      return db
+        .select({ n: sql<number>`count(*)` })
+        .from(gameProperties)
+        .where(
+          and(
+            eq(gameProperties.userId, s.userId),
+            eq(gameProperties.store, store),
+            eq(gameProperties.kind, "game"),
+            eq(gameProperties.owned, 1),
+            isNull(gameProperties.removedAt),
+          ),
+        )
+        .get()!.n;
+    },
+
     async applyScanPlan(plan) {
       const s = need();
       db.transaction((tx) => applyPlan(tx, s, plan));
@@ -387,6 +440,12 @@ export function createRepositories(sqlite: Database.Database): Repositories {
     async put(state) {
       putSync(db, need(), state);
     },
+    async delete(store, operation) {
+      const s = need();
+      db.delete(syncState)
+        .where(and(eq(syncState.userId, s.userId), eq(syncState.store, store), eq(syncState.operation, operation)))
+        .run();
+    },
     async resetRunning() {
       const s = need();
       return db
@@ -420,7 +479,69 @@ export function createRepositories(sqlite: Database.Database): Repositories {
     },
   };
 
-  return { identity, library, scanRoots: roots, syncState: sync, settings: settingsRepo };
+  const secrets: SecretRepository = {
+    async get(scope, name) {
+      const s = need();
+      const r = db
+        .select()
+        .from(secretsTable)
+        .where(and(eq(secretsTable.userId, s.userId), eq(secretsTable.scope, scope), eq(secretsTable.name, name)))
+        .get();
+      return r ? { scope: r.scope, name: r.name, ciphertext: r.ciphertext, keyId: r.keyId, updatedAt: r.updatedAt } : null;
+    },
+    async put(rec) {
+      const s = need();
+      const values = { ciphertext: rec.ciphertext, keyId: rec.keyId, updatedAt: rec.updatedAt };
+      db.insert(secretsTable)
+        .values({ id: randomUUID(), userId: s.userId, scope: rec.scope, name: rec.name, ...values })
+        .onConflictDoUpdate({ target: [secretsTable.userId, secretsTable.scope, secretsTable.name], set: values })
+        .run();
+    },
+    async delete(scope, name) {
+      const s = need();
+      db.delete(secretsTable).where(and(eq(secretsTable.userId, s.userId), eq(secretsTable.scope, scope), eq(secretsTable.name, name))).run();
+    },
+    async deleteScope(scope) {
+      const s = need();
+      return db.delete(secretsTable).where(and(eq(secretsTable.userId, s.userId), eq(secretsTable.scope, scope))).run().changes;
+    },
+  };
+
+  const toConnection = (r: typeof storeConnections.$inferSelect): StoreConnectionRecord => ({
+    store: r.store as StoreId,
+    status: r.status as "connected" | "expired",
+    accountLabel: r.accountLabel,
+    connectedAt: r.connectedAt,
+  });
+  const connections: ConnectionRepository = {
+    async get(store) {
+      const s = need();
+      const r = db.select().from(storeConnections).where(and(eq(storeConnections.userId, s.userId), eq(storeConnections.store, store))).get();
+      return r ? toConnection(r) : null;
+    },
+    async list() {
+      const s = need();
+      return db.select().from(storeConnections).where(eq(storeConnections.userId, s.userId)).orderBy(asc(storeConnections.store)).all().map(toConnection);
+    },
+    async put(rec) {
+      const s = need();
+      const values = { status: rec.status, accountLabel: rec.accountLabel, connectedAt: rec.connectedAt };
+      db.insert(storeConnections)
+        .values({ userId: s.userId, store: rec.store, ...values })
+        .onConflictDoUpdate({ target: [storeConnections.userId, storeConnections.store], set: values })
+        .run();
+    },
+    async setStatus(store, status) {
+      const s = need();
+      db.update(storeConnections).set({ status }).where(and(eq(storeConnections.userId, s.userId), eq(storeConnections.store, store))).run();
+    },
+    async delete(store) {
+      const s = need();
+      db.delete(storeConnections).where(and(eq(storeConnections.userId, s.userId), eq(storeConnections.store, store))).run();
+    },
+  };
+
+  return { identity, library, scanRoots: roots, syncState: sync, settings: settingsRepo, secrets, connections };
 }
 
 function toRoot(r: typeof scanRoots.$inferSelect): ScanRootRecord {
@@ -537,8 +658,8 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
     tx.update(gameProperties)
       // ADR 73: the scan rewrites media and externalIds but keeps what resolveMedia stored.
       .set({
-        title: e.title,
-        normalizedTitle: e.normalizedTitle,
+        // ADR 74: the API title of an owned property is better than the manifest name.
+        ...(prop.owned === 1 ? {} : { title: e.title, normalizedTitle: e.normalizedTitle }),
         storeMetadata: {
           ...metadata(e),
           ...(prop.storeMetadata?.resolvedMedia ? { resolvedMedia: prop.storeMetadata.resolvedMedia } : {}),
@@ -550,7 +671,11 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
     if (prop.canonicalGameId) {
       // Only a canonical game with this single property follows the store title and artwork.
       tx.update(canonicalGames)
-        .set({ title: e.title, normalizedTitle: e.normalizedTitle, media: e.media ? { ...e.media } : null, updatedAt: at })
+        .set({
+          ...(prop.owned === 1 ? {} : { title: e.title, normalizedTitle: e.normalizedTitle }),
+          media: e.media ? { ...e.media } : null,
+          updatedAt: at,
+        })
         .where(
           and(
             eq(canonicalGames.id, prop.canonicalGameId),
@@ -604,6 +729,103 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
   for (const part of chunks(plan.deleteRoots)) {
     tx.delete(scanRoots)
       .where(and(eq(scanRoots.userId, s.userId), eq(scanRoots.origin, "discovered"), inArray(scanRoots.id, part)))
+      .run();
+  }
+
+  putSync(tx, s, plan.sync);
+}
+
+/** ADR 74: a library snapshot. Same storeGameId = same property (unique index). The whole plan or nothing. */
+function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan): void {
+  const at = plan.at;
+  type Entry = LibraryPlan["update"][number]["entry"];
+  const metadata = (e: Entry) => ({
+    ...(e.media ? { media: { ...e.media } } : {}),
+    ...(e.externalIds ? { externalIds: { ...e.externalIds } } : {}),
+  });
+
+  for (const c of plan.create) {
+    const e = c.entry;
+    tx.insert(canonicalGames)
+      .values({
+        id: c.canonicalId,
+        userId: s.userId,
+        title: e.title,
+        normalizedTitle: e.normalizedTitle,
+        media: e.media ? { ...e.media } : null,
+        metadataSource: plan.store,
+        createdAt: at,
+        updatedAt: at,
+      })
+      .run();
+    tx.insert(gameProperties)
+      .values({
+        id: c.propertyId,
+        userId: s.userId,
+        canonicalGameId: c.canonicalId,
+        store: plan.store,
+        storeGameId: e.storeGameId,
+        kind: "game",
+        title: e.title,
+        normalizedTitle: e.normalizedTitle,
+        owned: 1,
+        removedAt: null,
+        storeMetadata: metadata(e),
+        storePlaytimeMinutes: e.storePlaytimeMinutes,
+        storeLastPlayedAt: e.storeLastPlayedAt,
+      })
+      .run();
+  }
+
+  for (const u of plan.update) {
+    const e = u.entry;
+    const prop = tx
+      .select()
+      .from(gameProperties)
+      .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
+      .get();
+    if (!prop) throw new Error(`Library plan updates an unknown property ${u.propertyId}`);
+    tx.update(gameProperties)
+      .set({
+        title: e.title,
+        normalizedTitle: e.normalizedTitle,
+        owned: 1,
+        removedAt: null,
+        storePlaytimeMinutes: e.storePlaytimeMinutes,
+        storeLastPlayedAt: e.storeLastPlayedAt,
+        // ADR 73: keeps what resolveMedia stored.
+        storeMetadata: {
+          ...metadata(e),
+          ...(prop.storeMetadata?.resolvedMedia ? { resolvedMedia: prop.storeMetadata.resolvedMedia } : {}),
+          ...(prop.storeMetadata?.mediaResolvedAt !== undefined ? { mediaResolvedAt: prop.storeMetadata.mediaResolvedAt } : {}),
+        },
+      })
+      .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
+      .run();
+    if (prop.canonicalGameId) {
+      tx.update(canonicalGames)
+        .set({ title: e.title, normalizedTitle: e.normalizedTitle, media: e.media ? { ...e.media } : null, updatedAt: at })
+        .where(
+          and(
+            eq(canonicalGames.id, prop.canonicalGameId),
+            eq(canonicalGames.userId, s.userId),
+            sql`(SELECT count(*) FROM game_properties WHERE canonical_game_id = ${prop.canonicalGameId}) = 1`,
+          ),
+        )
+        .run();
+    }
+  }
+
+  for (const part of chunks(plan.disown)) {
+    tx.update(gameProperties)
+      .set({ owned: 0 })
+      .where(and(eq(gameProperties.userId, s.userId), eq(gameProperties.store, plan.store), inArray(gameProperties.id, part)))
+      .run();
+  }
+  for (const part of chunks(plan.retire)) {
+    tx.update(gameProperties)
+      .set({ removedAt: at })
+      .where(and(eq(gameProperties.userId, s.userId), eq(gameProperties.store, plan.store), inArray(gameProperties.id, part)))
       .run();
   }
 

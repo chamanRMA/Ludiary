@@ -1,4 +1,4 @@
-// Drizzle schema of migration 0001_library_scan (ADR 47, 72). Only what the first cut uses.
+// Drizzle schema of migrations 0001_library_scan and 0002_store_account (ADR 47, 72, 74).
 import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
@@ -61,6 +61,9 @@ export const gameProperties = sqliteTable(
     owned: integer("owned").notNull().default(0),
     removedAt: integer("removed_at"),
     storeMetadata: text("store_metadata", { mode: "json" }).$type<StoreMetadataJson>(),
+    /** ADR 74. Minutes and epoch ms reported by the store; null if unknown. */
+    storePlaytimeMinutes: integer("store_playtime_minutes"),
+    storeLastPlayedAt: integer("store_last_played_at"),
   },
   (t) => [
     uniqueIndex("game_properties_store_uq").on(t.userId, t.store, t.storeGameId),
@@ -138,4 +141,35 @@ export const settings = sqliteTable(
     value: text("value", { mode: "json" }),
   },
   (t) => [uniqueIndex("settings_user_key_uq").on(t.userId, t.key)],
+);
+
+/** ADR 46, 74. Ciphertext only; the key lives outside the database. */
+export const secrets = sqliteTable(
+  "secrets",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    scope: text("scope").notNull(),
+    name: text("name").notNull(),
+    ciphertext: text("ciphertext").notNull(),
+    keyId: integer("key_id").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("secrets_user_scope_name_uq").on(t.userId, t.scope, t.name)],
+);
+
+/** ADR 74. No row = disconnected. */
+export const storeConnections = sqliteTable(
+  "store_connections",
+  {
+    userId: text("user_id").notNull().references(() => users.id),
+    store: text("store").notNull(),
+    status: text("status").notNull(),
+    accountLabel: text("account_label"),
+    connectedAt: integer("connected_at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.store] }),
+    check("store_connections_status_check", sql`${t.status} IN ('connected', 'expired')`),
+  ],
 );

@@ -1,0 +1,3 @@
+ns:http://specs.openid.net/auth/2.0
+error:is_valid:true is not what happened
+is_valid:false

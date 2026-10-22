@@ -46,6 +46,11 @@ function userName(): string {
   }
 }
 
+// Digit/hex lookarounds instead of \b, so an encoded value (id%2F7656119…) is still caught.
+// shortcut: a key right after "%3D" (encoded "=") joins the D to the run and is missed; no code path logs encoded queries.
+const STEAM_KEY = /(?<![0-9A-Fa-f])[0-9A-Fa-f]{32}(?![0-9A-Fa-f])/g;
+const STEAM_ID = /(?<!\d)7656119\d{10}(?!\d)/g;
+
 /** Builds the redaction patterns for one home folder and user name (exported for tests). */
 export function makeRedactor(home: string, user: string): (text: string) => string {
   // Windows paths are case-insensitive and stack traces may use either slash; the lookahead stops
@@ -58,7 +63,8 @@ export function makeRedactor(home: string, user: string): (text: string) => stri
   return (text) => {
     let out = homePattern ? text.replace(homePattern, "~") : text;
     if (userPattern) out = out.replace(userPattern, "<user>");
-    return out;
+    // ADR 74 point 6: the net under Secret. A Steam Web API key (32 hex) and a SteamID64 are never written to a log.
+    return out.replace(STEAM_KEY, "[redacted]").replace(STEAM_ID, "[redacted]");
   };
 }
 

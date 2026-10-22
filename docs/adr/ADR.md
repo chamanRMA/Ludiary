@@ -52,7 +52,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
@@ -86,6 +86,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 71 | Portadas de Steam desde su CDN | Vigente (qué, confirmado por el usuario; cómo, recomendado; revisa la 68 en portadas y CSP; amplía las 6 y 40); URL con hash resueltas en la 73 |
 | 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68) |
 | 73 | Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` | Vigente (recomendada; amplía las 40, 71 y 72) |
+| 74 | Cuenta de Steam: OpenID, API key cifrada y juegos no instalados | Vigente (recomendada; amplía las 40, 43, 46, 47, 50, 68, 72 y 73); punto 12 decidido por el usuario el 22-10-2026 |
 
 ## Decisiones
 
@@ -565,7 +566,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72 y 73)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73 y 74)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -1542,7 +1543,7 @@ Alternativas consideradas:
 - El invariante 4 de `CLAUDE.md` y las fichas del `programador`, el `auditor` y el `tester` añaden que las acciones sensibles del navegador exigen cookie y clave de origen.
 - El documentalista recoge en la guía de solución de problemas el aviso «Vuelve a abrir Ludiary desde el acceso directo o desde la bandeja» y la recomendación sobre la dirección alternativa.
 
-### 68. Primera versión de `apps/web`: estructura, datos simulados y CSP (concreta la decisión 10; portadas e `img-src` revisados en la decisión 71; servir la SPA, librería de esquemas y selector de carpetas concretados en la decisión 72)
+### 68. Primera versión de `apps/web`: estructura, datos simulados y CSP (concreta la decisión 10; portadas e `img-src` revisados en la decisión 71; servir la SPA, librería de esquemas y selector de carpetas concretados en la decisión 72; enlace de inicio de sesión con vuelta en la misma pestaña en la decisión 74)
 
 **Decisión (recomendada, 21 de octubre de 2026):**
 
@@ -2313,6 +2314,484 @@ Se implementa ahora la parte de `HttpClient` (decisión 40) que este paso necesi
 - El `documentalista` añade a la guía de solución de problemas que una portada que falta aparece tras el siguiente escaneo con conexión, y menciona en la de privacidad la petición a `api.steampowered.com` con la lista de AppID.
 - Las tiendas futuras siguen el mismo patrón: `apiHosts` declarados y medios resueltos por `resolveMedia` si su escaneo no los da.
 
+### 74. Cuenta de Steam: OpenID, API key cifrada y juegos no instalados (amplía las decisiones 40, 43, 46, 47, 50, 68, 72 y 73)
+
+**Decisión (recomendada, 22 de octubre de 2026):** es el «corte siguiente, cuenta de Steam» de la decisión 72, encargado el 22 de octubre de 2026 tras probar el corte anterior con Steam real (18 juegos, portadas de la 73 y Jugar).
+
+#### 1. Alcance
+
+- **Entra:**
+  - el camino completo del asistente de Steam de la decisión 43: OpenID, abrir la página de la clave, Pegar, llamada de prueba y aviso de perfil privado;
+  - el motor de asistentes en el núcleo y sus rutas;
+  - `SecretCipher`, la tabla `secrets` y `store_connections`, en la migración `0002_store_account`;
+  - `listLibrary` con `GetOwnedGames`, para mostrar los juegos poseídos que no están instalados, con la acción `install`;
+  - el tiempo de juego y la última partida que informa Steam (decisión 56);
+  - desconectar y el estado `expired`;
+  - un `HttpClient` con POST y cabeceras secretas.
+- **Fuera, cada parte con su motivo:**
+  - Rotación de la clave y contraseña maestra (decisión 46). El formato `v1.<keyId>` y el `key_id` por fila ya la admiten, y en este corte el anillo tiene una sola clave. Se hace cuando haya un segundo secreto que proteger, o antes de publicar.
+  - DLC de la biblioteca: `GetOwnedGames` no los devuelve (supuesto S5). `dlc` sigue en `'none'`.
+  - `open-store-page`: con `install` ya se cumple la decisión 16 («la instalación directa donde la URI lo permita»).
+  - Nombre de la cuenta en Ajustes: lo decide el usuario (punto 12).
+  - Claves de IGDB y RAWG: siguen en el simulador. Usarán el mismo motor y el mismo almacén con el ámbito `service:<id>`.
+  - Persistir las sesiones del navegador (decisión 72, punto 10).
+
+#### 2. ¿OpenID o pegar el perfil?
+
+- **A. OpenID (la decisión 43, confirmada por el usuario).**
+  - Ventajas: el usuario no copia nada y, si ya tiene sesión de Steam en el navegador, basta un clic. El SteamID llega firmado por Steam. La aserción no da acceso a la cuenta: no hay contraseña ni token.
+  - Coste: una página de vuelta, un POST de `check_authentication` y protección contra repeticiones.
+- **B. Pegar la URL del perfil o el SteamID.**
+  - Menos código, pero es un segundo dato que copiar. Una URL personalizada (`/id/<nombre>`) exige además `ResolveVanityURL`, y para el público general (decisión 30) es otro sitio donde perderse.
+  - En seguridad es equivalente aquí: con la clave del propio usuario solo se leen datos que su perfil ya hace públicos, así que OpenID no protege nada que B ponga en riesgo.
+- **Se mantiene A** por la experiencia de uso y porque está confirmada. B es el plan de reserva solo si Steam no acepta el `realm` de la dirección local (supuesto S1). Necesitaría una decisión nueva.
+
+#### 3. Flujo OpenID 2.0 de Steam
+
+- **Ida (la construye el conector):** `https://steamcommunity.com/openid/login` con:
+  - `openid.ns=http://specs.openid.net/auth/2.0`;
+  - `openid.mode=checkid_setup`;
+  - `openid.return_to=<callbackUrl>`;
+  - `openid.realm=<origen de callbackUrl>/`;
+  - `openid.identity` y `openid.claimed_id`, ambos `http://specs.openid.net/auth/2.0/identifier_select`.
+- **`callbackUrl`** la crea el núcleo: `<returnBase>/connect/return?w=<wizardId>`.
+  - `returnBase` es `http://<Host>` de la petición que abrió el asistente. Ese `Host` ya está validado contra la lista cerrada (decisiones 23 y 66), así que vale `ludiary.localhost:<puerto>` o `127.0.0.1:<puerto>` con el puerto vigente.
+  - La vuelta llega al mismo origen que abrió el asistente, porque la clave de origen vive en el `localStorage` de ese origen (decisión 67).
+- **Misma pestaña.** El enlace de inicio de sesión (`open-external` con `awaits: 'callback'`) se abre en la misma pestaña, con `rel="noreferrer"`. Revisa la regla general de la decisión 68 (`target="_blank"`) solo para este tipo de paso. Así la vuelta cae en la pestaña de Ludiary y no hay que coordinar dos pestañas. Los demás enlaces externos siguen en pestaña nueva.
+- **Vuelta (la web, sin ruta pública nueva):**
+  - `/connect/return` es una ruta de la SPA, que el servidor entrega por la vuelta a `index.html`.
+  - La página lee `location.search` y lo borra **antes de nada** con `history.replaceState(null, '', '/connect/return')`.
+  - Si `w` es un id con formato válido, envía `POST /api/wizards/<w>/callback` con **solo** los parámetros `openid.*`, con la cookie y la clave de origen (`session+key`).
+  - Supuesto S10: tras una navegación entre sitios, las peticiones `fetch` de la página al mismo origen sí llevan la cookie `SameSite=Strict`. Si un navegador no la enviara, la página se recarga una vez con `location.replace` antes de enviar.
+  - Ninguna ruta pública procesa datos de Steam.
+- **Verificación (conector, `connectors/steam/src/openid.ts`), en este orden. Cualquier fallo es `auth.invalid` con la clave `connectors.steam.error.openid`:**
+  1. `openid.mode`:
+     - `cancel`: `auth.required` con la clave `connectors.steam.login.cancelled`;
+     - cualquier valor distinto de `id_res`: fallo.
+  2. `openid.ns` es exactamente `http://specs.openid.net/auth/2.0`.
+  3. `openid.op_endpoint` es exactamente `https://steamcommunity.com/openid/login`.
+  4. `openid.return_to` es **exactamente** `ctx.callbackUrl`, con su `w`. Una aserción grabada en otro asistente o para otro sitio (`return_to` ajeno) no pasa.
+  5. `openid.claimed_id` cumple `^https://steamcommunity\.com/openid/id/(7656119\d{10})$` y `openid.identity` es igual a él.
+  6. `openid.signed`, separado por comas, contiene `op_endpoint`, `claimed_id`, `identity`, `return_to`, `response_nonce` y `assoc_handle`.
+  7. `openid.response_nonce` empieza por una fecha `AAAA-MM-DDTHH:MM:SSZ` de hace 5 minutos como mucho y no más de 1 minuto en el futuro, según `ctx.now()`.
+  8. `POST https://steamcommunity.com/openid/login` con cuerpo de formulario: todos los `openid.*` recibidos, con `openid.mode=check_authentication`. La respuesta debe ser 200 y, leída por líneas `clave:valor`, tener **exactamente** `ns:http://specs.openid.net/auth/2.0` e `is_valid:true`. No se busca una subcadena (supuesto S2).
+- **Repetición:**
+  - El paso de la vuelta solo se acepta una vez: tras el éxito, el asistente pasa al paso siguiente y otra vuelta para el mismo `w` da `rejected`.
+  - Cada asistente tiene un `w` nuevo, ligado a `return_to` (comprobación 4), y caduca a los 15 minutos sin actividad.
+  - La comprobación 7 acota la ventana.
+  - No se confía en que Steam rechace por sí mismo un nonce repetido (supuesto S3), así que no hace falta una tabla de nonces.
+- El SteamID verificado queda en el estado del asistente (punto 5) hasta terminar. Es un dato personal: nunca va a los registros ni a las respuestas de la API.
+
+#### 4. Pasos del asistente de Steam
+
+| Id | Tipo | Qué hace |
+|---|---|---|
+| `choose` | `info` | Explica los dos caminos. Continuar lleva a `login`. El botón «Steam sin clave: solo instalados» lo resuelve la web: cancela el asistente y cierra, sin más llamadas. Ya es el modo por defecto de Steam sin conexión (decisión 72). |
+| `login` | `open-external`, `awaits: 'callback'` | La URL del punto 3. |
+| `apikey` | `open-external`, `awaits: 'input'`, con campo | Enlace a `https://steamcommunity.com/dev/apikey`, con instrucciones para el campo de dominio (`localhost`, supuesto S11). Campo `apiKey`: `secret: true`, `paste: true`, `pattern: '^[0-9A-Fa-f]{32}$'`, `maxLength: 64`. |
+| `profile` | `info` | Solo si la llamada de prueba indica perfil privado (`{"response":{}}`). Explica cómo hacer públicos los «Detalles de juego». Continuar repite la prueba con la clave guardada en el estado del asistente. |
+
+- **Llamada de prueba**, en el envío de `apikey`: `GetOwnedGames` con `include_appinfo=false` (ver el punto 7 para la petición).
+  - 401 o 403: `rejected` con `auth.invalid` y la clave `connectors.steam.error.key` (clave mal copiada o revocada, supuesto S6).
+  - 429: `rejected` con `store.rate-limited`.
+  - Error de red: `rejected` con su código.
+  - `response` sin `game_count`: paso `profile`.
+  - Con `game_count`: `secrets.set('steamId')`, `secrets.set('apiKey')` y `done`.
+- **Contrato** (amplía la decisión 40; alinea el desvío ya anotado en `api-contract`): el paso `open-external` admite `fields?: readonly WizardField[]` cuando `awaits === 'input'`. El enlace y el campo comparten pantalla, como ya hace la web.
+
+#### 5. Motor de asistentes (núcleo)
+
+- **`packages/core/src/wizards.ts`.** Sesiones **solo en memoria**, nunca persistidas, como la clave de origen:
+  - Una por tienda: abrir otra cancela la anterior.
+  - Como mucho 4 a la vez.
+  - Caducan a los 15 minutos sin actividad.
+  - El id es `deps.newId()` (UUID v4 aleatorio, 122 bits).
+  - Mueren al parar el servidor.
+  - El `wizardState` de la decisión 40 es un mapa en memoria de esa sesión. El comentario del contrato («Encrypted») pasa a ser «solo en memoria, se borra al terminar, cancelar o caducar»: no tocar el disco es más estricto que cifrar.
+- **`WizardContext`** añade `now(): number`, porque los conectores no leen la hora por su cuenta (decisión 38). Todo lo demás está ya en la 40:
+  - `callbackUrl`;
+  - `http`, con los `apiHosts` del conector;
+  - `secrets`, el almacén del ámbito `store:<id>`;
+  - `tools`, que en este corte es un doble que lanza `tool.missing`;
+  - `progress`, que no hace nada.
+- **Validación de lo que devuelve el conector** (regla 4 de la decisión 40):
+  - `id` del paso con `^[a-z][a-z0-9-]{0,31}$`.
+  - Claves de texto bajo `connectors.<id>.` o `connectors.common.`.
+  - `url` en `https` y con host en `authHosts`.
+  - Como mucho 4 campos, con `name` `^[A-Za-z][A-Za-z0-9]{0,31}$`, `maxLength` entre 1 y 4096 y un `pattern` que compile.
+  - Si algo no cumple: `internal` y la sesión se cierra.
+- **Validación de la entrada:**
+  - `stepId` debe ser el paso actual, o da `rejected`.
+  - El tipo de entrada debe corresponder al paso:
+    - `info`, o `open-external` con `awaits: 'input'` sin campos: `continue`;
+    - paso con campos: `fields`;
+    - `open-external` con `awaits: 'callback'`: solo por la ruta de vuelta.
+  - `fields`: exactamente los nombres declarados. Se aplica `extract`, se recortan espacios y se comprueba `maxLength` y `pattern` anclado en el servidor, aunque la web ya lo haga.
+  - La vuelta: como mucho 32 parámetros, nombres `^[A-Za-z0-9._-]{1,64}$` y valores de hasta 2048 caracteres sin caracteres de control.
+  - Los valores de campos `secret` no se registran nunca.
+- **Llamadas al conector:** con un tiempo máximo de 30 s.
+  - Un `ConnectorError` da `rejected` en el mismo paso, con `code` y `key`.
+  - Otra excepción da `internal` y cierra la sesión.
+- **Al terminar (`done`):**
+  - `store_connections` pasa a `connected` con `connected_at`.
+  - Se borra la sesión.
+  - Se programa la operación `library` de esa tienda **forzada**, sin el suelo de la decisión 50: es la primera.
+- **Fachada** (amplía `LudiaryCore` de la decisión 72):
+
+```ts
+// packages/core/src/env.ts — additions of ADR 74
+export type WizardResponse =
+  | WizardStep | WizardDone
+  | { kind: "rejected"; stepId: string; error: CoreErrorInfo };
+
+export interface LudiaryCore {
+  // ...ADR 72...
+  /** returnBase: "http://<validated Host>", no path. 404 not-found if the store has no `connection`. */
+  startWizard(store: StoreId, returnBase: string): Promise<{ wizardId: string; response: WizardResponse }>;
+  submitWizard(wizardId: string, stepId: string, input: WizardInput): Promise<WizardResponse>; // input.kind !== 'callback'
+  wizardCallback(wizardId: string, query: Readonly<Record<string, string>>): Promise<{ store: StoreId; response: WizardResponse }>;
+  cancelWizard(wizardId: string): Promise<void>;
+  disconnect(store: StoreId): Promise<void>;
+}
+
+export interface CoreDeps {
+  // ...ADR 72, 73...
+  cipher: SecretCipher;                 // ADR 46, 74
+  secrets: SecretRepository;
+  connections: ConnectionRepository;
+  /** ADR 73, plus maxBytes: the core passes 16 MiB for listLibrary, 2 MiB otherwise. */
+  http?: (hosts: readonly string[], signal: AbortSignal, log: ConnectorLogger, opts?: { maxBytes?: number }) => HttpClient;
+}
+```
+
+- **API** (todas `session+key`, porque aceptan secretos o cambian datos, decisión 67; TypeBox con `additionalProperties: false`):
+
+| Método y ruta | Cuerpo → respuesta |
+|---|---|
+| `POST /api/stores/:store/wizard` | `{}` → `201 WizardStartDto { wizardId, response: WizardResponseDto }`. `returnBase` sale del `Host` ya validado, nunca del cuerpo. |
+| `POST /api/wizards/:wizardId/submit` | `WizardSubmitDto { stepId, input }`, con `input.kind` en `continue` o `fields`, como mucho 8 valores de hasta 4096 caracteres → `200 WizardResponseDto`. |
+| `POST /api/wizards/:wizardId/callback` | `WizardCallbackDto { query }`, con los límites de la vuelta → `200 { store, response: WizardResponseDto }`. |
+| `DELETE /api/wizards/:wizardId` | → 204, también si ya no existe. |
+| `DELETE /api/stores/:store/connection` | → 204 (punto 9). |
+
+  - Un asistente desconocido o caducado da `404 not-found`; la web lo muestra como «El asistente ha caducado, vuelve a empezar».
+  - `LaunchRequestDto` añade `action?: 'play' | 'install'`; si falta, vale `play`.
+  - `GameSummaryDto` añade `mainAction: 'play' | 'install' | null`.
+- **Web: de simulador a real solo para Steam** (revisa el punto 7 de la decisión 72 en este método):
+  - `real.ts`:
+    - `startWizard`, `submitWizard`, `cancelWizard` y `disconnect` van a la API cuando `target` es `{ kind: 'store', store: 'steam' }`; las demás tiendas y los servicios siguen delegados en el simulador.
+    - Guarda el `wizardId` en memoria, por tienda.
+    - Añade `wizardCallback(wizardId, query)`.
+    - `getStores` deja de superponer el estado simulado sobre Steam.
+  - `ConnectWizard.tsx`:
+    - Acepta `resume?: { target, response }` para continuar sin `startWizard`.
+    - En `awaits: 'callback'`, fuera del simulador, pinta un enlace en la misma pestaña («Iniciar sesión en Steam»). Antes de seguirlo guarda en `sessionStorage['ludiary.wizardReturn']` solo `'welcome'` o `'settings'`, ningún dato de Steam.
+    - El botón «Steam sin clave» cancela y cierra.
+  - Página nueva `/connect/return` (y su ruta en `router.ts`):
+    - Hace lo del punto 3 y muestra `ConnectWizard` con `resume`.
+    - Al terminar o cancelar, vuelve a `/welcome`, en el paso Tiendas, o a `/settings/stores`, según `ludiary.wizardReturn` (lista cerrada; por defecto, Ajustes), y borra esa entrada.
+  - Los textos `connectors.steam.*` pasan a `connectors/steam/locales/` si aún no están allí (decisión 72). Claves nuevas:
+    - `connectors.steam.error.openid`, `connectors.steam.error.key` y `connectors.steam.login.cancelled`;
+    - `connectors.steam.disconnect.revokeHint` («Ludiary borra la clave; para anularla en Steam, pulsa Revoke en steamcommunity.com/dev/apikey»);
+    - `library.action.install`, `game.installing` y `wizard.expired`.
+
+#### 6. Secretos (decisión 46, mínimo de este corte)
+
+- **Puerto** en `packages/contracts/src/ports.ts` (lo previó la decisión 38). Implementación en `packages/platform-node/src/cipher.ts` con `node:crypto`:
+
+```ts
+/** ADR 46, 74. AES-256-GCM. aad = `${userId}|${scope}|${name}`. */
+export interface SecretCipher {
+  /** Slot n of the credential master-key/<n> (ADR 64). */
+  readonly activeKeyId: number;
+  /** `v1.<keyId>.<nonce base64url>.<ciphertext+tag base64url>`, fresh random 12-byte nonce per call, 16-byte tag. */
+  encrypt(plaintext: string, aad: string): string;
+  /** 'other-key': written under another slot (compartment, ADR 64). 'invalid': bad format, tag or AAD. */
+  decrypt(blob: string, aad: string): { ok: true; value: string } | { ok: false; reason: "other-key" | "invalid" };
+}
+// platform-node
+export function createSecretCipher(key: { id: number; value: Uint8Array }): SecretCipher; // throws unless 32 bytes
+// contracts (pure): toString()/toJSON() give "[redacted]"
+export function makeSecret(value: string): Secret;
+```
+
+  - El análisis es estricto: cuatro partes, `v1`, `keyId` entre 1 y 16, nonce de exactamente 12 bytes y cifrado de al menos 16. Cualquier otra cosa es `invalid`.
+  - `runtime` crea el cifrador con la clave que ya carga `loadMasterKey` (id y valor) y lo pasa a `createCore`.
+- **Migración `0002_store_account`** (decisión 47; la copia previa de la 57 la hace ya el migrador):
+  - `secrets`: `id`, `user_id`, `scope`, `name`, `ciphertext`, `key_id` (entero), `updated_at`. Único por (`user_id`, `scope`, `name`).
+  - `store_connections`: `user_id`, `store`, `status` (`connected` / `expired`, con `CHECK`), `account_label` (nulo), `connected_at`. Clave primaria (`user_id`, `store`). Sin fila, la tienda está desconectada.
+  - `game_properties` añade `store_playtime_minutes` y `store_last_played_at`, enteros nulos; las fechas en milisegundos (decisión 47).
+- **Almacén por conector** (`packages/core/src/vault.ts`): implementa `SecretVault` sobre `SecretRepository` y `SecretCipher`, con ámbito `store:<id>` y AAD `user_id|ámbito|nombre`.
+  - `set` cifra y hace un upsert.
+  - `get`:
+    - sin fila: `null`;
+    - `key_id` distinto de la clave activa: `null`. La fila **no se toca**: es un compartimento (decisión 64) y se registra un aviso sin el nombre del secreto;
+    - `invalid` con la clave activa (clave perdida y recreada en el mismo hueco, o AAD manipulado): se **borra** la fila, se registra un aviso y devuelve `null` (decisión 46);
+    - en otro caso, `makeSecret(valor)`.
+  - Reconectar sobrescribe la fila del compartimento con el mismo nombre. Es una acción explícita del usuario y se acepta.
+- **Estado que se muestra:**
+  - Sin fila en `store_connections`: `disconnected`.
+  - Con fila: el núcleo llama a `connection.status`. Steam devuelve `connected` si lee `steamId` y `apiKey`, y `expired` si no; es local, sin red.
+  - Se combina con `store_connections.status`: si cualquiera dice `expired`, se muestra `expired`.
+  - `mode` es `library` si está `connected` e `installed-only` en otro caso.
+- **Registros** (decisiones 35 y 40, regla 6): `makeRedactor` de `runtime/src/files.ts` añade dos patrones que sustituye por `[redacted]`: `\b[0-9A-Fa-f]{32}\b` (forma de la API key) y `\b7656119\d{10}\b` (SteamID64). Es la red bajo `Secret`. Se acepta que tape algún hash legítimo de 32 caracteres hexadecimales.
+
+#### 7. Biblioteca
+
+- **Conector** (`connectors/steam/src/library.ts`):
+  - `listLibrary` hace `GET https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/`:
+    - cabecera `x-webapi-key` con el `Secret` (vía oficial según la página de autenticación de Steamworks; supuesto S4 para las claves de usuario; plan de reserva: parámetro `key` como `Secret`);
+    - consulta: `steamid`, `include_appinfo=true`, `include_played_free_games=true`, `skip_unvetted_apps=false` (supuesto S8) y `format=json`.
+  - Sin `steamId` o sin `apiKey` legibles: `auth.required`.
+  - Respuesta:
+    - 401 o 403: `auth.invalid`.
+    - 429: `store.rate-limited` con `Retry-After`.
+    - Cualquier otro estado distinto de 200: `store.unexpected-response`.
+    - `response` sin `game_count`: `account.private-profile` (supuesto S5).
+  - Por juego:
+    - `appid` entero entre 1 y 2³²−1;
+    - `name`, o `Steam <appid>` si falta;
+    - `playtime_forever` (minutos, entero ≥ 0) → `storePlaytimeMinutes`;
+    - `rtime_last_played` (segundos; 0 es nunca) → `storeLastPlayedAt` en ISO;
+    - `media` con las URL por AppID de la decisión 71;
+    - se excluyen los AppID de `EXCLUDED_APP_IDS`.
+  - `complete` vale `games.length === game_count`.
+- **Manifiesto de Steam:**
+  - `library: true`, `actions: ['play', 'install']`, `storePlaytime: true`;
+  - `authHosts: ['steamcommunity.com']`;
+  - `apiHosts: ['api.steampowered.com', 'steamcommunity.com']`; el segundo es para `check_authentication`;
+  - `connection` y `listLibrary`.
+  - `dlc: 'none'`, `uriSchemes: ['steam']` y `minSyncIntervalMs: 600_000` no cambian.
+  - `checkConnectorManifest` añade dos reglas: un conector con `connection` tiene `authHosts` no vacío, y uno con `library` tiene `apiHosts` o `externalTools` no vacíos.
+- **Núcleo, operación `library`** (cierra «`requestSync` solo implementa `scan`» de la decisión 72):
+  - **Quién:** conectores con `library` y fila `connected` en `store_connections`.
+  - **Orden:** en la cola por tienda que ya existe, `library` antes que `scan`, nunca a la vez. Así no se pisan las escrituras de propiedades, y el escaneo engancha las instalaciones a las propiedades poseídas.
+  - **Cuándo** (decisión 50):
+    - El botón manual respeta el suelo de 10 minutos desde el último intento.
+    - `trigger: 'open'` sincroniza solo si la última sincronización correcta tiene más de 6 horas (constante del núcleo por tienda: 6 h para Steam y 12 h para GOG y Epic).
+    - Tras un error, el intento automático espera el doble del suelo (20 minutos).
+    - Tiempo máximo de 60 s.
+  - **Validación:**
+    - las mismas reglas que las entradas del escaneo (ID, título y medios en `mediaHosts`);
+    - `storePlaytimeMinutes` entero entre 0 y 10⁸;
+    - `storeLastPlayedAt` como fecha ISO válida;
+    - como mucho 50 000 entradas;
+    - una entrada `dlc` sin la capacidad se descarta.
+  - **Plan en una transacción** (`applyLibraryPlan`):
+    - Mismo AppID = misma propiedad, por el índice único (`user_id`, `store`, `store_game_id`). Una propiedad que ya existía por el escaneo pasa a `owned = 1`, `removed_at = null`, y actualiza título, tiempo, última partida y `store_metadata.media`, conservando `resolvedMedia` (decisión 73).
+    - Una propiedad nueva crea su canónico, con la regla de una sola tienda de la 72.
+    - El título del canónico sigue al de su propiedad de Steam. El escaneo deja de sobrescribir el título de una propiedad con `owned = 1`: el de la API es mejor que el `name` del manifiesto.
+    - Con `complete: true`, las propiedades con `owned = 1` ausentes pasan a `owned = 0`, y a `removed_at` si no tienen instalación.
+    - **Guarda:** una instantánea completa y **vacía**, con propiedades poseídas en la base, se trata como `complete: false` y se registra un aviso. Steam devuelve a veces respuestas vacías en perfiles públicos (supuesto S5), y una así no debe vaciar la biblioteca.
+  - **Errores:**
+    - `auth.invalid` o `auth.expired`: `store_connections.status = 'expired'`.
+    - `account.private-profile`: error de la sincronización con su clave traducida.
+    - En ningún caso se toca la biblioteca.
+  - **Tras una sincronización correcta:** el paso de medios de la decisión 73, con las mismas reglas. Así resuelve las portadas con hash de los juegos no instalados.
+- **Tiempo de juego** (decisión 56):
+  - El tiempo de una propiedad es el mayor entre `store_playtime_minutes` y el tiempo propio. El propio vale 0 hasta el corte 2b.
+  - El total del canónico es la suma de sus propiedades no retiradas; `lastPlayedAt`, la más reciente.
+  - La ficha muestra el tiempo de Steam.
+- **Acciones:**
+  - `mainAction`: `play` si hay una instalación y el modo puede lanzar; si no, `install` si alguna propiedad poseída la ofrece; si no, `null`.
+  - El núcleo (`core.ts` y `launch.ts`) admite `install` con las mismas comprobaciones que `play` (capacidad, tipo, esquema, doble clic en 5 s), pero exige que la propiedad **no** esté instalada y tenga `owned = 1`.
+  - Steam: `resolveAction('install')` devuelve `steam://install/<appId>`, con la misma comprobación de dígitos y de `launcher-missing` que `play` (supuesto S9: abre el diálogo de instalación de Steam y no instala nada sin confirmar).
+  - La web pinta «Instalar» y, al pulsar, «Abriendo Steam…».
+
+#### 8. `HttpClient` (amplía el de la decisión 73)
+
+- `POST` con `body: { form }`, que se envía como `application/x-www-form-urlencoded`, o `{ json }`. Un `GET` con cuerpo es `internal`.
+- Los `Secret` del formulario, de la consulta o de las cabeceras se revelan solo al enviar.
+- **Cabeceras del conector:**
+  - nombres `^[a-z0-9-]{1,64}$`;
+  - prohibidas `host`, `cookie`, `content-length`, `connection` y `transfer-encoding`;
+  - valores sin CR ni LF.
+  - Se suman a `accept: application/json`.
+- Opción `maxBytes` por cliente: 16 MiB para `listLibrary`; 2 MiB, el valor por defecto, para lo demás. Por ejemplo, 10 000 juegos con `include_appinfo` ocupan del orden de 1,5 MB.
+- Lo demás no cambia: hosts exactos de `apiHosts`, sin redirecciones, el error del `signal`. El registro sigue con método, host, ruta, estado y duración; **nunca** consulta, cabeceras ni cuerpo.
+
+#### 9. Desconectar y caducidad
+
+- **Desconectar** (`DELETE /api/stores/steam/connection`), en este orden:
+  1. `connection.disconnect`, que borra `steamId` y `apiKey` de su almacén.
+  2. El núcleo borra además todo el ámbito `store:steam`, incluidos los compartimentos.
+  3. Borra la fila de `store_connections` y la de `sync_state` de `library`, para que una reconexión sincronice enseguida.
+  4. Aplica lo que decida el usuario sobre los juegos no instalados (punto 12). Recomendado: las propiedades de Steam pasan a `owned = 0`, y a `removed_at` las que no tienen instalación, como en el escaneo. Los canónicos y los datos del usuario no se borran y reaparecen al reconectar.
+- La web recuerda con `connectors.steam.disconnect.revokeHint` que la clave sigue viva en Steam hasta que se revoca allí.
+- **Clave revocada o mal copiada:** `GetOwnedGames` responde 401 o 403. La tienda pasa a `expired`, la biblioteca se queda como estaba y la tarjeta muestra «Hay que volver a conectar» con el botón del asistente (la pantalla que ya existe para la sesión caducada simulada de Epic). Reconectar sobrescribe los secretos.
+- **Clave maestra perdida o compartimento** (punto 6): el mismo estado `expired`, sin red y sin tocar la biblioteca.
+
+#### 10. Pruebas
+
+- **`connectors/steam`**, con respuestas grabadas sanitizadas (decisiones 19 y 48):
+  - SteamID ficticio `76561190000000000`, que cumple el patrón pero no es de nadie.
+  - Clave `0123456789abcdef0123456789abcdef`.
+  - Ningún nombre de cuenta.
+  - La comprobación de fixtures acepta **solo** esos dos valores literales y sigue rechazando cualquier otro `7656119\d{10}` o hexadecimal de 32 caracteres.
+  - OpenID:
+    - firma inválida (`is_valid:false`);
+    - respuesta con `is_valid:true` como subcadena de otra línea;
+    - `return_to` ajeno, o con otro `w`;
+    - `op_endpoint` distinto;
+    - `claimed_id` de otro host o con `identity` distinta;
+    - `signed` sin `return_to`;
+    - nonce caducado o del futuro;
+    - `mode=cancel`;
+    - la URL de ida con `realm` igual al origen de `callbackUrl`;
+    - el POST lleva exactamente los `openid.*` recibidos, con `mode` cambiado.
+  - Clave:
+    - formato y recorte de espacios;
+    - 401 y 403 → `rejected`;
+    - perfil privado → `profile` y reintento;
+    - éxito → dos `secrets.set` y `done`;
+    - la clave viaja en `x-webapi-key` y no en la URL.
+  - `listLibrary`:
+    - biblioteca normal, `game_count` distinto del número de juegos (`complete: false`), `{}` (privado), 403, 429 y 500;
+    - AppID fuera de rango, nombre ausente, `rtime_last_played` igual a 0, `228980` excluido.
+  - `resolveAction('install')`.
+  - Conformidad con las reglas nuevas del manifiesto.
+- **`platform-node`:**
+  - `cipher.ts`:
+    - ida y vuelta;
+    - nonce distinto en cada cifrado;
+    - AAD manipulado (otro `user_id`, otro ámbito, otro nombre) → `invalid`;
+    - un byte del cifrado o de la etiqueta cambiado → `invalid`;
+    - `keyId` de otro hueco → `other-key`;
+    - formatos rotos → `invalid`;
+    - clave de tamaño distinto de 32 → error al crear.
+  - `http.ts`:
+    - POST con formulario y con JSON;
+    - `Secret` en cabecera, formulario y consulta, revelado solo en la petición enviada;
+    - cabeceras prohibidas o con CR/LF rechazadas sin llamar a `fetch`;
+    - `maxBytes` por cliente;
+    - el registro no contiene ni la clave ni el cuerpo.
+- **`core`:**
+  - Motor de asistentes:
+    - paso fuera de turno;
+    - campos de más o de menos;
+    - `pattern` en el servidor;
+    - URL fuera de `authHosts` → `internal`;
+    - vuelta repetida → `rejected`;
+    - asistente caducado (reloj doble) y tope de 4;
+    - abrir uno nuevo cancela el anterior;
+    - `done` → `connected` y sincronización forzada.
+  - Almacén:
+    - clave perdida (fila cifrada con otra clave del mismo hueco) → fila borrada y `expired`;
+    - compartimento → fila conservada y `expired`;
+    - el AAD incluye el `user_id`.
+  - Biblioteca:
+    - fusión con la propiedad escaneada (mismo AppID);
+    - `complete: false` no da de baja;
+    - instantánea vacía con poseídos → no da de baja;
+    - suelo, 6 horas al abrir y doble del suelo tras error;
+    - `auth.invalid` → `expired`;
+    - `library` y `scan` nunca a la vez;
+    - el escaneo ya no sobrescribe el título de una propiedad poseída.
+  - `install`: rechazado si está instalado o no es poseído; doble clic.
+  - Tiempo: mayor por propiedad y suma por canónico.
+  - `disconnect`: borra el ámbito y aplica la regla del punto 12.
+- **`db`:**
+  - `0002` desde una base con `0001` (copia previa hecha);
+  - índice único de `secrets`;
+  - `CHECK` de `store_connections`;
+  - filtro de `user_id` en todo lo nuevo (decisión 47).
+- **`api`:**
+  - Las rutas nuevas sin clave de origen → 401 `origin_key_required`.
+  - Campos de más → 400.
+  - `returnBase` sale del `Host` y no del cuerpo.
+  - Una petición de vuelta con más de 32 parámetros → 400.
+  - Ninguna respuesta lleva la clave ni el SteamID: comprobado con una búsqueda sobre todas las respuestas de la prueba.
+  - `LaunchRequestDto` con `action: 'install'`.
+- **`runtime`:** el redactor tapa una clave y un SteamID dentro de un mensaje.
+- **Web:**
+  - `real.ts` envía Steam a la API y el resto al simulador.
+  - `/connect/return` borra la consulta antes de llamar y envía solo `openid.*`.
+  - `ludiary.wizardReturn` fuera de la lista cerrada → Ajustes.
+  - El enlace de OpenID abre en la misma pestaña.
+  - El botón Instalar.
+- **Playwright:** el asistente completo contra un Steam doble (OpenID y `GetOwnedGames` grabados) → biblioteca con juegos no instalados → Instalar graba `steam://install/<id>`. Desconectar los retira.
+- **Pruebas manuales del usuario** (las prepara el tester):
+  - conectar con su cuenta real en Chrome, Edge y Firefox, por `ludiary.localhost` y por `127.0.0.1`;
+  - perfil con detalles de juego privados y luego públicos;
+  - clave revocada en Steam → `expired` y reconectar;
+  - Instalar un juego no instalado;
+  - tiempos de juego coherentes con los de Steam;
+  - borrar a mano `master-key/1` en el Administrador de credenciales → `expired` sin perder la biblioteca;
+  - el registro exportado no contiene la clave, el SteamID ni `openid.*`.
+
+#### 11. Orden de implementación y trabajo en paralelo
+
+1. **Primero, y bloquea lo demás** (`programador`, pequeño): `contracts` (`SecretCipher`, `makeSecret`, `fields` en `open-external`, `WizardContext.now`, reglas del manifiesto) y `api-contract` (DTO del punto 5).
+2. **En paralelo**, cada parte contra dobles:
+   - `conectores`: `openid.ts`, el asistente, `library.ts`, `install` y las respuestas grabadas. Solo necesita `contracts` y el `fakeHttp` de `connector-testkit`, que añade `wizardContext()` y `syncContext()`.
+   - `programador` A: `platform-node` (`cipher.ts` y `http.ts`).
+   - `programador` B: `db` (migración `0002` y repositorios).
+   - `programador` C: `core` (motor, almacén, operación `library`, `install` y tiempo).
+   - `programador` D: la web contra el simulador, adaptado a los DTO nuevos.
+   - `auditor`: revisión de este diseño (OpenID, almacén y rutas) antes de que haya código, para que los cambios salgan baratos.
+3. **Después:** rutas de `api` y conexión en `runtime` (cifrador desde `loadMasterKey`, redactor y `http` con `maxBytes`), Playwright y la revisión del `auditor` sobre el código (cifrado, almacén, vuelta de OpenID, `http.ts`, registros, fixtures y la comprobación de la 67).
+4. **Al final:** pruebas manuales del usuario con su cuenta y el `documentalista`:
+   - guía con capturas para crear la clave y hacer públicos los detalles de juego (decisión 43);
+   - privacidad: qué sale hacia Steam (SteamID, clave y la petición de la 73);
+   - solución de problemas: «Hay que volver a conectar» y el perfil privado.
+
+#### 12. Lo que decide el usuario
+
+**Respuestas del usuario (22 de octubre de 2026):**
+
+- **Punto 1: opción nueva (c).** Al desconectar, los juegos de Steam no instalados **se quedan visibles con un velo gris** que aclara que no están sincronizados. Concreción:
+  - Desconectar **no toca las propiedades** ni los canónicos: solo borra los secretos del ámbito `store:steam`, la fila de `store_connections` y el `sync_state` de `library` (pasos 1 a 3 del punto 9). El paso 4 del punto 9 queda sustituido por esto.
+  - El velo se calcula al leer, sin columna nueva: un juego lleva `unsynced: true` en `GameSummaryDto` y `GameDetailDto` cuando todas sus propiedades que no están instaladas son de una tienda cuya conexión no está `connected` (desconectada o `expired`). Un juego instalado nunca lleva velo.
+  - La web pinta la portada atenuada en gris con el texto traducido `library.unsynced` («Sin sincronizar: conecta tu cuenta de Steam para actualizarlo») y mantiene la ficha accesible. Las acciones de tienda de esos juegos siguen disponibles.
+  - Al reconectar, la primera sincronización de `library` actualiza o retira lo que haya cambiado mientras tanto, con las reglas normales (instantánea completa, guarda de la respuesta vacía).
+  - Lo mismo vale para el estado `expired` (clave revocada o clave maestra perdida).
+- **Punto 2: opción (b) con datos mínimos.** Se muestra «Conectado como <nombre>». Al conectar se llama una vez a `ISteamUser/GetPlayerSummaries` y **solo se guarda `personaname`**, en `store_connections.account_label`; nada más del perfil (ni avatar, ni nombre real, ni país, ni URL del perfil). No se registra nunca. Se refresca solo al volver a conectar. Si la llamada falla, la conexión sigue adelante sin nombre («Conectado»).
+- **Identificación de la cuenta:** el usuario confirma OpenID frente a pegar la URL del perfil.
+- **Comprobación previa del supuesto S1 (22-10-2026):** una petición `checkid_setup` con `realm` `http://ludiary.localhost:<puerto>/` devuelve la misma página de inicio de sesión de Steam que con un `realm` público (`https://example.com/`). Falta comprobar la vuelta tras iniciar sesión, que es la primera prueba manual del usuario.
+
+1. **Al desconectar Steam**, los juegos que no están instalados:
+   - (a) desaparecen de la biblioteca y vuelven al reconectar, con sus favoritos y datos (recomendado: la biblioteca refleja lo que Ludiary sabe que posee);
+   - (b) se quedan visibles hasta borrarlos a mano.
+2. **Nombre de la cuenta en Ajustes** («Conectado como …»):
+   - (a) no, solo «Conectado» (recomendado en este corte: cero llamadas y cero datos personales de más);
+   - (b) sí, con una llamada a `ISteamUser/GetPlayerSummaries` al conectar, guardando `personaname` en `store_connections.account_label`, que nunca se registra.
+
+#### Supuestos de Steam (verificar al implementar; los marcados con «sin verificar» no se han comprobado)
+
+- **S1 (sin verificar):** Steam acepta `openid.realm=http://ludiary.localhost:<puerto>/` y `http://127.0.0.1:<puerto>/`. Las librerías de la comunidad usan `http://localhost:<puerto>` sin problema (`steam-openid-php`, `passport-steam`); `.localhost` como subdominio no está comprobado. Si falla, se prueba solo con `127.0.0.1` y, en último caso, el plan B del punto 2.
+- **S2:** `check_authentication` responde texto `clave:valor` por líneas, con `ns:` e `is_valid:true`. Coincide con la especificación de OpenID 2.0 y con las librerías de la comunidad; no hay documentación de Valve.
+- **S3 (sin verificar):** si Steam rechaza un `response_nonce` ya verificado. No se depende de ello.
+- **S4:** la clave puede ir en la cabecera `x-webapi-key`. Lo dice la página de autenticación de Steamworks («as a standard parameter or by setting the 'x-webapi-key' request header value»). Falta comprobar que vale para las claves de usuario en `api.steampowered.com`; si no, se usa el parámetro `key` como `Secret`.
+- **S5:** `GetOwnedGames` (documentado en Steamworks con `key`, `steamid`, `include_appinfo`, `include_played_free_games` y `appids_filter`) solo devuelve juegos si los detalles de juego son visibles. Con el perfil privado responde `{"response":{}}`, según la comunidad, y la misma respuesta aparece a veces en perfiles públicos. No incluye DLC (sin verificar).
+- **S6 (sin verificar):** una clave revocada o inválida da 403, o según algunos 401. Se tratan los dos igual.
+- **S7 (sin verificar):** el límite de 100 000 llamadas al día por clave (decisión 50). Este corte hace como mucho unas pocas llamadas cada 10 minutos.
+- **S8 (sin verificar):** `skip_unvetted_apps=false` hace aparecer juegos con perfil limitado. Dato de la comunidad; si Steam lo ignora, no cambia nada.
+- **S9 (sin verificar):** `steam://install/<appId>` abre el diálogo de instalación del cliente (wiki comunitaria de Valve).
+- **S10:** las peticiones `fetch` de una página a la que se llegó desde otro sitio llevan la cookie `SameSite=Strict` de su propio origen. Es el comportamiento estándar; se comprueba en los tres navegadores.
+- **S11 (sin verificar):** el campo de dominio de la página de la clave acepta `localhost` (decisión 69).
+- **S12:** `playtime_forever` va en minutos y `rtime_last_played` en segundos Unix.
+
+**Motivo:** es el mínimo que cierra el camino completo de la decisión 43 con la vía oficial de Steam, sin rutas públicas nuevas: la vuelta de OpenID entra por la SPA y una ruta `session+key`, así que hereda la clave de origen de la 67. Las sesiones del asistente en memoria evitan cifrar estado temporal. El `SecretCipher` y el almacén son los de la 46 sin la rotación, que el formato ya admite. La operación `library` reutiliza la cola por tienda, la validación, el plan transaccional y el paso de medios que ya existen. Mismo AppID = misma propiedad sale gratis del índice único. Alternativas descartadas:
+
+- pegar el perfil en lugar de OpenID (punto 2);
+- abrir OpenID en otra pestaña y coordinarlas (polling o `BroadcastChannel`: más código para el mismo resultado);
+- una ruta pública `/openid/return` que procese la aserción (superficie sin clave de origen);
+- persistir el estado del asistente cifrado (disco para datos de 15 minutos);
+- un filtro de registros por valores conocidos (los patrones cubren la clave y el SteamID con menos código).
+
+**Consecuencias:**
+
+- Segunda salida de red, y la primera con un secreto. El `auditor` revisa antes de cerrar:
+  - `cipher.ts` y `vault.ts`;
+  - la verificación de OpenID y `/connect/return`;
+  - las rutas nuevas y su nivel de acceso;
+  - el POST y las cabeceras de `http.ts`;
+  - el redactor y las fixtures.
+- El punto 7 de la decisión 72 queda revisado para Steam: sus asistentes y `disconnect` dejan de delegarse en el simulador.
+- `apiHosts` de Steam incluye `steamcommunity.com`, solo para `check_authentication`. `mediaHosts` y la CSP no cambian: la verificación la hace el servidor.
+- El documentalista actualiza las guías del punto 11.
+- Si el usuario elige (b) en el punto 12.2, `store_connections.account_label` ya existe y no hace falta migración.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -2352,7 +2831,8 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Actualizador con vuelta atrás (decisión 58): por implementar y validar en Windows; condición que antes cerraba la 45.
 - Detección del proceso de cada juego: propuesta en la 55. Se cierra para Steam en el corte 2b de la 72 (tiempo de juego, después del corte de la cuenta de Steam y antes de GOG), con al menos tres juegos reales, y se revalida con cada tienda nueva.
 - Puntos de producto de la decisión 72 (A y B ya decididos por el usuario):
-  - (C) Orden de los cortes siguientes (cuenta de Steam, tiempo de juego, GOG): el usuario lo decide cuando se termine y se pruebe el primer corte.
+  - (C) Orden de los cortes siguientes: tras probar el primer corte se encargó el de la cuenta de Steam (decisión 74, 22 de octubre de 2026). Queda por confirmar que después van el tiempo de juego (corte 2b) y GOG, como propone la 72.
+- Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.

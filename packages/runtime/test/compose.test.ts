@@ -15,6 +15,7 @@ import { loadWebAssets } from "../src/web-assets";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "../../../connectors/steam/fixtures/tree");
 const noLog = () => {};
+const MASTER_KEY = { id: 1, value: Buffer.alloc(32, 7) };
 const HEADER = "x-ludiary-origin-key";
 
 let dir = "";
@@ -92,7 +93,7 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
     writeFileSync(join(web, "assets", "app-abc.js"), "console.log(1)");
     const deps = fakeDeps({ createProcessLauncher: launcher, folderPicker, webDir: web });
     const sqlite = await openMigrated();
-    const { core, facade, connectors } = await composeCore(deps, sqlite, noLog);
+    const { core, facade, connectors } = await composeCore(deps, sqlite, noLog, MASTER_KEY);
     const sessions = new SessionStore();
     server = createLocalServer({
       appId: "Ludiary",
@@ -186,7 +187,7 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
 
   it("starts without web/: the API works and / explains the reinstall", async () => {
     const sqlite = await openMigrated();
-    const { facade, connectors } = await composeCore(fakeDeps(), sqlite, noLog);
+    const { facade, connectors } = await composeCore(fakeDeps(), sqlite, noLog, MASTER_KEY);
     server = createLocalServer({
       appId: "Ludiary", version: "test", launcherKey: Buffer.alloc(32, 3), sessions: new SessionStore(), t: (k) => translate("en", k),
       getStatus: () => ({}), onShutdownRequested: () => {}, core: facade,
@@ -205,7 +206,7 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
   it("refuses a connector with another contractVersion, with a clear fatal error", async () => {
     const bad = { ...createSteamConnector(), contractVersion: 2 } as unknown as StoreConnector;
     const sqlite = await openMigrated();
-    const error = await composeCore(fakeDeps({ connectors: [bad] }), sqlite, noLog).catch((e: unknown) => e);
+    const error = await composeCore(fakeDeps({ connectors: [bad] }), sqlite, noLog, MASTER_KEY).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(FatalError);
     expect((error as FatalError).exitCode).toBe(EXIT.error);
     expect((error as FatalError).message).toMatch(/connector 'steam' refused.*contractVersion/);
@@ -220,6 +221,7 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
       fakeDeps({ connectors: [needsExec], createProcessLauncher: launcherOf(["uri"]) }),
       sqlite,
       noLog,
+      MASTER_KEY,
     ).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(FatalError);
     expect((error as FatalError).message).toContain("launch kind 'exec'");
@@ -332,7 +334,7 @@ describe("folders leaving force (ADR 72)", () => {
     const fixture = join(FIXTURES, "D", "SteamLibrary");
     const sqlite = await openMigrated();
     const folderPicker: FolderPicker = { pick: async () => fixture };
-    const { core } = await composeCore(fakeDeps({ folderPicker }), sqlite, noLog);
+    const { core } = await composeCore(fakeDeps({ folderPicker }), sqlite, noLog, MASTER_KEY);
     await core.completeOnboarding("manual-only");
     await core.whenIdle();
     const root = await core.pickScanRoot();
@@ -344,5 +346,72 @@ describe("folders leaving force (ADR 72)", () => {
     await core.setScanRootEnabled(root!.id, true);
     await core.whenIdle();
     expect((await core.listLibrary()).map((g) => g.title)).toEqual(["Portal 2"]);
+  });
+});
+
+describe("the master key reaches the secrets (ADR 46, 74)", () => {
+  const k = (s: string) => s as never;
+  const account: StoreConnector = {
+    contractVersion: 1,
+    id: "gog",
+    nameKey: k("connectors.gog.name"),
+    access: "official-api",
+    capabilities: { library: false, scan: false, dlc: "none", actions: [], launchKinds: [], uriSchemes: [], storePlaytime: false, price: false },
+    minSyncIntervalMs: 1_800_000,
+    authHosts: ["login.example.com"],
+    mediaHosts: [],
+    apiHosts: [],
+    locations: [],
+    externalTools: [],
+    connection: {
+      start: async () => ({
+        kind: "input",
+        id: "key",
+        titleKey: k("connectors.gog.t"),
+        bodyKey: k("connectors.gog.b"),
+        fields: [{ name: "apiKey", labelKey: k("connectors.gog.l"), secret: true, maxLength: 64 }],
+      }),
+      submit: async (ctx, _step, input) => {
+        if (input.kind !== "fields") throw new Error("unexpected input");
+        await ctx.secrets.set("apiKey", input.values.apiKey ?? "");
+        return { kind: "done" };
+      },
+      status: async (ctx) => ({ state: (await ctx.secrets.get("apiKey")) ? "connected" : "expired" }),
+      disconnect: async (ctx) => ctx.secrets.delete("apiKey"),
+    },
+    resolveAction: async () => null,
+  };
+  const rows = (db: Awaited<ReturnType<typeof openMigrated>>) => db.prepare("SELECT scope, name, ciphertext, key_id AS keyId FROM secrets").all() as { ciphertext: string; keyId: number }[];
+
+  it("stores the secret encrypted under the slot of the key, and reads it back until the key is lost", async () => {
+    const sqlite = await openMigrated();
+    const first = await composeCore(fakeDeps({ connectors: [account] }), sqlite, noLog, MASTER_KEY);
+    const { wizardId } = await first.core.startWizard("gog", "http://127.0.0.1:5000");
+    const done = await first.core.submitWizard(wizardId, "key", { kind: "fields", values: { apiKey: "plain-text-value" } });
+    expect(done).toEqual({ kind: "done" });
+    expect(rows(sqlite)).toHaveLength(1);
+    expect(rows(sqlite)[0]).toMatchObject({ keyId: 1, ciphertext: expect.stringMatching(/^v1\.1\./) });
+    expect(rows(sqlite)[0]!.ciphertext).not.toContain("plain-text-value");
+    expect((await first.core.storeStatus())[0]).toMatchObject({ store: "gog", connection: "connected", mode: "library" });
+
+    // Same slot, another key (the credential was lost and recreated): the row is useless and goes; the store expires.
+    const other = await composeCore(fakeDeps({ connectors: [account] }), sqlite, noLog, { id: 1, value: Buffer.alloc(32, 9) });
+    expect((await other.core.storeStatus())[0]).toMatchObject({ connection: "expired", mode: "installed-only" });
+    expect(rows(sqlite)).toEqual([]);
+    sqlite.close();
+  });
+
+  it("keeps the row of another slot (a compartment) and expires the store", async () => {
+    const sqlite = await openMigrated();
+    const first = await composeCore(fakeDeps({ connectors: [account] }), sqlite, noLog, MASTER_KEY);
+    const { wizardId } = await first.core.startWizard("gog", "http://127.0.0.1:5000");
+    await first.core.submitWizard(wizardId, "key", { kind: "fields", values: { apiKey: "v" } });
+    const second = await composeCore(fakeDeps({ connectors: [account] }), sqlite, noLog, { id: 2, value: Buffer.alloc(32, 9) });
+    expect((await second.core.storeStatus())[0]).toMatchObject({ connection: "expired" });
+    expect(rows(sqlite)).toHaveLength(1);
+    await second.core.disconnect("gog"); // the user's explicit action wipes the whole scope, compartments included
+    expect(rows(sqlite)).toEqual([]);
+    expect((await second.core.storeStatus())[0]).toMatchObject({ connection: "disconnected" });
+    sqlite.close();
   });
 });

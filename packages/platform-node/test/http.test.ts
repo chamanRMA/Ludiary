@@ -37,9 +37,8 @@ describe("createHttpClient (ADR 73)", () => {
     expect(init).toMatchObject({ method: "GET", redirect: "manual", headers: { accept: "application/json" } });
   });
 
-  it("rejects POST, http:, undeclared host, other port and credentials without calling fetch", async () => {
+  it("rejects http:, undeclared host, other port and credentials without calling fetch", async () => {
     const { client, f } = setup();
-    expect(await codeOf(client.request({ method: "POST", url: URL_OK, body: { json: {} } }))).toBe("internal");
     for (const url of [
       "http://api.example.com/x",
       "https://other.example.com/x",
@@ -118,5 +117,67 @@ describe("createHttpClient (ADR 73)", () => {
     expect(all).toContain("/path/v1/");
     expect(all).toContain('"status":200');
     expect(all).not.toMatch(/s3cr3t|620|input_json|key=/);
+  });
+
+  describe("POST and headers (ADR 74)", () => {
+    const secret = (v: string): Secret => ({ reveal: () => v, toString: () => "[redacted]", toJSON: () => "[redacted]" });
+    const post = (client: ReturnType<typeof setup>["client"], extra: object) => client.request({ method: "POST", url: URL_OK, ...extra });
+
+    it("sends a form as application/x-www-form-urlencoded, revealing Secrets only then", async () => {
+      const key = secret("0123456789abcdef0123456789abcdef");
+      const { client, f, logs } = setup();
+      await post(client, { body: { form: { "openid.mode": "check_authentication", k: key, "a b": "c&d" } } });
+      const [, init] = f.mock.calls[0] as [URL, RequestInit];
+      expect(init.method).toBe("POST");
+      expect(init.body).toBe("openid.mode=check_authentication&k=0123456789abcdef0123456789abcdef&a+b=c%26d");
+      expect(init.headers).toMatchObject({ "content-type": "application/x-www-form-urlencoded" });
+      expect(JSON.stringify(key)).toBe('"[redacted]"');
+      expect(logs.join("\n")).not.toMatch(/0123456789abcdef|check_authentication|openid/);
+    });
+
+    it("sends JSON", async () => {
+      const { client, f } = setup();
+      await post(client, { body: { json: { a: [1, 2] } } });
+      const [, init] = f.mock.calls[0] as [URL, RequestInit];
+      expect(init.body).toBe('{"a":[1,2]}');
+      expect(init.headers).toMatchObject({ "content-type": "application/json", accept: "application/json" });
+    });
+
+    it("reveals a Secret header at send time and keeps it out of the log", async () => {
+      const { client, f, logs } = setup();
+      await get(client, URL_OK, { headers: { "x-webapi-key": secret("0123456789abcdef0123456789abcdef"), "x-n": "1" } });
+      const [, init] = f.mock.calls[0] as [URL, RequestInit];
+      expect(init.headers).toMatchObject({ "x-webapi-key": "0123456789abcdef0123456789abcdef", "x-n": "1", accept: "application/json" });
+      expect(logs.join("\n")).not.toMatch(/0123456789abcdef|x-webapi-key/);
+    });
+
+    it("rejects forbidden or malformed headers and a GET with a body without calling fetch", async () => {
+      const { client, f } = setup();
+      const bad: Record<string, string | Secret>[] = [
+        { host: "evil.example" },
+        { cookie: "a=b" },
+        { "content-length": "1" },
+        { connection: "close" },
+        { "transfer-encoding": "chunked" },
+        { "X-Upper": "1" },
+        { "x y": "1" },
+        { "": "1" },
+        { ["x-a".padEnd(65, "a")]: "1" },
+        { "x-a": "line1\r\nx-b: 2" },
+        { "x-a": "line1\nline2" },
+        { "x-a": secret("a\rb") },
+      ];
+      for (const headers of bad) expect(await codeOf(get(client, URL_OK, { headers })), JSON.stringify(Object.keys(headers))).toBe("internal");
+      expect(await codeOf(get(client, URL_OK, { body: { json: {} } }))).toBe("internal");
+      expect(await codeOf(client.request({ method: "PUT" as "GET", url: URL_OK }))).toBe("internal");
+      expect(f).not.toHaveBeenCalled();
+    });
+
+    it("maxBytes is per client", async () => {
+      const big = "x".repeat(100);
+      const f = vi.fn(async () => new Response(big));
+      expect(await codeOf(post(setup({ fetch: f as unknown as typeof fetch, maxBytes: 99 }).client, { body: { json: {} } }))).toBe("store.unexpected-response");
+      expect(await (await post(setup({ fetch: f as unknown as typeof fetch, maxBytes: 16 * 1024 * 1024 }).client, { body: { json: {} } })).text()).toBe(big);
+    });
   });
 });

@@ -1,4 +1,4 @@
-// Domain types of the core (ADR 72). Plain data; no I/O. The API layer maps them to DTOs.
+// Domain types of the core (ADR 72, 74). Plain data; no I/O. The API layer maps them to DTOs.
 import type { ConnectorErrorCode, EntryMedia, ExternalIds, GameAction, I18nKey, I18nParams, StoreId } from "@ludiary/contracts";
 
 export type DetectionMode = "auto-and-manual" | "manual-only" | "later";
@@ -65,12 +65,17 @@ export interface GameSummary {
   playtimeMinutes: number;
   lastPlayedAt?: number;
   tags: readonly string[];
+  /** ADR 74. Computed on read by the core; the repository may leave it undefined. */
+  mainAction?: "play" | "install" | null;
+  unsynced?: boolean;
 }
 
 export interface GamePropertyDetail {
   id: string;
   store: StoreId | "manual";
   installed: boolean;
+  /** ADR 74. The user owns it (library snapshot), installed or not. */
+  owned?: boolean;
   installPath?: string;
   actions: readonly GameAction[];
 }
@@ -101,6 +106,9 @@ export interface PropertyRecord {
   normalizedTitle: string;
   owned: boolean;
   removedAt: number | null;
+  /** ADR 74. Minutes reported by the store (Steam); null if unknown. */
+  storePlaytimeMinutes: number | null;
+  storeLastPlayedAt: number | null;
 }
 
 export interface InstallationRecord {
@@ -145,6 +153,54 @@ export interface ScanPlan {
   /** ... and delete those the connector stopped returning. */
   deleteRoots: readonly string[];
   sync: SyncStateRecord;
+}
+
+/** One validated entry of a library snapshot, ready to be planned (ADR 74). */
+export interface LibraryEntry {
+  storeGameId: string;
+  title: string;
+  normalizedTitle: string;
+  externalIds?: ExternalIds;
+  media?: EntryMedia;
+  storePlaytimeMinutes: number | null;
+  storeLastPlayedAt: number | null;
+}
+
+/**
+ * Library plan computed by the core and applied by db in ONE transaction (ADR 74, point 7).
+ * Same storeGameId = same property (unique index user, store, store_game_id).
+ */
+export interface LibraryPlan {
+  store: StoreId;
+  at: number;
+  /** New property + new canonical game. */
+  create: readonly { canonicalId: string; propertyId: string; entry: LibraryEntry }[];
+  /** Existing property: owned = 1, removed_at = null, update title, playtime, last played and media (keeps resolvedMedia, ADR 73). */
+  update: readonly { propertyId: string; entry: LibraryEntry }[];
+  /** owned = 0 for these (complete snapshots only). */
+  disown: readonly string[];
+  /** Subset of the disowned ones without installation: set removed_at. */
+  retire: readonly string[];
+  sync: SyncStateRecord;
+}
+
+/** ADR 46, 74. Encrypted secret row of the only user. */
+export interface SecretRecord {
+  /** `store:<id>` or `service:<id>`. */
+  scope: string;
+  name: string;
+  /** `v1.<keyId>.<nonce>.<ciphertext+tag>` from SecretCipher. */
+  ciphertext: string;
+  keyId: number;
+  updatedAt: number;
+}
+
+/** ADR 74. Absent row = disconnected. accountLabel is the non-secret personaname; never logged. */
+export interface StoreConnectionRecord {
+  store: StoreId;
+  status: "connected" | "expired";
+  accountLabel: string | null;
+  connectedAt: number;
 }
 
 export interface LaunchTarget {

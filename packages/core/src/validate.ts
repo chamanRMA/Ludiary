@@ -1,7 +1,7 @@
 // Validation of everything a connector returns (ADR 40 rule 4, ADR 72). Pure except for LocalFiles lookups.
-import type { EntryMedia, ExternalIds, InstalledEntry, LocalFiles, ResolvedLocation, StoreConnector } from "@ludiary/contracts";
+import type { EntryMedia, ExternalIds, InstalledEntry, LocalFiles, ResolvedLocation, StoreConnector, StoreEntry } from "@ludiary/contracts";
 import { ConnectorError } from "@ludiary/contracts";
-import type { CoreLogger, ScannedEntry } from "./model";
+import type { CoreLogger, LibraryEntry, ScannedEntry } from "./model";
 import { normalizeTitle } from "./normalize";
 
 export const MAX_ENTRIES = 10_000;
@@ -183,4 +183,85 @@ export async function validateDiscoveredRoots(
   }
   if (dropped > 0) log.warn("Some discovered roots were ignored", { connector: connector.id, dropped });
   return out;
+}
+
+export const MAX_LIBRARY_ENTRIES = 50_000;
+const MAX_PLAYTIME_MINUTES = 100_000_000;
+
+export interface LibraryValidation {
+  entries: LibraryEntry[];
+  /** An entry was invalid or the list was cut: the snapshot can no longer prove that a missing game is gone. */
+  lossy: boolean;
+}
+
+/**
+ * Library snapshot entries (ADR 74 point 7): the same rules as scan entries, plus playtime and last played.
+ * An invalid entry is dropped and logged (no title in the log); a repeated id keeps the first. DLC entries are dropped. Dropping makes the snapshot `lossy`, so the core never disowns on it.
+ */
+export function validateLibraryEntries(a: {
+  entries: unknown;
+  connector: Pick<StoreConnector, "id" | "mediaHosts">;
+  log: CoreLogger;
+}): LibraryValidation {
+  if (!Array.isArray(a.entries)) throw new ConnectorError("store.unexpected-response", "listLibrary returned entries that are not a list");
+  const list = a.entries as readonly StoreEntry[];
+  const out: LibraryEntry[] = [];
+  const seen = new Set<string>();
+  let invalid = 0;
+  let dlc = 0;
+  let duplicates = 0;
+  for (const e of list.slice(0, MAX_LIBRARY_ENTRIES)) {
+    if (!e || typeof e !== "object") {
+      invalid++;
+      continue;
+    }
+    const id = e.storeGameId;
+    if (typeof id !== "string" || id.length < 1 || id.length > 64 || id.trim() === "" || ID_FORBIDDEN.test(id) || !isNonEmptyText(e.title, 300)) {
+      invalid++;
+      continue;
+    }
+    if (e.kind !== "game" && e.kind !== "dlc") {
+      invalid++;
+      continue;
+    }
+    const minutes = e.storePlaytimeMinutes;
+    if (minutes !== undefined && (!Number.isInteger(minutes) || minutes < 0 || minutes > MAX_PLAYTIME_MINUTES)) {
+      invalid++;
+      continue;
+    }
+    let lastPlayed: number | null = null;
+    if (e.storeLastPlayedAt !== undefined) {
+      lastPlayed = typeof e.storeLastPlayedAt === "string" && e.storeLastPlayedAt.length <= 40 ? Date.parse(e.storeLastPlayedAt) : Number.NaN;
+      if (!Number.isFinite(lastPlayed)) {
+        invalid++;
+        continue;
+      }
+    }
+    if (e.kind === "dlc") {
+      dlc++; // DLC properties are not stored in this cut (ADR 52, 74); not a loss
+      continue;
+    }
+    if (seen.has(id)) {
+      duplicates++;
+      continue;
+    }
+    seen.add(id);
+    const title = e.title.trim();
+    const media = validateMedia(e.media, a.connector.mediaHosts);
+    const externalIds = validateExternalIds(e.externalIds);
+    out.push({
+      storeGameId: id,
+      title,
+      normalizedTitle: normalizeTitle(title),
+      ...(externalIds ? { externalIds } : {}),
+      ...(media ? { media } : {}),
+      storePlaytimeMinutes: minutes ?? null,
+      storeLastPlayedAt: lastPlayed,
+    });
+  }
+  const cut = list.length > MAX_LIBRARY_ENTRIES;
+  if (invalid + dlc + duplicates > 0 || cut) {
+    a.log.warn("Some library entries were not stored", { connector: a.connector.id, invalid, dlc, duplicates, cut });
+  }
+  return { entries: out, lossy: invalid > 0 || cut };
 }

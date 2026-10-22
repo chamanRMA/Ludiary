@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
-import es from "../locales/web/es.json";
+import { webCatalogs } from "../src/web";
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -12,7 +12,7 @@ function sources(dir: string): string[] {
 }
 
 it("every literal t(\"…\") / key string used by the web exists in the catalog (invariant 6)", () => {
-  const keys = new Set(Object.keys(es));
+  const keys = new Set(Object.keys(webCatalogs.es));
   const missing: string[] = [];
   for (const file of sources(join(import.meta.dirname, "../../../apps/web/src"))) {
     const text = readFileSync(file, "utf8");

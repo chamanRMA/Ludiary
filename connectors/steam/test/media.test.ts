@@ -111,7 +111,7 @@ describe("resolveSteamMedia (ADR 73)", () => {
 
   it("is declared in the manifest with apiHosts", () => {
     const c = createSteamConnector();
-    expect(c.apiHosts).toEqual(["api.steampowered.com"]);
+    expect(c.apiHosts).toEqual(["api.steampowered.com", "steamcommunity.com"]);
     expect(c.resolveMedia).toBe(resolveSteamMedia);
   });
 });

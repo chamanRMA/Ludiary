@@ -374,6 +374,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       maintenance.lastScanAt = now();
     },
     // Simulator: starts nothing. The real client asks the server, which starts the store's launcher.
+    wizardCallback: async () => null, // the simulator has no OpenID return
     launchGame: async () => ({ status: "started" }),
     createBackup: async () => {
       maintenance.lastBackupAt = now();

@@ -1,4 +1,4 @@
-// Persistence ports (ADR 38, 72). Implemented by packages/db. Async in the signature even if the
+// Persistence ports (ADR 38, 72, 74). Implemented by packages/db. Async in the signature even if the
 // driver is synchronous, so the core is not tied to it. Repositories are scoped to the only user and
 // the local device, which IdentityRepository.ensure creates and returns once at startup.
 import type { EntryMedia, StoreId } from "@ludiary/contracts";
@@ -6,6 +6,9 @@ import type {
   GameDetail,
   GameSummary,
   InstallationRecord,
+  LibraryPlan,
+  SecretRecord,
+  StoreConnectionRecord,
   LaunchTarget,
   PropertyRecord,
   ScanPlan,
@@ -35,6 +38,30 @@ export interface LibraryRepository {
   setResolvedMedia(store: StoreId, media: ReadonlyMap<string, EntryMedia>, requested: readonly string[], at: number): Promise<void>;
   /** Applies the whole plan in one transaction; rolls everything back if it fails midway. */
   applyScanPlan(plan: ScanPlan): Promise<void>;
+  /** ADR 74. Applies a library snapshot plan in ONE transaction (owned, playtime, last played, media, retirements). */
+  applyLibraryPlan(plan: LibraryPlan): Promise<void>;
+  /** ADR 74. Number of properties of the store with owned = 1 and not retired (guard against an empty snapshot). */
+  countOwned(store: StoreId): Promise<number>;
+}
+
+/** ADR 46, 74. Rows hold ciphertext only; the core encrypts and decrypts. Unique by (scope, name) for the only user. */
+export interface SecretRepository {
+  get(scope: string, name: string): Promise<SecretRecord | null>;
+  /** Upsert. */
+  put(record: SecretRecord): Promise<void>;
+  delete(scope: string, name: string): Promise<void>;
+  /** Deletes every row of the scope, compartments included. Returns how many. */
+  deleteScope(scope: string): Promise<number>;
+}
+
+/** ADR 74. No row means disconnected. */
+export interface ConnectionRepository {
+  get(store: StoreId): Promise<StoreConnectionRecord | null>;
+  list(): Promise<readonly StoreConnectionRecord[]>;
+  /** Upsert (connect or reconnect). */
+  put(record: StoreConnectionRecord): Promise<void>;
+  setStatus(store: StoreId, status: "connected" | "expired"): Promise<void>;
+  delete(store: StoreId): Promise<void>;
 }
 
 export interface ScanRootRepository {
@@ -51,6 +78,8 @@ export interface SyncStateRepository {
   get(store: StoreId, operation: SyncOperation): Promise<SyncStateRecord | null>;
   list(): Promise<readonly SyncStateRecord[]>;
   put(state: SyncStateRecord): Promise<void>;
+  /** ADR 74. Disconnect: deletes the row so a reconnection syncs at once. */
+  delete(store: StoreId, operation: SyncOperation): Promise<void>;
   /** At startup: every 'running' becomes 'idle' (killed process). Returns how many were reset. */
   resetRunning(): Promise<number>;
 }

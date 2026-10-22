@@ -1,0 +1,13 @@
+{
+  "response": {
+    "game_count": 6,
+    "games": [
+      { "appid": 620, "name": "Portal 2", "playtime_forever": 754, "rtime_last_played": 1790000000 },
+      { "appid": 10, "name": "Counter-Strike", "playtime_forever": 0, "rtime_last_played": 0 },
+      { "appid": 228980, "name": "Steamworks Common Redistributables", "playtime_forever": 0, "rtime_last_played": 0 },
+      { "appid": 440, "playtime_forever": 12 },
+      { "appid": 4294967296, "name": "Out of range", "playtime_forever": 1 },
+      { "appid": 730, "name": "  Counter-Strike 2  ", "playtime_forever": 90, "rtime_last_played": 1789000000 }
+    ]
+  }
+}

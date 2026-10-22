@@ -78,7 +78,14 @@ describe("real client: what the server serves", () => {
     const api = createRealApi(http, createMockApi(memory()));
     await expect(api.launchGame("g1")).resolves.toEqual({ status: "started" });
     await api.launchGame("g1", "p1");
-    expect(log).toEqual(["POST /api/games/g1/launch {}", 'POST /api/games/g1/launch {"propertyId":"p1"}']);
+    await api.launchGame("g1", undefined, "install");
+    await api.launchGame("g1", "p1", "install");
+    expect(log).toEqual([
+      "POST /api/games/g1/launch {}",
+      'POST /api/games/g1/launch {"propertyId":"p1"}',
+      'POST /api/games/g1/launch {"action":"install"}',
+      'POST /api/games/g1/launch {"propertyId":"p1","action":"install"}',
+    ]);
   });
 
   it("launchGame lets the server's translatable error through", async () => {
@@ -105,23 +112,23 @@ describe("real client: what the server serves", () => {
 });
 
 describe("real client: point B, the rest comes from the simulator", () => {
-  it("delegates wizards, services, collections, backups, logs and disconnect without touching the server", async () => {
+  it("delegates other stores' wizards, services, collections, backups and logs without touching the server", async () => {
     const { http, log } = fakeHttp(() => []);
     const sim = createMockApi(memory());
     const names = ["getServices", "startWizard", "submitWizard", "cancelWizard", "disconnect", "getCollections", "createBackup", "exportLogs", "simulateExpiredSession"] as const;
     for (const name of names) vi.spyOn(sim as LudiaryApi, name);
-    const api = createRealApi(http, sim);
-    const steam = { kind: "store", store: "steam" } as const;
+    const api = createRealApi(http, sim, null);
+    const gog = { kind: "store", store: "gog" } as const;
     await api.getServices();
-    await api.startWizard(steam);
-    await api.submitWizard(steam, { kind: "continue" });
-    await api.cancelWizard(steam);
-    await api.disconnect(steam);
+    await api.startWizard(gog);
+    await api.submitWizard(gog, { kind: "continue" });
+    await api.cancelWizard(gog);
+    await api.disconnect(gog);
     await api.getCollections();
     await api.createBackup();
     await api.exportLogs();
     await api.simulateExpiredSession("epic");
-    for (const name of names) expect(sim[name], name).toHaveBeenCalledTimes(1);
+    for (const name of names) expect(sim[name], name).toHaveBeenCalled();
     expect(log).toEqual([]);
   });
 
@@ -161,12 +168,63 @@ describe("real client: point B, the rest comes from the simulator", () => {
     const api = createRealApi(http, sim);
     expect((await api.getStores())[0]).toMatchObject({ connection: "disconnected", mode: "installed-only" });
 
+    await sim.simulateExpiredSession("gog");
+    expect((await api.getStores())[1]).toMatchObject({ connection: "expired" });
+    // Steam is real now (ADR 74): a simulated wizard never overlays it
     const steam = { kind: "store", store: "steam" } as const;
     await sim.startWizard(steam);
     await sim.submitWizard(steam, { kind: "fields", values: { mode: "installed-only" } });
-    const after = await api.getStores();
-    expect(after[0]).toMatchObject({ connection: "connected", mode: "installed-only", sync: real[0]?.sync });
-    expect(after[1]).toEqual(real[1]);
+    expect((await api.getStores())[0]).toEqual(real[0]);
+  });
+
+  it("steam account: wizard and disconnect go to the API with the stored wizard id", async () => {
+    const store = new Map<string, string>();
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) };
+    const step = { kind: "info", id: "choose", titleKey: "a", bodyKey: "b" };
+    const apikey = { kind: "open-external", id: "apikey", titleKey: "a", bodyKey: "b", url: "https://steamcommunity.com/dev/apikey", awaits: "input" };
+    let submits = 0;
+    const { http, log } = fakeHttp((_m, p) => {
+      if (p === "/api/stores/steam/wizard") return { wizardId: "w1", response: step };
+      if (p === "/api/wizards/w1/callback") return { store: "steam", response: apikey };
+      if (p === "/api/wizards/w1/submit") return ++submits === 1 ? step : { kind: "done", accountLabel: "Ana" };
+      return undefined;
+    });
+    const sim = createMockApi(memory());
+    vi.spyOn(sim as LudiaryApi, "startWizard");
+    const api = createRealApi(http, sim, storage);
+    const steam = { kind: "store", store: "steam" } as const;
+    await expect(api.startWizard(steam)).resolves.toEqual(step);
+    expect(store.get("ludiary.wizardId.steam")).toBe("w1");
+    await api.submitWizard(steam, { kind: "continue" });
+    // a fresh page (OpenID return) only has the id in sessionStorage
+    const api2 = createRealApi(http, sim, storage);
+    await expect(api2.wizardCallback("steam", { "openid.mode": "id_res" })).resolves.toEqual(apikey);
+    await expect(api2.submitWizard(steam, { kind: "fields", values: { apiKey: "k" } })).resolves.toEqual({ kind: "done", accountLabel: "Ana" });
+    expect(store.size).toBe(0); // done forgets the wizard
+    await api2.disconnect(steam);
+    expect(log).toEqual([
+      "POST /api/stores/steam/wizard {}",
+      'POST /api/wizards/w1/submit {"stepId":"choose","input":{"kind":"continue"}}',
+      'POST /api/wizards/w1/callback {"query":{"openid.mode":"id_res"}}',
+      'POST /api/wizards/w1/submit {"stepId":"apikey","input":{"kind":"fields","values":{"apiKey":"k"}}}',
+      "DELETE /api/stores/steam/connection",
+    ]);
+    expect(sim.startWizard).not.toHaveBeenCalled();
+  });
+
+  it("steam account: a 404 becomes wizard.expired, no stored wizard means null, cancel deletes", async () => {
+    const store = new Map([["ludiary.wizardId.steam", "w9"]]);
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: () => undefined, removeItem: (k: string) => void store.delete(k) };
+    const { http, log } = fakeHttp((_m, p) => (p.endsWith("/callback") ? new ApiError(404, "not-found", "core.errors.not-found") : undefined));
+    const mk = () => createRealApi(http, createMockApi(memory()), storage);
+    const steam = { kind: "store", store: "steam" } as const;
+    await expect(mk().wizardCallback("steam", {})).rejects.toMatchObject({ key: "wizard.expired" });
+    expect(store.size).toBe(0);
+    await expect(mk().wizardCallback("steam", {})).resolves.toBeNull();
+    await expect(mk().submitWizard(steam, { kind: "continue" })).rejects.toMatchObject({ key: "wizard.expired" });
+    store.set("ludiary.wizardId.steam", "w2");
+    await mk().cancelWizard(steam);
+    expect(log).toEqual(['POST /api/wizards/w9/callback {"query":{}}', "DELETE /api/wizards/w2"]);
   });
 
   it("maintenance: scan and sync times come from the real stores, the backup time from the simulator", async () => {

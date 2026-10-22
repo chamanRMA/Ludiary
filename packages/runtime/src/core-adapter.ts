@@ -7,6 +7,7 @@ import type {
   StoreStatusDto,
   SyncStatusDto,
   TranslatedErrorDto,
+  WizardResponseDto,
 } from "@ludiary/api-contract";
 import { ConnectorError } from "@ludiary/contracts";
 import {
@@ -16,6 +17,7 @@ import {
   type GameDetail,
   type GameSummary,
   type LudiaryCore,
+  type WizardResponse,
   type ScanRootRecord,
   type StoreStatus,
   type SyncStateRecord,
@@ -62,7 +64,14 @@ export function summaryDto(g: GameSummary): GameSummaryDto {
     playtimeMinutes: g.playtimeMinutes,
     ...(g.lastPlayedAt !== undefined ? { lastPlayedAt: g.lastPlayedAt } : {}),
     tags: [...g.tags],
+    ...(g.mainAction !== undefined ? { mainAction: g.mainAction } : {}),
+    ...(g.unsynced !== undefined ? { unsynced: g.unsynced } : {}),
   };
+}
+
+/** Only `rejected` differs: the core carries CoreErrorInfo, the wire carries TranslatedErrorDto. */
+export function wizardResponseDto(r: WizardResponse): WizardResponseDto {
+  return r.kind === "rejected" ? { kind: "rejected", stepId: r.stepId, error: errorDto(r.error) } : r;
 }
 
 export function detailDto(g: GameDetail): GameDetailDto {
@@ -134,7 +143,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
         const g = await core.getGame(id);
         return g ? detailDto(g) : null;
       }),
-    launch: (id, propertyId) => guard(() => core.launch(id, propertyId)),
+    launch: (id, propertyId, action) => guard(() => core.launch(id, propertyId, action)),
     requestSync: (req) =>
       guard(() => core.requestSync({ trigger: req.trigger, ...(req.operations ? { operations: req.operations } : {}) })),
     storeStatus: () => guard(async () => (await core.storeStatus()).map(storeStatusDto)),
@@ -157,5 +166,18 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
         return r ? scanRootDto(r) : null;
       }),
     removeScanRoot: (id) => guard(() => core.removeScanRoot(id)),
+    startWizard: (store, returnBase) =>
+      guard(async () => {
+        const { wizardId, response } = await core.startWizard(store, returnBase);
+        return { wizardId, response: wizardResponseDto(response) };
+      }),
+    submitWizard: (wizardId, stepId, input) => guard(async () => wizardResponseDto(await core.submitWizard(wizardId, stepId, input))),
+    wizardCallback: (wizardId, query) =>
+      guard(async () => {
+        const { store, response } = await core.wizardCallback(wizardId, query);
+        return { store, response: wizardResponseDto(response) };
+      }),
+    cancelWizard: (wizardId) => guard(() => core.cancelWizard(wizardId)),
+    disconnect: (store) => guard(() => core.disconnect(store)),
   };
 }

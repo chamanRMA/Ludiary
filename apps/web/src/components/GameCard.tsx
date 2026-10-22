@@ -5,6 +5,7 @@ import { Link } from "../app/Link";
 import { STORE_BRAND } from "../app/stores";
 import { useLaunch } from "../app/useLaunch";
 import ui from "../styles/ui.module.css";
+import { isUnsynced, primaryAction } from "../data/library";
 import { cx, Cover, formatHours } from "./bits";
 
 /** Main action per game (CLAUDE.md): Play if installed, otherwise open the store page (still simulated). */
@@ -13,6 +14,7 @@ export function GameCard({ game }: { game: GameSummaryDto }) {
   const { launching, message, setMessage, play } = useLaunch();
   const store = game.stores[0];
   const storeName = store ? STORE_BRAND[store].name : "";
+  const action = primaryAction(game);
   return (
     <li className={ui.card}>
       <Link to={`/game/${game.id}`} className={ui.coverLink} aria-label={t("library.openSheet", { title: game.title })}>
@@ -34,7 +36,12 @@ export function GameCard({ game }: { game: GameSummaryDto }) {
         {formatHours(game.playtimeMinutes, t)}
         <span className={cx(ui.chip, game.installed && ui.ok)}>{game.installed ? t("common.installed") : t("common.notInstalled")}</span>
       </span>
-      {game.installed ? (
+      {isUnsynced(game) && <small className={ui.muted}>{t("library.unsynced")}</small>}
+      {action === "install" ? (
+        <button type="button" className={cx(ui.btn, ui.primary)} disabled={launching} onClick={() => void play(game.id, game.title, storeName, undefined, "install")}>
+          {t("library.action.install")}
+        </button>
+      ) : action === "play" ? (
         <button type="button" className={cx(ui.btn, ui.primary)} disabled={launching} onClick={() => void play(game.id, game.title, storeName)}>
           {t("common.play")}
         </button>

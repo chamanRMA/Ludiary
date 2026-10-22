@@ -18,3 +18,13 @@ export function filterGames(games: readonly GameSummaryDto[], f: LibraryFilter):
       (!q || g.title.toLowerCase().includes(q) || g.tags.some((tag) => tag.toLowerCase().includes(q))),
   );
 }
+
+/** ADR 74: what the main button of a game does. Without `mainAction` (older answers, simulator) the old rule holds. */
+export function primaryAction(g: Pick<GameSummaryDto, "installed" | "mainAction">): "play" | "install" | "store" {
+  if (g.mainAction === "install") return "install";
+  if (g.mainAction === "play" || g.installed) return "play";
+  return "store";
+}
+
+/** ADR 74 point 12: the store connection is gone, so this entry may be out of date. */
+export const isUnsynced = (g: Pick<GameSummaryDto, "unsynced">): boolean => g.unsynced === true;

@@ -73,6 +73,11 @@ function fakeCore(over: Partial<LudiaryCore> = {}): LudiaryCore & { calls: unkno
     setScanRootEnabled: rec("setScanRootEnabled", root),
     pickScanRoot: rec("pickScanRoot", root),
     removeScanRoot: rec("removeScanRoot", undefined),
+    startWizard: rec("startWizard", { wizardId: "w1", response: { kind: "info", id: "choose", titleKey: "connectors.steam.choose.title", bodyKey: "connectors.steam.choose.body" } }),
+    submitWizard: rec("submitWizard", { kind: "rejected", stepId: "apikey", error: { code: "auth.invalid", key: "connectors.steam.error.key", params: { a: 1 }, internal: "x" } }),
+    wizardCallback: rec("wizardCallback", { store: "steam", response: { kind: "done", accountLabel: "Ana" } }),
+    cancelWizard: rec("cancelWizard", undefined),
+    disconnect: rec("disconnect", undefined),
     ...over,
   } as LudiaryCore & { calls: unknown[][] };
 }
@@ -133,6 +138,36 @@ describe("core to LudiaryCoreFacade adapter (ADR 72 point 4)", () => {
     const facade = createCoreFacade(fakeCore({ pickScanRoot: async () => null }));
     expect(await facade.pickScanRoot()).toBeNull();
     expect(await facade.launch("g1", "p1")).toEqual({ status: "started" });
+  });
+
+  it("maps ADR 74 fields: mainAction, unsynced, owned stays out, accountLabel", async () => {
+    const owned = { ...detail, installed: false, mainAction: "install" as const, unsynced: true, properties: [{ id: "p1", store: "steam" as const, installed: false, owned: true, actions: ["install" as const] }] };
+    const facade = createCoreFacade(fakeCore({ listLibrary: async () => [owned], getGame: async () => owned, storeStatus: async () => [{ ...status, accountLabel: "Ana" }] }));
+    const [g] = await facade.listLibrary();
+    expect(g).toMatchObject({ mainAction: "install", unsynced: true });
+    expect((await facade.getGame("g1"))!.properties).toEqual([{ id: "p1", store: "steam", installed: false, actions: ["install"] }]);
+    expect((await facade.storeStatus())[0]!.accountLabel).toBe("Ana");
+    expect((await createCoreFacade(fakeCore({ listLibrary: async () => [{ ...detail, mainAction: null }] })).listLibrary())[0]!.mainAction).toBeNull();
+  });
+
+  it("passes launch action and maps the wizard calls, converting rejected to a TranslatedErrorDto", async () => {
+    const core = fakeCore();
+    const facade = createCoreFacade(core);
+    await facade.launch("g1", undefined, "install");
+    expect(core.calls.at(-1)).toEqual(["launch", "g1", undefined, "install"]);
+    expect((await facade.startWizard("steam", "http://127.0.0.1:1")).wizardId).toBe("w1");
+    expect(core.calls.at(-1)).toEqual(["startWizard", "steam", "http://127.0.0.1:1"]);
+    const rejected = await facade.submitWizard("w1", "apikey", { kind: "fields", values: { apiKey: "x" } });
+    expect(rejected).toEqual({ kind: "rejected", stepId: "apikey", error: { code: "auth.invalid", key: "connectors.steam.error.key", params: { a: 1 } } });
+    expect(await facade.wizardCallback("w1", { "openid.mode": "id_res" })).toEqual({ store: "steam", response: { kind: "done", accountLabel: "Ana" } });
+    await facade.cancelWizard("w1");
+    await facade.disconnect("steam");
+    expect(core.calls.slice(-2)).toEqual([["cancelWizard", "w1"], ["disconnect", "steam"]]);
+  });
+
+  it("turns wizard CoreError into FacadeCoreError", async () => {
+    const facade = createCoreFacade(fakeCore({ cancelWizard: async () => { throw new CoreError("not-found", "gone"); }, disconnect: async () => { throw new CoreError("not-found", "no"); } }));
+    expect(await facade.disconnect("steam").catch((e: unknown) => e)).toBeInstanceOf(FacadeCoreError);
   });
 
   it("turns CoreError into the shape api expects, without message or cause", async () => {

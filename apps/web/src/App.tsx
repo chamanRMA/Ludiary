@@ -2,10 +2,12 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { AuthNotice } from "./components/AuthNotice";
 import { Layout } from "./components/Layout";
+import { RETURN_PATH } from "./app/connectReturn";
 import { matchRoute, navigate, useLocation, type Params } from "./app/router";
 import { api } from "./data/api";
 import { shouldShowWelcome } from "./app/welcome";
 import { useQueryState } from "./data/hooks";
+import { ConnectReturn } from "./pages/ConnectReturn";
 import { Game } from "./pages/Game";
 import { Home } from "./pages/Home";
 import { Library } from "./pages/Library";
@@ -46,6 +48,8 @@ function Routes() {
     if (needsWelcome) navigate("/welcome", true);
   }, [needsWelcome]);
 
+  // The OpenID return must not wait for, or be redirected by, the first-run check (ADR 74).
+  if (path === RETURN_PATH) return <ConnectReturn />;
   if (onboarding === undefined || needsWelcome) return null;
   if (path === "/welcome") return <Welcome />;
 

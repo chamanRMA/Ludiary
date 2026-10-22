@@ -6,8 +6,17 @@ export interface PrivacyViolation {
   line: number;
 }
 
+/** ADR 74 point 10: the only fictional values fixtures may carry. Anything else of the same shape is rejected. */
+export const FICTIONAL_STEAM_ID = "76561190000000000";
+export const FICTIONAL_API_KEY = "0123456789abcdef0123456789abcdef";
+const ALLOWED = [
+  new RegExp(`(?<!\\d)${FICTIONAL_STEAM_ID}(?!\\d)`, "g"),
+  new RegExp(`(?<![0-9A-Za-z])${FICTIONAL_API_KEY}(?![0-9A-Za-z])`, "g"),
+];
+
 const RULES: readonly { rule: string; re: RegExp }[] = [
   { rule: "SteamID64", re: /7656119\d{10}/ },
+  { rule: "32-hex key", re: /(?<![0-9A-Za-z])[0-9A-Fa-f]{32}(?![0-9A-Za-z])/ },
   { rule: "LastOwner", re: /LastOwner/i },
   { rule: "user profile path", re: /[A-Za-z]:(?:\\{1,2}|\/)Users(?:\\{1,2}|\/)/i },
   { rule: "email address", re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/ },
@@ -19,7 +28,8 @@ export function findPrivacyViolations(files: readonly { path: string; content: s
   const out: PrivacyViolation[] = [];
   for (const f of files) {
     const lines = f.content.split(/\r?\n/);
-    lines.forEach((text, i) => {
+    lines.forEach((raw, i) => {
+      const text = ALLOWED.reduce((t, re) => t.replace(re, ""), raw);
       for (const { rule, re } of RULES) if (re.test(text)) out.push({ file: f.path, rule, line: i + 1 });
     });
   }

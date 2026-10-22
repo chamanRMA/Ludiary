@@ -1,10 +1,12 @@
 
+import type { StoreId } from "@ludiary/api-contract";
 import { useTranslation } from "react-i18next";
 import { Link } from "../app/Link";
 import { STORE_BRAND } from "../app/stores";
 import { useLaunch } from "../app/useLaunch";
 import { api } from "../data/api";
 import { useQuery } from "../data/hooks";
+import { isUnsynced, primaryAction } from "../data/library";
 import { cx, Cover, formatHours, PageTitle, relativeTime } from "../components/bits";
 import ui from "../styles/ui.module.css";
 import { NotFound } from "./NotFound";
@@ -17,6 +19,8 @@ export function Game({ id }: { id: string }) {
   if (game === null) return <NotFound />;
 
   const primary = game.properties.find((p) => p.installed) ?? game.properties[0];
+  const action = primaryAction(game);
+  const installable = game.properties.find((p) => !p.installed && p.actions.includes("install"));
   const storeName = primary && primary.store !== "manual" ? STORE_BRAND[primary.store].name : "";
 
   return (
@@ -37,7 +41,11 @@ export function Game({ id }: { id: string }) {
             {game.favorite && <span className={ui.chip}>{t("game.favorite")}</span>}
           </div>
           <div className={ui.chips}>
-            {game.installed ? (
+            {action === "install" ? (
+              <button type="button" className={cx(ui.btn, ui.primary)} disabled={launching} onClick={() => void play(game.id, game.title, installable ? STORE_BRAND[installable.store as StoreId].name : storeName, installable?.id, "install")}>
+                {t("library.action.install")}
+              </button>
+            ) : action === "play" ? (
               <button type="button" className={cx(ui.btn, ui.primary)} disabled={launching} onClick={() => void play(game.id, game.title, storeName, primary?.installed ? primary.id : undefined)}>
                 {t("common.play")}
               </button>
@@ -47,6 +55,7 @@ export function Game({ id }: { id: string }) {
               </button>
             )}
           </div>
+          {isUnsynced(game) && <p className={ui.muted} role="status">{t("library.unsynced")}</p>}
           {message && (
             <p role={message.error ? "alert" : "status"} className={message.error ? ui.error : ui.muted}>
               {message.text}

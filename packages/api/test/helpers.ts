@@ -29,6 +29,11 @@ export function send(
   });
 }
 
+export const WIZARD_ROUTES: [string, string][] = [
+  ["POST", "/api/stores/steam/wizard"], ["POST", "/api/wizards/w-1/submit"], ["POST", "/api/wizards/w-1/callback"],
+  ["DELETE", "/api/wizards/w-1"], ["DELETE", "/api/stores/steam/connection"],
+];
+
 /** Records every call; each method can be overridden. */
 export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCoreFacade & { calls: [string, ...unknown[]][] } {
   const calls: [string, ...unknown[]][] = [];
@@ -75,6 +80,11 @@ export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCor
     setScanRootEnabled: rec("setScanRootEnabled", undefined),
     pickScanRoot: rec("pickScanRoot", null),
     removeScanRoot: rec("removeScanRoot", undefined),
+    startWizard: rec("startWizard", { wizardId: "w-1", response: { kind: "info" as const, id: "choose", titleKey: "t", bodyKey: "b" } }),
+    submitWizard: rec("submitWizard", { kind: "done" as const }),
+    wizardCallback: rec("wizardCallback", { store: "steam" as const, response: { kind: "done" as const } }),
+    cancelWizard: rec("cancelWizard", undefined),
+    disconnect: rec("disconnect", undefined),
     ...overrides,
   } as LudiaryCoreFacade & { calls: [string, ...unknown[]][] };
 }

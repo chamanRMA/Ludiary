@@ -107,3 +107,18 @@ export interface Clock {
   now(): number;
   timeout(ms: number): AbortSignal;
 }
+
+// ---------- Ports added by ADR 74 ----------
+
+/**
+ * ADR 46, 74. AES-256-GCM; implemented in platform-node. aad = `${userId}|${scope}|${name}`.
+ * The key never leaves the implementation.
+ */
+export interface SecretCipher {
+  /** Slot n of the credential master-key/<n> (ADR 64). */
+  readonly activeKeyId: number;
+  /** `v1.<keyId>.<nonce base64url>.<ciphertext+tag base64url>`, fresh random 12-byte nonce per call, 16-byte tag. */
+  encrypt(plaintext: string, aad: string): string;
+  /** 'other-key': written under another slot (compartment, ADR 64). 'invalid': bad format, tag or AAD. */
+  decrypt(blob: string, aad: string): { ok: true; value: string } | { ok: false; reason: "other-key" | "invalid" };
+}

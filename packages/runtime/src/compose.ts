@@ -4,7 +4,7 @@ import type { StoreConnector } from "@ludiary/contracts";
 import { ConnectorRegistrationError, createCore, type CoreLogger, type LudiaryCore } from "@ludiary/core";
 import { createRepositories, DatabaseTooNewError, migrate } from "@ludiary/db";
 import { translate, type ConnectorMessageKey, type MessageKey } from "@ludiary/i18n";
-import { createHttpClient, createNodeLocalFiles, systemClock } from "@ludiary/platform-node";
+import { createHttpClient, createNodeLocalFiles, createSecretCipher, systemClock } from "@ludiary/platform-node";
 import { createConnectors, unionUriSchemes } from "./connectors";
 import { createCoreFacade } from "./core-adapter";
 import { EXIT, localeOf, type RuntimeDeps } from "./deps";
@@ -64,8 +64,14 @@ export interface ComposedCore {
  * Composition of the core (ADR 38, 72): connectors, repositories, node files and the platform ports the mode provides.
  * A connector refused at registration (wrong contract version, launch kinds the platform cannot run) stops the server
  * with a clear log line instead of leaving a half-working store.
+ * `masterKey` is the key loadMasterKey chose (ADR 64): its slot id goes into every encrypted secret (ADR 46, 74).
  */
-export async function composeCore(deps: RuntimeDeps, sqlite: SqliteDatabase, log: Logger): Promise<ComposedCore> {
+export async function composeCore(
+  deps: RuntimeDeps,
+  sqlite: SqliteDatabase,
+  log: Logger,
+  masterKey: { id: number; value: Uint8Array },
+): Promise<ComposedCore> {
   const connectors = deps.connectors ?? createConnectors();
   const files = createNodeLocalFiles();
   const repos = createRepositories(sqlite);
@@ -81,11 +87,14 @@ export async function composeCore(deps: RuntimeDeps, sqlite: SqliteDatabase, log
       syncState: repos.syncState,
       settings: repos.settings,
       identity: repos.identity,
+      secrets: repos.secrets,
+      connections: repos.connections,
+      cipher: createSecretCipher(masterKey),
       files,
       ...(locations ? { locations } : {}),
       ...(launcher ? { launcher } : {}),
       ...(deps.folderPicker ? { folderPicker: deps.folderPicker } : {}),
-      http: deps.http ?? ((hosts, signal, log) => createHttpClient({ hosts, signal, log })),
+      http: deps.http ?? ((hosts, signal, log, opts) => createHttpClient({ hosts, signal, log, ...(opts?.maxBytes ? { maxBytes: opts.maxBytes } : {}) })),
       clock: systemClock,
       newId: randomUUID,
       log: coreLogger(log),

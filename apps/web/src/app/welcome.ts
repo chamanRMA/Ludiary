@@ -5,5 +5,5 @@ import type { OnboardingDto } from "@ludiary/api-contract";
  * (not completed) is still on screen while it reloads, and redirecting on it showed the wizard twice.
  */
 export function shouldShowWelcome(onboarding: OnboardingDto | undefined, stale: boolean, path: string): boolean {
-  return !stale && onboarding !== undefined && onboarding.completedAt === null && path !== "/welcome";
+  return !stale && onboarding !== undefined && onboarding.completedAt === null && path !== "/welcome" && path !== "/connect/return";
 }

@@ -1,8 +1,14 @@
 // In-memory doubles for the core tests: no database, no disk, no OS.
 import type {
   Clock,
+  ConnectionWizard,
   ConnectorCapabilities,
   EntryMedia,
+  HttpClient,
+  LibrarySnapshot,
+  SecretCipher,
+  StoreEntry,
+  SyncContext,
   I18nKey,
   InstalledEntry,
   LocalFiles,
@@ -21,12 +27,23 @@ import type {
   GameSummary,
   InstallationRecord,
   LaunchTarget,
+  LibraryPlan,
   PropertyRecord,
   ScanPlan,
   ScanRootRecord,
+  SecretRecord,
+  StoreConnectionRecord,
   SyncStateRecord,
 } from "../src/model";
-import type { LibraryRepository, ScanRootRepository, SettingsRepository, SyncStateRepository, IdentityRepository } from "../src/ports";
+import type {
+  ConnectionRepository,
+  IdentityRepository,
+  LibraryRepository,
+  ScanRootRepository,
+  SecretRepository,
+  SettingsRepository,
+  SyncStateRepository,
+} from "../src/ports";
 
 export const key = (s: string) => s as I18nKey;
 
@@ -96,6 +113,47 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
   sync = new Map<string, SyncStateRecord>();
   kv = new Map<string, unknown>();
   applied: ScanPlan[] = [];
+  libraryPlans: LibraryPlan[] = [];
+  async applyLibraryPlan(plan: LibraryPlan): Promise<void> {
+    this.libraryPlans.push(plan);
+    for (const c of plan.create) {
+      this.canonical.set(c.canonicalId, { id: c.canonicalId, title: c.entry.title });
+      this.properties.set(c.propertyId, {
+        id: c.propertyId,
+        canonicalGameId: c.canonicalId,
+        store: plan.store,
+        storeGameId: c.entry.storeGameId,
+        kind: "game",
+        title: c.entry.title,
+        normalizedTitle: c.entry.normalizedTitle,
+        owned: true,
+        removedAt: null,
+        storePlaytimeMinutes: c.entry.storePlaytimeMinutes,
+        storeLastPlayedAt: c.entry.storeLastPlayedAt,
+      });
+    }
+    for (const u of plan.update) {
+      const p = this.properties.get(u.propertyId)!;
+      this.properties.set(p.id, {
+        ...p,
+        title: u.entry.title,
+        normalizedTitle: u.entry.normalizedTitle,
+        owned: true,
+        removedAt: null,
+        storePlaytimeMinutes: u.entry.storePlaytimeMinutes,
+        storeLastPlayedAt: u.entry.storeLastPlayedAt,
+      });
+      if (p.canonicalGameId) this.canonical.set(p.canonicalGameId, { id: p.canonicalGameId, title: u.entry.title });
+    }
+    plan.disown.forEach((id) => this.properties.set(id, { ...this.properties.get(id)!, owned: false }));
+    plan.retire.forEach((id) => this.properties.set(id, { ...this.properties.get(id)!, removedAt: plan.at }));
+    this.sync.set(`${plan.sync.store}:${plan.sync.operation}`, plan.sync);
+  }
+  async countOwned(store: StoreId): Promise<number> {
+    return [...this.properties.values()].filter((p) => p.store === store && p.owned && p.removedAt === null).length;
+  }
+  secretRows = new Map<string, SecretRecord>();
+  connectionRows = new Map<StoreId, StoreConnectionRecord>();
   deviceId = "dev";
 
   async ensure() {
@@ -112,8 +170,9 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
         stores: ps.map((p) => p.store as StoreId),
         installed: ps.some((p) => [...this.installs.values()].some((i) => i.propertyId === p.id)),
         favorite: false,
-        playtimeMinutes: 0,
+        playtimeMinutes: ps.reduce((n, p) => n + (p.storePlaytimeMinutes ?? 0), 0),
         tags: [],
+        mainAction: ps.some((p) => [...this.installs.values()].some((i) => i.propertyId === p.id)) ? "play" : ps.some((p) => p.owned) ? "install" : null,
       });
     }
     return out;
@@ -126,7 +185,7 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
       ...g,
       properties: ps.map((p) => {
         const i = [...this.installs.values()].find((x) => x.propertyId === p.id);
-        return { id: p.id, store: p.store, installed: !!i, ...(i ? { installPath: i.installPath } : {}), actions: [] };
+        return { id: p.id, store: p.store, installed: !!i, owned: p.owned, ...(i ? { installPath: i.installPath } : {}), actions: [] };
       }),
       dlc: [],
       collections: [],
@@ -177,13 +236,17 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
         normalizedTitle: c.entry.normalizedTitle,
         owned: false,
         removedAt: null,
+        storePlaytimeMinutes: null,
+        storeLastPlayedAt: null,
       });
       inst(c.installationId, c.propertyId, c.entry);
     }
     for (const u of plan.update) {
       const p = this.properties.get(u.propertyId)!;
-      this.properties.set(p.id, { ...p, title: u.entry.title, normalizedTitle: u.entry.normalizedTitle });
-      if (p.canonicalGameId) this.canonical.set(p.canonicalGameId, { id: p.canonicalGameId, title: u.entry.title });
+      // ADR 74: the title of an owned property (from the API) is not overwritten by the manifest name.
+      const title = p.owned ? p.title : u.entry.title;
+      this.properties.set(p.id, { ...p, title, normalizedTitle: p.owned ? p.normalizedTitle : u.entry.normalizedTitle });
+      if (p.canonicalGameId) this.canonical.set(p.canonicalGameId, { id: p.canonicalGameId, title });
       inst(u.installationId, u.propertyId, u.entry);
     }
     plan.removeInstallations.forEach((id) => this.installs.delete(id));
@@ -243,7 +306,33 @@ export function views(store: MemoryStore) {
       list: async () => [...store.sync.values()],
       put: (s: SyncStateRecord) => store.put(s),
       resetRunning: () => store.resetRunning(),
+      delete: async (s: StoreId, o: "library" | "scan") => void store.sync.delete(`${s}:${o}`),
     } satisfies SyncStateRepository,
+    secrets: {
+      get: async (scope: string, name: string) => store.secretRows.get(`${scope}|${name}`) ?? null,
+      put: async (r: SecretRecord) => void store.secretRows.set(`${r.scope}|${r.name}`, r),
+      delete: async (scope: string, name: string) => void store.secretRows.delete(`${scope}|${name}`),
+      deleteScope: async (scope: string) => {
+        let n = 0;
+        for (const k of [...store.secretRows.keys()]) {
+          if (k.startsWith(`${scope}|`)) {
+            store.secretRows.delete(k);
+            n++;
+          }
+        }
+        return n;
+      },
+    } satisfies SecretRepository,
+    connections: {
+      get: async (s: StoreId) => store.connectionRows.get(s) ?? null,
+      list: async () => [...store.connectionRows.values()],
+      put: async (r: StoreConnectionRecord) => void store.connectionRows.set(r.store, r),
+      setStatus: async (s: StoreId, status: "connected" | "expired") => {
+        const r = store.connectionRows.get(s);
+        if (r) store.connectionRows.set(s, { ...r, status });
+      },
+      delete: async (s: StoreId) => void store.connectionRows.delete(s),
+    } satisfies ConnectionRepository,
     settings: {
       get: async (k: string) => store.kv.get(k),
       set: (k: string, v: unknown) => store.set(k, v),
@@ -272,6 +361,10 @@ export interface ConnectorOptions {
   locations?: StoreConnector["locations"];
   resolveMedia?: StoreConnector["resolveMedia"];
   apiHosts?: string[];
+  authHosts?: string[];
+  library?: (ctx: SyncContext) => Promise<LibrarySnapshot>;
+  connection?: ConnectionWizard;
+  minSyncIntervalMs?: number;
 }
 
 export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
@@ -281,10 +374,10 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     nameKey: key("connectors.test.name"),
     access: "official-api" as const,
     capabilities: { ...STEAM_CAPS, ...o.caps },
-    minSyncIntervalMs: 600_000,
-    authHosts: [],
+    minSyncIntervalMs: o.minSyncIntervalMs ?? 600_000,
+    authHosts: o.authHosts ?? (o.connection ? ["login.example.com"] : []),
     mediaHosts: ["shared.akamai.steamstatic.com"],
-    apiHosts: o.apiHosts ?? (o.resolveMedia ? ["api.example.com"] : []),
+    apiHosts: o.apiHosts ?? (o.resolveMedia || o.library ? ["api.example.com"] : []),
     locations: o.locations ?? [
       { id: "steam-root", purpose: "scan" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam" }] },
       { id: "steam-client", purpose: "launcher" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam\\steam.exe" }] },
@@ -294,9 +387,38 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     resolveAction: o.resolveAction ?? (async (p) => ({ kind: "uri", uri: `steam://rungameid/${p.storeGameId}` })),
     ...(o.discover ? { discoverRoots: o.discover } : {}),
     ...(o.resolveMedia ? { resolveMedia: o.resolveMedia } : {}),
+    ...(o.library ? { listLibrary: o.library } : {}),
+    ...(o.connection ? { connection: o.connection } : {}),
   };
   return base as StoreConnector;
 }
+
+/** A library entry as a connector returns it. */
+export function owned(id: string, title: string, extra: Partial<StoreEntry> = {}): StoreEntry {
+  return { storeGameId: id, kind: "game", title, ...extra };
+}
+
+/** Same idea as the real cipher: version, slot, key tag, AAD and value, so tests can tell a lost key from a compartment. */
+export function fakeCipher(slot = 1, keyTag = "k"): SecretCipher {
+  const b64 = (v: string) => Buffer.from(v).toString("base64url");
+  return {
+    activeKeyId: slot,
+    encrypt: (plain, aad) => `v1.${slot}.${keyTag}.${b64(aad)}.${b64(plain)}`,
+    decrypt: (blob, aad) => {
+      const [v, id, tag, a, p] = blob.split(".");
+      if (v !== "v1" || id === undefined || tag === undefined || a === undefined || p === undefined) return { ok: false, reason: "invalid" };
+      if (Number(id) !== slot) return { ok: false, reason: "other-key" };
+      if (tag !== keyTag || a !== b64(aad)) return { ok: false, reason: "invalid" };
+      return { ok: true, value: Buffer.from(p, "base64url").toString() };
+    },
+  };
+}
+
+export const offlineHttp: HttpClient = {
+  request: async () => {
+    throw new Error("no network in core tests");
+  },
+};
 
 export function entry(id: string, title: string, path: string, extra: Partial<InstalledEntry> = {}): InstalledEntry {
   return { storeGameId: id, kind: "game", title, installPath: path, ...extra };
@@ -325,6 +447,9 @@ export async function harness(
     onboarded?: boolean;
     mode?: "auto-and-manual" | "manual-only" | "later" | null;
     http?: CoreDeps["http"];
+    cipher?: SecretCipher;
+    /** Stores that start with a 'connected' row (ADR 74). */
+    connected?: StoreId[];
   } = {},
 ): Promise<Harness> {
   const store = new MemoryStore();
@@ -341,6 +466,7 @@ export async function harness(
       : { kinds: ["uri"], openUri: async (u) => void opened.push(u), exec: async (s) => void execs.push(s), ...opts.launcher };
   const log = (level: string) => (m: string, f?: object) => void logs.push(`${level}: ${m} ${JSON.stringify(f ?? {})}`);
   const v = views(store);
+  for (const st of opts.connected ?? []) store.connectionRows.set(st, { store: st, status: "connected", accountLabel: null, connectedAt: 1 });
   if (opts.onboarded !== false) {
     store.kv.set("onboarding.completedAt", 1);
     if (opts.mode !== null) store.kv.set("detection.mode", opts.mode ?? "manual-only");
@@ -353,6 +479,7 @@ export async function harness(
     ...(launcher ? { launcher } : {}),
     ...(opts.picker ? { folderPicker: opts.picker } : {}),
     ...(opts.http ? { http: opts.http } : {}),
+    cipher: opts.cipher ?? fakeCipher(),
     clock,
     newId: ids,
     log: { debug: log("debug"), info: log("info"), warn: log("warn"), error: log("error") },

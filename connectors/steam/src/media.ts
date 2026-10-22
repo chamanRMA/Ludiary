@@ -17,14 +17,15 @@ export function steamMedia(appId: string): EntryMedia {
 
 // ---- ADR 73: current artwork (with hash) from IStoreBrowseService/GetItems ----
 
-export const STEAM_API_HOSTS: readonly string[] = ["api.steampowered.com"];
+/** steamcommunity.com is only for OpenID check_authentication (ADR 74). */
+export const STEAM_API_HOSTS: readonly string[] = ["api.steampowered.com", "steamcommunity.com"];
 
 const GET_ITEMS_URL = "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/";
 const ASSET_BASE = "https://shared.akamai.steamstatic.com/store_item_assets/";
 const FILE_RE = /^(?:[0-9a-f]{40}\/)?[a-z0-9_]{1,64}\.jpg$/;
 
 /** Retry-After in seconds (the HTTP-date form is ignored). */
-function retryAfterMs(headers: Readonly<Record<string, string>>): number | undefined {
+export function retryAfterMs(headers: Readonly<Record<string, string>>): number | undefined {
   const raw = Object.entries(headers).find(([k]) => k.toLowerCase() === "retry-after")?.[1];
   if (raw === undefined || !/^\d{1,6}$/.test(raw.trim())) return undefined;
   return Number(raw.trim()) * 1000;

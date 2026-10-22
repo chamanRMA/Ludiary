@@ -2,7 +2,9 @@ import i18next from "i18next";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import es from "../../../../packages/i18n/locales/web/es.json";
+import { webCatalogs } from "@ludiary/i18n/web";
+
+const es: Record<string, string> = webCatalogs.es;
 import { errorText } from "../app/errors";
 import { isSimulated } from "./api";
 import { ApiError } from "./http";

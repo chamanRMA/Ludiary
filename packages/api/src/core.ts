@@ -6,7 +6,12 @@ import type {
   ScanRootDto,
   SettingsDto,
   SettingsPatchDto,
+  StoreId,
   StoreStatusDto,
+  WizardCallbackResponseDto,
+  WizardResponseDto,
+  WizardStartDto,
+  WizardSubmitDto,
 } from "@ludiary/api-contract";
 
 /**
@@ -16,7 +21,7 @@ import type {
 export interface LudiaryCoreFacade {
   listLibrary(): Promise<readonly GameSummaryDto[]>;
   getGame(canonicalId: string): Promise<GameDetailDto | null>;
-  launch(canonicalId: string, propertyId?: string): Promise<{ status: "started" | "already-starting" }>;
+  launch(canonicalId: string, propertyId?: string, action?: "play" | "install"): Promise<{ status: "started" | "already-starting" }>;
   requestSync(req: { trigger: "open" | "manual"; operations?: readonly ("library" | "scan")[] }): Promise<void>;
   storeStatus(): Promise<readonly StoreStatusDto[]>;
   getSettings(): Promise<SettingsDto>;
@@ -27,6 +32,12 @@ export interface LudiaryCoreFacade {
   setScanRootEnabled(id: string, enabled: boolean): Promise<void>;
   pickScanRoot(): Promise<ScanRootDto | null>;
   removeScanRoot(id: string): Promise<void>;
+  /** ADR 74. returnBase is "http://<validated Host>", built by the API, never taken from the request body. */
+  startWizard(store: StoreId, returnBase: string): Promise<WizardStartDto>;
+  submitWizard(wizardId: string, stepId: string, input: WizardSubmitDto["input"]): Promise<WizardResponseDto>;
+  wizardCallback(wizardId: string, query: Readonly<Record<string, string>>): Promise<WizardCallbackResponseDto>;
+  cancelWizard(wizardId: string): Promise<void>;
+  disconnect(store: StoreId): Promise<void>;
 }
 
 export interface FacadeError {

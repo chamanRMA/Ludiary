@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createLocalServer, type LocalServer, type LocalServerDeps } from "../src/server";
 import { SessionStore } from "../src/sessions";
 import { spaCsp, type WebAsset } from "../src/web";
-import { FakeCoreError, fakeCore, send } from "./helpers";
+import { FakeCoreError, WIZARD_ROUTES, fakeCore, send } from "./helpers";
 
 const KEY = randomBytes(32);
 const HEADER = "x-ludiary-origin-key";
@@ -137,6 +137,7 @@ describe("access levels (ADR 67, 72)", () => {
       ["GET", "/api/stores"], ["GET", "/api/onboarding"], ["POST", "/api/onboarding/complete"],
       ["POST", "/api/onboarding/reset"], ["GET", "/api/settings"], ["PATCH", "/api/settings"],
       ["PATCH", "/api/scan-roots/r1"], ["DELETE", "/api/scan-roots/r1"], ["POST", "/api/scan-roots/pick"],
+      ...WIZARD_ROUTES,
     ];
     for (const [method, path] of routes) {
       const res = await send(port, path, { method, headers: { cookie }, ...(method === "GET" || method === "DELETE" ? {} : { body: {} }) });
@@ -297,7 +298,7 @@ describe("routes against the fake facade (ADR 72, point 5)", () => {
     expect(res.status).toBe(202);
     expect(res.json()).toEqual({ status: "started" });
     await send(port, "/api/games/g1/launch", { method: "POST", headers: auth, body: {} });
-    expect(core.calls.filter((c) => c[0] === "launch")).toEqual([["launch", "g1", "p1"], ["launch", "g1", undefined]]);
+    expect(core.calls.filter((c) => c[0] === "launch")).toEqual([["launch", "g1", "p1", undefined], ["launch", "g1", undefined, undefined]]);
   });
 
   it("rejects extra fields in the launch request with 400 and never calls the core (invariant 3)", async () => {

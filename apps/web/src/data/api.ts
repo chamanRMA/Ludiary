@@ -35,6 +35,8 @@ export type SettingsUpdate = Partial<Pick<GeneralSettings, "locale" | "backups" 
 
 export type SyncTrigger = "open" | "manual";
 
+export type LaunchActionDto = "play" | "install";
+
 /** Not in the draft contract either: collections, and the state behind backup/scan/log buttons. */
 export interface CollectionDto {
   id: string;
@@ -55,6 +57,8 @@ export interface LudiaryApi {
   submitWizard(target: WizardTarget, input: WizardInputDto): Promise<WizardResponseDto>;
   cancelWizard(target: WizardTarget): Promise<void>;
   disconnect(target: WizardTarget): Promise<void>;
+  /** OpenID return (ADR 74). Sends the stored wizard the `openid.*` parameters. `null`: no wizard is stored (expired or never started). */
+  wizardCallback(store: StoreId, query: Readonly<Record<string, string>>): Promise<WizardResponseDto | null>;
   getOnboarding(): Promise<OnboardingDto>;
   completeOnboarding(detection: DetectionMode | null): Promise<void>;
   /** Settings > General "repeat the wizard". */
@@ -73,8 +77,8 @@ export interface LudiaryApi {
   syncAll(trigger?: SyncTrigger): Promise<void>;
   /** Manual folder scan. */
   scan(): Promise<void>;
-  /** Launches a stored game by id (ADR 72, invariant 3). `propertyId` picks one of its properties. */
-  launchGame(id: string, propertyId?: string): Promise<LaunchResponseDto>;
+  /** Launches a stored game by id (ADR 72, invariant 3). `propertyId` picks one of its properties; `action` defaults to play (ADR 74). */
+  launchGame(id: string, propertyId?: string, action?: LaunchActionDto): Promise<LaunchResponseDto>;
   createBackup(): Promise<void>;
   exportLogs(): Promise<void>;
   /** Simulator only: lets the Epic "expired session" screens be reached. Goes away with the real API. */

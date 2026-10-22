@@ -20,7 +20,7 @@ const WIZARD_SERVICES: readonly ServiceId[] = ["rawg", "igdb"]; // ADR 69: IsThe
 /** First-run wizard (ADR 69): five steps, every one skippable, and "Skip all". */
 export function Welcome() {
   const { t, i18n } = useTranslation();
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => (new URLSearchParams(location.search).get("step") === "stores" ? STEPS.indexOf("stores") : 0)); // back from the Steam sign-in (ADR 74)
   const [pick, setPick] = useState<DetectionMode>("auto-and-manual");
   const heading = useRef<HTMLHeadingElement>(null);
   const stores = useQuery(() => api.getStores());

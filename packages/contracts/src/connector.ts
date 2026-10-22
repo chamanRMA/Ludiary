@@ -1,4 +1,4 @@
-// Store connector contract, version 1 (ADR 40, extended by ADR 71 and 72).
+// Store connector contract, version 1 (ADR 40, extended by ADR 71, 72, 73 and 74).
 // Types only, plus ConnectorError and the pure function checkConnectorManifest. No I/O.
 
 export type StoreId = "steam" | "gog" | "epic" | "ubisoft" | "ea";
@@ -80,7 +80,7 @@ export interface BaseContext {
   readonly locale: string;
 }
 
-/** Types only until the account cut (ADR 72). */
+/** ADR 74: built by the core per store and run; `secrets` is the vault of scope `store:<id>`. */
 export interface SyncContext extends BaseContext {
   readonly http: HttpClient;
   readonly secrets: SecretVault;
@@ -91,8 +91,10 @@ export interface SyncContext extends BaseContext {
 export interface WizardContext extends SyncContext {
   /** Core-owned return URL for OpenID/OAuth flows (uses the current port, ADR 28). */
   readonly callbackUrl: string;
-  /** Encrypted, short-lived state for this wizard session; wiped on done or cancel. */
+  /** In-memory only (never on disk), short-lived state of this wizard session; wiped on done, cancel or expiry (ADR 74). */
   readonly wizardState: SecretVault;
+  /** ADR 74. Current time in ms; connectors never read the clock themselves (ADR 38). */
+  now(): number;
 }
 
 export interface ScanContext extends BaseContext {
@@ -137,6 +139,11 @@ export interface Secret {
   toJSON(): string;
 }
 
+/** ADR 74. Pure. Wraps a value so it cannot be logged or serialized by accident. */
+export function makeSecret(value: string): Secret {
+  return { reveal: () => value, toString: () => "[redacted]", toJSON: () => "[redacted]" };
+}
+
 /** Scoped to (user, store). The core encrypts and decrypts; the connector never sees the key or the ciphertext. */
 export interface SecretVault {
   get(name: string): Promise<Secret | null>;
@@ -144,7 +151,11 @@ export interface SecretVault {
   delete(name: string): Promise<void>;
 }
 
-/** Only network access a connector has. Secrets in headers/query are revealed at send time and redacted in logs. */
+/**
+ * Only network access a connector has. A GET with a body is 'internal'. Headers: names `^[a-z0-9-]{1,64}$`, no host/cookie/
+ * content-length/connection/transfer-encoding, values without CR or LF (ADR 74). The response size cap (`maxBytes`:
+ * 16 MiB for listLibrary, 2 MiB otherwise) is a factory option of the core, not a per-request field.
+ * Secrets in headers/query are revealed at send time and redacted in logs. */
 export interface HttpClient {
   request(req: {
     method: "GET" | "POST";
@@ -220,7 +231,7 @@ export interface ConnectorLogger {
   warn(msg: string, fields?: Readonly<Record<string, string | number | boolean>>): void;
 }
 
-// ---------- Connection wizard (rendered by the web, driven by the core). Types only until the account cut. ----------
+// ---------- Connection wizard (rendered by the web, driven by the core). ----------
 
 export interface ConnectionWizard {
   start(ctx: WizardContext): Promise<WizardStep>;
@@ -240,6 +251,8 @@ export type WizardStep =
       bodyKey: I18nKey;
       url: string;
       awaits: "callback" | "input";
+      /** ADR 74. Only with awaits 'input': the link and the fields share one screen. */
+      fields?: readonly WizardField[];
     }
   | { kind: "input"; id: string; titleKey: I18nKey; bodyKey: I18nKey; fields: readonly WizardField[] };
 
@@ -444,6 +457,10 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[] {
     if (l.os.length === 0) problems.push(`location '${l.id}' has no os`);
   }
 
+  if (c.connection && c.authHosts.length === 0) problems.push("a connector with a connection wizard needs authHosts");
+  if (cap.library && c.apiHosts.length === 0 && c.externalTools.length === 0) {
+    problems.push("capabilities.library requires apiHosts or externalTools");
+  }
   if (c.access === "local-only" && c.connection) problems.push("a local-only connector must not declare a connection wizard");
   return problems;
 }

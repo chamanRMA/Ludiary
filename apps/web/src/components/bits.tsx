@@ -27,14 +27,14 @@ export function StoreBadge({ store, size, warning }: { store: StoreId; size?: "m
  * Cover image with the ADR 71 fallback chain: coverUrl, then coverFallbackUrl (contained), then a
  * deterministic CSS gradient with the title. No retries.
  */
-export function Cover({ game, height = 190, bare }: { game: Pick<GameSummaryDto, "title" | "coverUrl" | "coverFallbackUrl">; height?: number; bare?: boolean }) {
+export function Cover({ game, height = 190, bare }: { game: Pick<GameSummaryDto, "title" | "coverUrl" | "coverFallbackUrl" | "unsynced">; height?: number; bare?: boolean }) {
   const urls = [game.coverUrl, game.coverFallbackUrl].filter((u): u is string => !!u);
   const [failed, setFailed] = useState(0);
   let hash = 0;
   for (const ch of game.title) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
   const src = urls[failed];
   return (
-    <div className={ui.cover} style={{ height, background: `hsl(${hash} 38% 32%)` }} aria-hidden="true">
+    <div className={cx(ui.cover, game.unsynced === true && ui.unsynced)} style={{ height, background: `hsl(${hash} 38% 32%)` }} aria-hidden="true">
       {src ? (
         <img
           key={src}

@@ -8,12 +8,13 @@ import {
 } from "@ludiary/contracts";
 import { APPID_RE } from "./appmanifest";
 
+/** play -> steam://rungameid/<id>; install -> steam://install/<id> (ADR 74, S9). The core checks installed/owned. */
 export async function resolveSteamAction(
   property: StoredProperty,
   action: GameAction,
   ctx: LaunchContext,
 ): Promise<LaunchSpec | null> {
-  if (action !== "play") return null;
+  if (action !== "play" && action !== "install") return null;
   const id = property.storeGameId;
   if (id === null) return null;
   if (!APPID_RE.test(id)) {
@@ -35,5 +36,5 @@ export async function resolveSteamAction(
       });
     }
   }
-  return { kind: "uri", uri: `steam://rungameid/${id}` };
+  return { kind: "uri", uri: `steam://${action === "play" ? "rungameid" : "install"}/${id}` };
 }

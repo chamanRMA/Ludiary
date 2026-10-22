@@ -14,21 +14,26 @@ const MAX_ARGS = 64;
 const MAX_ARG_LEN = 8192;
 
 export interface LaunchService {
-  launch(canonicalId: string, propertyId?: string): Promise<{ status: "started" | "already-starting" }>;
+  launch(canonicalId: string, propertyId?: string, action?: "play" | "install"): Promise<{ status: "started" | "already-starting" }>;
 }
 
-function pickTarget(targets: readonly LaunchTarget[], propertyId: string | undefined): LaunchTarget {
+function pickTarget(targets: readonly LaunchTarget[], propertyId: string | undefined, action: "play" | "install"): LaunchTarget {
   if (propertyId !== undefined) {
     const t = targets.find((x) => x.property.id === propertyId);
     if (!t) throw new CoreError("not-found", "Property does not belong to this game");
     return t;
   }
-  const live = targets.filter((t) => t.property.kind === "game" && t.property.removedAt === null && t.installation !== null);
+  const live = targets.filter(
+    (t) =>
+      t.property.kind === "game" &&
+      t.property.removedAt === null &&
+      (action === "play" ? t.installation !== null : t.installation === null && t.property.owned),
+  );
   for (const store of LAUNCH_ORDER) {
     const t = live.find((x) => x.property.store === store);
     if (t) return t;
   }
-  throw new CoreError("not-installed", "No installed property to launch");
+  throw new CoreError(action === "play" ? "not-installed" : "action-unavailable", action === "play" ? "No installed property to launch" : "No owned, uninstalled property to install");
 }
 
 export function createLaunchService(env: Env): LaunchService {
@@ -98,32 +103,40 @@ export function createLaunchService(env: Env): LaunchService {
   }
 
   return {
-    async launch(canonicalId, propertyId) {
+    async launch(canonicalId, propertyId, action = "play") {
+      if (action !== "play" && action !== "install") throw new CoreError("invalid-input", "Unknown launch action");
       if (typeof canonicalId !== "string" || canonicalId === "") throw new CoreError("invalid-input", "Missing game id");
       if (propertyId !== undefined && (typeof propertyId !== "string" || propertyId === "")) {
         throw new CoreError("invalid-input", "Invalid property id");
       }
       const targets = await deps.library.getLaunchTargets(canonicalId);
       if (targets.length === 0) throw new CoreError("not-found", "Game not found");
-      const target = pickTarget(targets, propertyId);
+      const target = pickTarget(targets, propertyId, action);
       const { property, installation } = target;
       if (property.kind === "dlc") throw new CoreError("action-unavailable", "Additional content cannot be played");
-      if (property.removedAt !== null || installation === null) throw new CoreError("not-installed", "The game is not installed");
+      if (action === "play") {
+        if (property.removedAt !== null || installation === null) throw new CoreError("not-installed", "The game is not installed");
+      } else {
+        // ADR 74 point 7: install is for an owned property that is not installed.
+        if (installation !== null) throw new CoreError("action-unavailable", "The game is already installed");
+        if (!property.owned || property.removedAt !== null) throw new CoreError("action-unavailable", "The game is not owned");
+      }
       if (property.store === "manual") throw new CoreError("action-unavailable", "Manual entries cannot be launched yet");
 
       const connector = env.connectors.get(property.store);
       if (!connector) throw new CoreError("action-unavailable", "No connector for this store");
-      if (!connector.capabilities.actions.includes("play")) throw new CoreError("action-unavailable", "The store does not support play");
+      if (!connector.capabilities.actions.includes(action)) throw new CoreError("action-unavailable", `The store does not support ${action}`);
       if (!deps.launcher) throw new CoreError("action-unavailable", "This mode cannot launch games");
 
       const now = deps.clock.now();
-      const last = lastStart.get(canonicalId);
+      const clickKey = `${canonicalId}|${action}`;
+      const last = lastStart.get(clickKey);
       if (last !== undefined && now - last < DOUBLE_LAUNCH_MS) return { status: "already-starting" };
-      lastStart.set(canonicalId, now); // also covers a second click while this one is still being resolved
+      lastStart.set(clickKey, now); // also covers a second click while this one is still being resolved
 
       try {
         const { launchers, resolved } = await resolveLauncherLocations(connector);
-        const allowedRoots = [installation.installPath, ...launchers.map((l) => l.path)];
+        const allowedRoots = [...(installation ? [installation.installPath] : []), ...launchers.map((l) => l.path)];
         const ctx: LaunchContext = {
           signal: deps.clock.timeout(30_000),
           log: {
@@ -139,8 +152,13 @@ export function createLaunchService(env: Env): LaunchService {
         let spec: LaunchSpec | null;
         try {
           spec = await connector.resolveAction(
-            { storeGameId: property.storeGameId, installed: true, installPath: installation.installPath, launchData: installation.launchData },
-            "play",
+            {
+              storeGameId: property.storeGameId,
+              installed: installation !== null,
+              installPath: installation?.installPath ?? null,
+              launchData: installation?.launchData ?? null,
+            },
+            action,
             ctx,
           );
         } catch (e) {
@@ -148,7 +166,7 @@ export function createLaunchService(env: Env): LaunchService {
           else deps.log.error("Connector failed while resolving the action", { connector: connector.id });
           throw toCoreError(e);
         }
-        if (spec === null) throw new CoreError("action-unavailable", "The connector has no play action for this property");
+        if (spec === null) throw new CoreError("action-unavailable", `The connector has no ${action} action for this property`);
 
         const safe = await checkSpec(connector, spec, allowedRoots);
         try {
@@ -160,7 +178,7 @@ export function createLaunchService(env: Env): LaunchService {
         }
         return { status: "started" };
       } catch (e) {
-        lastStart.delete(canonicalId); // a failed attempt must not block the retry
+        lastStart.delete(clickKey); // a failed attempt must not block the retry
         throw e;
       }
     },

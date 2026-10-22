@@ -1,4 +1,4 @@
-// Wire contract of the local API (ADR 68, 72). TypeBox schemas are the source; DTO types derive from them.
+// Wire contract of the local API (ADR 68, 72, 74). TypeBox schemas are the source; DTO types derive from them.
 // The web imports this package with `import type` only, so TypeBox never reaches the browser bundle.
 import { Type, type Static } from "typebox";
 
@@ -94,7 +94,7 @@ export interface ServiceStatusDto {
   available: boolean;
 }
 
-// ---- Wizard (no server route in this slice: plain types, ADR 72 point 7)
+// ---- Wizard (ADR 74, point 5). Responses are plain types; requests are validated with TypeBox.
 export type WizardTarget = { kind: "store"; store: StoreId } | { kind: "service"; service: ServiceId };
 
 /** Wire form of WizardStep (ADR 40, 43). */
@@ -197,6 +197,10 @@ export const GameSummarySchema = Type.Object(
     playtimeMinutes: Type.Integer({ minimum: 0 }),
     lastPlayedAt: Type.Optional(EpochSchema),
     tags: Type.Array(Type.String()),
+    /** ADR 74. Absent counts as null. 'install' when not installed but owned and the store offers it. */
+    mainAction: Type.Optional(Type.Union([Type.Literal("play"), Type.Literal("install"), Type.Null()])),
+    /** ADR 74 (point 12). true: every non-installed property belongs to a store whose connection is not 'connected'. Absent = false. */
+    unsynced: Type.Optional(Type.Boolean()),
   },
   strict,
 );
@@ -225,7 +229,9 @@ export const GameDetailSchema = Type.Object(
 export type GameDetailDto = RO<Static<typeof GameDetailSchema>>;
 
 // ---- Launch and sync
-export const LaunchRequestSchema = Type.Object({ propertyId: Type.Optional(Id) }, strict);
+export const LaunchActionSchema = Type.Union([Type.Literal("play"), Type.Literal("install")]);
+/** ADR 74. `action` absent means 'play'. */
+export const LaunchRequestSchema = Type.Object({ propertyId: Type.Optional(Id), action: Type.Optional(LaunchActionSchema) }, strict);
 export type LaunchRequestDto = Static<typeof LaunchRequestSchema>;
 
 export const LaunchResponseSchema = Type.Object(
@@ -249,3 +255,56 @@ export type IdParams = Static<typeof IdParamsSchema>;
 export const EmptyObjectSchema = Type.Object({}, strict);
 export const PickCancelledSchema = Type.Object({ cancelled: Type.Literal(true) }, strict);
 export type PickCancelledDto = Static<typeof PickCancelledSchema>;
+
+// ---- Wizard routes (ADR 74, point 5). All 'session+key'.
+/** Wizard ids are UUID v4 made by the core; the format check keeps junk out of lookups. */
+export const WizardIdSchema = Type.String({ pattern: "^[A-Za-z0-9-]{1,64}$" });
+export const WizardIdParamsSchema = Type.Object({ wizardId: WizardIdSchema }, strict);
+export type WizardIdParams = Static<typeof WizardIdParamsSchema>;
+export const StoreParamsSchema = Type.Object({ store: StoreIdSchema }, strict);
+export type StoreParams = Static<typeof StoreParamsSchema>;
+
+/** POST /api/stores/:store/wizard -> 201 WizardStartDto. Body: EmptyObjectSchema; returnBase comes from the validated Host. */
+export interface WizardStartDto {
+  wizardId: string;
+  response: WizardResponseDto;
+}
+
+// Record(pattern keys) emits patternProperties only; additionalProperties:false is what rejects keys outside the pattern.
+/** POST /api/wizards/:wizardId/submit -> 200 WizardResponseDto. At most 8 values of at most 4096 characters. */
+export const WizardSubmitSchema = Type.Object(
+  {
+    stepId: Type.String({ pattern: "^[a-z][a-z0-9-]{0,31}$" }),
+    input: Type.Union([
+      Type.Object({ kind: Type.Literal("continue") }, strict),
+      Type.Object(
+        {
+          kind: Type.Literal("fields"),
+          values: Type.Record(Type.String({ pattern: "^[A-Za-z][A-Za-z0-9]{0,31}$" }), Type.String({ maxLength: 4096 }), { maxProperties: 8, additionalProperties: false }),
+        },
+        strict,
+      ),
+    ]),
+  },
+  strict,
+);
+export type WizardSubmitDto = RO<Static<typeof WizardSubmitSchema>>;
+
+/** POST /api/wizards/:wizardId/callback -> 200 WizardCallbackResponseDto. At most 32 parameters (the web sends only `openid.*`). */
+export const WizardCallbackSchema = Type.Object(
+  {
+    query: Type.Record(
+      Type.String({ pattern: "^[A-Za-z0-9._-]{1,64}$" }),
+      Type.String({ maxLength: 2048, pattern: "^[^\u0000-\u001f\u007f]*$" }),
+      { maxProperties: 32, additionalProperties: false },
+    ),
+  },
+  strict,
+);
+export type WizardCallbackDto = RO<Static<typeof WizardCallbackSchema>>;
+
+export interface WizardCallbackResponseDto {
+  store: StoreId;
+  response: WizardResponseDto;
+}
+// DELETE /api/wizards/:wizardId and DELETE /api/stores/:store/connection answer 204 with no body.

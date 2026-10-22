@@ -25,5 +25,15 @@ export const MIGRATIONS: readonly EmbeddedMigration[] = [
       "CREATE TABLE `sync_state` (\n\t`user_id` text NOT NULL,\n\t`store` text NOT NULL,\n\t`operation` text NOT NULL,\n\t`last_attempt_at` integer,\n\t`last_success_at` integer,\n\t`status` text NOT NULL,\n\t`error_code` text,\n\t`error_key` text,\n\t`error_params` text,\n\t`next_allowed_at` integer,\n\tPRIMARY KEY(`user_id`, `store`, `operation`),\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,\n\tCONSTRAINT \"sync_state_operation_check\" CHECK(\"sync_state\".\"operation\" IN ('library', 'scan')),\n\tCONSTRAINT \"sync_state_status_check\" CHECK(\"sync_state\".\"status\" IN ('idle', 'running', 'error'))\n);",
       "CREATE TABLE `users` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`created_at` integer NOT NULL\n);"
     ]
+  },
+  {
+    "id": "0002_store_account",
+    "statements": [
+      "CREATE TABLE `secrets` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`user_id` text NOT NULL,\n\t`scope` text NOT NULL,\n\t`name` text NOT NULL,\n\t`ciphertext` text NOT NULL,\n\t`key_id` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action\n);",
+      "CREATE UNIQUE INDEX `secrets_user_scope_name_uq` ON `secrets` (`user_id`,`scope`,`name`);",
+      "CREATE TABLE `store_connections` (\n\t`user_id` text NOT NULL,\n\t`store` text NOT NULL,\n\t`status` text NOT NULL,\n\t`account_label` text,\n\t`connected_at` integer NOT NULL,\n\tPRIMARY KEY(`user_id`, `store`),\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,\n\tCONSTRAINT \"store_connections_status_check\" CHECK(\"store_connections\".\"status\" IN ('connected', 'expired'))\n);",
+      "ALTER TABLE `game_properties` ADD `store_playtime_minutes` integer;",
+      "ALTER TABLE `game_properties` ADD `store_last_played_at` integer;"
+    ]
   }
 ];

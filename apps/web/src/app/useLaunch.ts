@@ -19,12 +19,12 @@ export function useLaunch() {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  async function play(gameId: string, title: string, storeName: string, propertyId?: string): Promise<void> {
+  async function play(gameId: string, title: string, storeName: string, propertyId?: string, action: "play" | "install" = "play"): Promise<void> {
     setLaunching(true);
     timer.current = setTimeout(() => setLaunching(false), 5000);
     try {
-      await api.launchGame(gameId, propertyId);
-      setMessage({ text: isSimulated ? t("game.playSimulated", { title }) : t("game.launching", { store: storeName }), error: false });
+      await api.launchGame(gameId, propertyId, action === "play" ? undefined : action);
+      setMessage({ text: isSimulated ? t("game.playSimulated", { title }) : t(action === "install" ? "game.installing" : "game.launching", { store: storeName }), error: false });
     } catch (e) {
       setMessage({ text: errorText(t, e), error: true });
     }

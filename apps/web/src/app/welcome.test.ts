@@ -10,5 +10,6 @@ it("redirects to the wizard only with fresh data saying it is not completed", ()
   expect(shouldShowWelcome(pending, true, "/library")).toBe(false);
   expect(shouldShowWelcome(done, false, "/library")).toBe(false);
   expect(shouldShowWelcome(pending, false, "/welcome")).toBe(false);
+  expect(shouldShowWelcome(pending, false, "/connect/return")).toBe(false); // the OpenID return keeps its query
   expect(shouldShowWelcome(undefined, false, "/")).toBe(false);
 });

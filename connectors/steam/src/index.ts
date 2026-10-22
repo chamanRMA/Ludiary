@@ -1,10 +1,12 @@
 import type { StoreConnector } from "@ludiary/contracts";
 import { resolveSteamAction } from "./launch";
+import { listSteamLibrary } from "./library";
 import { STEAM_LOCATIONS, STEAM_NAME_KEY } from "./manifest";
 import { resolveSteamMedia, STEAM_API_HOSTS, STEAM_MEDIA_HOSTS } from "./media";
 import { discoverSteamRoots, scanSteamInstalled } from "./scan";
+import { steamConnection } from "./wizard";
 
-/** Steam connector, "installed only" cut (ADR 72). library switches to true with the account cut. */
+/** Steam connector: installed games (ADR 72) and the account cut (ADR 74): wizard and GetOwnedGames. */
 export function createSteamConnector(): StoreConnector {
   return {
     contractVersion: 1,
@@ -12,21 +14,23 @@ export function createSteamConnector(): StoreConnector {
     nameKey: STEAM_NAME_KEY,
     access: "official-api",
     capabilities: {
-      library: false,
+      library: true,
       scan: true,
       dlc: "none",
-      actions: ["play"],
+      actions: ["play", "install"],
       launchKinds: ["uri"],
       uriSchemes: ["steam"],
-      storePlaytime: false,
+      storePlaytime: true,
       price: false,
     },
     minSyncIntervalMs: 600_000,
-    authHosts: [],
+    authHosts: ["steamcommunity.com"],
     mediaHosts: STEAM_MEDIA_HOSTS,
     apiHosts: STEAM_API_HOSTS,
     locations: STEAM_LOCATIONS,
     externalTools: [],
+    connection: steamConnection,
+    listLibrary: listSteamLibrary,
     scanInstalled: scanSteamInstalled,
     discoverRoots: discoverSteamRoots,
     resolveMedia: resolveSteamMedia,
@@ -41,3 +45,6 @@ export { parseAppManifest, APPID_RE } from "./appmanifest";
 export type { AppManifest } from "./appmanifest";
 export { EXCLUDED_APP_IDS } from "./scan";
 export { steamMedia, resolveSteamMedia, STEAM_MEDIA_HOSTS, STEAM_API_HOSTS } from "./media";
+export { buildLoginUrl, verifyAssertion, OPENID_ENDPOINT } from "./openid";
+export { steamConnection } from "./wizard";
+export { listSteamLibrary, fetchOwnedGames } from "./library";

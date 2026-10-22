@@ -17,6 +17,8 @@ function seed(h: Harness, store: StoreId, id: string, path = GAME, canonical = "
     normalizedTitle: "portal",
     owned: false,
     removedAt: null,
+    storePlaytimeMinutes: null,
+    storeLastPlayedAt: null,
   });
   h.store.installs.set(`i-${store}-${id}`, { id: `i-${store}-${id}`, propertyId: `p-${store}-${id}`, deviceId: "dev", installPath: path, launchData: null });
   return `p-${store}-${id}`;
