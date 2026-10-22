@@ -20,7 +20,7 @@ export function GameCard({ game }: { game: GameSummaryDto }) {
       <Link to={`/game/${game.id}`} className={ui.coverLink} aria-label={t("library.openSheet", { title: game.title })}>
         <Cover game={game} />
       </Link>
-      <Link to={`/game/${game.id}`} className={ui.title}>
+      <Link to={`/game/${game.id}`} className={ui.title} title={game.title}>
         {game.title}
       </Link>
       <span className={ui.chips}>
