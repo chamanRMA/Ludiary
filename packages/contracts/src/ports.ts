@@ -78,6 +78,8 @@ export interface LocalFiles {
   /** Equality key for uniqueness (lower-case on Windows). */
   compareKey(path: string): string;
   isDirectory(path: string): Promise<boolean>;
+  /** Canonical path (realpath of the deepest existing ancestor, missing tail unchanged). Throws if it cannot be resolved. */
+  realPath(path: string): Promise<string>;
   /**
    * True only for a path on a local drive. On Windows it is false for UNC (\\server\share) and device
    * (\\?\, \\.\) paths, which a stat could turn into a network connection. Checked on paths that come from
@@ -93,8 +95,20 @@ export interface ProcessLauncher {
   readonly kinds: readonly ("uri" | "exec")[];
   /** Hands the URI to the OS handler of its scheme. */
   openUri(uri: string): Promise<void>;
-  /** Detached, args as a list, no shell. Implemented with the GOG connector; until then `kinds` excludes 'exec'. */
+  /**
+   * Detached, args as a list, no shell (ADR 40 rule 5). Windows (ADR 76): only an existing local `.exe`,
+   * no verbatim arguments, the child's main window is not hidden. Rejects with ExecError.
+   */
   exec(spec: { executable: string; args: readonly string[]; cwd?: string }): Promise<void>;
+}
+
+/** ADR 76: why `ProcessLauncher.exec` failed. */
+export class ExecError extends Error {
+  /** 'rejected': the platform's own check refused the spec. 'denied': the OS refused (e.g. needs administrator). 'failed': anything else. */
+  constructor(readonly reason: "rejected" | "denied" | "failed") {
+    super(`exec ${reason}`);
+    this.name = "ExecError";
+  }
 }
 
 /** Native folder dialog on the user's desktop (localhost only). null if cancelled. Texts arrive translated. */

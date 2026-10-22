@@ -1,4 +1,4 @@
-import { ConnectorError, type LaunchContext, type LaunchSpec, type StoreId } from "@ludiary/contracts";
+import { ConnectorError, ExecError, type LaunchContext, type LaunchSpec, type StoreId } from "@ludiary/contracts";
 import { describe, expect, it } from "vitest";
 import { CoreError } from "../src";
 import { addUserRoot, harness, makeConnector, resolver, type Harness } from "./helpers";
@@ -21,6 +21,7 @@ function seed(h: Harness, store: StoreId, id: string, path = GAME, canonical = "
     storeLastPlayedAt: null,
   });
   h.store.installs.set(`i-${store}-${id}`, { id: `i-${store}-${id}`, propertyId: `p-${store}-${id}`, deviceId: "dev", installPath: path, launchData: null });
+  addUserRoot(h, "D:\\Games"); // the install must lie under a root in force (launch check)
   return `p-${store}-${id}`;
 }
 
@@ -186,10 +187,11 @@ describe("exec checks (not used by any platform yet)", () => {
     expect(h.execs).toEqual([{ executable: `${GAME}\\g.exe`, args: ["--a", "b c"], cwd: GAME }]);
   });
 
-  it("runs the resolved launcher client", async () => {
+  it("never runs a file inside a launcher location: it is readable, not an exec destination (ADR 77, audit A1)", async () => {
     const h = await execHarness(() => ({ kind: "exec", executable: CLIENT, args: ["/command=runGame"] }));
     seed(h, "steam", "1");
-    expect(await h.core.launch("c1")).toEqual({ status: "started" });
+    expect((await rejection(h.core.launch("c1"))).code).toBe("launch.rejected");
+    expect(h.execs).toEqual([]);
   });
 
   it("does not trust launcher locations when detection was not allowed", async () => {
@@ -212,6 +214,75 @@ describe("exec checks (not used by any platform yet)", () => {
   ])("rejects %s", async (_n, spec) => {
     const h = await execHarness(() => spec);
     seed(h, "steam", "1");
+    expect((await rejection(h.core.launch("c1"))).code).toBe("launch.rejected");
+    expect(h.execs).toEqual([]);
+  });
+});
+
+describe("exec outcome (ADR 76)", () => {
+  const spec = { kind: "exec", executable: `${GAME}\\g.exe`, args: ["--secret-arg"], cwd: GAME };
+  const exec = (launcher: Parameters<typeof harness>[0] extends infer O ? O : never) =>
+    harness({ dirs: ["D:\\Games", GAME], files: [`${GAME}\\g.exe`], connectors: [makeConnector({ id: "gog", caps: { launchKinds: ["exec"], uriSchemes: [] }, resolveAction: async () => spec as LaunchSpec })], ...launcher });
+
+  it("maps ExecError denied to launch.denied with the game.launchDenied key, and logs no path or arguments", async () => {
+    const h = await exec({ launcher: { kinds: ["uri", "exec"], exec: async () => { throw new ExecError("denied"); } } });
+    seed(h, "gog", "1");
+    const e = await rejection(h.core.launch("c1"));
+    expect(e).toMatchObject({ code: "launch.denied", key: "game.launchDenied" });
+    expect(h.logs.join("\n")).not.toMatch(/Games|secret-arg/);
+  });
+
+  it("maps ExecError rejected to launch.rejected and failed to internal", async () => {
+    for (const [reason, code] of [["rejected", "launch.rejected"], ["failed", "internal"]] as const) {
+      const h = await exec({ launcher: { kinds: ["uri", "exec"], exec: async () => { throw new ExecError(reason); } } });
+      seed(h, "gog", "1");
+      expect((await rejection(h.core.launch("c1"))).code).toBe(code);
+    }
+  });
+
+  it("hands the platform the canonical paths it checked", async () => {
+    const h = await exec({ launcher: { kinds: ["uri", "exec"] } });
+    (h.deps.files as { realPath: (p: string) => Promise<string> }).realPath = async (p) => p.replace("Games", "Real");
+    h.deps.files.isInside = async () => true;
+    seed(h, "gog", "1");
+    await h.core.launch("c1");
+    expect(h.execs).toEqual([{ executable: "D:\\Real\\Portal\\g.exe", args: ["--secret-arg"], cwd: "D:\\Real\\Portal" }]);
+  });
+});
+
+describe("root check before launching", () => {
+  it.each([
+    ["a disabled root", (h: Harness) => addUserRoot(h, "D:\\Games", false)],
+    ["a removed root", (h: Harness) => void h.store.roots.clear()],
+    ["detection 'later'", (h: Harness) => void h.store.kv.set("detection.mode", "later")],
+  ])("%s gives not-installed and the connector is not called", async (_n, change) => {
+    let calls = 0;
+    const h = await harness({ connectors: [makeConnector({ resolveAction: async () => (calls++, { kind: "uri", uri: "steam://rungameid/1" }) })] });
+    seed(h, "steam", "1");
+    change(h);
+    expect((await rejection(h.core.launch("c1"))).code).toBe("not-installed");
+    expect(calls).toBe(0);
+    expect(h.opened).toEqual([]);
+  });
+});
+
+describe("canonical paths (ADR 76)", () => {
+  const make = (realPath: (p: string) => Promise<string>) =>
+    harness({ dirs: ["D:\\Games", GAME], files: [`${GAME}\\g.exe`], launcher: { kinds: ["uri", "exec"] }, connectors: [makeConnector({ id: "gog", caps: { launchKinds: ["exec"], uriSchemes: [] }, resolveAction: async () => ({ kind: "exec", executable: `${GAME}\\g.exe`, args: [] }) })] }).then((h) => {
+      (h.deps.files as { realPath: typeof realPath }).realPath = realPath;
+      return h;
+    });
+
+  it("rejects when realPath leaves the install path (isInside is real)", async () => {
+    const h = await make(async () => "C:\\Windows\\calc.exe");
+    seed(h, "gog", "1");
+    expect((await rejection(h.core.launch("c1"))).code).toBe("launch.rejected");
+    expect(h.execs).toEqual([]);
+  });
+
+  it("rejects when realPath throws", async () => {
+    const h = await make(async () => { throw new Error("EPERM"); });
+    seed(h, "gog", "1");
     expect((await rejection(h.core.launch("c1"))).code).toBe("launch.rejected");
     expect(h.execs).toEqual([]);
   });

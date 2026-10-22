@@ -242,6 +242,29 @@ describe("fields", () => {
   });
 });
 
+describe("url-query extract only trusts the store's own pages (ADR 77, audit M1)", () => {
+  const codeStep: WizardStep = { ...keyStep, id: "code", fields: [{ name: "apiKey", labelKey: k("connectors.steam.l"), secret: true, maxLength: 64, extract: "url-query:code" }] };
+  const run = async (pasted: string) => {
+    const { h } = await setup({ spy: { override: async (id, input) => (id === "login" ? codeStep : input.kind === "fields" ? { kind: "done" } : codeStep) } });
+    const { wizardId } = await h.core.startWizard("steam", BASE);
+    await callback(h, wizardId);
+    return (await h.core.submitWizard(wizardId, "code", fields(pasted))).kind;
+  };
+  it("accepts https on an auth or api host with the parameter", async () => {
+    expect(await run("https://login.example.com/ok?code=abc")).toBe("done");
+  });
+  it.each([
+    ["a bare value", "abc"],
+    ["http", "http://login.example.com/ok?code=abc"],
+    ["another host", "https://evil.example/ok?code=abc"],
+    ["a sub-domain trick", "https://login.example.com.evil.example/?code=abc"],
+    ["credentials in the address", "https://u:p@login.example.com/ok?code=abc"],
+    ["no parameter", "https://login.example.com/ok?other=abc"],
+  ])("rejects %s", async (_n, pasted) => {
+    expect(await run(pasted)).toBe("rejected");
+  });
+});
+
 describe("what the connector returns is validated (ADR 40 rule 4)", () => {
   const bad: [string, WizardStep][] = [
     ["a url outside authHosts", { ...keyStep, url: "https://evil.example/key" }],

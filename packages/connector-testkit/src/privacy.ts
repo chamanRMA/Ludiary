@@ -9,9 +9,17 @@ export interface PrivacyViolation {
 /** ADR 74 point 10: the only fictional values fixtures may carry. Anything else of the same shape is rejected. */
 export const FICTIONAL_STEAM_ID = "76561190000000000";
 export const FICTIONAL_API_KEY = "0123456789abcdef0123456789abcdef";
+/** ADR 77 point 10: the fictional GOG session values fixtures may carry. */
+export const FICTIONAL_GOG_VALUES = [
+  "gog-test-auth-code-0001",
+  "gog-test-access-token",
+  "gog-test-refresh-token",
+  "gog-test-refresh-token-2",
+] as const;
 const ALLOWED = [
   new RegExp(`(?<!\\d)${FICTIONAL_STEAM_ID}(?!\\d)`, "g"),
   new RegExp(`(?<![0-9A-Za-z])${FICTIONAL_API_KEY}(?![0-9A-Za-z])`, "g"),
+  ...FICTIONAL_GOG_VALUES.map((v) => new RegExp(`(?<![0-9A-Za-z-])${v}(?![0-9A-Za-z-])`, "g")),
 ];
 
 const RULES: readonly { rule: string; re: RegExp }[] = [

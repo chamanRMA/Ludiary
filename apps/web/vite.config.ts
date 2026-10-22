@@ -7,8 +7,8 @@ const csp = [
   "script-src 'self'",
   "style-src 'self'",
   "font-src 'self'",
-  // ADR 71: Steam covers load straight from Steam's CDN (union of connector mediaHosts).
-  "img-src 'self' data: https://shared.akamai.steamstatic.com https://shared.cloudflare.steamstatic.com https://shared.steamstatic.com",
+  // ADR 71: covers load straight from the stores' CDNs (union of connector mediaHosts).
+  "img-src 'self' data: https://images.gog.com https://shared.akamai.steamstatic.com https://shared.cloudflare.steamstatic.com https://shared.steamstatic.com",
   "connect-src 'self'",
   "manifest-src 'self'",
   "base-uri 'none'",

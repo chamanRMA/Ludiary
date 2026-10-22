@@ -17,7 +17,7 @@ import {
 import { createSyncService } from "./sync";
 import { storeScope, createVaultFactory } from "./vault";
 import { createWizardEngine } from "./wizards";
-import { syncContext } from "./contexts";
+import { bumpEpoch, syncContext } from "./contexts";
 
 /** A connector was refused at startup (ADR 40 rule 11, ADR 72). `problems` are English, for developers. */
 export class ConnectorRegistrationError extends Error {
@@ -123,6 +123,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     async disconnect(store) {
       const c = connectorOf(store);
       wizards.cancelStore(store);
+      bumpEpoch(env, store); // a library operation in flight can no longer store a refreshed token (ADR 77)
       const signal = deps.clock.timeout(30_000);
       try {
         await withTimeout(signal, async () => c.connection!.disconnect(await syncContext(env, c, signal)));
@@ -133,6 +134,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
       await deps.secrets.deleteScope(storeScope(store));
       await deps.connections.delete(store);
       await deps.syncState.delete(store, "library");
+      bumpEpoch(env, store);
     },
 
     async requestSync(req) {

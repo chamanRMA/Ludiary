@@ -1,9 +1,10 @@
 // Launching a game (ADR 40 rule 5, invariant 3, ADR 72). The only input is stored ids; the LaunchSpec never leaves here.
-import { ConnectorError } from "@ludiary/contracts";
+import { ConnectorError, ExecError } from "@ludiary/contracts";
 import type { LaunchContext, LaunchSpec, ResolvedLocation, StoreConnector } from "@ludiary/contracts";
 import { DOUBLE_LAUNCH_MS, LAUNCH_ORDER, type Env } from "./env";
-import { CoreError, toCoreError } from "./errors";
+import { asKey, CoreError, toCoreError } from "./errors";
 import type { LaunchTarget } from "./model";
+import { storedActiveRoots } from "./active-roots";
 import { effectiveLocale, readSettings } from "./settings";
 import { insideAny } from "./validate";
 
@@ -99,7 +100,18 @@ export function createLaunchService(env: Env): LaunchService {
       if (typeof cwd !== "string" || CONTROL.test(cwd) || !deps.files.isAbsolute(cwd)) return reject(c, "bad cwd");
       if (!(await insideAny(deps.files, cwd, allowedRoots)) || !(await deps.files.isDirectory(cwd))) return reject(c, "cwd outside the allowed locations");
     }
-    return { kind: "exec", executable, args: [...(args as string[])], ...(cwd !== undefined ? { cwd: cwd as string } : {}) };
+    // Hand the platform the canonical paths that were checked, not the connector's (a link could change in between).
+    try {
+      const realExe = await deps.files.realPath(executable);
+      const realCwd = cwd !== undefined ? await deps.files.realPath(cwd as string) : undefined;
+      if (!(await insideAny(deps.files, realExe, allowedRoots)) || (realCwd !== undefined && !(await insideAny(deps.files, realCwd, allowedRoots)))) {
+        return reject(c, "canonical path outside the allowed locations");
+      }
+      return { kind: "exec", executable: realExe, args: [...(args as string[])], ...(realCwd !== undefined ? { cwd: realCwd } : {}) };
+    } catch (e) {
+      if (e instanceof CoreError) throw e;
+      return reject(c, "path could not be resolved");
+    }
   }
 
   return {
@@ -135,8 +147,16 @@ export function createLaunchService(env: Env): LaunchService {
       lastStart.set(clickKey, now); // also covers a second click while this one is still being resolved
 
       try {
+        // Only what the scan would still see: a disabled or removed folder, or detection 'later', means not installed.
+        if (action === "play" && installation !== null) {
+          const mode = (await readSettings(env)).detection ?? "later";
+          const active = storedActiveRoots(mode, await deps.scanRoots.list(), connector.id).map((r) => r.path);
+          if (!(await insideAny(deps.files, installation.installPath, active))) throw new CoreError("not-installed", "The install folder is no longer scanned");
+        }
         const { launchers, resolved } = await resolveLauncherLocations(connector);
-        const allowedRoots = [...(installation ? [installation.installPath] : []), ...launchers.map((l) => l.path)];
+        // Launcher locations are readable by the connector (ctx.fs) but never a destination for exec (ADR 77, audit A1).
+        const execRoots = installation ? [installation.installPath] : [];
+        const allowedRoots = [...execRoots, ...launchers.map((l) => l.path)];
         const ctx: LaunchContext = {
           signal: deps.clock.timeout(30_000),
           log: {
@@ -168,11 +188,17 @@ export function createLaunchService(env: Env): LaunchService {
         }
         if (spec === null) throw new CoreError("action-unavailable", `The connector has no ${action} action for this property`);
 
-        const safe = await checkSpec(connector, spec, allowedRoots);
+        const safe = await checkSpec(connector, spec, execRoots);
         try {
           if (safe.kind === "uri") await deps.launcher.openUri(safe.uri);
           else await deps.launcher.exec({ executable: safe.executable, args: safe.args, ...(safe.cwd !== undefined ? { cwd: safe.cwd } : {}) });
         } catch (e) {
+          // Never the path or the arguments: they may hold the user name (ADR 76 point 2).
+          if (e instanceof ExecError && e.reason !== "failed") {
+            deps.log.warn("The platform refused to start the game", { connector: connector.id, reason: e.reason });
+            if (e.reason === "denied") throw new CoreError("launch.denied", "The OS did not allow opening the game", { key: asKey("game.launchDenied"), params: { store: connector.id }, cause: e });
+            throw new CoreError("launch.rejected", "The platform rejected the launch specification", { cause: e });
+          }
           deps.log.error("The platform could not start the game", { connector: connector.id, error: e instanceof Error ? e.name : "unknown" });
           throw new CoreError("internal", "The platform could not start the game", { cause: e });
         }

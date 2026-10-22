@@ -23,6 +23,7 @@
   "core.errors.not-found": "What you are looking for was not found.",
   "core.errors.not-installed": "This game is not installed on this computer.",
   "core.errors.action-unavailable": "This action is not available for this game.",
+  "core.errors.launch.denied": "Windows did not allow the game to open. It may ask for administrator rights: open it from its store or from its shortcut.",
   "core.errors.launch.rejected": "Ludiary rejected the launch request for safety and nothing was run.",
   "core.errors.busy": "Another operation is already running. Wait for it to finish.",
   "core.errors.invalid-input": "The data sent is not valid.",

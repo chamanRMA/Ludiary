@@ -1,4 +1,5 @@
 import type {
+  StoreId,
   GameDetailDto,
   GameSummaryDto,
   LaunchRequestDto,
@@ -28,7 +29,8 @@ import { ApiError, type Http } from "./http";
  * Served by the local server: library, game sheet, launch, sync and scan, store status, first run,
  * detection mode, language and scan roots.
  *
- * Steam account (ADR 74): `startWizard`, `submitWizard`, `cancelWizard`, `disconnect` and `wizardCallback` for Steam.
+ * Store accounts (ADR 74, 77): `startWizard`, `submitWizard`, `cancelWizard`, `disconnect` and `wizardCallback` for the stores
+ * in REAL_WIZARD_STORES (Steam and GOG).
  *
  * Delegated to `sim`, method by method, and never stored in the server: the same wizard methods for the other
  * stores and services, `getServices`, collections, backups, log export, `simulateExpiredSession`, and the settings the
@@ -55,7 +57,9 @@ function sessionStore(): WizardIdStorage | null {
   return null;
 }
 
-const isSteam = (t: WizardTarget): boolean => t.kind === "store" && t.store === "steam";
+/** Stores whose wizard is served by the real server (ADR 77 point 8). */
+export const REAL_WIZARD_STORES: readonly StoreId[] = ["steam", "gog"];
+const realStore = (t: WizardTarget): StoreId | null => (t.kind === "store" && REAL_WIZARD_STORES.includes(t.store) ? t.store : null);
 const expired = (): ApiError => new ApiError(404, "not-found", "wizard.expired");
 
 export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStorage | null = sessionStore()): LudiaryApi {
@@ -65,8 +69,9 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
   // the current step id stays in memory and is learned again from each answer.
   let wizardId: string | null = null;
   let stepId: string | null = null;
+  let wizardStore: StoreId | null = null; // store of the wizard in memory
   const currentId = (): string | null => {
-    if (wizardId) return wizardId;
+    if (wizardId) return wizardStore === "gog" ? null : wizardId; // a GOG wizard in memory is not Steam's
     try {
       wizardId = storage?.getItem(WIZARD_ID_KEY) ?? null;
     } catch {
@@ -75,10 +80,12 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     return wizardId;
   };
   function forget(): void {
+    const keepSteamKey = wizardStore === "gog";
     wizardId = null;
     stepId = null;
+    wizardStore = null;
     try {
-      storage?.removeItem(WIZARD_ID_KEY);
+      if (!keepSteamKey) storage?.removeItem(WIZARD_ID_KEY);
     } catch {
       /* ignore */
     }
@@ -109,7 +116,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     const simulated = new Map((await sim.getStores()).map((s) => [s.store, s]));
     return real.map((r): StoreStatusDto => {
       const s = simulated.get(r.store);
-      if (r.store === "steam" || !s || (s.connection !== "connected" && s.connection !== "expired")) return r;
+      if (REAL_WIZARD_STORES.includes(r.store) || !s || (s.connection !== "connected" && s.connection !== "expired")) return r;
       return {
         ...r,
         connection: s.connection,
@@ -198,35 +205,43 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     },
     getMaintenance,
 
-    // ---- Steam account (ADR 74): wizard and disconnect go to the server; other stores and services stay simulated
+    // ---- Store accounts (ADR 74, 77): wizard and disconnect go to the server; other stores and services stay simulated.
+    // Only Steam keeps the id in sessionStorage (its wizard leaves Ludiary and comes back); GOG's lives in memory.
     startWizard: async (t) => {
-      if (!isSteam(t)) return sim.startWizard(t);
-      const res = await http.post<WizardStartDto>("/api/stores/steam/wizard", {});
+      const store = realStore(t);
+      if (!store) return sim.startWizard(t);
+      const res = await http.post<WizardStartDto>(`/api/stores/${store}/wizard`, {});
       wizardId = res.wizardId;
-      try {
-        storage?.setItem(WIZARD_ID_KEY, res.wizardId);
-      } catch {
-        /* ignore */
+      wizardStore = store;
+      if (store === "steam") {
+        try {
+          storage?.setItem(WIZARD_ID_KEY, res.wizardId);
+        } catch {
+          /* ignore */
+        }
       }
       return track(res.response);
     },
     submitWizard: async (t, input) => {
-      if (!isSteam(t)) return sim.submitWizard(t, input);
-      const id = currentId();
+      const store = realStore(t);
+      if (!store) return sim.submitWizard(t, input);
+      const id = store === "steam" ? currentId() : wizardStore === store ? wizardId : null;
       if (!id || !stepId) throw expired();
-      if (input.kind === "callback") return (await api.wizardCallback("steam", input.query)) ?? Promise.reject(expired()); // the route is different
+      if (input.kind === "callback") return (await api.wizardCallback(store, input.query)) ?? Promise.reject(expired()); // the route is different
       const body: WizardSubmitDto = { stepId, input };
       return track(await guard(() => http.post<WizardResponseDto>(`/api/wizards/${enc(id)}/submit`, body)));
     },
     cancelWizard: async (t) => {
-      if (!isSteam(t)) return sim.cancelWizard(t);
-      const id = currentId();
-      forget();
+      const store = realStore(t);
+      if (!store) return sim.cancelWizard(t);
+      const id = store === "steam" ? currentId() : wizardStore === store ? wizardId : null;
+      if (store === "steam" || wizardStore === store) forget(); // never drop another store's wizard
       if (id) await http.delete(`/api/wizards/${enc(id)}`).catch(() => undefined); // 204 even when gone; best effort
     },
     disconnect: async (t) => {
-      if (!isSteam(t)) return sim.disconnect(t);
-      await http.delete("/api/stores/steam/connection");
+      const store = realStore(t);
+      if (!store) return sim.disconnect(t);
+      await http.delete(`/api/stores/${store}/connection`);
     },
     wizardCallback: async (store, query) => {
       const id = currentId();

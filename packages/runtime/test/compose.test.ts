@@ -76,7 +76,7 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
   async function start(picks: (string | null)[]) {
     const launched: string[] = [];
     const launcher = (schemes: readonly string[]): ProcessLauncher => ({
-      kinds: ["uri"],
+      kinds: ["uri", "exec"],
       openUri: async (uri) => {
         if (!schemes.includes(uri.split(":")[0]!)) throw new Error("scheme not allowed");
         launched.push(uri);
@@ -165,8 +165,9 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
     const { port } = await start([]);
     const { call } = await login(port);
     const stores = (await (await call("/api/stores")).json()) as { store: string; access: string; mode: string; connection: string }[];
-    expect(stores).toHaveLength(1);
+    expect(stores.map((s) => s.store)).toEqual(["steam", "gog"]);
     expect(stores[0]).toMatchObject({ store: "steam", access: "official-api", mode: "installed-only" });
+    expect(stores[1]).toMatchObject({ store: "gog", access: "unofficial-api", mode: "installed-only" });
     const cancelled = await call("/api/scan-roots/pick", "POST", {});
     expect(cancelled.status).toBe(200);
     expect(await cancelled.json()).toEqual({ cancelled: true });
@@ -179,7 +180,7 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
     expect(root.status).toBe(200);
     expect(await root.text()).toContain("<title>spa</title>");
     const csp = root.headers.get("content-security-policy")!;
-    expect(csp).toContain("img-src 'self' data: https://shared.akamai.steamstatic.com");
+    expect(csp).toContain("img-src 'self' data: https://images.gog.com https://shared.akamai.steamstatic.com");
     const js = await fetch(`http://127.0.0.1:${port}/assets/app-abc.js`);
     expect(js.headers.get("cache-control")).toContain("immutable");
     expect(js.headers.get("content-type")).toContain("text/javascript");
@@ -228,10 +229,20 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
     sqlite.close();
   });
 
+  it("refuses the registered GOG connector on a platform without exec (ADR 72, 76)", async () => {
+    const sqlite = await openMigrated();
+    const error = await composeCore(fakeDeps({ connectors: createConnectors(), createProcessLauncher: launcherOf(["uri"]) }), sqlite, noLog, MASTER_KEY).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(FatalError);
+    expect((error as FatalError).message).toContain("launch kind 'exec'");
+    sqlite.close();
+  });
+
   it("unions the media hosts and URI schemes of the registered connectors", () => {
     const connectors = createConnectors();
-    expect(unionUriSchemes(connectors)).toEqual(["steam"]);
+    expect(unionUriSchemes(connectors)).toEqual(["goggalaxy", "steam"]); // ADR 77: GOG declares goggalaxy for install
+    expect(connectors.map((c) => c.id)).toEqual(["steam", "gog"]);
     expect(unionMediaHosts(connectors)).toEqual([
+      "images.gog.com",
       "shared.akamai.steamstatic.com",
       "shared.cloudflare.steamstatic.com",
       "shared.steamstatic.com",

@@ -6,7 +6,7 @@ import { EXCLUDED_APP_IDS } from "./scan";
 const OWNED_URL = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/";
 const MAX_APPID = 2 ** 32 - 1;
 const MAX_PLAYTIME = 100_000_000;
-const MAX_TITLE = 500;
+const MAX_TITLE = 300; // the core drops longer titles (validate.ts), which would leave complete false forever
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const isInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v);
@@ -76,7 +76,7 @@ export async function listSteamLibrary(ctx: SyncContext): Promise<LibrarySnapsho
     const id = String(appid);
     if (EXCLUDED_APP_IDS.has(id) || seen.has(id)) continue;
     seen.add(id);
-    const name = typeof g["name"] === "string" ? g["name"].trim().slice(0, MAX_TITLE) : "";
+    const name = typeof g["name"] === "string" ? g["name"].replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_TITLE) : "";
     const played = g["playtime_forever"];
     const last = g["rtime_last_played"];
     const lastDate = isInt(last) && last > 0 ? new Date(last * 1000) : null;
