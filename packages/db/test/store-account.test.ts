@@ -71,11 +71,25 @@ describe("migration 0002_store_account", () => {
     sqlite.exec("INSERT INTO canonical_games (id, user_id, title, normalized_title, created_at, updated_at) VALUES ('c1', 'u', 'Portal 2', 'portal 2', 1, 1)");
     sqlite.exec("INSERT INTO game_properties (id, user_id, canonical_game_id, store, store_game_id, kind, title, normalized_title) VALUES ('p1', 'u', 'c1', 'steam', '620', 'game', 'Portal 2', 'portal 2')");
     const res = await migrate(sqlite, { backupDir: join(dir, "backups") });
-    expect(res.applied).toEqual(["0002_store_account"]);
+    expect(res.applied).toEqual(["0002_store_account", "0003_recheck_steam_media"]);
     expect(res.backupFile && existsSync(res.backupFile)).toBe(true);
     const cols = (sqlite.prepare("PRAGMA table_info(game_properties)").all() as { name: string }[]).map((c) => c.name);
     expect(cols).toEqual(expect.arrayContaining(["store_playtime_minutes", "store_last_played_at"]));
     expect(sqlite.prepare("SELECT title, store_playtime_minutes AS m, store_last_played_at AS l FROM game_properties").get()).toEqual({ title: "Portal 2", m: null, l: null });
+  });
+
+  it("0003 forgets resolved Steam media so the next scan asks again (PNG covers were rejected before)", async () => {
+    await migrate(sqlite, { backupDir: join(dir, "backups"), migrations: MIGRATIONS.slice(0, 2) });
+    sqlite.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
+    sqlite.exec("INSERT INTO canonical_games (id, user_id, title, normalized_title, created_at, updated_at) VALUES ('c1', 'u', 'Ace', 'ace', 1, 1)");
+    const meta = JSON.stringify({ media: { coverUrl: "https://x/a.jpg" }, resolvedMedia: { heroUrl: "https://x/h.jpg" }, mediaResolvedAt: 5 });
+    const ins = sqlite.prepare("INSERT INTO game_properties (id, user_id, canonical_game_id, store, store_game_id, kind, title, normalized_title, store_metadata) VALUES (?, 'u', 'c1', ?, ?, 'game', 'Ace', 'ace', ?)");
+    ins.run("p1", "steam", "228400", meta);
+    ins.run("p2", "gog", "1", meta);
+    await migrate(sqlite, { backupDir: join(dir, "backups") });
+    const read = (id: string) => JSON.parse((sqlite.prepare("SELECT store_metadata AS m FROM game_properties WHERE id = ?").get(id) as { m: string }).m);
+    expect(read("p1")).toEqual({ media: { coverUrl: "https://x/a.jpg" } }); // initial media kept, resolution forgotten
+    expect(read("p2")).toEqual(JSON.parse(meta)); // other stores untouched
   });
 
   it("has the unique index of secrets and the CHECK of store_connections", async () => {

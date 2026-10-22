@@ -15,6 +15,13 @@
       "when": 1792661109434,
       "tag": "0001_store_account",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792678421667,
+      "tag": "0002_recheck_steam_media",
+      "breakpoints": true
     }
   ]
 }

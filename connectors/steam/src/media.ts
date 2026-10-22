@@ -22,7 +22,8 @@ export const STEAM_API_HOSTS: readonly string[] = ["api.steampowered.com", "stea
 
 const GET_ITEMS_URL = "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/";
 const ASSET_BASE = "https://shared.akamai.steamstatic.com/store_item_assets/";
-const FILE_RE = /^(?:[0-9a-f]{40}\/)?[a-z0-9_]{1,64}\.jpg$/;
+// Older games name the vertical cover portrait.png (e.g. 228400): rejecting .png left a guessed URL that 404s.
+const FILE_RE = /^(?:[0-9a-f]{40}\/)?[a-z0-9_]{1,64}\.(?:jpg|png)$/;
 
 /** Retry-After in seconds (the HTTP-date form is ignored). */
 export function retryAfterMs(headers: Readonly<Record<string, string>>): number | undefined {

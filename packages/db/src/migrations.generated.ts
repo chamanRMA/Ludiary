@@ -35,5 +35,11 @@ export const MIGRATIONS: readonly EmbeddedMigration[] = [
       "ALTER TABLE `game_properties` ADD `store_playtime_minutes` integer;",
       "ALTER TABLE `game_properties` ADD `store_last_played_at` integer;"
     ]
+  },
+  {
+    "id": "0003_recheck_steam_media",
+    "statements": [
+      "-- Data only (ADR 73): the Steam connector used to reject PNG cover names (portrait.png), so some games were marked\n-- as resolved with a guessed URL that returns 404. Forget the resolution so the next scan asks GetItems again.\nUPDATE `game_properties` SET `store_metadata` = json_remove(`store_metadata`, '$.mediaResolvedAt', '$.resolvedMedia') WHERE `store` = 'steam' AND `store_metadata` IS NOT NULL AND json_valid(`store_metadata`);"
+    ]
   }
 ];

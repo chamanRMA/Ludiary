@@ -66,7 +66,7 @@ describe("resolveSteamMedia (ADR 73)", () => {
       good,
       { ...item(3450310, { library_capsule: "x.jpg" }), assets: { asset_url_format: "steam/apps/999/${FILENAME}", library_capsule: "a.jpg" } },
       item(2062430, { library_capsule: "../library_600x900.jpg", header: "a/b/header.jpg" }),
-      item(228980, { library_capsule: "x.png", header: "https://evil.example/h.jpg" }),
+      item(228980, { library_capsule: "x.gif", header: "https://evil.example/h.jpg" }),
       item(1, { library_capsule: "a.jpg" }), // not requested
       item(10, { library_capsule: "//evil.example/a.jpg", header: "AAAA/header.jpg" }),
       { ...item(20, { library_capsule: "a.jpg" }), success: 15 },
@@ -76,6 +76,11 @@ describe("resolveSteamMedia (ADR 73)", () => {
     );
     const m = await run(ok(body), ["620", "3450310", "2062430", "228980", "10", "20", "30"]);
     expect([...m.keys()]).toEqual(["620"]);
+  });
+
+  it("accepts a PNG vertical cover (older games name it portrait.png, e.g. 228400)", async () => {
+    const m = await run(ok(wrap(item(228400, { library_capsule: "portrait.png", header: "header.jpg" }))), ["228400"]);
+    expect(m.get("228400")).toEqual({ coverUrl: `${CDN}/228400/portrait.png?t=1`, heroUrl: `${CDN}/228400/header.jpg?t=1` });
   });
 
   it("keeps only the valid field of an element", async () => {

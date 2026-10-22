@@ -2272,7 +2272,7 @@ Se implementa ahora la parte de `HttpClient` (decisión 40) que este paso necesi
 - `connectors/steam/src/media.ts`: `resolveSteamMedia(ids, ctx)`. Manifiesto con `apiHosts`.
   - Construye `input_json` con `ids: [{ appid: Number(id) }]`, el `context` de arriba y `data_request: { include_assets: true }`.
   - `429` → `store.rate-limited` con `retryAfterMs` de `Retry-After`; otro estado distinto de 200 o cuerpo sin `response.store_items` → `store.unexpected-response`.
-  - Por elemento, se acepta solo si `success === 1`, `appid` está entre los pedidos, `asset_url_format` cumple `^steam/apps/<appid>/\$\{FILENAME\}(\?t=\d{1,12})?$` con su propio AppID, y cada nombre de fichero cumple `^(?:[0-9a-f]{40}/)?[a-z0-9_]{1,64}\.jpg$`. Lo que no cumple se salta, sin tumbar el resto.
+  - Por elemento, se acepta solo si `success === 1`, `appid` está entre los pedidos, `asset_url_format` cumple `^steam/apps/<appid>/\$\{FILENAME\}(\?t=\d{1,12})?$` con su propio AppID, y cada nombre de fichero cumple `^(?:[0-9a-f]{40}/)?[a-z0-9_]{1,64}\.(?:jpg|png)` (algunos juegos antiguos usan `portrait.png`; ver la corrección del final). Lo que no cumple se salta, sin tumbar el resto.
   - `library_capsule` → `coverUrl`; `header` → `heroUrl`.
 - `packages/platform-node/src/http.ts`: `createHttpClient` con las reglas de arriba.
 - `packages/core`: paso de medios al final de la operación `scan`, con las reglas de «Cuándo». Valida la salida con la misma función de medios que el escaneo (`validate.ts`) e ignora los ID no pedidos. `CoreDeps.http`.
@@ -2307,6 +2307,8 @@ Se implementa ahora la parte de `HttpClient` (decisión 40) que este paso necesi
 6. `GetItems` no exige un `User-Agent` concreto.
 
 **Motivo:** es la única fuente pública sin clave que da la portada vertical con hash, y lo hace por lotes, así que el coste en red es mínimo y una vez resuelto no se repite. Mantiene intactos `mediaHosts`, la CSP y el modelo de la decisión 71 (el navegador carga del CDN, el servidor no sirve imágenes), y no añade tablas. Adelantar un `HttpClient` acotado a `apiHosts` y solo `GET` es poca superficie y es la pieza que el corte de la cuenta necesita de todos modos.
+
+**Corrección del 22-10-2026 (prueba del usuario):** algunos juegos antiguos llaman a su portada vertical `portrait.png` (por ejemplo, 228400). El patrón de nombres solo admitía `.jpg`, así que la respuesta se descartaba y quedaba la URL adivinada, que da 404; además, el navegador no guarda en caché un 404 y lo volvía a pedir en cada repintado. Ahora el patrón admite `.jpg` y `.png`; la migración de datos `0003_recheck_steam_media` borra la resolución guardada de Steam para que el siguiente escaneo pregunte de nuevo; y la web recuerda durante la sesión las portadas que ya fallaron y no las vuelve a pedir.
 
 **Consecuencias:**
 
@@ -2363,7 +2365,7 @@ Se implementa ahora la parte de `HttpClient` (decisión 40) que este paso necesi
   - `/connect/return` es una ruta de la SPA, que el servidor entrega por la vuelta a `index.html`.
   - La página lee `location.search` y lo borra **antes de nada** con `history.replaceState(null, '', '/connect/return')`.
   - Si `w` es un id con formato válido, envía `POST /api/wizards/<w>/callback` con **solo** los parámetros `openid.*`, con la cookie y la clave de origen (`session+key`).
-  - Supuesto S10: tras una navegación entre sitios, las peticiones `fetch` de la página al mismo origen sí llevan la cookie `SameSite=Strict`. Si un navegador no la enviara, la página se recarga una vez con `location.replace` antes de enviar.
+  - Supuesto S10: tras una navegación entre sitios, las peticiones `fetch` de la página al mismo origen sí llevan la cookie `SameSite=Strict`. Comprobado por el usuario el 22-10-2026 con su cuenta real: la cookie viaja. **Sin plan de reserva** (decisión del usuario): la recarga con `location.replace` que se proponía aquí no serviría, porque la página borra la consulta de OpenID antes de enviarla; si un navegador no mandara la cookie, el usuario ve «no autorizado» y vuelve a conectar la cuenta.
   - Ninguna ruta pública procesa datos de Steam.
 - **Verificación (conector, `connectors/steam/src/openid.ts`), en este orden. Cualquier fallo es `auth.invalid` con la clave `connectors.steam.error.openid`:**
   1. `openid.mode`:
@@ -2481,7 +2483,7 @@ export interface CoreDeps {
 - **Web: de simulador a real solo para Steam** (revisa el punto 7 de la decisión 72 en este método):
   - `real.ts`:
     - `startWizard`, `submitWizard`, `cancelWizard` y `disconnect` van a la API cuando `target` es `{ kind: 'store', store: 'steam' }`; las demás tiendas y los servicios siguen delegados en el simulador.
-    - Guarda el `wizardId` en memoria, por tienda.
+    - Guarda el `wizardId` en `sessionStorage` (`ludiary.wizardId.steam`; hoy solo Steam tiene asistente con redirección), no en memoria: tiene que sobrevivir al viaje a Steam en la misma pestaña. No es un secreto (sin cookie y clave de origen no sirve) y desaparece al cerrar la pestaña. La vuelta comprueba además que coincide con el `w` de la URL.
     - Añade `wizardCallback(wizardId, query)`.
     - `getStores` deja de superponer el estado simulado sobre Steam.
   - `ConnectWizard.tsx`:
@@ -2518,7 +2520,7 @@ export function makeSecret(value: string): Secret;
 
   - El análisis es estricto: cuatro partes, `v1`, `keyId` entre 1 y 16, nonce de exactamente 12 bytes y cifrado de al menos 16. Cualquier otra cosa es `invalid`.
   - `runtime` crea el cifrador con la clave que ya carga `loadMasterKey` (id y valor) y lo pasa a `createCore`.
-- **Migración `0002_store_account`** (decisión 47; la copia previa de la 57 la hace ya el migrador):
+- **Migración `0002_store_account`** (decisión 47; la copia previa de la 57 la hace ya el migrador). Nombre: drizzle-kit numera los ficheros desde 0000, así que el fichero es `packages/db/drizzle/0001_store_account.sql` y el id registrado en `schema_migrations` es `0002_store_account` (`embed-migrations.mjs` suma uno, como con `0001_library_scan`).
   - `secrets`: `id`, `user_id`, `scope`, `name`, `ciphertext`, `key_id` (entero), `updated_at`. Único por (`user_id`, `scope`, `name`).
   - `store_connections`: `user_id`, `store`, `status` (`connected` / `expired`, con `CHECK`), `account_label` (nulo), `connected_at`. Clave primaria (`user_id`, `store`). Sin fila, la tienda está desconectada.
   - `game_properties` añade `store_playtime_minutes` y `store_last_played_at`, enteros nulos; las fechas en milisegundos (decisión 47).
@@ -2768,7 +2770,7 @@ export function makeSecret(value: string): Secret;
 - **S7 (sin verificar):** el límite de 100 000 llamadas al día por clave (decisión 50). Este corte hace como mucho unas pocas llamadas cada 10 minutos.
 - **S8 (sin verificar):** `skip_unvetted_apps=false` hace aparecer juegos con perfil limitado. Dato de la comunidad; si Steam lo ignora, no cambia nada.
 - **S9 (sin verificar):** `steam://install/<appId>` abre el diálogo de instalación del cliente (wiki comunitaria de Valve).
-- **S10:** las peticiones `fetch` de una página a la que se llegó desde otro sitio llevan la cookie `SameSite=Strict` de su propio origen. Es el comportamiento estándar; se comprueba en los tres navegadores.
+- **S10:** las peticiones `fetch` de una página a la que se llegó desde otro sitio llevan la cookie `SameSite=Strict` de su propio origen. Es el comportamiento estándar. Comprobado por el usuario el 22-10-2026; sin plan de reserva (decisión 74).
 - **S11 (sin verificar):** el campo de dominio de la página de la clave acepta `localhost` (decisión 69).
 - **S12:** `playtime_forever` va en minutos y `rtime_last_played` en segundos Unix.
 

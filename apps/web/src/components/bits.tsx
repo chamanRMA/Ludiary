@@ -27,24 +27,40 @@ export function StoreBadge({ store, size, warning }: { store: StoreId; size?: "m
  * Cover image with the ADR 71 fallback chain: coverUrl, then coverFallbackUrl (contained), then a
  * deterministic CSS gradient with the title. No retries.
  */
+/**
+ * Cover URLs that already failed in this page session. A 404 is not cached by the browser, so without this every
+ * re-render of the library (window focus, background sync) asked Steam again for the same missing image.
+ */
+const brokenCovers = new Set<string>();
+
+/** The cover URLs still worth trying, in order: vertical cover, then the horizontal fallback. */
+export function coverCandidates(game: Pick<GameSummaryDto, "coverUrl" | "coverFallbackUrl">): string[] {
+  return [game.coverUrl, game.coverFallbackUrl].filter((u): u is string => !!u && !brokenCovers.has(u));
+}
+
+/** Test seam: marks a URL as failed, as an <img> error would. */
+export const markCoverBroken = (url: string): void => void brokenCovers.add(url);
+
 export function Cover({ game, height = 190, bare }: { game: Pick<GameSummaryDto, "title" | "coverUrl" | "coverFallbackUrl" | "unsynced">; height?: number; bare?: boolean }) {
-  const urls = [game.coverUrl, game.coverFallbackUrl].filter((u): u is string => !!u);
-  const [failed, setFailed] = useState(0);
+  const [, setFailed] = useState(0);
   let hash = 0;
   for (const ch of game.title) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-  const src = urls[failed];
+  const src = coverCandidates(game)[0];
   return (
     <div className={cx(ui.cover, game.unsynced === true && ui.unsynced)} style={{ height, background: `hsl(${hash} 38% 32%)` }} aria-hidden="true">
       {src ? (
         <img
           key={src}
-          className={cx(ui.coverImg, failed > 0 && ui.coverContain)}
+          className={cx(ui.coverImg, src === game.coverFallbackUrl && ui.coverContain)}
           src={src}
           alt=""
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={() => setFailed((n) => n + 1)}
+          onError={() => {
+            brokenCovers.add(src);
+            setFailed((n) => n + 1);
+          }}
         />
       ) : (
         !bare && game.title
