@@ -52,10 +52,10 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; propósito `library`, `SyncContext.fs`, `readBytes`, paso `embedded-login`, puerto `EmbeddedLogin` y fila de Ubisoft en la 80 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario); consecuencia sobre Ubisoft concretada en la 79 |
-| 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`) |
+| 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`); para Ubisoft, ventana de login integrada en la 80 (decisión expresa del usuario) |
 | 44 | Nombre del proyecto (Ludiary) y ámbito de los paquetes | Vigente (confirmada por el usuario) |
 | 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Vigente (confirmada por el usuario tras el prototipo); ampliada en las 62 a 65; la actualización con vuelta atrás pasa a la 58 |
 | 46 | Cifrado de secretos y rotación de la clave | Vigente (confirmada por el usuario; amplía la 14); token de instalación revisado en la 63 |
@@ -91,7 +91,8 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11.1 pendiente del usuario; punto 11.2 resuelto en la 77); vía de la cuenta y orden del emparejamiento revisados en la 77 |
 | 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
 | 78 | Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta, no instalados e Instalar (corte 2) | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de la 40 y la parte de Epic de la 43; sin tipos nuevos; `storeGameId` hasta 160 caracteres; punto 13 aplicado por defecto con (a), (a) y (a); corte 2 tras la prueba del corte 1; revisada por el auditor el mismo día sin críticos ni altos (punto 14): `.item` como entrada no confiable con regla estricta de ruta, solo el valor extraído en `json-field`, E5 comprobado y `AppDataPath` como primera fuente; E7 falso en la práctica: el corte 1 va sin portadas y sin `resolveMedia` (punto 15)) |
-| 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); pendiente de prueba manual y de la revisión del código) |
+| 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); prueba manual del 23-10-2026: detección correcta, U4 y U7 confirmados (punto 13); portadas, Instalar, cuenta y biblioteca revisados en la 80) |
+| 80 | Ubisoft: cuenta con ventana de login integrada, juegos poseídos y portadas con la caché local | Propuesta (vía C elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 42, 45, 74 y 79; revisa para Ubisoft la 43 y, de la 79, los puntos 1 y 5, el descarte de `configurations` y `access`; paso `embedded-login` y puerto `EmbeddedLogin` (subcomando del auxiliar de Go con WebView2), propósito `library`, `SyncContext.fs` y `readBytes`, aditivos, `contractVersion` 1; comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto) |
 
 ## Decisiones
 
@@ -571,7 +572,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79; propósito `library`, `SyncContext.fs`, `ScopedFileReader.readBytes`, paso `embedded-login`, entrada `embedded` y puerto `EmbeddedLogin` añadidos, y fila de Ubisoft de la tabla revisada otra vez, en la decisión 80)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -874,7 +875,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 | Steam | `official-api` | sí | sí | `uri` (`steam`) |
 | GOG | `unofficial-api` | sí | sí | ~~`exec` (cliente de Galaxy)~~ `exec` del ejecutable del juego; Galaxy, opcional (revisado en la decisión 76) |
 | Epic | `unofficial-api` | sí | sí | ~~`uri` del launcher de Epic, a verificar~~ `uri` (`com.epicgames.launcher`) del launcher (revisado en la decisión 78) |
-| Ubisoft | `local-only` | no | sí | ~~`uri` (`uplay`), a verificar~~ `uri` (`uplay://launch/<id>/0`); supuestos U4 y U6 (revisado en la decisión 79) |
+| Ubisoft | ~~`local-only`~~ `unofficial-api` (revisado en la decisión 80) | ~~no~~ sí, con cuenta por ventana de login integrada (decisión 80) | sí | ~~`uri` (`uplay`), a verificar~~ `uri` (`uplay://launch/<id>/0`); supuestos U4 y U6 (revisado en la decisión 79) |
 | EA | `local-only` | no | sí | `uri` o `exec`, a validar con juegos reales |
 
 **Motivo:** un contrato que solo describe (datos y especificaciones de lanzamiento) y deja la ejecución, la persistencia y la validación al núcleo concentra en un único sitio lo delicado: lanzar procesos, guardar secretos y tocar el disco. Los conectores, que son la parte que más se romperá, quedan pequeños, sin E/S propia y comprobables con respuestas grabadas sustituyendo `http`, `fs` y `tools` por los dobles de `connector-testkit`. Alternativas descartadas: que el conector lance el juego él mismo (dispersa la superficie de ejecución de procesos y rompe el invariante 3); que el conector reciba la clave o los tokens descifrados en bruto y gestione su persistencia (multiplica los puntos donde puede filtrarse un secreto); un asistente de conexión con interfaz propia por conector (obliga a meter React en los conectores; los pasos declarativos bastan para OpenID, códigos de autorización y claves).
@@ -883,7 +884,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 
 - `capabilities` alimenta la interfaz: filtros, botones disponibles y avisos de fragilidad para las APIs no oficiales.
 - Confirmado por el usuario: en la pantalla de tiendas, cada conector con `access: 'unofficial-api'` (hoy Epic y GOG) muestra un icono de alerta junto a su nombre. Al pasar el ratón o al enfocarlo con el teclado (decisión 37), un tooltip traducido explica que se usa una vía no oficial que puede dejar de funcionar sin aviso y que el proyecto no está afiliado a la tienda. La clave común es `connectors.common.access.unofficial`.
-- Las tiendas sin cuenta (Ubisoft y EA) no tienen `connection` ni `listLibrary`; solo muestran instalados (decisión 16).
+- Las tiendas sin cuenta (~~Ubisoft y EA~~ EA; Ubisoft tiene cuenta desde la decisión 80) no tienen `connection` ni `listLibrary`; solo muestran instalados (decisión 16).
 - El modelo de datos detallado (pendiente) debe guardar `launchData`, `executables`, `storePlaytimeMinutes` y el estado de sincronización por tienda con código y clave de error.
 - La decisión 11 decía «sin pegar claves a mano»: el paso `input` existe porque Steam exige la API key del usuario y el flujo de Epic puede requerir copiar un código de autorización. El asistente lo guía paso a paso y lo valida con `pattern`. La propuesta de la decisión 43 lo resuelve con el botón de pegar y la extracción automática.
 - El agente de conectores no necesita decisiones nuevas para empezar Steam; sí para el valor del intervalo y para la detección de procesos.
@@ -911,7 +912,7 @@ Nota de trazabilidad: una primera redacción de esta decisión, nunca confirmada
 - Cuando Drizzle 1.0 sea estable, la migración es una decisión aparte que solo afecta a `packages/db`.
 - `node:sqlite` queda como alternativa si en el futuro se estabiliza y conviene quitar el binario.
 
-### 42. Detección de instalaciones: autodetección y carpetas manuales (amplía la decisión 3; consecuencia sobre Ubisoft concretada en la decisión 79)
+### 42. Detección de instalaciones: autodetección y carpetas manuales (amplía la decisión 3; consecuencia sobre Ubisoft concretada en la decisión 79; la autodetección como permiso para leer la caché del launcher, en la decisión 80)
 
 **Decisión (confirmada por el usuario):** hay dos fuentes de detección que se pueden combinar.
 
@@ -935,7 +936,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 - Con «configurarlo más tarde», la biblioteca se limita a lo que llegue por API (Steam, GOG y Epic conectados).
 - La lista de ubicaciones detectadas y su estado se guarda por dispositivo (decisión 47).
 
-### 43. Credenciales en los asistentes de conexión (revisa la decisión 11; parte de Epic revisada en la decisión 78)
+### 43. Credenciales en los asistentes de conexión (revisa la decisión 11; parte de Epic revisada en la decisión 78; para Ubisoft, ventana de login integrada en la decisión 80)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** el principio de «sin pegar claves a mano» de la decisión 11 se sustituye por «sin escribir nada y sin editar ficheros». Cuando una tienda obliga a trasladar un dato, el asistente lo pide con un botón **Pegar desde el portapapeles** y lo valida en el momento.
 
@@ -3975,7 +3976,7 @@ El usuario: «sale perfecto». Antes de conectar la cuenta salía solo el juego 
 - **EA5, cerrado:** `refreshExpires=31540000` (unos 365 días) y `accessExpires=129600` (36 h). La reconexión periódica no es un problema.
 - **Privacidad:** en `server.log` y `launcher.log` no aparece ningún `eg1~`, `authorizationCode`, `exchangeCode`, hexadecimal de 32, correo, ruta de usuario, nombre de usuario de Windows ni `.exe`.
 - Sin probar en esta pasada: Instalar desde Ludiary (E4), desinstalar, reconectar y sesión caducada; el usuario no dio detalle paso a paso más allá de «sale perfecto».
-### 79. Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` (amplía las decisiones 40, 42 y 72; revisa la fila de Ubisoft de la tabla de la 40 y, de la 72, qué hace `LocationResolver` cuando el registro no se puede leer)
+### 79. Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` (amplía las decisiones 40, 42 y 72; revisa la fila de Ubisoft de la tabla de la 40 y, de la 72, qué hace `LocationResolver` cuando el registro no se puede leer; portadas, Instalar, cuenta y biblioteca, el descarte de `configurations` y `access`, revisados en la decisión 80)
 
 **Decisión (recomendada, 22 de octubre de 2026):** el usuario encarga el conector de Ubisoft Connect en la rama `feature/ubisoftconector`. Es el equivalente de la 76 para Ubisoft, pero más pequeño: Ubisoft no tiene cuenta ni API (decisiones 11, 16 y 40), así que el corte entero es detectar los juegos instalados y jugarlos. La numeración salta la 78 (Epic), que está en otra rama sin fusionar.
 
@@ -3990,8 +3991,8 @@ El usuario: «sale perfecto». Antes de conectar la cuenta salía solo el juego 
   - el conector `connectors/ubisoft` registrado en `runtime`, con sus textos;
   - dos cambios pequeños fuera del conector que Ubisoft necesita y que valen para todas las tiendas: el nombre de la subclave en las ubicaciones del registro, y distinguir «la clave no existe» de «no se ha podido leer» (punto 2).
 - **No aplica:**
-  - **Instalar:** sin cuenta no hay juegos no instalados (decisión 16), así que no hay nada que instalar. `actions: ['play']`.
-  - **Cuenta, `connection` y `listLibrary`:** regla de la decisión 40 para las tiendas `local-only`.
+  - **Instalar:** sin cuenta no hay juegos no instalados (decisión 16), así que no hay nada que instalar. `actions: ['play']`. (Revisado en la decisión 80: con la cuenta conectada salen los poseídos no instalados, e Instalar abre Ubisoft Connect con `uplay://install/<id>`.)
+  - **Cuenta, `connection` y `listLibrary`:** regla de la decisión 40 para las tiendas `local-only`. (Revisado en la decisión 80: Ubisoft tiene cuenta, con una ventana de login integrada, `connection` y `listLibrary` con la API de Ubisoft, y pasa a `access: 'unofficial-api'`.)
 - **Queda fuera:**
   - **Portadas** (punto 5): sin portada, con el degradado.
   - **DLC:** `dlc: 'none'`. No consta que Ubisoft cree subclaves de `Installs` para sus DLC (supuesto U10).
@@ -4105,9 +4106,9 @@ resolve(decl: LocationDeclaration): Promise<readonly ResolvedLocation[]>;
 - **Núcleo:** sin reglas nuevas. `checkSpec` ya comprueba el esquema contra `uriSchemes` y la plataforma vuelve a validar la URI (decisión 72).
 - **Invariante 3:** la API recibe solo IDs; la URI se construye con un ID que sale del nombre de una subclave del registro, validado con un patrón de dígitos antes de interpolarlo.
 
-#### 5. Portadas
+#### 5. Portadas (revisado en la decisión 80)
 
-- **No entran: sin portada, con el degradado** (decisión 71).
+- ~~**No entran: sin portada, con el degradado** (decisión 71).~~ (Revisado en la decisión 80: con la cuenta conectada, llegan de la `thumb_image` de `configurations`, leída con un analizador propio, y del CDN del launcher.)
 - La única vía conocida sin cuenta es el CDN del launcher (`static3.cdn.ubi.com/orbit/uplay_launcher_3_0/assets/<thumb_image>`, el que usa Lutris; Playnite usa el equivalente en `ubistatic3-a.akamaihd.net`), pero el nombre del fichero (`thumb_image`) solo está en `configurations`, descartado en el punto 3. No se ha encontrado ningún servicio público de Ubisoft que dé una portada a partir del ID sin cuenta; las API de `ubiservices` piden identificadores de aplicación y sesión, y usarlas así chocaría con la regla de vías oficiales (invariante 8).
 - Llegarán con el respaldo de metadatos de IGDB o RAWG (decisiones 6 y 31), como ya preveía la 31 para Ubisoft y EA.
 - Por tanto, `resolveMedia` no existe y `apiHosts` y `mediaHosts` están vacíos: **el conector no hace ninguna petición de red.** Ni la CSP ni la guía de privacidad cambian.
@@ -4232,15 +4233,22 @@ Sin críticos. Lo que sigue prevalece sobre los puntos 2 y 3 donde no coincida. 
   - núcleo: una declaración lanza y otra no → se conservan las raíces de la primera y se actualizan las de la segunda, con el aviso; más de 64 raíces → no se borra ninguna guardada y sale el aviso; el aviso no pone el escaneo en `error`;
   - `resolveLauncherLocations` con una declaración que lanza → devuelve las otras con `resolved: false`.
 
+#### 13. Prueba manual del usuario (23 de octubre de 2026, Ubisoft Connect real)
+
+- La detección de los juegos instalados es correcta.
+- Jugar funciona: **U4 y U7 confirmados** (el esquema `uplay` está registrado y la URI abre el juego).
+- Sin portada, como decidía el punto 5. El usuario pide a continuación ver los juegos no instalados y las portadas: decisión 80.
+- No se anotó más detalle; los demás supuestos (U1 a U3, U5, U6 y U8 a U11) siguen como estaban.
+
 #### Supuestos de Ubisoft (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
 
 - **U1:** cada juego instalado tiene una subclave `HKLM\SOFTWARE\Ubisoft\Launcher\Installs\<gameId>` en la vista de 32 bits (`WOW6432Node`), con el ID como nombre y la carpeta en `InstallDir`. Fuentes: Playnite (`UplayLibrary.cs`: vista de 32 bits y luego de 64, nombre de subclave como ID, `InstallDir` con `/` cambiadas por `\`), la integración de Galaxy (`local_helper.py`, `InstallDir`) y un artículo de DEV con `WOW6432Node`. El formato exacto (`/` y barra final) sale solo de que Playnite reemplaza `/` y recorta la barra final; **sin verificar** en un equipo.
 - **U2:** el `gameId` es un entero positivo pequeño (ejemplos de la comunidad: 4, 420, 720). El patrón admite hasta 10 dígitos.
 - **U3:** `HKLM\SOFTWARE\Ubisoft\Launcher` (vista de 32 bits) tiene `InstallDir` con la carpeta de Ubisoft Connect (integración de Galaxy, `local_client.py`), cuya ubicación por defecto es `C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher`, y dentro están `upc.exe` (el proceso del cliente según la integración de Galaxy) y `UbisoftConnect.exe` (Playnite).
-- **U4 (sin verificar):** Ubisoft Connect registra el esquema `uplay`. Solo consta indirectamente: Playnite, Lutris y la integración de Galaxy abren `uplay://…` con el manejador del sistema.
+- **U4 (confirmado en la prueba manual del 23-10-2026, punto 13):** Ubisoft Connect registra el esquema `uplay`. ~~Solo consta indirectamente: Playnite, Lutris y la integración de Galaxy abren `uplay://…` con el manejador del sistema.~~
 - **U5 (sin verificar):** la carpeta del juego lleva el nombre del juego, legible para una persona. Playnite usa el nombre de la carpeta como título de los instalados.
 - **U6:** `uplay://launch/<gameId>/0` arranca el juego. Guías de la comunidad de 2015 y 2022 (Steam y GamingOnLinux) con esa forma; Playnite, Lutris y la integración de Galaxy usan `uplay://launch/<gameId>` sin `/0`. Ninguna fuente oficial.
-- **U7 (sin verificar):** la URI funciona con el launcher cerrado y abierto. Una guía de 2015 decía que fallaba con Uplay abierto; puede no valer para Ubisoft Connect.
+- **U7 (confirmado en la prueba manual del 23-10-2026, punto 13):** la URI funciona ~~con el launcher cerrado y abierto~~ (el usuario confirmó que Jugar funciona, sin detallar si probó los dos casos). Una guía de 2015 decía que fallaba con Uplay abierto; puede no valer para Ubisoft Connect.
 - **U8 (sin verificar):** al desinstalar desde Ubisoft Connect se borra la subclave de `Installs`.
 - **U9:** `uplay_install.state` está en la raíz de la carpeta del juego y es binario: la integración de Galaxy da por instalado un juego si su primer byte es `0x0A`. Que contenga el `gameId`, **sin verificar**. Ningún otro fichero conocido de la carpeta del juego da el ID.
 - **U10 (sin verificar):** los DLC de Ubisoft no tienen subclave propia en `Installs`. Si la tienen, saldrían como juegos con el nombre de su carpeta; se resolvería con su propio corte.
@@ -4260,6 +4268,407 @@ Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](http
 - Límite conocido: 64 juegos de Ubisoft instalados como mucho (tope de raíces descubiertas de la 72). El núcleo registra los descartados; la guía lo dice.
 - El `auditor` revisa antes de cerrar: el ID en el `tag` y su validación, la regla de ruta copiada, «ausente frente a ilegible» en la plataforma y en el núcleo, la URI construida desde el grupo, y que ni el registro ni los errores lleven rutas o títulos.
 - Los agentes `programador` y `conectores` tienen aquí su especificación; el `tester` escribe `docs/manual-tests/ubisoft.md` (punto 9); el `documentalista` actualiza las guías del punto 10.
+
+### 80. Cuenta de Ubisoft con ventana de login integrada, juegos poseídos y portadas con la caché local (amplía las decisiones 40, 42, 45, 74 y 79; revisa para Ubisoft la decisión 43 por decisión expresa del usuario; revisa de la 79 los puntos 1 y 5, el descarte de `configurations` del punto 3 y `access: 'local-only'`)
+
+**Decisión (vía elegida por el usuario el 23 de octubre de 2026; diseño recomendado por el arquitecto):** tras la prueba manual de la 79 (punto 13), el usuario pide «ver los no instalados + carátulas» de Ubisoft. El arquitecto recomendó leer la caché local (opción A). **El usuario eligió la opción C:** una **ventana de login integrada** (WebView2, abierta por el auxiliar de Go) con la página oficial de Ubisoft, de la que Ludiary toma la sesión al terminar. Con esa sesión, la API interna de Ubisoft da los juegos poseídos. La caché local `configurations`, cuyo formato ya está comprobado (punto 3), traduce el ID de la API (`spaceId`) al ID numérico del registro y da las portadas. La opción A queda como **alternativa descartada por el usuario**.
+
+#### 1. Opciones (A recomendada por el arquitecto; C elegida por el usuario)
+
+| | Opción | Ventajas | Costes y riesgos |
+|---|---|---|---|
+| A | Caché local del launcher (`cache\configuration\configurations` y `cache\ownership\<id de cuenta>`) (la recomendada por el arquitecto; **descartada por el usuario** el 23-10-2026) | Sin red, sin cuenta, sin secretos, sin imitar a ningún cliente. Da propiedad, título, imagen y, sobre todo, **el mismo ID numérico que el registro** (punto 5), con lo que Jugar e Instalar funcionan sin traducir ID. Es lo que hacen Playnite (solo `configurations`), Lutris y la integración de Galaxy (los dos ficheros). | Formato binario sin documentar (protobuf con YAML dentro), puede cambiar con una versión del launcher. Refleja la última vez que el launcher se abrió con sesión en **este** PC. Contrato: leer bytes y una biblioteca sin cuenta (punto 4). Una dependencia nueva para el YAML. |
+| B | Login oficial en el navegador y pegar algo | Mismo patrón que GOG (77) y Epic (78). | **No hay nada que pegar.** El login de `connect.ubisoft.com` deja el `ticket`, el `sessionId` y el `rememberMeTicket` en el `localStorage` de la página, y la vuelta (`/ready`) no los muestra (Galaxy y Lutris los sacan inyectando JavaScript). Copiarlos exige las herramientas de desarrollo del navegador: un paso técnico que el proyecto no pide (decisión 30). Además, la API (`public-ubiservices.ubi.com`) exige presentarse con un `Ubi-AppId` de Ubisoft, y la biblioteca (GraphQL `v1/profiles/me/uplay/graphql`, `games(filterBy: {isOwned: true})`) devuelve `spaceId` (UUID) y no el ID numérico del registro: haría falta la caché de A igualmente para Jugar e Instalar. |
+| **C** | **Ventana de login integrada (WebView2 desde el auxiliar de Go) que lee el `localStorage`** (**elegida por el usuario**) | Es lo que hacen Galaxy y Lutris. El usuario escribe la contraseña y el segundo factor en la página oficial, sin pasos técnicos. La biblioteca sale de la cuenta, no de lo que el launcher de este PC recuerda. | Un componente nuevo de escritorio (WebView2, firma, empaquetado, decisión 45). Un guion fijo inyectado en una página de Ubisoft. **La contraseña se escribe en una ventana que controla Ludiary.** Presentarse con el `Ubi-AppId` de la web de Ubisoft. El mismo problema de ID que B, que se resuelve con `configurations` (punto 9). La 43 lo dejaba como mejora. |
+| D | Usuario y contraseña en Ludiary (`POST v3/profiles/sessions` con `Basic`, más el segundo factor) | Sin navegador; flujo sencillo. | **Choca con la decisión 43 y el invariante 8**: la contraseña solo se escribe en la web oficial. Solo entraría si el usuario lo decide expresamente, sabiendo que Ludiary manejaría su contraseña y que Ubisoft podría bloquear la cuenta o el acceso. Además, una guía de la comunidad de Trackmania (Openplanet) dice que ese método dejó de funcionar en abril de 2026 para su caso (supuesto UB10). No se recomienda. |
+| E | Portadas de IGDB o RAWG para todas las tiendas (decisiones 6 y 31) | Sirve también a EA y a cualquier juego sin portada. | **No da la propiedad**: no resuelve los no instalados. Exige que el usuario cree una clave (Twitch para IGDB, RAWG), un proveedor nuevo, su asistente y emparejar por título. Es el respaldo previsto; no sustituye a A. |
+
+**Recomendación del arquitecto: A**, por ser la única opción que da propiedad, portadas e ID compatibles sin tocar credenciales. **Elección del usuario: C**, que es la que se diseña a continuación. De la A se conserva la lectura de `configurations` para traducir ID y sacar portadas. `ownership` no se lee.
+
+#### 2. Revisión de la decisión 43 y alcance del invariante 8 (decisión expresa del usuario, 23-10-2026)
+
+- **Lo que cambia.** La 43 establecía dos formas de conectar una cuenta no oficial: pegar lo que muestra la web oficial abierta en el navegador del usuario (GOG y Epic), o una ventana integrada «como mejora». Para Ubisoft no hay nada que pegar (opción B), así que **se adopta la ventana integrada**. El usuario sigue escribiendo la contraseña y el segundo factor **en la página oficial de Ubisoft**, pero ya no en su navegador: lo hace en **una ventana que abre y controla Ludiary**. Técnicamente, quien controla la ventana podría leer lo que se escribe en ella. **El usuario lo acepta de forma expresa.** Esta decisión no la toma el arquitecto.
+- **Invariante 8.** Se mantiene en su letra: Ubisoft no tiene vía oficial para terceros (supuesto UL1), y la vía que se usa es su propia página de login. Lo que se relaja es la garantía de la 43 de que la contraseña solo se escribe en el navegador del usuario. Esa garantía sigue valiendo para Steam, GOG y Epic, y **solo se relaja para Ubisoft**.
+- **Mitigaciones obligatorias** (el `auditor` las comprueba):
+  - el guion inyectado es una constante del auxiliar, no lo aporta el conector, y solo lee del `localStorage` las claves con nombre en la página de captura; no toca formularios ni pulsaciones de teclas (punto 5);
+  - la navegación de la ventana está limitada a los hosts del conector;
+  - la carpeta de datos del navegador es nueva en cada login y se borra al cerrar;
+  - lo capturado viaja solo por la tubería del auxiliar y se cifra enseguida;
+  - el código es abierto.
+- **Lo que no cambia de la 43:** no se lee ninguna sesión de otros clientes. La sesión que se toma es la que nace en la ventana de Ludiary, no la de Ubisoft Connect ni la del navegador del usuario.
+- **Riesgo de condiciones de uso (no es asesoría legal):** el mismo que en la 77 y la 78, más un guion inyectado en una página de Ubisoft. Mitigación igual que entonces: el fallo queda aislado en el conector, el escaneo y Jugar siguen sin cuenta, la guía lo explica y el proyecto no se declara afiliado. `access` pasa de `'local-only'` a `'unofficial-api'`, con su icono de fragilidad.
+
+#### 3. Comprobación previa (hecha el 23-10-2026 por la sesión principal con permiso del usuario, solo lectura, sin copiar nombres)
+
+- **`configurations`:** está en `%LOCALAPPDATA%\Ubisoft Game Launcher\cache\configuration\configurations` y mide 428 952 bytes. Empieza por `0a cf d6 01 08 36 10 36 1a c7 d6 01 76 65 72 73`, es decir:
+  - campo 1 de longitud 27 471, con los campos varint 1 = 54 y 2 = 54;
+  - campo 3 de longitud 27 463, cuyo texto empieza por `vers…` (YAML).
+  - Tiene 36 apariciones de `start_game` y 342 de `thumb_image`.
+  - **UL2 confirmado:** protobuf sin cifrar con YAML dentro. UL5 resuelto: `LocalAppData`, muy por debajo de cualquier tope.
+- **`cache\ownership`:** un fichero de 12 548 bytes, con nombre en forma de UUID, y `0x0a` en el byte `0x108`. Es compatible con UL3, pero **no se usa en esta decisión**.
+- **CDN:** con un `thumb_image` real (`168616bac535772d7c19750aec4fa11a.jpg`), tanto `https://static3.cdn.ubi.com/orbit/uplay_launcher_3_0/assets/<thumb>` como `https://ubistatic3-a.akamaihd.net/…` responden 200 con un JPEG (`ff d8 ff e0`). Lo sirven como `application/octet-stream`, sin `nosniff` y con `Access-Control-Allow-Origin: *`. **UL7 confirmado**. Que el `<img>` lo pinte pese al tipo es el supuesto UB8.
+
+#### 4. Alcance
+
+- **Entra:**
+  - el asistente de Ubisoft con la ventana integrada (puntos 5 a 7);
+  - la sesión cifrada (solo el `rememberMeTicket`) y su renovación (punto 8);
+  - `listLibrary` con los juegos poseídos de la cuenta, con el ID traducido mediante `configurations` (punto 9);
+  - portadas desde `thumb_image` y el CDN del launcher (punto 10);
+  - Instalar con `uplay://install/<id>` (punto 11);
+  - «Conectado como <nombre>», desconectar y `expired` con el velo gris, como en la 77;
+  - los juegos de Ubisoft comprados en otra tienda **también salen por Ubisoft** (decisión del usuario, punto 16).
+- **Fuera:**
+  - fondo e icono (`backgroundUrl`, `background_image`);
+  - DLC (`dlc: 'none'`, se saltan y se cuentan);
+  - tiempo de juego;
+  - emparejamiento entre tiendas;
+  - Ubisoft+ más allá de lo que la API dé como poseído;
+  - inicio de sesión con Google, Apple, Facebook, consolas u otros proveedores externos (punto 5);
+  - modo Docker: la ventana necesita el escritorio del usuario y en fase 2 irá por el agente local (decisión 22);
+  - portadas de los instalados **sin** cuenta (punto 16.2).
+
+#### 5. Componente: la ventana de login en el auxiliar de Go
+
+- **Dónde:** un subcomando nuevo, `ludiary-tray.exe --embedded-login`, con la misma forma que `--pick-folder` y `--registry` (decisión 72): una línea JSON por stdin, una por stdout, y sale. No hay binario nuevo que firmar ni instalar: siguen siendo tres (decisiones 45 y 58).
+- **Librería (opciones):**
+  - **A. `github.com/wailsapp/go-webview2`, paquete `pkg/edge`** (se elige). MIT, sin CGO. Por defecto (sin la etiqueta de compilación `native_webview2loader`) usa `webviewloader`, un port a Go del cargador de Microsoft: **no se distribuye `WebView2Loader.dll`**. Admite carpeta de datos propia (`DataPath`) y desactivar el guardado de contraseñas y el autorrelleno (`PutIsPasswordAutosaveEnabled`, `PutIsGeneralAutofillEnabled`). La mantiene el proyecto Wails. Coste: su tipo `Chromium` no expone `NavigationStarting` ni `NewWindowRequested`; se añaden llamando a la interfaz COM desde el auxiliar o en una copia parcheada en `third_party/`, como la de `gogpu/systray` (decisión 45). Versión fijada en `go.mod` (UB11).
+  - B. `github.com/jchv/go-webview2`: MIT, sin CGO y con ventana incluida, pero carga con `go-winloader` una copia incrustada de `WebView2Loader.dll`: un binario de Microsoft más dentro del nuestro, con su licencia, y le faltan los mismos eventos.
+  - C. Un auxiliar en .NET con el control oficial: exige runtime o NativeAOT, ya descartado para la bandeja (decisión 45).
+- **Runtime de WebView2:** no se distribuye. Viene con Windows 11 y Microsoft lo instaló en casi todos los Windows 10 (UB12). Si falta, el auxiliar responde `runtime-missing` y el asistente lo explica con el enlace oficial de Microsoft (punto 16.3).
+- **Ventana:** propia (Win32), en primer plano como el selector de carpetas (`foregroundOwner` de `pickfolder.go`), de tamaño fijo como la de Galaxy (460 × 690), con el título ya traducido que manda el servidor. Sin barra de direcciones ni menús: el usuario ve solo la página de Ubisoft.
+- **Perfil:** carpeta de datos nueva en cada login, `%LOCALAPPDATA%\Ludiary\tmp\webview-<aleatorio>`, que crea y borra la plataforma (punto 6). Cookies, `localStorage` y caché viven ahí y desaparecen con ella: no se persiste nada. DevTools, guardado de contraseñas y autorrelleno, desactivados. Sin objetos del host ni mensajes web (`chrome.webview` no se usa).
+- **Navegación:** el documento principal solo navega por `https` a hosts exactos de `allowedHosts`; el resto se cancela en `NavigationStarting`. Los iframes y recursos de la página (un captcha, por ejemplo) no se tocan. Ventanas nuevas y descargas: denegadas. Los hosts bloqueados se devuelven al servidor para el registro (solo hosts, sin rutas ni consulta).
+- **Flujo:**
+  1. carga `startUrl`;
+  2. cuando el documento principal termina de cargar en `doneUrl` (mismo origen y ruta; la consulta no cuenta), navega a `captureUrl` si es distinta. Es lo que hacen Lutris y Galaxy: `/ready` → `/change_domain/`;
+  3. en `captureUrl` ejecuta el guion fijo con `ExecuteScript` y lee el resultado. Si falta algún valor, reintenta cada 500 ms durante 10 s como mucho;
+  4. responde y cierra la ventana.
+- **Guion fijo:** es una constante en Go. Los parámetros entran como literal JSON generado con `json.Marshal`, nunca concatenados. Para cada campo pedido recorre sus `storageKeys`, hace `JSON.parse(localStorage.getItem(clave))` dentro de `try` y toma `[jsonField]` solo si es texto. Devuelve un objeto con esos nombres y nada más. No lee formularios, cookies, pulsaciones ni otras claves.
+- **Protocolo:**
+  - stdin: `{"title","startUrl","doneUrl","captureUrl","allowedHosts":[…],"capture":[{"name","storageKeys":[…],"jsonField","maxLength"}],"dataDir"}`;
+  - stdout: `{"captured":{"<name>":"<valor>"},"blockedHosts":[…]}`, `{"cancelled":true,"blockedHosts":[…]}` (el usuario cerró la ventana) o `{"error":"bad-request"|"runtime-missing"|"capture-missing"|"failed"}`;
+  - código de salida: 0 con `captured` y `cancelled`, 1 con error y 2 con `bad-request`. Si stdin se cierra (el servidor canceló o murió), cierra la ventana y sale.
+  - **Segunda barrera en el auxiliar:** URLs `https` sin usuario ni fragmento y con host en `allowedHosts`; como mucho 4 hosts, 4 campos y 3 claves por campo; nombres `^[A-Za-z][A-Za-z0-9]{0,31}$`; claves y `jsonField` `^[A-Za-z0-9_.-]{1,64}$`; `maxLength` de 1 a 8192; `dataDir` absoluta y existente. Un valor capturado con caracteres de control o más largo que `maxLength` no se devuelve (`capture-missing`).
+  - El auxiliar no escribe registros ni ficheros: lo capturado solo sale por stdout.
+- **Qué controla Ludiary y qué no:**
+  - **Controla** la ventana, a qué hosts navega, el guion (lee solo lo pedido), que el perfil sea nuevo y se borre, que no se guarde la contraseña, y que lo capturado vaya solo por la tubería al servidor, que lo cifra.
+  - **No controla** el contenido ni los guiones de la página de Ubisoft (captcha y segundo factor incluidos), lo que Ubisoft guarde en su `localStorage`, ni el runtime de WebView2, que actualiza Microsoft y que sigue los ajustes de diagnóstico de Windows (UB12). Quien controla la ventana podría, técnicamente, leer lo que se escribe. El código no lo hace, es abierto y el `auditor` lo comprueba (punto 2).
+- **Solo localhost en Windows:** la ventana necesita el escritorio del usuario. En Docker irá por el agente local (fase 2).
+
+#### 6. Contrato y núcleo (amplía las decisiones 40 y 74; todo aditivo, `contractVersion` sigue en 1)
+
+```ts
+// packages/contracts/src/connector.ts — ADR 80
+export type WizardStep =
+  | /* ...ADR 40 and 74... */
+  | {
+      kind: "embedded-login";
+      id: string; titleKey: I18nKey; bodyKey: I18nKey;
+      /** Title of the login window; translated by the core. */
+      windowTitleKey: I18nKey;
+      /** https, host in authHosts. */
+      url: string;
+      /** https, host in authHosts, no query or fragment; matched on origin and path. */
+      doneUrl: string;
+      captureUrl: string;
+      /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. */
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+    };
+
+export type WizardInput =
+  | /* ...ADR 40... */
+  | { kind: "embedded"; values: Readonly<Record<string, Secret>> }; // built by the core only, never accepted from the API
+
+export interface LocationDeclaration {
+  readonly id: string;
+  /** 'library' (ADR 80): resolved for listLibrary under the auto-detection rule; requires capabilities.library. */
+  readonly purpose: "scan" | "launcher" | "library";
+  readonly os: readonly ("windows" | "linux" | "macos")[];
+  readonly sources: readonly LocationSource[];
+}
+
+export interface SyncContext extends BaseContext {
+  // ...as today...
+  /** ADR 80. listLibrary only, with auto-detection only: read-only, confined to the resolved 'library' locations. */
+  readonly fs?: ScopedFileReader;
+}
+
+export interface ScopedFileReader {
+  // ...as today...
+  /** ADR 80. Raw bytes; 'scan.root-unreadable' if the file is larger than maxBytes (at most 64 MiB). */
+  readBytes(path: string, maxBytes: number): Promise<Uint8Array>;
+}
+
+// packages/contracts/src/ports.ts — ADR 80
+/** Login window on the user's desktop (localhost, Windows). Texts arrive translated. One window at a time. */
+export interface EmbeddedLogin {
+  run(
+    req: {
+      title: string; startUrl: string; doneUrl: string; captureUrl: string;
+      allowedHosts: readonly string[];
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
+    },
+    signal: AbortSignal,
+  ): Promise<
+    | { kind: "captured"; values: Readonly<Record<string, Secret>>; blockedHosts: readonly string[] }
+    | { kind: "cancelled"; blockedHosts: readonly string[] }
+    | { kind: "unavailable"; reason: "runtime-missing" | "busy" }
+    | { kind: "failed"; reason: "capture-missing" | "failed" }
+  >;
+}
+```
+
+- **Por qué un tipo de paso y no que el conector abra la ventana:** las llamadas al conector tienen 30 s (decisión 74) y un login dura minutos. Además, el conector no hace E/S propia (decisión 40): solo describe la ventana, y la abren el núcleo y la plataforma.
+- **Motor de asistentes (`packages/core/src/wizards.ts`):**
+  - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento; `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión.
+  - **La web** pinta el paso y su botón envía `submit` con `{ kind: 'continue' }`; la API no cambia (el cuerpo sigue admitiendo solo `continue` y `fields`). El núcleo entonces:
+    1. incrementa la época de la tienda (77, A2);
+    2. llama a `EmbeddedLogin.run` con `allowedHosts` = `authHosts` **del manifiesto**, nunca del paso; con el título traducido; y con una señal que se aborta con `DELETE /api/wizards/:id`, al abrir otro asistente de la misma tienda o a los **10 minutos**. Mientras espera, la sesión del asistente no caduca;
+    3. con `captured`, comprueba que llegan exactamente los nombres pedidos, cada uno con su `pattern` anclado y su `maxLength`. Si no: `rejected` con `wizard.embedded.failed`. Si cumplen, llama a `submit(ctx, stepId, { kind: 'embedded', values })` con los 30 s de siempre;
+    4. con `cancelled`: `rejected` con `wizard.embedded.cancelled`, en el mismo paso. Con `unavailable`: `wizard.embedded.runtimeMissing` o `wizard.embedded.busy`. Con `failed`: `wizard.embedded.failed`.
+  - **Sin el puerto** (Docker, Linux, pruebas): `rejected` con `wizard.embedded.unavailable` («Este inicio de sesión necesita Ludiary en el escritorio de Windows»).
+  - **Registro:** solo el resultado (`captured`, `cancelled`…), la duración y `blockedHosts`. Nunca los valores, que son `Secret` desde que salen de la plataforma.
+  - La petición HTTP de ese `submit` sigue abierta mientras la ventana lo esté. Node no corta las respuestas lentas (`server.requestTimeout` solo mide la recepción de la petición). El `programador` comprueba que Fastify tampoco las corta; si lo hiciera, se amplía el límite solo para esa ruta.
+- **Plataforma (`packages/platform-windows/src/embedded-login.ts`):**
+  - crea la carpeta de datos con `mkdtemp` bajo `%LOCALAPPDATA%\Ludiary\tmp\` y lanza el auxiliar sin shell;
+  - escribe la línea del pedido y lee **una** línea de 64 KiB como mucho. La valida: solo los nombres pedidos, de texto, dentro de `maxLength` y sin caracteres de control; `blockedHosts`, como mucho 32 hosts con forma de host. Envuelve los valores con `makeSecret`;
+  - al terminar borra la carpeta, con reintentos durante 5 s (los procesos de WebView2 tardan en soltarla);
+  - con la señal abortada, cierra stdin y mata el proceso;
+  - una ventana a la vez (`busy`);
+  - al arrancar el servidor, borra cualquier `tmp\webview-*` que hubiera quedado.
+- **Biblioteca con ubicaciones `library`** (se aprovecha del diseño de la opción A):
+  - `checkConnectorManifest`: una ubicación `library` exige `capabilities.library`.
+  - Núcleo (`sync.ts` y `contexts.ts`): antes de `listLibrary`, si el conector declara ubicaciones `library` y la detección está en `auto-and-manual`, se resuelven con las reglas de la 79 (ausente frente a ilegible). La autodetección es el permiso para mirar las carpetas de los launchers (decisión 42). Si alguna lanza: `scan.discovery-unavailable` y la biblioteca no cambia. `ctx.fs` se crea confinado a las ubicaciones resueltas; en cualquier otro modo de detección, `ctx.fs` es `undefined`.
+  - `readBytes`, en `platform-windows`, sigue las reglas de `readText` (realpath dentro de las raíces) y comprueba el tamaño con `stat` antes de leer. También lo implementa el doble `memoryFiles` del `testkit`.
+- **`api-contract` y web:**
+  - `WizardStepDto` añade la variante `embedded-login`, sin `capture` (la web no lo necesita);
+  - `ConnectWizard.tsx` pinta título, cuerpo y el botón «Abrir la ventana de inicio de sesión» (`wizard.embedded.open`). Mientras espera muestra «Inicia sesión en la ventana de Ubisoft; se cerrará sola al terminar» (`wizard.embedded.waiting`) y Cancelar;
+  - `real.ts` amplía la lista de tiendas con asistente real a `['steam', 'gog', 'epic', 'ubisoft']`, sin `sessionStorage`;
+  - el simulador (`mock.ts`) añade el paso;
+  - la tarjeta de Ubisoft deja de ser `not-applicable`.
+
+#### 7. Asistente de Ubisoft (`connectors/ubisoft/src/wizard.ts` y `auth.ts`)
+
+| Id | Tipo | Qué hace |
+|---|---|---|
+| `login` | `embedded-login` | `url`: `https://connect.ubisoft.com/login?appId=<APP_ID>&genomeId=<GENOME_ID>&lang=<es-ES o en-US, según ctx.locale>&nextUrl=https%3A%2F%2Fconnect.ubisoft.com%2Fready`. `doneUrl`: `https://connect.ubisoft.com/ready`. `captureUrl`: `https://connect.ubisoft.com/change_domain/`. `capture`: un solo campo, `rememberMeTicket`, con `storageKeys` `['PRODrememberMe', 'PRODloginData']`, `jsonField` `rememberMeTicket`, el `pattern` del punto 8 y `maxLength` 8192 (UB2). Cuerpo: «Se abrirá una ventana con la página oficial de Ubisoft. Inicia sesión allí, también con el código de verificación si te lo pide; la ventana se cerrará sola. Ludiary no guarda tu contraseña». |
+
+- **Solo se captura `rememberMeTicket`.** Lutris y Galaxy leen también `ticket`, `sessionId` y el ID de la cuenta, pero la renovación da un `ticket` y un `sessionId` nuevos en cada uso (punto 8): leerlos sería tomar dos credenciales más sin necesidad. Si la prueba manual muestra que la renovación necesita la sesión inicial, se añaden en el mismo commit que su prueba.
+- **Al recibir `embedded`:** renovación (punto 8) con el `rememberMeTicket` capturado. Después, `secrets.set('rememberMeTicket', …)` con el que devuelva la renovación o, si no devuelve ninguno, con el capturado. Por último, `done` con `accountLabel` = `nameOnPlatform` de la respuesta, sin caracteres de control y recortado a 64 (si falta, sin nombre). El `ticket` y el `sessionId` de esa respuesta se descartan. Así la renovación prueba la sesión, como el canje de GOG.
+  - Renovación con 400, 401 o 403 en este paso: `auth.invalid` con `connectors.ubisoft.error.login` («Ubisoft no ha aceptado el inicio de sesión. Vuelve a intentarlo»). 429: `store.rate-limited`.
+- **Constantes** (`auth.ts`): `APP_ID` y `GENOME_ID` de la web de Ubisoft, los de Lutris (`util/ubisoft/consts.py`). La integración de Galaxy usa otro par, que queda como plan B (UB13). No son secretos (van en la URL pública del login) y el ADR no los copia, como en la 77. El mismo `APP_ID` va en la cabecera `Ubi-AppId`.
+- Sin paso `choose`: sin cuenta, Ubisoft sigue como hoy (instalados y Jugar), y cancelar lo deja así.
+
+#### 8. Sesión (decisión 46, mínimo de este corte)
+
+- **Qué se guarda:** solo `rememberMeTicket`, cifrado en `secrets` con el ámbito `store:ubisoft`. El `ticket` y el `sessionId` viven en memoria durante una operación y se descartan.
+- **Forma aceptada (UB3):** `rememberMeTicket` y `ticket` deben cumplir `^[A-Za-z0-9+/=_.-]{64,8192}$`, y `sessionId`, `^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$`. Si no cumplen: `store.unexpected-response` (en el asistente, el núcleo ya lo rechaza por `pattern`).
+- **Renovación** (`refreshSession`, al principio de cada `listLibrary` y en el asistente): `POST https://public-ubiservices.ubi.com/v3/profiles/sessions` con `ubi-appid: <APP_ID>`, `authorization` = `makeSecret('rm_v1 t=' + rm.reveal())` y el cuerpo JSON `{"rememberMe": true}` (UB4). Sin `User-Agent`, `Origin` ni `Referer` propios (77, B3); si Ubisoft los exige, se decide aparte.
+  - **200 con `ticket` y `sessionId` válidos:** si trae un `rememberMeTicket` válido y distinto, **lo primero** es `secrets.set` (orden de la 77; si falla, se propaga). Se registran solo `rotated` (sí o no) y si la respuesta trae `expiration` (sí o no), para cerrar UB4.
+  - **200 sin `ticket` y con `twoFactorAuthenticationTicket`** (Ubisoft pide el segundo factor), **o 400, 401 o 403:** `auth.expired` con `connectors.ubisoft.error.expired` («Hay que volver a iniciar sesión en Ubisoft»). El núcleo pasa la tienda a `expired` y no toca la biblioteca. La fila del secreto no se borra.
+  - **429:** `store.rate-limited` con `Retry-After`. Ubisoft restringe sus puntos de login hasta una hora si se les llama demasiado (UB14); con el suelo de 30 minutos no debería pasar. **Error de red:** su código, sin pasar a `expired`. **Otro estado:** `store.unexpected-response`.
+  - Del cuerpo solo se leen `ticket`, `sessionId`, `rememberMeTicket`, si `twoFactorAuthenticationTicket` tiene valor y, en el asistente, `nameOnPlatform`. `userId`, el correo y lo demás se descartan sin registrarse.
+  - Sin `rememberMeTicket` legible: `auth.required`, y la tienda se ve `expired`.
+- **Época, `status`, desconectar, `expired` y velo gris:** idénticos a la 77 (puntos 5 y 9 y su A2), con el ámbito `store:ubisoft`. `connection.status` es local: `connected` si se lee `rememberMeTicket`. Sin revocación remota (el `HttpClient` no admite `DELETE`). `connectors.ubisoft.disconnect.hint`: «Ludiary borra su sesión de Ubisoft de este equipo. Para cerrar todas las sesiones, cambia la contraseña en ubisoft.com».
+- **Redactor** (`makeRedactor`, `runtime/src/files.ts`): añade dos patrones que se sustituyen por `[redacted]`:
+  - `\b(?:Ubi_v1|rm_v1) t=\S+`;
+  - `(?<![A-Za-z0-9+/=_.-])[A-Za-z0-9+/=_.-]{64,}`, superconjunto de la forma aceptada. El de la 77 no cubre `+`, `/`, `=` ni `.`. Se acepta que tape alguna ruta o texto largo sin espacios.
+  - El `sessionId` no tiene patrón propio: nunca sale de la memoria ni de su cabecera `Secret`.
+- **Nunca salen** los tickets ni el `sessionId`: las mismas reglas que en la 77, y tampoco por el auxiliar, que no registra nada (punto 5).
+
+#### 9. Biblioteca e ID (`connectors/ubisoft/src/library.ts`, `cache.ts` y `protobuf.ts`)
+
+1. **Primero la caché, sin red:**
+   - sin `ctx.fs` (la detección no es automática): error con `connectors.ubisoft.needsAutoDetection`, la clave de la 79, y la biblioteca no cambia;
+   - sin `configurations` en ninguna ubicación `ubisoft-cache`: `scan.root-unreadable` con `connectors.ubisoft.errors.noCache` («Instala Ubisoft Connect y ábrelo una vez para ver aquí tus juegos de Ubisoft»).
+   - Así, si falta la caché, no se gasta una renovación.
+2. **`configurations`** (`readBytes`, 64 MiB como mucho), con el formato comprobado en el punto 3:
+   - **`protobuf.ts`:** lector mínimo del formato de cable. Varint de 10 bytes como mucho y sin pasar de `Number.MAX_SAFE_INTEGER`; longitudes comprobadas contra lo que queda; tipos de cable 0, 1, 2 y 5, y los desconocidos dentro de un mensaje se saltan. Cualquier otro tipo, o una longitud que se sale, es un fallo del fichero. Sin dependencias.
+   - **Registros:** mensajes con campo 1 de longitud. Dentro: campo 1 varint (el ID), campo 2 varint (el segundo ID, que no se usa) y campo 3 de longitud (YAML en UTF-8). Como mucho 20 000 registros y 1 MiB de YAML por registro.
+   - **YAML** con la biblioteca `yaml` (eemeli/yaml, licencia ISC, sin dependencias; el `auditor` la confirma según la decisión 60): esquema `core`, sin etiquetas propias y con el tope de alias por defecto. Un YAML que no se analiza se salta y se cuenta.
+   - **Se quedan** los registros con `start_game` (como Lutris, Galaxy y Playnite), sin `root.is_ulc` verdadero (DLC), con `root.space_id` en forma de UUID (pasado a minúsculas) y con un ID que cumple `^[1-9][0-9]{0,9}$`.
+   - **Mapa `spaceId` → ID** (UB6 y UB7). El ID es el **primero** de los dos varint: es la clave del registro en Lutris (`installId`) y el que Playnite une con la subclave `Installs` del registro. Si dos registros dan el mismo `space_id`, gana el ID menor y se cuenta (`ambiguousSpace`).
+   - Por ID se guarda también la `thumb_image` (punto 10).
+3. **Renovación** (punto 8).
+4. **Poseídos:** `POST https://public-ubiservices.ubi.com/v1/profiles/me/uplay/graphql`.
+   - Cabeceras: `authorization` `Ubi_v1 t=<ticket>`, `ubi-appid` y `ubi-sessionid`. El ticket y la sesión, de la renovación y como `Secret`.
+   - Cuerpo JSON `{ operationName: 'AllGames', query }`, con la consulta constante en `library.ts`: `query AllGames { viewer { ownedGames: games(filterBy: {isOwned: true}) { totalCount nodes { spaceId name viewer { meta { ownedPlatformGroups { type } } } } } } }`. Son los campos que usan Lutris y Galaxy, sin `viewer.id` ni las portadas de la API (UB5).
+   - 401 o 403: `auth.expired`. 429: `store.rate-limited`. Cualquier otro estado, `errors` en el cuerpo o sin `data.viewer.ownedGames.nodes` como lista: `store.unexpected-response`. Más de 50 000 nodos: `store.unexpected-response`.
+   - **Sin paginación** (Lutris y Galaxy no la usan): `totalCount` dice si llegó todo.
+5. **Por nodo:**
+   - `spaceId` con forma de UUID; si no, se salta y deja `complete: false`;
+   - sin ningún grupo con `type === 'PC'`: fuera y se cuenta (`notPc`), como hacen Lutris y Galaxy;
+   - **sin traducción** en el mapa: fuera y se cuenta (`untranslated`), **sin** tocar `complete`. Sin ID numérico no hay Jugar ni Instalar, y un ID distinto del del registro duplicaría los instalados. `shortcut:` el mismo que en la 77: un juego sin configuración en este equipo no aparece y, si estaba guardado y no está instalado, se da de baja; reaparece al abrir Ubisoft Connect;
+   - entrada `{ storeGameId: <ID>, kind: 'game', title, media }`. `title` = `name` sin caracteres de control, recortado y de 300 como mucho; si falta, `Ubisoft <ID>`. `media`, del punto 10. Repetidos por `storeGameId`, fuera;
+   - los juegos de Ubisoft comprados en Steam o Epic salen también si la API los da como poseídos en PC (decisión del usuario, punto 4; UB15).
+6. **`complete`:** `true` si `configurations` se leyó entera sin fallos de formato ni topes, `nodes.length === totalCount` y ningún nodo estaba mal formado. Si `configurations` falla a mitad, se usa lo leído con `complete: false`. El núcleo ya protege ante una lista vacía con juegos guardados (74).
+7. **Registro:** solo contadores (`records`, `invalidYaml`, `ambiguousSpace`, `nodes`, `totalCount`, `notPc`, `untranslated`, `invalidThumb`) y el tamaño del fichero. Ni ID de cuenta, ni títulos, ni rutas, ni `spaceId`.
+8. **Núcleo:** la operación `library` de la 74 no cambia. Mismo ID que el escaneo = misma propiedad, y el título de la API sustituye al de la carpeta (regla de la 74). Intervalos: `minSyncIntervalMs` pasa de 60 s a 30 minutos, como GOG y Epic (los escaneos no están sujetos a ese suelo, decisión 72), y la constante del núcleo para `trigger: 'open'` es de 12 h.
+9. **DLC:** `dlc: 'none'`. Los registros de DLC (`is_ulc`) no entran en el mapa.
+
+#### 10. Portadas
+
+- **Fuente:** la `thumb_image` del registro de `configurations`, resuelta por `localizations.default` si es una clave. Vale solo si cumple `^[A-Za-z0-9_-]{1,128}\.(jpg|jpeg|png)$`, y entonces `coverUrl = https://static3.cdn.ubi.com/orbit/uplay_launcher_3_0/assets/<valor>` (comprobado en el punto 3). Si no cumple, sin portada y se cuenta.
+- **`mediaHosts: ['static3.cdn.ubi.com']`**, el host de Lutris. La CSP (`img-src`) y `vite.config.ts` lo añaden (prueba de paridad de la 71). `ubistatic3-a.akamaihd.net` (Playnite, misma ruta) queda de reserva.
+- **Lo que da la API:** el GraphQL tiene `coverUrl` (Lutris la prefiere a `thumb_image`), pero no se ha visto su host. No se pide en este corte. Si la prueba muestra juegos sin `thumb_image`, se añade en un cambio pequeño, con su host en `mediaHosts`.
+- Los instalados poseídos tienen portada por la misma entrada. Sin cuenta, los instalados siguen sin portada (punto 16.2).
+- `resolveMedia` no existe: quien pide las imágenes al CDN es el navegador, con la IP del usuario, como con Steam, GOG y Epic (invariante 9). Supuesto UB8: el `<img>` las pinta aunque lleguen como `application/octet-stream`.
+
+#### 11. Instalar
+
+- `resolveAction('install')`: mismo ID validado y misma comprobación de Ubisoft Connect que `play` (79, punto 4). URI `uplay://install/<id>`, construida desde el grupo del patrón y afirmada con `^uplay://install/[1-9][0-9]{0,9}$`. Es la de Playnite (`UplayGameController.cs`) y la de Lutris (`services/ubisoft.py`). Supuesto UB9: abre Ubisoft Connect en la instalación de ese juego y no instala nada sin confirmar.
+- `actions: ['play', 'install']`. Sin cambios en el núcleo ni en `uriSchemes`. La web pinta «Abriendo Ubisoft Connect…» (`game.installing` con `{store}`).
+
+#### 12. Manifiesto (cambios sobre la 79)
+
+```ts
+// connectors/ubisoft/src/index.ts — ADR 80 (only what changes)
+access: "unofficial-api",
+capabilities: { library: true, scan: true, dlc: "none", actions: ["play", "install"], launchKinds: ["uri"], uriSchemes: ["uplay"], storePlaytime: false, price: false },
+minSyncIntervalMs: 1_800_000,                      // ADR 50, like GOG and Epic; scans are not bound by it
+authHosts: ["connect.ubisoft.com"],
+apiHosts: ["public-ubiservices.ubi.com"],
+mediaHosts: ["static3.cdn.ubi.com"],
+locations: [...UBISOFT_LOCATIONS, UBISOFT_CACHE],  // 'ubisoft-cache', purpose 'library'
+connection: ubisoftConnection,                     // wizard.ts
+listLibrary: listUbisoftLibrary,                   // library.ts
+```
+
+- **`ubisoft-cache`** (`library`): `{ kind: 'known-folder', folder: 'LocalAppData', relative: 'Ubisoft Game Launcher\\cache\\configuration' }` (comprobado en el punto 3) y, de respaldo, `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'Ubisoft\\Ubisoft Game Launcher\\cache\\configuration' }` (Galaxy). `ctx.fs` queda confinado a esa carpeta: el conector no ve nada más de la caché.
+- **Ficheros nuevos** en `connectors/ubisoft/src`: `auth.ts`, `wizard.ts`, `protobuf.ts`, `cache.ts` y `library.ts`. `launch.ts` y `manifest.ts` crecen. Dependencia nueva: `yaml`.
+- **Textos nuevos** (es y en):
+  - del conector: `connectors.ubisoft.login.title`, `.login.body`, `.login.window`, `connectors.ubisoft.error.login`, `.error.expired`, `connectors.ubisoft.errors.noCache` y `connectors.ubisoft.disconnect.hint`;
+  - comunes: `wizard.embedded.open`, `.waiting`, `.cancelled`, `.failed`, `.busy`, `.runtimeMissing` (con el enlace oficial de Microsoft) y `.unavailable`.
+- `checkConnectorManifest` lo acepta tal cual: `connection` con `authHosts`, `library` con `apiHosts`, y la ubicación `library` con `capabilities.library`.
+
+#### 13. Pruebas
+
+**Fixtures inventadas**, construidas en las pruebas y sin copiar nada de la caché ni de respuestas reales:
+
+- `rememberMeTicket` `ubisoft-test-remember-me-ticket-…`, de 64 caracteres o más para que cumpla el patrón, y su rotado `…-2`;
+- `ticket` `ubisoft-test-ticket-…`; `sessionId` `00000000-0000-4000-8000-000000000001`; `nameOnPlatform` `TestUser`;
+- `spaceId` `00000000-0000-4000-8000-0000000000a1`…, ID `900001`…, YAML inventado y bytes de protobuf hechos a mano.
+- `privacy.ts` añade esas constantes a `ALLOWED` y una regla que rechaza `rm_v1 t=` o `Ubi_v1 t=` seguidos de cualquier otro valor.
+
+Casos:
+
+- **Auxiliar (Go):**
+  - análisis y validación del pedido, cada límite del punto 5;
+  - el guion construido con `json.Marshal` escapa comillas, barras y saltos de línea;
+  - `doneUrl` y `captureUrl` coinciden por origen y ruta, ignorando la consulta;
+  - regla de navegación: `http`, otro host o un subdominio no listado → cancelada; host listado → permitida;
+  - un valor capturado con caracteres de control o de más de `maxLength` → `capture-missing`;
+  - stdin cerrado → sale.
+  - La ventana real va en la prueba manual.
+- **Plataforma:**
+  - `embedded-login.ts` con un auxiliar doble: línea válida → valores `Secret`; nombres de más, de menos o que no son texto → `failed`; línea de más de 64 KiB → `failed`; señal abortada → mata el proceso y borra la carpeta; carpeta bloqueada → reintenta y acaba borrándola; dos llamadas a la vez → `busy`; restos `tmp\webview-*` borrados al arrancar.
+  - `readBytes`: mayor que `maxBytes` → `scan.root-unreadable`; fuera de las raíces → error.
+- **Núcleo:**
+  - validación del paso: `http`, host fuera de `authHosts`, `doneUrl` con consulta, 5 campos o un `pattern` que no compila → `internal`;
+  - `continue` en el paso → llama al puerto con los `allowedHosts` del manifiesto;
+  - `captured` con un valor que no cumple `pattern` → `rejected`; `cancelled`, `busy`, `runtime-missing` y `failed` → sus claves; sin puerto → `wizard.embedded.unavailable`;
+  - `DELETE` y abrir otro asistente de la tienda abortan la señal; los 10 minutos; la sesión no caduca mientras espera; la época sube antes de abrir la ventana;
+  - ningún valor capturado en el registro; `kind: 'embedded'` no se acepta desde la API;
+  - ubicaciones `library`: `fs` solo con `auto-and-manual`; una declaración que lanza → `scan.discovery-unavailable` y nada cambia; `fs` ausente en los demás conectores.
+- **`connectors/ubisoft`:**
+  - asistente: URL de ida exacta (`appId`, `genomeId`, `lang` según `locale`, `nextUrl` codificada) y paso con `doneUrl`, `captureUrl` y `capture` exactos; al recibir `embedded`, renovación con cabeceras y cuerpo exactos, `set` del rotado o del capturado, `nameOnPlatform` saneado o ausente, 401 → `auth.invalid`;
+  - renovación en `listLibrary`: `set` **antes** del GraphQL; sin rotación, ningún `set`; `twoFactorAuthenticationTicket` → `auth.expired`; 400, 401 y 403 → `auth.expired`; 429; error de red; ticket o `sessionId` con otra forma;
+  - `protobuf.ts`: varint de 1 a 10 bytes, de 11 y mayor que `MAX_SAFE_INTEGER`; longitud que se sale; tipos 1 y 5 saltados; tipos 3, 4, 6 y 7 → fallo; fichero vacío; corte a mitad de un mensaje;
+  - caché: sin `fs` → `needsAutoDetection` sin ninguna petición; sin fichero → `noCache` sin ninguna petición; sin `start_game`; `is_ulc`; `space_id` ausente o que no es UUID; dos registros con el mismo `space_id` → el ID menor; YAML roto; topes;
+  - GraphQL: cabeceras como `Secret`; `errors`; sin `nodes`; `totalCount` mayor que los nodos → `complete: false`; nodo sin `PC`; nodo sin traducción (no toca `complete`); repetidos; más de 50 000;
+  - `thumb_image` válido → URL exacta; con `/`, `..`, `?`, otra extensión o de 129 caracteres → sin portada;
+  - `install` → `uplay://install/900001` exacto; sin Ubisoft Connect → `launch.launcher-missing`;
+  - ningún registro ni error lleva tickets, `sessionId`, el nombre de la cuenta, títulos, `spaceId` ni rutas;
+  - `assertConnectorConformance`.
+- **`runtime`:** el redactor tapa `rm_v1 t=…`, `Ubi_v1 t=…` y un ticket con `+`, `/` y `=`; paridad de la CSP con `static3.cdn.ubi.com`; el puerto `EmbeddedLogin` solo se registra en Windows.
+- **Web:** `ConnectWizard` con el paso nuevo (abrir, esperando, cancelar y cada `rejected`); `real.ts` envía Ubisoft a la API. Los casos de Playwright, con un puerto doble, quedan pendientes como en las 72 a 79.
+
+#### 14. Prueba manual (la prepara el `tester` en `docs/manual-tests/ubisoft.md`, sección «Account (ADR 80)»; la hace el usuario)
+
+1. Conectar desde Ajustes: la ventana se abre delante con la página de Ubisoft; iniciar sesión con la contraseña y, si la pide, el código de verificación; la ventana se cierra sola y sale «Conectado como <nombre>» (UB2, UB4 y UB13).
+2. Repetir cerrando la ventana sin iniciar sesión, y otra vez pulsando Cancelar en la web: mensaje en el mismo paso, y la ventana se cierra.
+3. Tras cada intento, `%LOCALAPPDATA%\Ludiary\tmp` no tiene carpetas `webview-*`.
+4. Biblioteca: los juegos de PC poseídos salen con portada y velo. Anotar del registro `nodes`, `totalCount`, `untranslated`, `notPc` y `ambiguousSpace`. Los instalados salen una sola vez, con el título de la API (UB6 y UB7). Si alguno sale dos veces, anotar los dos ID.
+5. Instalar un juego no instalado: Ubisoft Connect abre su instalación (UB9).
+6. Si hay un juego de Ubisoft comprado en Steam o Epic: sale también por Ubisoft (UB15).
+7. Sincronizar dos veces separadas por más de 30 minutos, y otra al día siguiente: sigue conectado. Anotar `rotated` y `expiration` del registro (UB4).
+8. Cambiar la contraseña en ubisoft.com y sincronizar: «Hay que volver a conectar»; reconectar.
+9. Desconectar: velo gris en los no instalados; los instalados siguen jugables.
+10. Con «solo carpetas manuales»: la tarjeta de Ubisoft muestra el aviso de detección automática.
+11. El registro exportado no contiene `rm_v1`, `Ubi_v1`, tickets, `sessionId`, el nombre de la cuenta, el correo, `spaceId` ni rutas. Anotar los `blockedHosts`: si el login necesitó otro host, se añade a `authHosts`.
+12. Opcional: con la verificación en dos pasos activada en la cuenta.
+
+#### 15. Orden de implementación y trabajo en paralelo
+
+1. **Primero** (`programador`): el contrato (paso `embedded-login`, entrada `embedded`, puerto `EmbeddedLogin`, ubicaciones `library`, `fs` y `readBytes`), el motor de asistentes, la operación `library` con `fs`, `readBytes` en la plataforma y el `testkit`, el redactor y las constantes de `privacy.ts`, con sus pruebas. Steam, GOG y Epic no cambian: sus pruebas siguen pasando.
+2. **En paralelo:**
+   - `empaquetador`: `--embedded-login` en el auxiliar con `wailsapp/go-webview2` y sus eventos de navegación, y `embedded-login.ts` en `platform-windows`; avisos de licencia (MIT) según la decisión 60; tamaño del auxiliar antes y después;
+   - `conectores`: `auth.ts`, `wizard.ts`, `protobuf.ts`, `cache.ts`, `library.ts`, `install`, manifiesto y textos, contra el `testkit`;
+   - `auditor`: revisión del diseño **antes del código**: el guion fijo y sus parámetros, la regla de navegación, el perfil temporal, la validación en las tres capas (auxiliar, plataforma y núcleo), que lo capturado no toque disco ni registro, el analizador binario de una entrada no confiable, la dependencia `yaml` y el `Ubi-AppId`.
+3. **Después:** web (`ConnectWizard`, `real.ts` y simulador), `runtime`, CSP y revisión del `auditor` sobre el código.
+4. **Al final:** la prueba manual (punto 14) y el `documentalista`:
+   - guía de conexión: la ventana de Ubisoft, por qué es distinta de GOG y Epic, y que la contraseña se escribe en la página oficial dentro de una ventana de Ludiary;
+   - privacidad: qué va a Ubisoft, y que la ventana es Microsoft Edge WebView2;
+   - aviso de vía no oficial;
+   - solución de problemas: `noCache`, `runtimeMissing` y «Hay que volver a conectar».
+
+#### 16. Lo que decide el usuario (solo producto)
+
+**Decidido por el usuario el 23-10-2026:** la vía C (punto 1); el permiso para la comprobación previa (punto 3); con varias cuentas en el PC vale la cuenta conectada; y los juegos de Ubisoft comprados en otra tienda salen también por Ubisoft (punto 4).
+
+**Aplicado por defecto, salvo que el usuario diga otra cosa:** 16.1 (a), 16.2 (a) y 16.3 (a).
+
+1. **Nombre de la cuenta:** (a) «Conectado como <nombre>», como en las demás tiendas (recomendado); (b) solo «Conectado».
+2. **Portadas de los instalados sin conectar la cuenta:** (a) no, como hoy (recomendado: menos código, y con la cuenta ya las tienen); (b) sí, leyendo `configurations` también sin cuenta, en un cambio pequeño posterior.
+3. **Si falta WebView2** (raro, porque viene con Windows 11): (a) mensaje con el enlace oficial de Microsoft (recomendado); (b) incluir su instalador en el de Ludiary (unos MB más y otro binario de terceros).
+
+#### 17. Alternativa descartada por el usuario: la caché local sin cuenta (opción A)
+
+El arquitecto recomendó leer `cache\configuration\configurations` y `cache\ownership\<id de cuenta>`, sin red ni secretos, como Playnite, Lutris y Galaxy. El usuario la descartó el 23-10-2026. De ella se conservan el lector de `configurations` (protobuf mínimo y `yaml`, punto 9), sus topes, la ubicación confinada y `readBytes`. Sus hallazgos siguen valiendo:
+
+- `configurations` es protobuf sin cifrar con YAML dentro y está en `LocalAppData` (sus supuestos UL2 y UL5, confirmados en el punto 3);
+- `ownership` existe, con un nombre de fichero en forma de UUID, y es compatible con el formato de Lutris (UL3; no se usa);
+- el CDN del launcher sirve las imágenes (UL7, confirmado);
+- `uplay://install/<id>` (UL8, ahora UB9).
+
+Su límite, que pesó frente a C: la biblioteca sería la del último inicio de sesión del launcher en este PC, sin saber de qué cuenta. Sus supuestos UL1 a UL8 quedan sustituidos por los UB de abajo.
+
+#### Supuestos (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
+
+- **UB1:** Ubisoft no ofrece a terceros una API ni un registro OAuth para leer la biblioteca. Búsqueda del 23-10-2026 sin resultados; Galaxy, Lutris y Playnite usan la API interna o la caché.
+- **UB2:** el login de `connect.ubisoft.com/login` con `appId`, `genomeId`, `lang` y `nextUrl=https://connect.ubisoft.com/ready`, el paso de `/ready` a `/change_domain/`, y la lectura de `PRODloginData`, `PRODrememberMe` y `PRODlastProfile` del `localStorage`, que llevan `ticket`, `sessionId` y `rememberMeTicket`. Fuentes: Lutris (`util/ubisoft/consts.py`, `services/ubisoft.py`, `authorise_with_local_storage` de `client.py`) y Galaxy (`consts.py`, con la expresión de fin `.*rememberMeTicket.*`). En qué clave va `rememberMeTicket` (por eso se miran dos), **sin verificar**.
+- **UB3 (sin verificar):** `rememberMeTicket` y `ticket` son cadenas opacas de 64 a 8192 caracteres de `[A-Za-z0-9+/=_.-]`, y `sessionId` es un UUID. Si no lo son, se rechazan y nunca se guarda un valor que el redactor no tape; si la prueba muestra otra forma, se cambian a la vez el patrón de aceptación y el del redactor, con el segundo como superconjunto del primero (como GA13 en la 77).
+- **UB4:** `POST public-ubiservices.ubi.com/v3/profiles/sessions` con `Authorization: rm_v1 t=<rememberMeTicket>`, `Ubi-AppId` y el cuerpo `{"rememberMe": true}` devuelve `ticket`, `sessionId`, el nombre, `expiration` y un `rememberMeTicket`, sin pedir el segundo factor. Fuentes: Lutris (`_refresh_remember_me`) y Galaxy (`backend.py`). Si rota, cuánto dura un `rememberMeTicket` sin usar y si `twoFactorAuthenticationTicket` aparece aquí: **sin verificar**.
+- **UB5:** `POST public-ubiservices.ubi.com/v1/profiles/me/uplay/graphql` con `Ubi_v1 t=<ticket>`, `Ubi-AppId` y `Ubi-SessionId` y la consulta `games(filterBy: {isOwned: true})` devuelve `totalCount` y `nodes` con `spaceId`, `name` y `viewer.meta.ownedPlatformGroups`, sin paginar. Fuentes: Lutris (`get_club_titles`) y Galaxy (`backend.py`). Si hace falta un `User-Agent` de navegador (los dos lo mandan) y si hay paginación en bibliotecas grandes: **sin verificar**.
+- **UB6:** el YAML de cada registro de `configurations` lleva `root.space_id`, igual al `spaceId` de la API. Fuente: Lutris (`parser.py`). **Sin verificar** en el fichero del usuario.
+- **UB7:** el primer varint de cada registro es el ID de la subclave `Installs` del registro. Fuentes: Lutris lo usa como `installId` y clave del registro; Playnite une así la caché y los instalados. **Sin verificar** (el punto 3 vio 54 y 54 en el primero).
+- **UB8 (sin verificar):** el `<img>` pinta los JPEG del CDN aunque lleguen como `application/octet-stream` (punto 3).
+- **UB9 (sin verificar en un equipo):** `uplay://install/<id>` abre Ubisoft Connect en la instalación del juego. Fuentes: Playnite (`UplayGameController.cs`) y Lutris (`services/ubisoft.py`).
+- **UB10:** la guía de Openplanet dice que el login con usuario y contraseña (`Basic`) en `v3/profiles/sessions` «dejó de funcionar en abril de 2026» para su caso (opción D).
+- **UB11:** `wailsapp/go-webview2` es MIT y sin CGO; sin la etiqueta `native_webview2loader` usa el cargador en Go (`webviewloader`, port de OpenWebView2Loader) y no necesita `WebView2Loader.dll`; `pkg/edge` expone `DataPath`, `PutIsPasswordAutosaveEnabled` y `PutIsGeneralAutofillEnabled`, pero no `NavigationStarting` ni `NewWindowRequested`. `jchv/go-webview2` es MIT y sin CGO y carga una copia incrustada de `WebView2Loader.dll` con `go-winloader`. Comprobado en sus repositorios el 23-10-2026; que el cargador en Go funcione en el equipo del usuario, **sin verificar**.
+- **UB12:** el runtime Evergreen de WebView2 viene preinstalado en Windows 11, y Microsoft lo instaló en los Windows 10 elegibles, aunque recomienda comprobarlo (Microsoft Learn). Sus ajustes de datos de diagnóstico siguen los de Windows: **sin verificar**.
+- **UB13 (sin verificar):** la sesión que nace con el `appId` del login se renueva con ese mismo `Ubi-AppId`. Lutris y Galaxy usan pares distintos (`appId` y `genomeId`); se elige el de Lutris y el de Galaxy es el plan B.
+- **UB14:** Ubisoft limita sus puntos de autenticación y una restricción puede durar hasta una hora (Openplanet).
+- **UB15 (sin verificar):** los juegos de Ubisoft activados desde Steam o Epic salen en `ownedGames` con el grupo `PC`.
+
+Fuentes consultadas el 23 de octubre de 2026: [Playnite, `UplayLibrary.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/UplayLibrary/UplayLibrary.cs), [`Uplay.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/UplayLibrary/Uplay.cs) y [`UplayGameController.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/UplayLibrary/UplayGameController.cs); [Lutris, `services/ubisoft.py`](https://github.com/lutris/lutris/blob/master/lutris/services/ubisoft.py), [`util/ubisoft/client.py`](https://github.com/lutris/lutris/blob/master/lutris/util/ubisoft/client.py), [`util/ubisoft/consts.py`](https://github.com/lutris/lutris/blob/master/lutris/util/ubisoft/consts.py) y [`util/ubisoft/parser.py`](https://github.com/lutris/lutris/blob/master/lutris/util/ubisoft/parser.py); integración de Galaxy: [`backend.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/backend.py), [`consts.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/consts.py), [`local_client.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/local_client.py), [`local_file_parser.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/local_file_parser.py) y [`plugin.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/plugin.py); [foro de Steam, carpeta `cache\ownership`](https://steamcommunity.com/app/488790/discussions/0/3182216552778658376).
+
+Fuentes añadidas para la vía C, consultadas el 23 de octubre de 2026: [Lutris, `util/ubisoft/client.py`](https://github.com/lutris/lutris/blob/master/lutris/util/ubisoft/client.py), [`util/ubisoft/consts.py`](https://github.com/lutris/lutris/blob/master/lutris/util/ubisoft/consts.py), [`util/ubisoft/parser.py`](https://github.com/lutris/lutris/blob/master/lutris/util/ubisoft/parser.py) y [`services/ubisoft.py`](https://github.com/lutris/lutris/blob/master/lutris/services/ubisoft.py); integración de Galaxy: [`backend.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/backend.py), [`consts.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/consts.py) y [`plugin.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/plugin.py); [Playnite, `UplayGameController.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/UplayLibrary/UplayGameController.cs); [`wailsapp/go-webview2`](https://github.com/wailsapp/go-webview2) (`LICENSE`, `webviewloader`, `pkg/edge/chromium.go`); [`jchv/go-webview2`](https://github.com/jchv/go-webview2); [Microsoft Learn, distribución del runtime de WebView2](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution); [Openplanet, cuenta de Ubisoft](https://webservices.openplanet.dev/auth/ubi).
+
+**Motivo:** el usuario quiere los juegos de su cuenta de Ubisoft y eligió la ventana integrada. Como en Ubisoft no hay nada que pegar, es la única vía con cuenta sin pasos técnicos y sin escribir la contraseña en una pantalla de Ludiary. Se pone en el auxiliar de Go que ya existe, sin un binario nuevo, con una librería sin CGO que no obliga a distribuir DLL de Microsoft. El conector solo describe la ventana con un tipo de paso declarativo; la ventana, la navegación y el guion son de la plataforma y del núcleo, con validación en tres capas. Se guarda una sola credencial (`rememberMeTicket`). La API da los poseídos con un `spaceId` que no sirve para lanzar, y `configurations`, ya comprobada en este equipo, lo traduce al ID del registro y da las portadas. Alternativas descartadas: A (decisión del usuario, punto 17), B (nada que pegar), D (la contraseña en Ludiary), E (no da la propiedad), que el conector abra la ventana (30 s y E/S propia), capturar también `ticket` y `sessionId` (innecesarios), `jchv/go-webview2` (DLL incrustada) y un auxiliar en .NET.
+
+**Consecuencias:**
+
+- Ubisoft pasa a `access: 'unofficial-api'` con cuenta: cuarta tienda con asistente real, con su icono de fragilidad. Quedan revisadas la fila de Ubisoft de la tabla de la 40 y su consecuencia «las tiendas sin cuenta (Ubisoft y EA)». EA sigue sin cuenta.
+- La 43 queda revisada solo para Ubisoft (punto 2); Steam, GOG y Epic no cambian.
+- El contrato gana un tipo de paso, una entrada interna, un puerto del SO (detrás de una interfaz propia, invariante 1), el propósito `library`, `SyncContext.fs` y `readBytes`. Todo es aditivo: `contractVersion` sigue en 1.
+- El auxiliar de Go crece con WebView2: más tamaño (lo mide el `empaquetador`), una dependencia MIT más y el runtime de Microsoft como requisito del sistema. Siguen siendo tres binarios que firmar (45 y 58).
+- La 79 queda revisada en sus puntos 1 y 5, en el descarte de `configurations` del punto 3 y en `access`. La 42 se amplía: con «solo carpetas manuales» no hay biblioteca de Ubisoft.
+- Fragilidad: un cambio de la página de login, de las claves del `localStorage`, de la API o del formato de `configurations` rompe la cuenta. El fallo queda en la tarjeta de Ubisoft (invariante 2), y el escaneo y Jugar siguen.
+- Un juego poseído sin configuración en este equipo no aparece hasta abrir Ubisoft Connect; la guía lo explica.
+- Una dependencia nueva, `yaml`, en `connectors/ubisoft`.
+- El `auditor` revisa el diseño antes del código y el código antes de cerrar; el `tester` amplía `docs/manual-tests/ubisoft.md` (punto 14); el `documentalista`, las guías del punto 15.
 
 ## Arquitectura resultante
 
@@ -4304,11 +4713,12 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 77: punto 12 aplicado por defecto («Conectado como <nombre>» y mensaje si no hay Galaxy); el usuario puede cambiarlo. Prueba manual de la cuenta (punto 10) para cerrar los supuestos GA1 a GA13, y revisión del `auditor` antes y después del código.
 - Decisión 78 (Epic): punto 13 aplicado por defecto («Conectado como <nombre>», mensaje si falta el launcher, sin instalados de Epic en «solo carpetas manuales»); el usuario puede cambiarlo. El usuario consigue Home – A Unique Horror Adventure (u otro juego pequeño) **antes del 29-10-2026** para la prueba manual del corte 1 (punto 11), que cierra los supuestos E pendientes (E5 ya comprobado; E7 falso, el corte 1 va sin portadas). La prueba del corte 2 comprueba primero que el catálogo con el token del usuario trae `categories` y `keyImages` (punto 15). El usuario decide si se actualizan las definiciones de los agentes `conectores` y `auditor`, que aún citan `legendary` (punto 14). El corte 2 cierra EA1 a EA10; si la sesión de Epic dura pocas horas (EA5), se decide aparte. Revisión del `auditor` antes y después del código de cada corte.
 - Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces (y un juego de Ubisoft comprado en Steam o Epic, previsiblemente también; supuesto U11 de la 79).
-- Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect); el usuario elige el juego de la prueba manual (11.2, recomendado Trackmania) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos U1 a U11. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
+- Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código. Prueba manual del 23-10-2026 (punto 13): detección correcta, U4 y U7 confirmados; quedan U1 a U3, U5, U6 y U8 a U11.
+- Decisión 80 (Ubisoft, cuenta con ventana de login integrada): vía C elegida por el usuario el 23-10-2026 y comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto, que el usuario puede cambiar. Revisión del `auditor` antes y después del código; la prueba manual (punto 14) cierra UB2 a UB9, UB13 y UB15. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 79 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 80 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
