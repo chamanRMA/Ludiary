@@ -233,12 +233,14 @@ describe("fields", () => {
   });
 
   it("applies extract before validating", async () => {
-    const step: WizardStep = { ...keyStep, id: "code", fields: [{ name: "apiKey", labelKey: k("connectors.steam.l"), secret: true, maxLength: 64, extract: "json-field:authorizationCode" }] };
+    const step: WizardStep = { ...keyStep, id: "code", fields: [{ name: "apiKey", labelKey: k("connectors.steam.l"), secret: true, maxLength: 64, pattern: "[a-z]{3}", extract: "json-field:authorizationCode" }] };
     const { h } = await setup({ spy: { override: async (id, input) => (id === "login" ? step : input.kind === "fields" ? { kind: "done" } : step) } });
     const { wizardId } = await h.core.startWizard("steam", BASE);
     await callback(h, wizardId);
-    expect(await h.core.submitWizard(wizardId, "code", fields("not json"))).toMatchObject({ kind: "rejected" });
-    expect(await h.core.submitWizard(wizardId, "code", fields('{"authorizationCode":"abc"}'))).toEqual({ kind: "done" });
+    expect(await h.core.submitWizard(wizardId, "code", fields("not-a-code"))).toMatchObject({ kind: "rejected" });
+    expect(await h.core.submitWizard(wizardId, "code", fields('{"other":"abc"}'))).toMatchObject({ kind: "rejected" });
+    expect(await h.core.submitWizard(wizardId, "code", fields('{"authorizationCode":5}'))).toMatchObject({ kind: "rejected" });
+    expect(await h.core.submitWizard(wizardId, "code", fields('"abc"'))).toEqual({ kind: "done" });
   });
 });
 

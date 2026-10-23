@@ -102,6 +102,28 @@ function stepFields(step: WizardStep): readonly WizardField[] | null {
   return null;
 }
 
+/** Same rule as the web's `extractValue` (ADR 78 point 7). null: it was JSON but the field is missing or not text. */
+function pickJsonField(text: string, name: string): string | null {
+  const field = (o: unknown): string | null => {
+    const v = o !== null && typeof o === "object" ? (o as Record<string, unknown>)[name] : undefined;
+    return typeof v === "string" ? v : null;
+  };
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed === "string") return parsed; // a quoted value is a bare value
+    if (parsed !== null && typeof parsed === "object") return field(parsed); // any other JSON (a number) falls through
+  } catch {
+    /* not JSON: try the braces, then the bare value */
+  }
+  const open = text.indexOf("{");
+  if (open === -1) return text.replace(/^["']|["']$/g, "");
+  try {
+    return field(JSON.parse(text.slice(open, text.lastIndexOf("}") + 1)));
+  } catch {
+    return null;
+  }
+}
+
 /** Applies `extract`, trims and checks maxLength and the anchored pattern. null means the value is not acceptable. */
 function cleanField(f: WizardField, raw: string, hosts: readonly string[]): string | null {
   let value = raw;
@@ -109,8 +131,9 @@ function cleanField(f: WizardField, raw: string, hosts: readonly string[]): stri
     const [kind, name] = [f.extract.slice(0, f.extract.indexOf(":")), f.extract.slice(f.extract.indexOf(":") + 1)];
     try {
       if (kind === "json-field") {
-        const v = (JSON.parse(value) as Record<string, unknown> | null)?.[name];
-        if (typeof v !== "string") return null;
+        // ADR 78 point 7: JSON, else the part between the first "{" and the last "}", else the bare value.
+        const v = pickJsonField(value, name);
+        if (v === null) return null;
         value = v;
       } else {
         const url = new URL(value);

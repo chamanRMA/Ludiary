@@ -7,7 +7,7 @@ import { STORE_BRAND } from "../app/stores";
 import { api, isSimulated } from "../data/api";
 import { mutate } from "../data/hooks";
 import { ApiError } from "../data/http";
-import { safeExternalUrl, validateField } from "../data/validate";
+import { safeExternalUrl, validateField, valuesToSend } from "../data/validate";
 import ui from "../styles/ui.module.css";
 import { cx, StepText } from "./bits";
 import { Icon } from "./Icon";
@@ -124,7 +124,7 @@ export function ConnectWizard({ target, resume, onDone, onCancel }: Props) {
     }
   };
   const submitFields = (): void => {
-    if (allValid) void send({ kind: "fields", values });
+    if (allValid) void send({ kind: "fields", values: valuesToSend(fields, values) });
   };
 
   return (

@@ -1,0 +1,12 @@
+{
+  "connectors.epic.name": "Epic Games",
+  "connectors.epic.errors.invalidId": "This Epic Games game has an invalid identifier and cannot be opened.",
+  "connectors.epic.errors.launcherMissing": "The Epic Games launcher is needed to install this game. Download it from epicgames.com.",
+  "connectors.epic.login.title": "Sign in to Epic Games",
+  "connectors.epic.login.body": "Sign in to Epic Games in the new tab. When it finishes you will see some text between curly braces: copy all of it and press “Paste”. Epic warns you not to share that code: Ludiary uses it only on this computer to talk to Epic.",
+  "connectors.epic.login.field": "Text of the final page",
+  "connectors.epic.error.code": "The code has expired or was already used. Sign in again and copy the new text.",
+  "connectors.epic.error.corrective": "Epic asks you to confirm something on its website. Go to epicgames.com, accept it and connect again.",
+  "connectors.epic.error.expired": "Epic Games has signed you out. Reconnect the account.",
+  "connectors.epic.disconnect.hint": "Ludiary deletes its Epic Games session from this computer. To sign out everywhere, change your password at epicgames.com."
+}

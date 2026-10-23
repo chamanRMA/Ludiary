@@ -118,7 +118,7 @@ describe("real client: point B, the rest comes from the simulator", () => {
     const names = ["getServices", "startWizard", "submitWizard", "cancelWizard", "disconnect", "getCollections", "createBackup", "exportLogs", "simulateExpiredSession"] as const;
     for (const name of names) vi.spyOn(sim as LudiaryApi, name);
     const api = createRealApi(http, sim, null);
-    const epic = { kind: "store", store: "epic" } as const;
+    const epic = { kind: "service", service: "rawg" } as const;
     await api.getServices();
     await api.startWizard(epic);
     await api.submitWizard(epic, { kind: "continue" });
@@ -127,7 +127,7 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await api.getCollections();
     await api.createBackup();
     await api.exportLogs();
-    await api.simulateExpiredSession("epic");
+    await api.simulateExpiredSession("ubisoft");
     for (const name of names) expect(sim[name], name).toHaveBeenCalled();
     expect(log).toEqual([]);
   });
@@ -169,9 +169,9 @@ describe("real client: point B, the rest comes from the simulator", () => {
     const api = createRealApi(http, sim);
     expect((await api.getStores())[0]).toMatchObject({ connection: "disconnected", mode: "installed-only" });
 
+    // Steam (ADR 74), GOG (ADR 77) and Epic (ADR 78) are real: a simulated state never overlays them
     await sim.simulateExpiredSession("epic");
-    expect((await api.getStores())[2]).toMatchObject({ connection: "expired" });
-    // Steam (ADR 74) and GOG (ADR 77) are real: a simulated state never overlays them
+    expect((await api.getStores())[2]).toEqual(real[2]);
     await sim.simulateExpiredSession("gog");
     expect((await api.getStores())[1]).toEqual(real[1]);
     const steam = { kind: "store", store: "steam" } as const;

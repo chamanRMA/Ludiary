@@ -1,0 +1,15 @@
+{
+  "FormatVersion": 0,
+  "bIsIncompleteInstall": false,
+  "AppVersionString": "1.0.0",
+  "LaunchCommand": "",
+  "LaunchExecutable": "TestGame.exe",
+  "ManifestLocation": "D:/Epic Games ñ/TestDlc01/.egstore",
+  "DisplayName": "Test DLC",
+  "AppName": "TestDlc01",
+  "CatalogNamespace": "000000000000000000000000000000a1",
+  "CatalogItemId": "00000000000000000000000000000002",
+  "InstallLocation": "D:/Epic Games ñ/TestDlc01",
+  "MainGameAppName": "TestGame01",
+  "AppCategories": ["public", "addons"]
+}

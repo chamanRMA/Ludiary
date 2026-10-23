@@ -1,0 +1,12 @@
+{
+  "connectors.epic.name": "Epic Games",
+  "connectors.epic.errors.invalidId": "Este juego de Epic Games tiene un identificador no válido y no se puede abrir.",
+  "connectors.epic.errors.launcherMissing": "Para instalar este juego hace falta el launcher de Epic Games. Descárgalo de epicgames.com.",
+  "connectors.epic.login.title": "Inicia sesión en Epic Games",
+  "connectors.epic.login.body": "Inicia sesión en Epic Games en la pestaña nueva. Al terminar verás un texto entre llaves: cópialo entero y pulsa «Pegar». Epic avisa de no compartir ese código: Ludiary lo usa solo en este equipo para hablar con Epic.",
+  "connectors.epic.login.field": "Texto de la página final",
+  "connectors.epic.error.code": "El código ha caducado o ya se usó. Vuelve a iniciar sesión y copia el texto nuevo.",
+  "connectors.epic.error.corrective": "Epic te pide confirmar algo en su web. Entra en epicgames.com, acéptalo y vuelve a conectar.",
+  "connectors.epic.error.expired": "Epic Games ha cerrado la sesión. Vuelve a conectar la cuenta.",
+  "connectors.epic.disconnect.hint": "Ludiary borra su sesión de Epic Games de este equipo. Para cerrar todas las sesiones, cambia la contraseña en epicgames.com."
+}

@@ -9,6 +9,7 @@
   "dependencies": {
     "@ludiary/api": "workspace:*",
     "@ludiary/api-contract": "workspace:*",
+    "@ludiary/connector-epic": "workspace:*",
     "@ludiary/connector-gog": "workspace:*",
     "@ludiary/connector-steam": "workspace:*",
     "@ludiary/contracts": "workspace:*",
