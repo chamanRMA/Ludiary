@@ -1,4 +1,5 @@
-import { ConnectorError } from "@ludiary/contracts";
+import { ConnectorError, LocationsUnreadableError, type LocalFiles } from "@ludiary/contracts";
+import type { ScanRootRecord } from "../src/model";
 import { describe, expect, it, vi } from "vitest";
 import { ConnectorRegistrationError, createCore } from "../src";
 import { addUserRoot, entry, harness, makeConnector, resolver, scanNow, type Harness } from "./helpers";
@@ -310,6 +311,51 @@ describe("detection modes (ADR 42, 72)", () => {
     expect([...h.store.roots.values()].map((r) => r.path).sort()).toEqual(["C:\\Steam", LIB]);
   });
 
+  it("keeps stored discovered roots and scans them when a location cannot be read (ADR 79)", async () => {
+    let fail = false;
+    const seen: string[][] = [];
+    const h = await harness({
+      dirs: [LIB, "C:\\Steam", "E:\\Lib"],
+      mode: "auto-and-manual",
+      locations: {
+        resolve: async () => {
+          if (fail) throw new Error("registry helper unavailable");
+          return [{ declarationId: "steam-root", path: "C:\\Steam" }];
+        },
+      },
+      connectors: [
+        makeConnector({
+          ...discoverTwo,
+          scan: async (ctx) => (seen.push(ctx.roots.map((r) => `${r.origin}:${r.path}`)), { entries: [], unreadableRoots: [] }),
+        }),
+      ],
+    });
+    addUserRoot(h, LIB);
+    await scanNow(h);
+    fail = true;
+    h.clock.time += 120_000;
+    await scanNow(h);
+    expect(seen[1]).toEqual(seen[0]);
+    expect([...h.store.roots.values()].filter((r) => r.origin === "discovered")).toHaveLength(2);
+  });
+
+  it("hands a connector's tag back in ScanRoot after storing the root (ADR 79)", async () => {
+    const seen: unknown[] = [];
+    const h = await harness({
+      dirs: [LIB, "C:\\Steam"],
+      mode: "auto-and-manual",
+      locations: resolver({ "steam-root": [{ declarationId: "steam-root", path: "C:\\Steam", subkey: "900001" }] }),
+      connectors: [
+        makeConnector({
+          discover: async (ctx) => ctx.locations.map((l) => ({ declarationId: l.declarationId, path: l.path, tag: `game-${l.subkey}` })),
+          scan: async (ctx) => (seen.push(...ctx.roots), { entries: [], unreadableRoots: [] }),
+        }),
+      ],
+    });
+    await scanNow(h);
+    expect(seen).toContainEqual({ origin: "discovered", declarationId: "steam-root", path: "C:\\Steam", tag: "game-900001" });
+  });
+
   it("ignores discovered roots that are not directories, not declared or relative", async () => {
     const h = await harness({
       dirs: [LIB, "C:\\Steam"],
@@ -453,5 +499,135 @@ describe("connector registration", () => {
   it("accepts a mode without launcher (it cannot launch)", async () => {
     const h = await harness({ launcher: null });
     expect(h.core.capabilities).toEqual({ canScan: true, canLaunch: false, canPickFolder: false });
+  });
+});
+
+describe("discovery that cannot be completed (ADR 79)", () => {
+  const decls = (...ids: string[]) =>
+    ids.map((id) => ({ id, purpose: "scan" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: id }] }));
+  const stored = (path: string, declarationId: string, store = "steam"): ScanRootRecord => ({
+    id: `r-${path}`, origin: "discovered", path, pathKey: path.toLowerCase(), declarationId, store: store as ScanRootRecord["store"], tag: null, enabled: true,
+  });
+  const scanned = () => {
+    const seen: string[][] = [];
+    return { seen, scan: async (ctx: { roots: readonly { origin: string; path: string }[] }) => (seen.push(ctx.roots.map((r) => r.path)), { entries: [], unreadableRoots: [] }) };
+  };
+  const scanState = (h: Harness) => [...h.store.sync.values()].find((s) => s.operation === "scan");
+
+  it("an unreadable declaration keeps its stored roots, the other one goes on, and the state carries a warning", async () => {
+    const { seen, scan } = scanned();
+    const h = await harness({
+      dirs: [LIB, "C:\\A", "E:\\Old", "C:\\Bp"],
+      mode: "auto-and-manual",
+      locations: {
+        resolve: async (d) => {
+          if (d.id === "b") throw new LocationsUnreadableError("down", [{ declarationId: "b", path: "C:\\Bp" }]);
+          return [{ declarationId: "a", path: "C:\\A" }];
+        },
+      },
+      connectors: [makeConnector({ locations: decls("a", "b"), scan })],
+    });
+    addUserRoot(h, LIB);
+    const old = stored("E:\\Old", "b");
+    h.store.roots.set(old.id, old);
+    const gone = stored("E:\\GoneA", "a");
+    h.store.roots.set(gone.id, gone);
+    await scanNow(h);
+    expect(seen[0]).toEqual([LIB, "C:\\A", "C:\\Bp", "E:\\Old"]);
+    expect(h.store.roots.has(old.id)).toBe(true); // kept
+    expect(h.store.roots.has(gone.id)).toBe(false); // its declaration did resolve
+    expect(scanState(h)).toMatchObject({ status: "idle", error: { code: "scan.discovery-unavailable" } });
+  });
+
+  it("with the registry down and nothing resolved, stored roots are kept and scanned", async () => {
+    const { seen, scan } = scanned();
+    const h = await harness({
+      dirs: ["E:\\Old"],
+      mode: "auto-and-manual",
+      locations: { resolve: async () => { throw new LocationsUnreadableError("down"); } },
+      connectors: [makeConnector({ scan })],
+    });
+    const old = stored("E:\\Old", "steam-root");
+    h.store.roots.set(old.id, old);
+    await scanNow(h);
+    expect(seen[0]).toEqual(["E:\\Old"]);
+    expect(h.store.roots.has(old.id)).toBe(true);
+    expect(scanState(h)?.error?.code).toBe("scan.discovery-unavailable");
+  });
+
+  it("a successful discovery leaves no warning", async () => {
+    const h = await harness({ dirs: ["C:\\Steam"], mode: "auto-and-manual", locations: resolver({ "steam-root": [{ declarationId: "steam-root", path: "C:\\Steam" }] }), connectors: [makeConnector()] });
+    await scanNow(h);
+    expect(scanState(h)).toMatchObject({ status: "idle", error: null });
+  });
+
+  it("a folder that cannot be checked only unresolves its own declaration", async () => {
+    const { seen, scan } = scanned();
+    const h = await harness({
+      dirs: ["C:\\A", "C:\\B", "E:\\OldA", "E:\\OldB"],
+      mode: "auto-and-manual",
+      locations: resolver({ a: [{ declarationId: "a", path: "C:\\A" }], b: [{ declarationId: "b", path: "C:\\B" }] }),
+      connectors: [makeConnector({ locations: decls("a", "b"), scan })],
+    });
+    (h.files as LocalFiles).isDirectoryStrict = async (p) => {
+      if (p === "C:\\B") throw Object.assign(new Error("denied"), { code: "EACCES" });
+      return true;
+    };
+    const oldA = stored("E:\\OldA", "a");
+    const oldB = stored("E:\\OldB", "b");
+    h.store.roots.set(oldA.id, oldA);
+    h.store.roots.set(oldB.id, oldB);
+    await scanNow(h);
+    expect(h.store.roots.has(oldA.id)).toBe(false); // "a" was read fine, so its missing root goes
+    expect(h.store.roots.has(oldB.id)).toBe(true);
+    expect(seen[0]).toEqual(["C:\\A", "E:\\OldB"]);
+  });
+
+  it("a folder that cannot be checked makes discovery null: stored roots stay", async () => {
+    const { seen, scan } = scanned();
+    const h = await harness({
+      dirs: ["C:\\Steam", "E:\\Old"],
+      mode: "auto-and-manual",
+      locations: resolver({ "steam-root": [{ declarationId: "steam-root", path: "C:\\Steam" }] }),
+      connectors: [makeConnector({ scan })],
+    });
+    (h.files as LocalFiles).isDirectoryStrict = async () => { throw Object.assign(new Error("denied"), { code: "EACCES" }); };
+    const old = stored("E:\\Old", "steam-root");
+    h.store.roots.set(old.id, old);
+    await scanNow(h);
+    expect(seen[0]).toEqual(["E:\\Old"]);
+    expect(h.store.roots.has(old.id)).toBe(true);
+  });
+
+  it("a list cut at 64 deletes nothing stored", async () => {
+    const many = Array.from({ length: 65 }, (_, i) => `C:\\G${i}`);
+    const h = await harness({
+      dirs: [...many, "E:\\Old"],
+      mode: "auto-and-manual",
+      locations: resolver({ "steam-root": many.map((p) => ({ declarationId: "steam-root", path: p })) }),
+      connectors: [makeConnector()],
+    });
+    const old = stored("E:\\Old", "steam-root");
+    h.store.roots.set(old.id, old);
+    await scanNow(h);
+    expect(h.store.roots.has(old.id)).toBe(true);
+    expect([...h.store.roots.values()].filter((r) => r.origin === "discovered")).toHaveLength(65);
+    expect(scanState(h)).toMatchObject({ status: "idle", error: { code: "scan.discovery-unavailable" } });
+  });
+
+  it("does not take a folder another store already owns, and does not touch that store's root", async () => {
+    const { seen, scan } = scanned();
+    const h = await harness({
+      dirs: ["C:\\Shared"],
+      mode: "auto-and-manual",
+      locations: resolver({ "steam-root": [{ declarationId: "steam-root", path: "C:\\Shared" }] }),
+      connectors: [makeConnector({ scan })],
+    });
+    const theirs = stored("C:\\Shared", "ubisoft-installs", "ubisoft");
+    h.store.roots.set(theirs.id, theirs);
+    await scanNow(h);
+    expect(seen).toEqual([]); // nothing of its own to scan
+    expect(h.store.roots.get(theirs.id)).toEqual(theirs);
+    expect(h.store.roots.size).toBe(1);
   });
 });

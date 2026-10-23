@@ -78,6 +78,9 @@ export class FakeFiles implements LocalFiles {
   async isDirectory(p: string) {
     return this.dirs.has(this.compareKey(p));
   }
+  async isDirectoryStrict(p: string) {
+    return this.isDirectory(p);
+  }
   scoped(roots: readonly string[]) {
     return {
       readText: async () => "",

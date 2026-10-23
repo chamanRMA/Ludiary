@@ -11,6 +11,7 @@
     "@ludiary/api-contract": "workspace:*",
     "@ludiary/connector-gog": "workspace:*",
     "@ludiary/connector-steam": "workspace:*",
+    "@ludiary/connector-ubisoft": "workspace:*",
     "@ludiary/contracts": "workspace:*",
     "@ludiary/core": "workspace:*",
     "@ludiary/db": "workspace:*",

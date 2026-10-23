@@ -153,6 +153,14 @@ describe("applyScanPlan", () => {
     expect(roots).toEqual([{ id: "r1", origin: "discovered", path: "C:\\Steam", pathKey: "c:\\steam", declarationId: "steam-root", store: "steam", tag: "other", enabled: false }]);
   });
 
+  it("does not let one store take over a folder stored for another (ADR 79)", async () => {
+    await repos.library.applyScanPlan({ ...emptyPlan(1), upsertDiscoveredRoots: [root("u1", "D:\\Shared", { origin: "discovered", store: "ubisoft", declarationId: "ubisoft-installs", tag: "game-900001" })] });
+    await repos.library.applyScanPlan({ ...emptyPlan(2), upsertDiscoveredRoots: [root("g1", "D:\\Shared", { origin: "discovered", store: "gog", declarationId: "gog-games", tag: null })] });
+    const roots = await repos.scanRoots.list();
+    expect(roots).toHaveLength(1);
+    expect(roots[0]).toMatchObject({ id: "u1", store: "ubisoft", declarationId: "ubisoft-installs", tag: "game-900001" });
+  });
+
   it("does not delete user roots through deleteRoots", async () => {
     await repos.scanRoots.addUser(root("u1", "D:\\Mine"));
     await repos.library.applyScanPlan({ ...emptyPlan(1), deleteRoots: ["u1"] });

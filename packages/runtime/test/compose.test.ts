@@ -165,7 +165,7 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
     const { port } = await start([]);
     const { call } = await login(port);
     const stores = (await (await call("/api/stores")).json()) as { store: string; access: string; mode: string; connection: string }[];
-    expect(stores.map((s) => s.store)).toEqual(["steam", "gog"]);
+    expect(stores.map((s) => s.store)).toEqual(["steam", "gog", "ubisoft"]);
     expect(stores[0]).toMatchObject({ store: "steam", access: "official-api", mode: "installed-only" });
     expect(stores[1]).toMatchObject({ store: "gog", access: "unofficial-api", mode: "installed-only" });
     const cancelled = await call("/api/scan-roots/pick", "POST", {});
@@ -239,8 +239,8 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
 
   it("unions the media hosts and URI schemes of the registered connectors", () => {
     const connectors = createConnectors();
-    expect(unionUriSchemes(connectors)).toEqual(["goggalaxy", "steam"]); // ADR 77: GOG declares goggalaxy for install
-    expect(connectors.map((c) => c.id)).toEqual(["steam", "gog"]);
+    expect(unionUriSchemes(connectors)).toEqual(["goggalaxy", "steam", "uplay"]); // ADR 77: GOG declares goggalaxy for install
+    expect(connectors.map((c) => c.id)).toEqual(["steam", "gog", "ubisoft"]);
     expect(unionMediaHosts(connectors)).toEqual([
       "images.gog.com",
       "shared.akamai.steamstatic.com",

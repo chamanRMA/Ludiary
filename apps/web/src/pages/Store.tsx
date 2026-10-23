@@ -8,6 +8,7 @@ import { filterGames } from "../data/library";
 import { cx, FilterChip, PageTitle, relativeTime, StoreBadge } from "../components/bits";
 import { ConnectWizard } from "../components/ConnectWizard";
 import { GameGrid } from "../components/GameCard";
+import { StoreNotices } from "../components/StoreNotices";
 import { Icon } from "../components/Icon";
 import ui from "../styles/ui.module.css";
 import { NotFound } from "./NotFound";
@@ -67,6 +68,7 @@ export function Store({ id }: { id: string }) {
         </div>
       </section>
 
+      <StoreNotices status={status} />
       {expired && (
         <section className={ui.alert} role="status">
           <div>

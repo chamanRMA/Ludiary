@@ -9,6 +9,7 @@ import ui from "../styles/ui.module.css";
 import { cx, StoreBadge } from "./bits";
 import { ConnectWizard } from "./ConnectWizard";
 import { Icon } from "./Icon";
+import { StoreNotices } from "./StoreNotices";
 import styles from "./wizard.module.css";
 
 const SERVICE_NAMES = { rawg: "RAWG", igdb: "IGDB", itad: "IsThereAnyDeal" } as const;
@@ -99,6 +100,7 @@ export function TargetRow(props: Props) {
           )}
         </div>
       </div>
+      {props.store && <StoreNotices status={props.store} />}
       {confirming && (
         <div className={styles.wizard} role="group" aria-label={t("stores.disconnect.confirm", { name })}>
           <p>{t("stores.disconnect.confirm", { name })}</p>

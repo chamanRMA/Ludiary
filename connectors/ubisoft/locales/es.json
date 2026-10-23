@@ -1,0 +1,6 @@
+{
+  "connectors.ubisoft.name": "Ubisoft",
+  "connectors.ubisoft.errors.invalidId": "Este juego de Ubisoft tiene un identificador no válido y no se puede abrir.",
+  "connectors.ubisoft.errors.launcherMissing": "No se encuentra Ubisoft Connect. Instálalo desde ubisoft.com y vuelve a intentarlo.",
+  "connectors.ubisoft.needsAutoDetection": "Ubisoft Connect guarda sus juegos en el registro de Windows. Para verlos, activa la detección automática."
+}

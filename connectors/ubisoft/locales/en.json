@@ -1,0 +1,6 @@
+{
+  "connectors.ubisoft.name": "Ubisoft",
+  "connectors.ubisoft.errors.invalidId": "This Ubisoft game has an invalid identifier and cannot be launched.",
+  "connectors.ubisoft.errors.launcherMissing": "Ubisoft Connect was not found. Install it from ubisoft.com and try again.",
+  "connectors.ubisoft.needsAutoDetection": "Ubisoft Connect keeps its games in the Windows registry. To see them, turn on automatic detection."
+}

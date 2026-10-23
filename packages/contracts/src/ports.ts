@@ -61,9 +61,21 @@ export interface PlatformInfo {
 
 // ---------- Ports added by ADR 72 ----------
 
+/** Thrown by LocationResolver.resolve when a source could not be read. `partial`: the locations that did resolve (ADR 79). */
+export class LocationsUnreadableError extends Error {
+  constructor(message: string, readonly partial: readonly ResolvedLocation[] = []) {
+    super(message);
+    this.name = "LocationsUnreadableError";
+  }
+}
+
 /** ADR 38, 40 rule 8. Read-only: implementations never write the registry or launcher files (ADR 42). */
 export interface LocationResolver {
-  /** Every distinct existing path of the declaration on this OS, in source order (deduplicated with LocalFiles.compareKey). */
+  /**
+   * Every distinct existing path of the declaration on this OS, in source order (deduplicated with LocalFiles.compareKey).
+   * A key or value that does not exist is not an error (it yields nothing). Throws if a registry source could not be read
+   * (helper failed, access denied, any other error): absent and unreadable are not the same (ADR 79).
+   */
   resolve(decl: LocationDeclaration): Promise<readonly ResolvedLocation[]>;
 }
 
@@ -78,6 +90,8 @@ export interface LocalFiles {
   /** Equality key for uniqueness (lower-case on Windows). */
   compareKey(path: string): string;
   isDirectory(path: string): Promise<boolean>;
+  /** ADR 79. Like isDirectory (false when absent or not a directory), but throws if it cannot tell (permissions, I/O). */
+  isDirectoryStrict(path: string): Promise<boolean>;
   /** Canonical path (realpath of the deepest existing ancestor, missing tail unchanged). Throws if it cannot be resolved. */
   realPath(path: string): Promise<string>;
   /**

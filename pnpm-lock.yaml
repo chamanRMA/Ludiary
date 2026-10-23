@@ -103,6 +103,16 @@ importers:
         specifier: workspace:*
         version: link:../../packages/connector-testkit
 
+  connectors/ubisoft:
+    dependencies:
+      '@ludiary/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+    devDependencies:
+      '@ludiary/connector-testkit':
+        specifier: workspace:*
+        version: link:../../packages/connector-testkit
+
   packages/api:
     dependencies:
       '@ludiary/api-contract':
@@ -185,6 +195,9 @@ importers:
       '@ludiary/connector-steam':
         specifier: workspace:*
         version: link:../../connectors/steam
+      '@ludiary/connector-ubisoft':
+        specifier: workspace:*
+        version: link:../../connectors/ubisoft
       '@ludiary/contracts':
         specifier: workspace:*
         version: link:../contracts

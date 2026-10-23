@@ -52,9 +52,9 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
-| 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario) |
+| 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario); consecuencia sobre Ubisoft concretada en la 79 |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
 | 44 | Nombre del proyecto (Ludiary) y ámbito de los paquetes | Vigente (confirmada por el usuario) |
 | 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Vigente (confirmada por el usuario tras el prototipo); ampliada en las 62 a 65; la actualización con vuelta atrás pasa a la 58 |
@@ -84,12 +84,13 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 69 | Asistente de primer arranque | Vigente (confirmada por el usuario) |
 | 70 | Fuentes tipográficas empaquetadas (OFL-1.1) | Vigente (confirmada por el usuario; amplía la 60) |
 | 71 | Portadas de Steam desde su CDN | Qué, vigente (confirmado por el usuario); cómo, vigente (la alternativa de guardarlas en el equipo se descartó en la 75); revisa la 68 en portadas y CSP; amplía las 6 y 40; URL con hash resueltas en la 73 |
-| 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68); orden de cortes y emparejamiento con la segunda tienda revisados en la 76 |
+| 72 | Primer corte vertical de Steam: instalados, biblioteca y lanzamiento | Vigente (recomendada; puntos A y B decididos por el usuario, C aplazado por él; implementada y corregida tras la auditoría en su punto 11; quedan pendientes del usuario el aviso «Simulado» y los juegos movidos con `mklink /J`; amplía las 40, 42, 47, 50, 64 y 68); orden de cortes y emparejamiento con la segunda tienda revisados en la 76; `LocationResolver` ante un registro ilegible revisado en la 79 |
 | 73 | Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` | Vigente (recomendada; amplía las 40, 71 y 72) |
 | 74 | Cuenta de Steam: OpenID, API key cifrada y juegos no instalados | Vigente (recomendada; amplía las 40, 43, 46, 47, 50, 68, 72 y 73); punto 12 decidido por el usuario el 22-10-2026 |
 | 75 | Portadas guardadas en el equipo y servidas por el servidor local | **Descartada** por el usuario el 22-10-2026: la caché del navegador ya las guarda 10 años; la 71 sigue vigente |
 | 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11.1 pendiente del usuario; punto 11.2 resuelto en la 77); vía de la cuenta y orden del emparejamiento revisados en la 77 |
 | 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
+| 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); pendiente de prueba manual y de la revisión del código) |
 
 ## Decisiones
 
@@ -569,7 +570,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -872,7 +873,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 | Steam | `official-api` | sí | sí | `uri` (`steam`) |
 | GOG | `unofficial-api` | sí | sí | ~~`exec` (cliente de Galaxy)~~ `exec` del ejecutable del juego; Galaxy, opcional (revisado en la decisión 76) |
 | Epic | `unofficial-api` | sí | sí | `uri` del launcher de Epic, a verificar |
-| Ubisoft | `local-only` | no | sí | `uri` (`uplay`), a verificar |
+| Ubisoft | `local-only` | no | sí | ~~`uri` (`uplay`), a verificar~~ `uri` (`uplay://launch/<id>/0`); supuestos U4 y U6 (revisado en la decisión 79) |
 | EA | `local-only` | no | sí | `uri` o `exec`, a validar con juegos reales |
 
 **Motivo:** un contrato que solo describe (datos y especificaciones de lanzamiento) y deja la ejecución, la persistencia y la validación al núcleo concentra en un único sitio lo delicado: lanzar procesos, guardar secretos y tocar el disco. Los conectores, que son la parte que más se romperá, quedan pequeños, sin E/S propia y comprobables con respuestas grabadas sustituyendo `http`, `fs` y `tools` por los dobles de `connector-testkit`. Alternativas descartadas: que el conector lance el juego él mismo (dispersa la superficie de ejecución de procesos y rompe el invariante 3); que el conector reciba la clave o los tokens descifrados en bruto y gestione su persistencia (multiplica los puntos donde puede filtrarse un secreto); un asistente de conexión con interfaz propia por conector (obliga a meter React en los conectores; los pasos declarativos bastan para OpenID, códigos de autorización y claves).
@@ -909,7 +910,7 @@ Nota de trazabilidad: una primera redacción de esta decisión, nunca confirmada
 - Cuando Drizzle 1.0 sea estable, la migración es una decisión aparte que solo afecta a `packages/db`.
 - `node:sqlite` queda como alternativa si en el futuro se estabiliza y conviene quitar el binario.
 
-### 42. Detección de instalaciones: autodetección y carpetas manuales (amplía la decisión 3)
+### 42. Detección de instalaciones: autodetección y carpetas manuales (amplía la decisión 3; consecuencia sobre Ubisoft concretada en la decisión 79)
 
 **Decisión (confirmada por el usuario):** hay dos fuentes de detección que se pueden combinar.
 
@@ -1747,7 +1748,7 @@ export interface GameDetailDto extends GameSummaryDto {
 - El tester añade una prueba para la validación de `mediaHosts` y otra para la paridad de la CSP.
 - El auditor revisa la CSP y `Referrer-Policy` cuando el servidor sirva la SPA.
 
-### 72. Primer corte vertical de Steam: instalados, biblioteca y lanzamiento (amplía las decisiones 40, 42, 47, 50, 64 y 68; orden de cortes y emparejamiento con la segunda tienda revisados en la decisión 76)
+### 72. Primer corte vertical de Steam: instalados, biblioteca y lanzamiento (amplía las decisiones 40, 42, 47, 50, 64 y 68; orden de cortes y emparejamiento con la segunda tienda revisados en la decisión 76; `LocationResolver` ante un registro ilegible revisado en la decisión 79)
 
 **Decisión (recomendada, 21 de octubre de 2026; puntos del usuario respondidos el mismo día):**
 
@@ -3640,6 +3641,292 @@ Fuentes consultadas el 22 de octubre de 2026: [gogapidocs, autenticación](https
 - Los juegos poseídos en Steam y en GOG salen duplicados hasta el corte del emparejamiento. La guía lo dice.
 - El `documentalista` actualiza las guías del punto 11; el `tester` amplía `docs/manual-tests/gog.md` (punto 10).
 
+### 79. Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` (amplía las decisiones 40, 42 y 72; revisa la fila de Ubisoft de la tabla de la 40 y, de la 72, qué hace `LocationResolver` cuando el registro no se puede leer)
+
+**Decisión (recomendada, 22 de octubre de 2026):** el usuario encarga el conector de Ubisoft Connect en la rama `feature/ubisoftconector`. Es el equivalente de la 76 para Ubisoft, pero más pequeño: Ubisoft no tiene cuenta ni API (decisiones 11, 16 y 40), así que el corte entero es detectar los juegos instalados y jugarlos. La numeración salta la 78 (Epic), que está en otra rama sin fusionar.
+
+**Punto de partida:** en el PC del usuario no hay Ubisoft Connect (comprobado el 22-10-2026, solo leyendo: no existen `HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher` ni `HKLM\SOFTWARE\Ubisoft\Launcher`, y no están registrados los esquemas `uplay` ni `ubisoft`). Lo que sigue sobre Ubisoft sale de fuentes públicas (Playnite, Lutris y la integración de GOG Galaxy para Uplay) y queda como supuesto (lista del final) hasta la prueba manual del punto 9.
+
+#### 1. Alcance
+
+- **Entra:**
+  - detección de los juegos de Ubisoft instalados por el registro (`Launcher\Installs\<gameId>`), con autodetección (decisión 42);
+  - título sacado del nombre de la carpeta del juego (punto 3);
+  - Jugar con `uplay://launch/<gameId>/0`, con comprobación previa de que Ubisoft Connect está instalado (punto 4);
+  - el conector `connectors/ubisoft` registrado en `runtime`, con sus textos;
+  - dos cambios pequeños fuera del conector que Ubisoft necesita y que valen para todas las tiendas: el nombre de la subclave en las ubicaciones del registro, y distinguir «la clave no existe» de «no se ha podido leer» (punto 2).
+- **No aplica:**
+  - **Instalar:** sin cuenta no hay juegos no instalados (decisión 16), así que no hay nada que instalar. `actions: ['play']`.
+  - **Cuenta, `connection` y `listLibrary`:** regla de la decisión 40 para las tiendas `local-only`.
+- **Queda fuera:**
+  - **Portadas** (punto 5): sin portada, con el degradado.
+  - **DLC:** `dlc: 'none'`. No consta que Ubisoft cree subclaves de `Installs` para sus DLC (supuesto U10).
+  - **Emparejamiento entre tiendas** (decisión 76, punto 1): un juego de Ubisoft comprado en Steam o Epic puede salir dos veces (supuesto U11).
+  - **Tiempo de juego** (corte 2b, punto 7).
+
+#### 2. Contrato (amplía las decisiones 40 y 72; `contractVersion` sigue en 1)
+
+**Problema:** el ID del juego solo está en el **nombre** de la subclave (`Installs\<gameId>`), y hoy `registry-subkeys` devuelve solo el valor (`InstallDir`), no el nombre. Ningún fichero de la carpeta del juego da el ID de forma fiable (punto 3). Sin el nombre, Ludiary sabría dónde hay juegos de Ubisoft, pero no cuáles son, y no podría lanzarlos.
+
+**Opciones:**
+
+- **A. Nombre de la subclave en `ResolvedLocation`, y el conector lo guarda en el `tag` de la raíz** (recomendada). Una raíz descubierta por juego, con `tag: 'game-<gameId>'`. El `tag` ya se guarda con la raíz (decisión 72) y vuelve en `ScanRoot`, así que no hace falta migración ni tocar el núcleo para que el ID llegue a `scanInstalled`.
+  - Ventajas: un campo opcional en un tipo y una lista más en la respuesta del auxiliar de Go; sin migración; sirve igual para otras tiendas que guarden datos en el nombre de la subclave.
+  - Costes: Ajustes muestra una carpeta detectada por cada juego de Ubisoft; el tope de 64 raíces descubiertas por tienda (decisión 72) limita a 64 juegos de Ubisoft instalados; el `tag` deja de ser solo una etiqueta y pasa a ser un dato del conector.
+- **B. Pasar las ubicaciones resueltas a `ScanContext`.** El escaneo vería los pares (ID, carpeta) sin usar el `tag`. Costes: un campo nuevo en `ScanContext`, y cuando falla el descubrimiento el núcleo usa las raíces guardadas, que no tienen los nombres: habría que guardarlos (migración) o dejar Ubisoft sin juegos en ese caso.
+- **C. Un tipo nuevo de `LocationSource` que devuelva varios valores por subclave.** Es lo que la 76 descartó para GOG: más código en el auxiliar y en la plataforma para el mismo resultado.
+
+**Se elige A.** Cambios:
+
+```ts
+// packages/contracts/src/connector.ts — ADR 79
+export interface ResolvedLocation {
+  readonly declarationId: string;
+  readonly path: string;
+  /** Opaque to the core, ^[a-z0-9-]{1,32}$, stored with the root and handed back in ScanRoot. A connector may encode an id in it (ADR 79). */
+  readonly tag?: string;
+  /**
+   * ADR 79. Only from a 'registry-subkeys' source: name of the subkey the path was read from. Untrusted text: the
+   * connector validates it before any use. The core does not store it, so it never arrives in ScanRoot.
+   */
+  readonly subkey?: string;
+}
+
+// packages/contracts/src/ports.ts — ADR 79: comment of LocationResolver.resolve
+/**
+ * Every distinct existing path of the declaration on this OS, in source order (deduplicated with LocalFiles.compareKey).
+ * A key or value that does not exist is not an error (it yields nothing). Throws if a registry source could not be read
+ * (helper failed, access denied, any other error): absent and unreadable are not the same (ADR 79).
+ */
+resolve(decl: LocationDeclaration): Promise<readonly ResolvedLocation[]>;
+```
+
+- **Auxiliar de Go** (`apps/desktop/tray-helper/registry.go`): con `kind: 'subkeys'`, el resultado añade `names`, de la misma longitud que `values` y en el mismo orden: el nombre de cada subclave cuyo valor se leyó. Los nombres ya cumplen lo que el auxiliar exige a una clave (UTF-8, sin NUL, 255 caracteres como mucho). ~~El tope de 256 subclaves no cambia.~~ (Revisado por el auditor, punto 12, A2 y M3: una subclave solo se salta si su error es `not-found` o `unsupported-type`; y con más de 256 subclaves la respuesta lleva `truncated: true`, que cuenta como fallo.)
+- **Plataforma** (`registry-protocol.ts` y `location-resolver.ts`):
+  - `parseRegistryResponse` acepta `names` solo si tiene la misma longitud que `values` y cada nombre es texto de 1 a 255 caracteres sin caracteres de control. Si no, esa respuesta cuenta como fallida.
+  - El resolutor pone `subkey` en cada ubicación que sale de una fuente `registry-subkeys`, y en ninguna otra.
+  - **Ausente frente a ilegible** (revisa la frase de la 72 «callers see fewer locations, not an error»): una respuesta `not-found` o `unsupported-type` es una ausencia y no da nada. Si el auxiliar falla, o una respuesta trae cualquier otro error (`access-denied`, `failed`, `invalid-*`), `resolve` **lanza**. Motivo: hoy, si el auxiliar falla, el núcleo recibe una lista vacía, borra las raíces descubiertas guardadas y el escaneo retira los juegos. Con Steam y GOG eso cuesta una biblioteca; con Ubisoft, donde cada juego es una raíz, se perderían todos los juegos por un fallo pasajero.
+  - ~~Fuera de esto, el resolutor sigue igual: ruta local, absoluta, normalizada y existente, sin repetidos.~~ (Corregido por el auditor, punto 12, A3 y M4: la existencia distingue ausencia de error de lectura, y los repetidos se cuentan por ruta y `subkey`.)
+- **Núcleo**, dos cambios de una línea que valen para todas las tiendas:
+  - ~~`discover` (`sync.ts`): si `resolve` lanza en **cualquier** declaración `scan` del conector, devuelve `null`. Las raíces guardadas quedan como estaban (comportamiento que ya existe para `null`), y se registra el código como hoy.~~ (Revisado por el auditor, punto 12, M1: se decide por declaración.)
+  - `resolveLauncherLocations` (`launch.ts`): si `resolve` lanza en cualquier declaración `launcher`, devuelve `resolved: false` (con lo que sí se resolvió, punto 12, B1). Así un fallo del auxiliar no se convierte en «No se encuentra Steam» ni «No se encuentra Ubisoft Connect» (la regla de `launchersResolved` de la 72: una lista vacía sin resolver no prueba nada).
+- `validateDiscoveredRoots` no cambia: ya conserva `tag` si cumple `^[a-z0-9-]{1,32}$` e ignora `subkey`.
+- **Web:** el `tag` de una raíz no se muestra tal cual. Hoy la web no lo muestra; si algún día lo hace, `game-*` se traduce como «carpeta de un juego».
+- Todo es aditivo (un campo opcional, una lista más en el protocolo interno del auxiliar) o un cambio de comportamiento de un puerto del SO, no del contrato de los conectores: `contractVersion` sigue en 1.
+
+#### 3. Escaneo
+
+- **Fuente única: el registro.** `HKLM\SOFTWARE\Ubisoft\Launcher\Installs\<gameId>`, valor `InstallDir` (en la vista de 32 bits es `WOW6432Node`). La carpeta tiene `/` como separador y barra final, por ejemplo `D:/Ubisoft Games/Trackmania/` (supuesto U1); la plataforma ya lo normaliza, como hace con `SteamPath`.
+- **Descartadas como fuente:**
+  - `settings.yml` (`%LOCALAPPDATA%\Ubisoft Game Launcher\settings.yml`, `game_installation_path`): solo da la carpeta por defecto donde instalar, no qué juegos hay ni sus ID.
+  - `cache\configuration\configurations` del launcher: es protobuf binario con YAML dentro (lo leen así Playnite y Lutris), puede pasar de 1 MiB y `ScopedFileReader` solo lee texto UTF-8. Daría títulos y portadas, pero exige un analizador de un formato binario sin documentar.
+  - `data\<gameId>\` del launcher: los nombres de carpeta son ID, pero no dice dónde está instalado cada juego.
+- **Manifiesto, `locations`:**
+  - `ubisoft-installs` (`scan`): `{ kind: 'registry-subkeys', hive: 'HKLM', key: 'SOFTWARE\\Ubisoft\\Launcher\\Installs', value: 'InstallDir', view: '32' }` y, como segunda fuente de la misma declaración, la misma con `view: '64'`, como hace Playnite (Ubisoft Connect es de 32 bits y lo normal es que solo exista la primera; la segunda cuesta una línea).
+  - `ubisoft-launcher` (`launcher`): `{ kind: 'registry-value', hive: 'HKLM', key: 'SOFTWARE\\Ubisoft\\Launcher', value: 'InstallDir', view: '32' }` y `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'Ubisoft\\Ubisoft Game Launcher' }`. Es la carpeta de Ubisoft Connect (supuesto U3).
+- **`discoverRoots`** (`connectors/ubisoft/src/scan.ts`), sin E/S, solo texto. Para cada ubicación de `ubisoft-installs`:
+  1. `subkey` debe cumplir `^[1-9][0-9]{0,9}$`. Si no (o falta), se salta y se cuenta.
+  2. La ruta se trata como entrada no confiable aunque la plataforma ya la filtró: se pasan `/` a `\`, se quitan las barras finales y se exige la regla estricta de ruta local de `localPath` (`packages/platform-windows/src/process-launcher.ts`): letra de unidad y `\`, sin caracteres de control, sin `"<>|?*/`, sin `:` después de la posición 1, ningún componente que sea un nombre reservado de dispositivo, acabe en punto o espacio, o sea `..`. Además, al menos un componente después de la unidad: una raíz de unidad (`D:\`) no es la carpeta de un juego. Si no cumple, se salta y se cuenta; nunca es `internal`.
+     - La regla se copia en `connectors/ubisoft/src/paths.ts` (un conector no importa `platform-windows`, decisión 38), con las mismas pruebas. La rama de Epic tiene la suya en `item.ts` (confirmado por el auditor): se unifican al fusionar.
+  3. Sin repetidos por ruta (clave en minúsculas): si dos ID apuntan a la misma carpeta, se queda el de número menor y se registra el otro ID. Se ordena por ID numérico para que el resultado sea estable.
+  4. Devuelve `{ declarationId: 'ubisoft-installs', path, tag: 'game-<gameId>' }`.
+  - En el registro, solo contadores (`invalidIds`, `invalidPaths`, `duplicates`) e IDs, nunca rutas.
+  - El núcleo valida como siempre (absoluta, local, carpeta existente, 64 como mucho) y guarda las raíces. Un juego desinstalado deja de estar en el registro, su raíz deja de volver y el núcleo la borra y retira el juego (decisión 72).
+- **`scanInstalled`**, sin leer ningún fichero:
+  - Solo usa raíces `discovered` de `ubisoft-installs` cuyo `tag` cumpla `^game-([1-9][0-9]{0,9})$`. El ID sale del grupo. Las demás raíces, incluidas las del usuario, se ignoran sin contarlas como ilegibles.
+  - Un ID ya visto se salta.
+  - `ctx.fs.exists(root.path)`:
+    - `true`: entrada `{ storeGameId: id, kind: 'game', title, installPath: root.path }`, sin `media` ni `launchData`;
+    - `false` (**ausente**, la carpeta ya no existe): sin entrada, y la raíz no cuenta como ilegible, así que el juego se retira;
+    - error de lectura (**ilegible**, `scan.root-unreadable`) o `PathEscapesRootsError`: la raíz va a `unreadableRoots` y el juego se conserva (punto 11 de la 72). Cualquier otro `internal` se propaga. Misma clasificación `isHandled` que GOG, copiada.
+  - **Título:** el último componente de la ruta, sin caracteres de control, con los espacios recortados y 200 caracteres como mucho. Si queda vacío, `Ubisoft <id>` (un dato, no un texto de la interfaz). Es lo que hace Playnite con los instalados. Ubisoft suele nombrar la carpeta con el nombre del juego (supuesto U5); si no, el título se verá raro hasta que haya respaldo de metadatos (decisión 6).
+    - Alternativa descartada: `DisplayName` de `Uninstall\Uplay Install <gameId>`. Necesita una ubicación con un ID dentro de la clave, que no es una declaración fija, o leer todo `Uninstall` con `registry-subkeys`, que pasa a menudo de las 256 subclaves del tope y donde «Uplay Install» va de las últimas en orden alfabético. Si U5 falla en la prueba manual, se decide aparte.
+  - No se exige `uplay_install.state` en la carpeta: la integración de Galaxy lo usa para saber si una instalación terminó (primer byte `0x0A`), pero es binario, no consta en todos los juegos antiguos y no lleva el ID de forma conocida (supuesto U9). Un juego a medio descargar puede salir como instalado; Jugar abre entonces Ubisoft Connect, que sabe en qué estado está.
+- **Carpetas manuales y «solo carpetas manuales»:** no hay ningún fichero conocido en la carpeta del juego que dé el `gameId` (U9). Sin ID no hay Jugar (la URI lo necesita), y una entrada sin ID sería un juego que no se puede abrir. Se decide: **Ubisoft solo detecta con la autodetección.** Con «solo carpetas manuales» o «configurarlo más tarde» no aparece ningún juego de Ubisoft, y la tarjeta de Ubisoft en Ajustes lo dice (`connectors.ubisoft.needsAutoDetection`: «Ubisoft Connect guarda sus juegos en el registro de Windows. Para verlos, activa la detección automática»). Es lo que ya anticipaban la decisión 42 («la interfaz lo avisa») y la 69.
+
+#### 4. Lanzamiento
+
+**Opciones:**
+
+- **A. URI `uplay://launch/<gameId>/0`** (recomendada). Ubisoft Connect se abre (si hace falta, pide iniciar sesión) y arranca el juego.
+  - Ventajas: es la vía que usan Playnite, Lutris y la integración de Galaxy; no necesita saber el ejecutable; cumple el requisito de los juegos de Ubisoft, que casi siempre exigen el launcher (llevan `uplay_r1_loader` o `upc_r2_loader`, que es justo lo que mira Playnite para saber si un juego necesita Ubisoft Connect).
+  - Costes: depende de que Ubisoft Connect esté instalado y registre `uplay`; Ludiary no sabe si el juego arrancó (lo mismo que con Steam).
+- **B. `exec` directo del ejecutable del juego.** Descartada: el registro no dice cuál es el ejecutable (habría que leer `configurations`, binario), y aunque se supiera, la mayoría de los juegos de Ubisoft vuelve a abrir el launcher o no arranca sin él.
+
+**Formato.** Las fuentes usan dos formas: `uplay://launch/<id>/0` (guías de la comunidad de 2015 y 2022, que la copian de los accesos directos que crea Ubisoft Connect) y `uplay://launch/<id>` (Playnite, Lutris y la integración de Galaxy). Se elige **`/0`**, la forma que escribe el propio launcher en sus accesos directos; el `0` es, previsiblemente, el índice de la opción de arranque. Supuesto U6: la prueba manual crea un acceso directo desde Ubisoft Connect y copia su destino. Si no lleva `/0`, se cambia a la forma de Playnite: la plantilla, la aserción del paso 4 y su prueba cambian juntas, en el mismo commit (punto 12, B2).
+
+**`resolveAction` de Ubisoft** (`connectors/ubisoft/src/launch.ts`):
+
+1. Acción distinta de `play`: `null`. `storeGameId` nulo: `null`.
+2. `const m = /^([1-9][0-9]{0,9})$/.exec(storeGameId)`; si no, `action.unsupported` con `connectors.ubisoft.errors.invalidId`.
+3. Si `ctx.launchersResolved`, se busca Ubisoft Connect: para cada ubicación de `ubisoft-launcher` cuya ruta cumpla la regla estricta del punto 3, `ctx.fs.exists` de `upc.exe` o de `UbisoftConnect.exe` en esa carpeta (supuesto U3).
+   - Alguno existe: se sigue.
+   - Ninguno existe y ninguna comprobación falló: `launch.launcher-missing` con `connectors.ubisoft.errors.launcherMissing` («No se encuentra Ubisoft Connect. Instálalo desde ubisoft.com y vuelve a intentarlo»). Es lo análogo a lo que eligió el usuario en Steam y en GOG.
+   - Alguna comprobación dio error de lectura (ilegible, no ausente): se sigue a la URI. La comprobación solo sirve para dar un mensaje mejor; la URI es segura igual.
+   - Sin `launchersResolved` (detección que no es automática): no se comprueba nada, como Steam. En la práctica no hay juegos de Ubisoft en ese modo (punto 3).
+4. `const uri = \`uplay://launch/${m[1]}/0\``, construida desde el grupo y **afirmada** al final con `^uplay://launch/[1-9][0-9]{0,9}/0$`; si no cumple (un error del propio conector), `internal`.
+5. Devuelve `{ kind: 'uri', uri }`.
+
+- Ningún `ConnectorError` lleva rutas ni títulos en `message` ni en `params`: como mucho el ID.
+- **Núcleo:** sin reglas nuevas. `checkSpec` ya comprueba el esquema contra `uriSchemes` y la plataforma vuelve a validar la URI (decisión 72).
+- **Invariante 3:** la API recibe solo IDs; la URI se construye con un ID que sale del nombre de una subclave del registro, validado con un patrón de dígitos antes de interpolarlo.
+
+#### 5. Portadas
+
+- **No entran: sin portada, con el degradado** (decisión 71).
+- La única vía conocida sin cuenta es el CDN del launcher (`static3.cdn.ubi.com/orbit/uplay_launcher_3_0/assets/<thumb_image>`, el que usa Lutris; Playnite usa el equivalente en `ubistatic3-a.akamaihd.net`), pero el nombre del fichero (`thumb_image`) solo está en `configurations`, descartado en el punto 3. No se ha encontrado ningún servicio público de Ubisoft que dé una portada a partir del ID sin cuenta; las API de `ubiservices` piden identificadores de aplicación y sesión, y usarlas así chocaría con la regla de vías oficiales (invariante 8).
+- Llegarán con el respaldo de metadatos de IGDB o RAWG (decisiones 6 y 31), como ya preveía la 31 para Ubisoft y EA.
+- Por tanto, `resolveMedia` no existe y `apiHosts` y `mediaHosts` están vacíos: **el conector no hace ninguna petición de red.** Ni la CSP ni la guía de privacidad cambian.
+
+#### 6. Manifiesto de Ubisoft
+
+```ts
+// connectors/ubisoft/src/index.ts (sketch)
+export function createUbisoftConnector(): StoreConnector {
+  return {
+    contractVersion: 1,
+    id: "ubisoft",
+    nameKey: "connectors.ubisoft.name" as I18nKey,
+    access: "local-only",
+    capabilities: {
+      library: false, scan: true, dlc: "none",
+      actions: ["play"], launchKinds: ["uri"], uriSchemes: ["uplay"],
+      storePlaytime: false, price: false,
+    },
+    minSyncIntervalMs: 60_000,          // only scans (ADR 50); no library sync exists
+    authHosts: [], apiHosts: [], mediaHosts: [],
+    locations: UBISOFT_LOCATIONS,       // ubisoft-installs, ubisoft-launcher (point 3)
+    externalTools: [],
+    scanInstalled: scanUbisoftInstalled,
+    discoverRoots: discoverUbisoftRoots,
+    resolveAction: resolveUbisoftAction,
+  };
+}
+```
+
+- `checkConnectorManifest` lo acepta tal cual: `local-only` sin `connection`, `play` con `uri` y su esquema.
+- **Paquete `connectors/ubisoft`** (`@ludiary/connector-ubisoft`, `"private": true`), con la forma de `connectors/gog`: `src/` (`manifest.ts`, `paths.ts`, `scan.ts`, `launch.ts`, `index.ts`), `locales/es.json` y `en.json` (`connectors.ubisoft.*`), `fixtures/` y pruebas con `connector-testkit`.
+- **`runtime`:** `createConnectors()` añade `createUbisoftConnector()`. `packages/i18n/src/connectors.ts` añade su línea.
+- **Web:** la tarjeta de Ubisoft ya existe en el simulador como `not-applicable` e `installed-only` (decisión 68); pasa a datos reales. Añade el aviso de `needsAutoDetection` cuando el modo no es `auto-and-manual`. Jugar usa `game.launching` con `{store}` = Ubisoft.
+
+#### 7. Proceso y tiempo de juego
+
+Fuera de este corte (corte 2b). Para la 55, Ubisoft es el caso difícil: el proceso que abre la URI es el launcher (`upc.exe`), no el juego, y el juego puede arrancar segundos después. Lo razonable, como hace Playnite, es vigilar los procesos cuyo ejecutable esté dentro de `installPath` después de que aparezca el launcher. La 55 se revalida con Ubisoft en ese corte.
+
+#### 8. Pruebas automáticas
+
+Fixtures **inventadas**: IDs ficticios (`900001`, `900002`…), títulos inventados y rutas bajo `D:\Ubisoft Games`, nunca `C:\Users\…`. La comprobación de fixtures de la decisión 48 se aplica igual. No hay respuestas grabadas: el conector no usa la red. Por eso no hay carpeta `fixtures/`: los árboles de registro y de carpetas se construyen en memoria dentro de las pruebas (anotado tras la auditoría del código, 23-10-2026). Sin Playwright en el repositorio, los tres casos de Playwright de este punto quedan pendientes junto con los de las decisiones 72 a 78.
+
+- **`connectors/ubisoft`:**
+  - Regla estricta de ruta (`paths.ts`): tabla con `/` y barra final (se acepta tras normalizar), UNC, `\\?\`, `\\.\`, ruta relativa, `C:` sin barra, raíz de unidad, `"` o `|`, `:` después de la posición 1, `CON`, `nul.txt`, `COM1`, `LPT9`, componente acabado en punto o espacio, `..`, caracteres de control.
+  - `discoverRoots`: dos juegos con `subkey` válido → dos raíces con su `tag`; `subkey` ausente, `0`, `abc`, con ceros a la izquierda, de 11 dígitos o con espacios → se salta; ruta que no cumple la regla → se salta y se cuenta, sin lanzar; raíz de unidad → se salta; dos ID con la misma carpeta (con distinta caja) → se queda el menor; orden por ID; ubicaciones de otra declaración ignoradas; el registro no contiene ninguna ruta.
+  - `scanInstalled` con `memoryFiles`: raíz con `tag` válido y carpeta existente → entrada con el título de la carpeta; carpeta ausente → sin entrada y no ilegible; error de lectura → `unreadableRoots`; `PathEscapesRootsError` → `unreadableRoots`; otro error → se propaga; raíz del usuario y raíz sin `tag` o con `tag` de otra forma (`game-abc`, `library`) → ignoradas; ID repetido; título con caracteres de control, solo espacios (→ `Ubisoft <id>`), no ASCII y de más de 200 caracteres.
+  - `resolveAction` con un `ScopedFileReader` doble: `play` → `uplay://launch/900001/0` exacto; `install` y otras acciones → `null`; ID no numérico, con `/`, `?`, `%`, espacios o de 11 dígitos → `action.unsupported` sin construir la URI; carpeta de Ubisoft Connect con `upc.exe` o con `UbisoftConnect.exe` → URI; sin ninguno de los dos → `launch.launcher-missing`; `exists` que lanza → se devuelve la URI; ruta de launcher que no cumple la regla → no cuenta como encontrado; `launchersResolved: false` → URI sin comprobar; ningún error lleva una ruta.
+  - `assertConnectorConformance`.
+- **`tray-helper` (Go):** `names` con la misma longitud y orden que `values`; una subclave sin el valor no aparece en ninguna de las dos listas.
+- **`platform-windows`:** `parseRegistryResponse` con `names` de otra longitud, con un nombre vacío o con caracteres de control → respuesta fallida; `subkey` solo en ubicaciones de `registry-subkeys`; `not-found` y `unsupported-type` → nada, sin lanzar; auxiliar que falla, `access-denied`, `failed` → `resolve` lanza; las pruebas actuales de Steam y GOG siguen pasando.
+- **`core`:** `discover` con una declaración `scan` que lanza → las raíces guardadas no se tocan y el escaneo usa las guardadas (juegos conservados); `resolveLauncherLocations` con una declaración que lanza → `launchersResolved: false`; un conector doble cuyas raíces llevan `tag: 'game-<id>'` lo recibe igual en `ScanRoot` tras guardarlas.
+- **`runtime`:** `createConnectors` registra los tres (o cuatro, si Epic ya está fusionado); el esquema `uplay` llega a la lista de esquemas de la plataforma.
+- **`i18n`:** paridad con `connectors/ubisoft/locales`.
+- **Playwright:** `LocationResolver` doble que devuelve una carpeta temporal con `subkey: '900001'` y `ProcessLauncher` que graba. Casos: el juego de Ubisoft sale con el nombre de su carpeta y el degradado; Jugar graba `uplay://launch/900001/0`; con «solo carpetas manuales», la tarjeta de Ubisoft muestra el aviso y el juego no sale.
+
+#### 9. Prueba manual (la prepara el tester en `docs/manual-tests/ubisoft.md`; la hace el usuario)
+
+- **Preparación:** instalar Ubisoft Connect desde ubisoft.com, crear o usar una cuenta gratuita de Ubisoft e instalar **Trackmania** (gratuito con el acceso «Starter», de Ubisoft y con su launcher, así que es el caso representativo) en una carpeta con espacios y un carácter no ASCII, por ejemplo `F:\Juegos Ubisoft ñ`. Alternativa más pequeña si falta espacio: **Brawlhalla**, gratuito en Ubisoft Connect (unos 1 a 2 GB según fuentes de poca calidad; sin verificar). El tamaño de Trackmania no se ha podido comprobar.
+- **Qué comprobar** (copiar al ADR, saneados, los valores que se piden):
+  1. `reg query "HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher" /s`: `InstallDir` del launcher y la subclave `Installs\<id>` con `InstallDir` (formato: separadores y barra final). Anotar el ID (U1, U2, U3).
+  2. En la carpeta de Ubisoft Connect existen `upc.exe` y `UbisoftConnect.exe` (U3).
+  3. `reg query "HKCR\uplay\shell\open\command"`: el esquema está registrado y apunta a Ubisoft Connect (U4).
+  4. Crear desde Ubisoft Connect un acceso directo del juego en el escritorio y copiar su destino: ¿lleva `/0`? (U6).
+  5. `reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Uplay Install <id>" /v DisplayName`: comparar con el nombre de la carpeta (U5).
+  6. Ludiary con autodetección: Ajustes muestra la carpeta del juego como detectada de Ubisoft; el juego sale con el nombre de la carpeta y el degradado.
+  7. Jugar con Ubisoft Connect **cerrado**: se abre el launcher y arranca el juego (puede pedir iniciar sesión). Repetir con el launcher **abierto** (U7).
+  8. Con «solo carpetas manuales»: el juego desaparece y la tarjeta de Ubisoft muestra el aviso. Volver a la automática: vuelve a salir.
+  9. Desinstalar el juego desde Ubisoft Connect y escanear: desaparece, y la subclave de `Installs` ya no existe (U8).
+  10. El registro exportado no contiene la ruta del juego, su título ni la del launcher.
+  11. Opcional: en la carpeta del juego, ¿existe `uplay_install.state`? Con `Format-Hex`, ¿se ve el ID en los primeros bytes? (U9). Si el ID aparece de forma clara, las carpetas manuales podrían admitirse en una decisión aparte.
+  12. Opcional, al terminar: desinstalar Ubisoft Connect dejando Ludiary con el juego guardado y pulsar Jugar: «No se encuentra Ubisoft Connect».
+
+#### 10. Orden de implementación y trabajo en paralelo
+
+1. **Primero** (`programador`, pequeño): `subkey` en `contracts` y los comentarios; `names` en el auxiliar de Go; `parseRegistryResponse` y el resolutor (con «ausente frente a ilegible»); los dos cambios del núcleo; sus pruebas. Toca a Steam y GOG: sus pruebas deben seguir pasando.
+2. **En paralelo:**
+   - `conectores`: `connectors/ubisoft` completo contra `connector-testkit` (puntos 3, 4 y 6, con sus pruebas). No depende del paso 1 para empezar: el `testkit` ya admite ubicaciones con cualquier campo.
+   - `auditor`: revisión de este diseño (el ID en el `tag`, la regla de ruta copiada, «ausente frente a ilegible», la URI) antes del código.
+3. **Después:** registro en `runtime`, textos (incluido el aviso de detección), Playwright y revisión del `auditor` sobre el código.
+4. **Al final:** prueba manual del usuario (punto 9), con los supuestos cerrados en este ADR, y el `documentalista`:
+   - guía de usuario: Ubisoft se detecta solo con la detección automática; sin portadas por ahora; títulos tomados de la carpeta; Jugar abre Ubisoft Connect;
+   - solución de problemas: «No se encuentra Ubisoft Connect» y «No veo mis juegos de Ubisoft» (detección automática desactivada, más de 64 juegos instalados);
+   - privacidad: el conector de Ubisoft no se conecta a internet; solo lee el registro.
+
+#### 11. Lo que decide el usuario
+
+**Aplicado por defecto (22-10-2026), salvo que el usuario diga otra cosa:** 11.1 (a).
+
+1. **Jugar sin Ubisoft Connect instalado:** (a) mensaje «No se encuentra Ubisoft Connect» (recomendado, lo mismo que eligió en Steam y GOG); (b) intentar la URI igual y dejar que Windows ofrezca buscar una aplicación (peor: un diálogo de Windows que no explica nada).
+2. **Juego para la prueba manual:** (a) Trackmania (recomendado: es de Ubisoft y exige su launcher, el caso real); (b) Brawlhalla, si importa el espacio en disco.
+3. **Qué va después:** (a) probar y fusionar Epic (78), que está en otra rama sin probar; (b) EA, el otro conector sin cuenta, que reutiliza casi todo esto; (c) el corte 2b (tiempo de juego), que ya tendría Steam, GOG y Ubisoft para cerrar la 55; (d) el emparejamiento entre tiendas. Recomendado: (a), porque cada rama abierta más tiempo hace más difícil fusionar.
+
+#### 12. Revisión del auditor sobre el diseño (23 de octubre de 2026)
+
+Sin críticos. Lo que sigue prevalece sobre los puntos 2 y 3 donde no coincida. El código lo hace el `programador`.
+
+- **A1 (alto). Dos tiendas con la misma carpeta se roban la raíz.** El índice único de `scan_roots` es solo por `path_key`, sin `store`. Si Ubisoft devuelve como raíz una carpeta que ya es raíz descubierta de otra tienda (por ejemplo, un juego de Ubisoft comprado en GOG o en Steam, supuesto U11), el `upsert` le cambiaría la tienda y el `tag` a esa raíz, y la otra tienda perdería sus juegos. Se decide **sin migración**:
+  - el `onConflictDoUpdate` del guardado de raíces solo actualiza si la fila existente es de la **misma tienda**; si no, no toca nada;
+  - `planDiscoveredRoots` salta las raíces devueltas cuyo `pathKey` ya está guardado para **otra** tienda: ni las inserta ni las actualiza. Se registra el conector y un contador, nunca la ruta.
+  - Consecuencia: en ese caso la carpeta sigue siendo de la tienda que la descubrió primero, y el juego de la segunda no sale por esa vía. Opción futura, con su propia decisión y migración: añadir `store` al índice único.
+- **A2 (alto). Subclaves ilegibles en el auxiliar de Go.** Una subclave solo se salta si al abrirla o leer el valor el error es `not-found` o `unsupported-type`. Cualquier otro error (`access-denied`, `failed`) hace fallar **la consulta entera**, con su código, y por tanto `resolve` lanza. Así un juego cuya subclave no se puede leer no se da por desinstalado.
+- **A3 (alto). Existencia de las carpetas.** En el resolutor (`exists` por defecto de `location-resolver.ts`), solo `ENOENT` y `ENOTDIR` son ausencia (la ubicación no se devuelve). Cualquier otro error de `stat` es ilegible: `resolve` lanza. La misma regla vale en `validateDiscoveredRoots`: una raíz cuya comprobación de carpeta falla con un error que no es de ausencia no se descarta como inexistente, sino que se trata como su declaración no resuelta (M1). Corrige la frase del punto 2 («ruta … existente»).
+- **M1 (medio). Descubrimiento por declaración.** Revisa el `discover` del punto 2:
+  - las raíces guardadas de una declaración cuyo `resolve` lanzó **se conservan** tal cual (ni se borran ni se actualizan);
+  - las demás declaraciones siguen el camino normal;
+  - las ubicaciones que sí se resolvieron se pasan a `discoverRoots` y sus raíces se añaden o actualizan;
+  - si todas las declaraciones `scan` fallan, equivale al `null` de hoy.
+  - `planDiscoveredRoots` recibe el conjunto de declaraciones conservadas y no borra raíces de ellas.
+- **M2 (medio). Aviso `scan.discovery-unavailable`.** Cuando alguna declaración no se pudo resolver (M1) o el descubrimiento quedó incompleto (M3), el escaneo **no** se marca como fallido: `sync_state` queda con `status: 'idle'` y el código `scan.discovery-unavailable` en su campo de error, sin migración. La web lo muestra en la tarjeta de la tienda como aviso, no como fallo (clave `connectors.common.errors.scan.discovery-unavailable`: «No se ha podido leer dónde instala sus juegos esta tienda; se muestran los que se detectaron antes»). El `documentalista` lo añade a la guía de solución de problemas.
+- **M3 (medio). Topes que pierden datos.**
+  - Si `discoverRoots` devuelve más de 64 raíces, el núcleo descarta las sobrantes (decisión 72) y el descubrimiento de esa tienda es **incompleto**: no se borra ninguna raíz guardada suya en esa pasada (solo se añaden o actualizan las aceptadas) y se emite el aviso de M2.
+  - El auxiliar de Go marca `truncated: true` cuando una clave tiene más de 256 subclaves, y el resolutor lo trata como fallo de la consulta (`resolve` lanza, M1). Revisa la frase del punto 2 «el tope de 256 subclaves no cambia».
+- **M4 (medio). Repetidos en el resolutor.** Para las fuentes `registry-subkeys`, el resolutor quita repetidos por el par (ruta, `subkey`) y no solo por la ruta, para que sea `discoverRoots` quien decida qué ID se queda cuando dos apuntan a la misma carpeta (punto 3, paso 3). Las demás fuentes siguen por ruta.
+- **B1 (bajo).** `resolveLauncherLocations`, si alguna declaración lanza, devuelve las ubicaciones que sí se resolvieron, con `resolved: false`.
+- **B2 (bajo).** Si U6 sale sin `/0`, la plantilla de la URI, la aserción final y su prueba cambian juntas (punto 4).
+- **Regla de ruta estricta:** confirmada su copia en `connectors/ubisoft/src/paths.ts`. La rama de Epic tiene la suya en `item.ts`; se unifican al fusionar.
+- **Pruebas añadidas por la revisión:**
+  - dos tiendas devuelven la misma carpeta: la raíz sigue siendo de la primera, con su `tag`, y sus juegos no se retiran;
+  - auxiliar: subclave con `access-denied` → la consulta falla; con `not-found` → se salta; más de 256 subclaves → `truncated: true`;
+  - resolutor: `stat` con `EACCES` o `EBUSY` → lanza; `ENOENT` y `ENOTDIR` → la ubicación no sale; `truncated` → lanza; dos `subkey` con la misma ruta → salen los dos;
+  - núcleo: una declaración lanza y otra no → se conservan las raíces de la primera y se actualizan las de la segunda, con el aviso; más de 64 raíces → no se borra ninguna guardada y sale el aviso; el aviso no pone el escaneo en `error`;
+  - `resolveLauncherLocations` con una declaración que lanza → devuelve las otras con `resolved: false`.
+
+#### Supuestos de Ubisoft (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
+
+- **U1:** cada juego instalado tiene una subclave `HKLM\SOFTWARE\Ubisoft\Launcher\Installs\<gameId>` en la vista de 32 bits (`WOW6432Node`), con el ID como nombre y la carpeta en `InstallDir`. Fuentes: Playnite (`UplayLibrary.cs`: vista de 32 bits y luego de 64, nombre de subclave como ID, `InstallDir` con `/` cambiadas por `\`), la integración de Galaxy (`local_helper.py`, `InstallDir`) y un artículo de DEV con `WOW6432Node`. El formato exacto (`/` y barra final) sale solo de que Playnite reemplaza `/` y recorta la barra final; **sin verificar** en un equipo.
+- **U2:** el `gameId` es un entero positivo pequeño (ejemplos de la comunidad: 4, 420, 720). El patrón admite hasta 10 dígitos.
+- **U3:** `HKLM\SOFTWARE\Ubisoft\Launcher` (vista de 32 bits) tiene `InstallDir` con la carpeta de Ubisoft Connect (integración de Galaxy, `local_client.py`), cuya ubicación por defecto es `C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher`, y dentro están `upc.exe` (el proceso del cliente según la integración de Galaxy) y `UbisoftConnect.exe` (Playnite).
+- **U4 (sin verificar):** Ubisoft Connect registra el esquema `uplay`. Solo consta indirectamente: Playnite, Lutris y la integración de Galaxy abren `uplay://…` con el manejador del sistema.
+- **U5 (sin verificar):** la carpeta del juego lleva el nombre del juego, legible para una persona. Playnite usa el nombre de la carpeta como título de los instalados.
+- **U6:** `uplay://launch/<gameId>/0` arranca el juego. Guías de la comunidad de 2015 y 2022 (Steam y GamingOnLinux) con esa forma; Playnite, Lutris y la integración de Galaxy usan `uplay://launch/<gameId>` sin `/0`. Ninguna fuente oficial.
+- **U7 (sin verificar):** la URI funciona con el launcher cerrado y abierto. Una guía de 2015 decía que fallaba con Uplay abierto; puede no valer para Ubisoft Connect.
+- **U8 (sin verificar):** al desinstalar desde Ubisoft Connect se borra la subclave de `Installs`.
+- **U9:** `uplay_install.state` está en la raíz de la carpeta del juego y es binario: la integración de Galaxy da por instalado un juego si su primer byte es `0x0A`. Que contenga el `gameId`, **sin verificar**. Ningún otro fichero conocido de la carpeta del juego da el ID.
+- **U10 (sin verificar):** los DLC de Ubisoft no tienen subclave propia en `Installs`. Si la tienen, saldrían como juegos con el nombre de su carpeta; se resolvería con su propio corte.
+- **U11 (sin verificar):** un juego de Ubisoft comprado en Steam o Epic se instala por esa tienda y también se registra en `Installs`, con la carpeta de esa tienda. Saldría dos veces (una por tienda) hasta el corte del emparejamiento; Jugar funciona en las dos.
+- **U12:** sin cuenta no hay ninguna vía pública y sin datos personales para las portadas (punto 5). Búsqueda del 22-10-2026 sin resultados; Lutris y Playnite solo las sacan de la caché local del launcher.
+
+Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/UplayLibrary/UplayLibrary.cs), [`Uplay.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/UplayLibrary/Uplay.cs) y [`UplayGameController.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/UplayLibrary/UplayGameController.cs); [Lutris, `services/ubisoft.py`](https://github.com/lutris/lutris/blob/master/lutris/services/ubisoft.py); integración de GOG Galaxy para Uplay: [`consts.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/consts.py), [`local_client.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/local_client.py), [`local_helper.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/local_helper.py) y [`plugin.py`](https://github.com/FriendsOfGalaxy/galaxy-integration-uplay/blob/master/src/plugin.py); [DEV, IDs de Uplay de los juegos instalados](https://dev.to/sakshatshinde/a-simple-way-to-find-installed-game-s-uplay-ids-with-python-3jf6); [foro de Steam, `uplay://launch/<id>/0`](https://steamcommunity.com/discussions/forum/1/627456486855607252); [GamingOnLinux, Ubisoft Connect en Steam Deck](https://www.gamingonlinux.com/2022/03/ubisoft-connect-on-steam-deck-guide-with-sd-card-access/); [file-extensions.org, `.state`](https://www.file-extensions.org/extension/state); [blog de Trackmania, acceso gratuito](https://blog.trackmania.com/?p=7525).
+
+**Motivo:** es el corte más pequeño que pone Ubisoft en la biblioteca y lo hace jugable, **sin red, sin secretos y sin migración**. El registro es la única fuente que da a la vez el ID y la carpeta, y solo faltaba que la plataforma devolviera el nombre de la subclave; guardar el ID en el `tag` evita tocar el núcleo y la base de datos. La URI deja al launcher lo que los juegos de Ubisoft le exigen de todos modos. Distinguir «ausente» de «ilegible» en el resolutor es imprescindible aquí (cada juego es una raíz) y corrige de paso el mismo fallo, más leve, en Steam y GOG. Alternativas descartadas: `ScanContext` con ubicaciones o una columna nueva (punto 2, B); un tipo nuevo de ubicación (punto 2, C); `configurations` como fuente de títulos y portadas (binario sin documentar); `exec` del juego (sin ejecutable conocido y el juego exige el launcher); carpetas manuales sin ID (juegos que no se podrían abrir).
+
+**Consecuencias:**
+
+- Tercera tienda en la biblioteca y la primera `local-only`. No añade hosts, ni CSP, ni cambios de privacidad.
+- La fila de Ubisoft de la tabla de la decisión 40 pasa de «`uri` (`uplay`), a verificar» a «`uri` (`uplay://launch/<id>/0`), decidido en la 79; supuestos U4 y U6».
+- La 42 queda concretada para Ubisoft: sin autodetección no hay juegos de Ubisoft, y la interfaz lo avisa.
+- La 72 queda revisada en una frase: `LocationResolver.resolve` lanza si el registro no se puede leer, y el núcleo conserva las raíces guardadas y no da por ausente el launcher. Cambia el comportamiento de Steam y GOG, solo a mejor; sus pruebas lo cubren.
+- Límite conocido: 64 juegos de Ubisoft instalados como mucho (tope de raíces descubiertas de la 72). El núcleo registra los descartados; la guía lo dice.
+- El `auditor` revisa antes de cerrar: el ID en el `tag` y su validación, la regla de ruta copiada, «ausente frente a ilegible» en la plataforma y en el núcleo, la URI construida desde el grupo, y que ni el registro ni los errores lleven rutas o títulos.
+- Los agentes `programador` y `conectores` tienen aquí su especificación; el `tester` escribe `docs/manual-tests/ubisoft.md` (punto 9); el `documentalista` actualiza las guías del punto 10.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -3681,11 +3968,12 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Puntos de producto de la decisión 72: A y B decididos por el usuario. (C), orden de los cortes, **resuelto** el 22-10-2026: tras la cuenta de Steam (74) el usuario encargó GOG (76), antes del corte 2b.
 - Decisión 76, punto 11.1 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste). El punto 11.2 queda **resuelto** el 22-10-2026: el usuario eligió (b), la cuenta de GOG ahora, pero sin el emparejamiento, que va en su propio corte; el corte 2b va después (decisión 77).
 - Decisión 77: punto 12 aplicado por defecto («Conectado como <nombre>» y mensaje si no hay Galaxy); el usuario puede cambiarlo. Prueba manual de la cuenta (punto 10) para cerrar los supuestos GA1 a GA13, y revisión del `auditor` antes y después del código.
-- Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces.
+- Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces (y un juego de Ubisoft comprado en Steam o Epic, previsiblemente también; supuesto U11 de la 79).
+- Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect); el usuario elige el juego de la prueba manual (11.2, recomendado Trackmania) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos U1 a U11. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 77 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 79 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

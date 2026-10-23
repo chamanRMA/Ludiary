@@ -1,4 +1,4 @@
-import { ConnectorError, ExecError, type LaunchContext, type LaunchSpec, type StoreId } from "@ludiary/contracts";
+import { ConnectorError, ExecError, LocationsUnreadableError, type LaunchContext, type LaunchSpec, type StoreId } from "@ludiary/contracts";
 import { describe, expect, it } from "vitest";
 import { CoreError } from "../src";
 import { addUserRoot, harness, makeConnector, resolver, type Harness } from "./helpers";
@@ -308,6 +308,32 @@ describe("launch context", () => {
     const manual = await captured("manual-only");
     expect(manual.launchersResolved).toBe(false);
     expect(manual.launchers).toEqual([]);
+  });
+
+  it("reports launchersResolved false when a launcher location cannot be read (ADR 79)", async () => {
+    let ctx: LaunchContext | undefined;
+    const h = await harness({
+      mode: "auto-and-manual",
+      locations: { resolve: async () => { throw new Error("registry helper unavailable"); } },
+      connectors: [makeConnector({ resolveAction: async (_p, _a, c) => ((ctx = c), { kind: "uri", uri: "steam://rungameid/1" }) })],
+    });
+    seed(h, "steam", "1");
+    await h.core.launch("c1");
+    expect(ctx!.launchersResolved).toBe(false);
+    expect(ctx!.launchers).toEqual([]);
+  });
+
+  it("keeps the locations that did resolve and reports resolved false (ADR 79)", async () => {
+    let ctx: LaunchContext | undefined;
+    const h = await harness({
+      mode: "auto-and-manual",
+      locations: { resolve: async () => { throw new LocationsUnreadableError("down", [{ declarationId: "steam-client", path: "C:\\Steam\\steam.exe" }]); } },
+      connectors: [makeConnector({ resolveAction: async (_p, _a, c) => ((ctx = c), { kind: "uri", uri: "steam://rungameid/1" }) })],
+    });
+    seed(h, "steam", "1");
+    await h.core.launch("c1");
+    expect(ctx!.launchersResolved).toBe(false);
+    expect(ctx!.launchers.map((l) => l.path)).toEqual(["C:\\Steam\\steam.exe"]);
   });
 
   it("passes the stored property, never anything from the caller", async () => {

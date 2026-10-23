@@ -216,7 +216,10 @@ export interface LocationDeclaration {
 export interface ResolvedLocation {
   readonly declarationId: string;
   readonly path: string;
+  /** Opaque to the core, ^[a-z0-9-]{1,32}$, stored with the root and handed back in ScanRoot. A connector may encode an id in it (ADR 79). */
   readonly tag?: string;
+  /** ADR 79. Only from a 'registry-subkeys' source: name of the subkey the path was read from. Untrusted text; the core does not store it. */
+  readonly subkey?: string;
 }
 export type ScanRoot =
   | { readonly origin: "user"; readonly path: string }
@@ -357,6 +360,7 @@ export type ConnectorErrorCode =
   | "tool.missing"
   | "tool.failed"
   | "scan.root-unreadable"
+  | "scan.discovery-unavailable"
   | "launch.launcher-missing"
   | "launch.not-installed"
   | "action.unsupported"

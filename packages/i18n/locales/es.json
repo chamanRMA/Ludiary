@@ -40,6 +40,7 @@
   "connectors.common.errors.tool.missing": "Falta una herramienta externa necesaria para esta tienda.",
   "connectors.common.errors.tool.failed": "Una herramienta externa ha fallado al trabajar con esta tienda.",
   "connectors.common.errors.scan.root-unreadable": "Ludiary no puede leer una de las carpetas de juegos. Comprueba que existe y que tienes permiso.",
+  "connectors.common.errors.scan.discovery-unavailable": "Ludiary no ha podido revisar todas las carpetas de juegos esta vez. Se muestran los juegos que se detectaron antes.",
   "connectors.common.errors.launch.launcher-missing": "No se ha encontrado el programa de la tienda en este equipo.",
   "connectors.common.errors.launch.not-installed": "Este juego no está instalado en este equipo.",
   "connectors.common.errors.action.unsupported": "Esta tienda no admite esa acción.",

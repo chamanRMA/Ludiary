@@ -92,6 +92,16 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
     }
   };
 
+  const isDirectoryStrict = async (value: string): Promise<boolean> => {
+    try {
+      return (await stat(value)).isDirectory();
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "ENOTDIR") return false;
+      throw e;
+    }
+  };
+
   const scoped = (roots: readonly string[]): ScopedFileReader => {
     const lexicalRoots = roots.filter(isAbsolute).map(normalize);
     let realRoots: Promise<string[]> | null = null;
@@ -203,5 +213,5 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
     return win ? /^[a-z]:[\\/]/i.test(value) : p.isAbsolute(value);
   };
 
-  return { scoped, normalize, isAbsolute, isInside, compareKey, isDirectory, isLocalPath, realPath: realpathLoose };
+  return { scoped, normalize, isAbsolute, isInside, compareKey, isDirectory, isDirectoryStrict, isLocalPath, realPath: realpathLoose };
 }

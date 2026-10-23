@@ -79,6 +79,58 @@ func TestValidateRegistryQuery(t *testing.T) {
 	}
 }
 
+// ADR 79: names runs parallel to values; a subkey without the value appears in neither.
+func TestSubkeysReturnNamesParallelToValues(t *testing.T) {
+	base := `Software\LudiaryTest\Subkeys`
+	root, _, err := registry.CreateKey(registry.CURRENT_USER, base, registry.ALL_ACCESS)
+	if err != nil {
+		t.Skip("cannot write HKCU")
+	}
+	ids := []string{"900001", "900002", "900003"}
+	defer func() {
+		for _, n := range ids {
+			_ = registry.DeleteKey(root, n)
+		}
+		root.Close()
+		_ = registry.DeleteKey(registry.CURRENT_USER, base)
+		_ = registry.DeleteKey(registry.CURRENT_USER, `Software\LudiaryTest`) // the parent CreateKey also made
+	}()
+	for _, n := range ids {
+		k, _, err := registry.CreateKey(root, n, registry.ALL_ACCESS)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n != "900002" { // 900002 has no InstallDir
+			_ = k.SetStringValue("InstallDir", "D:/G"+n+"/")
+		}
+		k.Close()
+	}
+	res := runRegistryQuery(registryQuery{Hive: "HKCU", Key: base, Value: "InstallDir", Kind: "subkeys"})
+	if !res.OK || len(res.Values) != 2 || len(res.Names) != 2 {
+		t.Fatalf("unexpected: %+v", res)
+	}
+	for i, n := range res.Names {
+		if res.Values[i] != "D:/G"+n+"/" {
+			t.Errorf("name %q not parallel to value %q", n, res.Values[i])
+		}
+	}
+}
+
+func TestSubkeyOutcome(t *testing.T) {
+	cases := map[string]bool{"not-found": true, "unsupported-type": true, "access-denied": false, "failed": false}
+	errs := map[string]error{
+		"not-found":        registry.ErrNotExist,
+		"unsupported-type": registry.ErrUnexpectedType,
+		"access-denied":    windows.ERROR_ACCESS_DENIED,
+		"failed":           windows.ERROR_INVALID_DATA,
+	}
+	for code, wantSkip := range cases {
+		if skip, got := subkeyOutcome(errs[code]); skip != wantSkip || got != code {
+			t.Errorf("%s: skip=%v code=%q", code, skip, got)
+		}
+	}
+}
+
 func TestHandleRegistryEndToEnd(t *testing.T) {
 	in := `{"queries":[{"hive":"HKCU","key":"Software\\Ludiary\\DoesNotExist","value":"x"},{"hive":"HKCR","key":"a","value":"b"}]}`
 	var out bytes.Buffer

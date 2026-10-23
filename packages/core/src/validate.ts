@@ -156,14 +156,18 @@ export async function validateDiscoveredRoots(
   connector: Pick<StoreConnector, "id" | "locations">,
   files: LocalFiles,
   log: CoreLogger,
-): Promise<ValidatedRoot[]> {
+): Promise<{ roots: ValidatedRoot[]; truncated: boolean; unresolved: Set<string> }> {
   if (!Array.isArray(returned)) throw new ConnectorError("store.unexpected-response", "discoverRoots did not return a list");
   const declared = new Set(connector.locations.map((l) => l.id));
   const out: ValidatedRoot[] = [];
   const keys = new Set<string>();
   let dropped = 0;
+  let truncated = false;
+  // Strict variant (ADR 79): an unreadable folder throws instead of looking absent, and the caller keeps the stored roots.
+  const unresolved = new Set<string>();
   for (const r of returned as readonly ResolvedLocation[]) {
     if (out.length >= MAX_DISCOVERED_ROOTS) {
+      truncated = true;
       dropped++;
       continue;
     }
@@ -173,7 +177,20 @@ export async function validateDiscoveredRoots(
     }
     const path = files.normalize(r.path);
     const key = files.compareKey(path);
-    if (keys.has(key) || !(await files.isDirectory(path))) {
+    if (keys.has(key)) {
+      dropped++;
+      continue;
+    }
+    let isDir: boolean;
+    try {
+      isDir = await files.isDirectoryStrict(path);
+    } catch {
+      // Could not tell (not absent): only this declaration is unresolved, its stored roots stay (ADR 79).
+      unresolved.add(r.declarationId);
+      dropped++;
+      continue;
+    }
+    if (!isDir) {
       dropped++;
       continue;
     }
@@ -182,7 +199,7 @@ export async function validateDiscoveredRoots(
     out.push({ path, pathKey: key, declarationId: r.declarationId, tag });
   }
   if (dropped > 0) log.warn("Some discovered roots were ignored", { connector: connector.id, dropped });
-  return out;
+  return { roots: out, truncated, unresolved };
 }
 
 export const MAX_LIBRARY_ENTRIES = 50_000;

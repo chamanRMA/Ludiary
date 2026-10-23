@@ -177,3 +177,12 @@ it("systemClock", () => {
   expect(Math.abs(systemClock.now() - Date.now())).toBeLessThan(1000);
   expect(systemClock.timeout(50)).toBeInstanceOf(AbortSignal);
 });
+
+describe("isDirectoryStrict (ADR 79)", () => {
+  it("is false for absent paths and files (ENOENT, ENOTDIR) and true for folders", async () => {
+    expect(await files.isDirectoryStrict!(root)).toBe(true);
+    expect(await files.isDirectoryStrict!(path.join(root, "nope"))).toBe(false);
+    expect(await files.isDirectoryStrict!(path.join(root, "a.txt"))).toBe(false);
+    expect(await files.isDirectoryStrict!(path.join(root, "a.txt", "inside"))).toBe(false);
+  });
+});
