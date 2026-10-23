@@ -3966,6 +3966,15 @@ Fuentes consultadas el 22 de octubre de 2026: [`legendary`, `api/egs.py`](https:
 - Antes de cerrar cada corte, el `auditor` revisa: las constantes del cliente y su única aparición en `auth.ts`, el token de aplicación, la regla de raíces y de errores de `scanInstalled`, el límite de 160, y en el corte 2 el orden de guardado, la cabecera `bearer` como `Secret`, el `json-field` tolerante, el redactor `eg1~` y las fixtures.
 - El `tester` prepara `docs/manual-tests/epic.md` (punto 11); el `documentalista`, las guías de los pasos 4 y 5 del punto 12.
 
+#### 16. Prueba manual del usuario (23 de octubre de 2026, Windows 11, launcher en `E:\Epic Games\Launcher`, cuenta real)
+
+El usuario: «sale perfecto». Antes de conectar la cuenta salía solo el juego instalado, sin portada (como prevé el punto 15: sin `resolveMedia`); al conectar salieron todos los juegos de la cuenta, con portada. Revisión de los registros reales, solo leyendo:
+- **Escaneo (corte 1):** `games=1 incomplete=0 dlc=0 notGame=0 outsideRoots=0 missing=0 invalid=0`: el `.item` real se lee con los campos previstos (E1, E2 en lo usado) y la URI de Jugar funciona (E3, según el usuario).
+- **Cuenta (corte 2):** canje y renovación correctos; con el token del usuario el catálogo sí trae `categories` y `keyImages`, así que el riesgo del punto 15 (biblioteca vacía por stubs) **no se da**. Se saltaron 27 DLC (`type_dlc=27`), ninguna imagen de host ajeno (`foreignImageHosts` vacío) y ningún registro mal formado.
+- **EA5, cerrado:** `refreshExpires=31540000` (unos 365 días) y `accessExpires=129600` (36 h). La reconexión periódica no es un problema.
+- **Privacidad:** en `server.log` y `launcher.log` no aparece ningún `eg1~`, `authorizationCode`, `exchangeCode`, hexadecimal de 32, correo, ruta de usuario, nombre de usuario de Windows ni `.exe`.
+- Sin probar en esta pasada: Instalar desde Ludiary (E4), desinstalar, reconectar y sesión caducada; el usuario no dio detalle paso a paso más allá de «sale perfecto».
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
