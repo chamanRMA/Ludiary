@@ -39,7 +39,7 @@ describe("log redaction (ADR 35)", () => {
 
   it("hides a long opaque token but not ordinary text (ADR 77)", () => {
     const token = "A1b2C3d4-".repeat(8) + "Zz"; // 74 chars
-    expect(redact(`refresh failed token=${token} again`)).toBe("refresh failed token=[redacted] again");
+    expect(redact(`refresh failed token=${token} again`)).toBe("refresh failed [redacted] again");
     expect(redact("a".repeat(64))).toBe("[redacted]");
     // 63 chars stays; so do the 40-hex hashes, 32-hex-free ids, paths and the usual log lines.
     expect(redact("a".repeat(63))).toBe("a".repeat(63));
@@ -51,7 +51,18 @@ describe("log redaction (ADR 35)", () => {
   it("hides a token that starts or ends with a dash, also inside a query (ADR 77, audit M2)", () => {
     const t = "-" + "Ab1_".repeat(16) + "-"; // 66 chars
     expect(redact(`x ${t} y`)).toBe("x [redacted] y");
-    expect(redact(`refresh_token=${t}&grant_type=refresh_token`)).toBe("refresh_token=[redacted]&grant_type=refresh_token");
+    // "=" is part of the run since ADR 80 (Ubisoft tickets end in "="): the key name goes with the token.
+    expect(redact(`refresh_token=${t}&grant_type=refresh_token`)).toBe("[redacted]&grant_type=refresh_token");
+  });
+
+  it("hides Ubisoft headers and tickets with + / = . (ADR 80)", () => {
+    const ticket = "ubisoft-test+ticket/" + "Ab1.".repeat(18) + "==";
+    expect(redact(`auth rm_v1 t=${ticket} sent`)).toBe("auth [redacted] sent");
+    expect(redact("auth Ubi_v1 t=short.value done")).toBe("auth [redacted] done");
+    expect(redact("auth RM_V1 t=x done")).toBe("auth [redacted] done");
+    expect(redact(`ticket ${ticket} end`)).toBe("ticket [redacted] end");
+    // Before STEAM_KEY: a 32-hex key inside a longer run is taken whole.
+    expect(redact(`x${"a".repeat(40)}/${"B".repeat(30)}`)).toBe("[redacted]");
   });
 
   it("is wired to this machine's home folder", () => {

@@ -110,7 +110,9 @@ export type WizardStepDto =
       /** Deviation from the ADR 68 draft v0 (reported to the architect): link and fields share one screen. */
       fields?: readonly WizardFieldDto[];
     }
-  | { kind: "input"; id: string; titleKey: I18nKey; bodyKey: I18nKey; fields: readonly WizardFieldDto[] };
+  | { kind: "input"; id: string; titleKey: I18nKey; bodyKey: I18nKey; fields: readonly WizardFieldDto[] }
+  /** ADR 80. Without the window parameters and `capture`: the web only needs to show the text and a button. */
+  | { kind: "embedded-login"; id: string; titleKey: I18nKey; bodyKey: I18nKey };
 
 export interface WizardFieldDto {
   name: string;

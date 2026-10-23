@@ -9,7 +9,7 @@ const launchers = [{ declarationId: "ubisoft-launcher", path: UBI }];
 const prop = (id: string | null): StoredProperty => ({ storeGameId: id, installed: true, installPath: null, launchData: null });
 const play = (id: string | null, ctx = launchContext({ launchers, tree: { [`${UBI}\\upc.exe`]: "" } })) => c.resolveAction(prop(id), "play", ctx);
 
-describe("resolveAction (ADR 79)", () => {
+describe("resolveAction (ADR 79, 80)", () => {
   it("play gives the exact uri", async () => {
     expect(await play("900001")).toEqual({ kind: "uri", uri: "uplay://launch/900001/0" });
   });
@@ -17,8 +17,14 @@ describe("resolveAction (ADR 79)", () => {
     const ctx = launchContext({ launchers, tree: { [`${UBI}\\UbisoftConnect.exe`]: "" } });
     expect(await play("900001", ctx)).toEqual({ kind: "uri", uri: "uplay://launch/900001/0" });
   });
+  it("install gives the exact uri, with the same launcher check and id validation as play", async () => {
+    const ctx = launchContext({ launchers, tree: { [`${UBI}\\upc.exe`]: "" } });
+    expect(await c.resolveAction(prop("900001"), "install", ctx)).toEqual({ kind: "uri", uri: "uplay://install/900001" });
+    await expect(c.resolveAction(prop("900001"), "install", launchContext({ launchers, tree: {} }))).rejects.toMatchObject({ code: "launch.launcher-missing" });
+    await expect(c.resolveAction(prop("9/0"), "install", ctx)).rejects.toMatchObject({ code: "action.unsupported" });
+    expect(await c.resolveAction(prop(null), "install", ctx)).toBeNull();
+  });
   it("other actions and a null id give null", async () => {
-    expect(await c.resolveAction(prop("900001"), "install", launchContext({}))).toBeNull();
     expect(await c.resolveAction(prop("900001"), "open-store-page", launchContext({}))).toBeNull();
     expect(await play(null)).toBeNull();
   });

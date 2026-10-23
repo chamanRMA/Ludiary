@@ -1,6 +1,6 @@
 // Contexts handed to connectors for network work (ADR 74): library, status, disconnect and the wizard.
 import { ConnectorError, makeSecret } from "@ludiary/contracts";
-import type { ConnectorLogger, HttpClient, SecretVault, StoreConnector, StoreId, SyncContext } from "@ludiary/contracts";
+import type { ConnectorLogger, HttpClient, ResolvedLocation, ScopedFileReader, SecretVault, StoreConnector, StoreId, SyncContext } from "@ludiary/contracts";
 import type { Env } from "./env";
 import { effectiveLocale } from "./settings";
 
@@ -74,7 +74,7 @@ export async function syncContext(
   env: Env,
   c: StoreConnector,
   signal: AbortSignal,
-  opts: { maxBytes?: number; epoch?: "guard" | "bump" } = {},
+  opts: { maxBytes?: number; epoch?: "guard" | "bump"; fs?: ScopedFileReader; libraryLocations?: readonly ResolvedLocation[] } = {},
 ): Promise<SyncContext> {
   const log = connectorLogger(env, c.id);
   return {
@@ -89,5 +89,7 @@ export async function syncContext(
       },
     },
     progress: { report: () => undefined },
+    ...(opts.fs ? { fs: opts.fs } : {}),
+    ...(opts.libraryLocations ? { libraryLocations: opts.libraryLocations } : {}),
   };
 }

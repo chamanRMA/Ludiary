@@ -9,11 +9,14 @@ import {
 import { gameFolder } from "./paths";
 
 const ID_RE = /^([1-9][0-9]{0,9})$/;
-const URI_RE = /^uplay:\/\/launch\/[1-9][0-9]{0,9}\/0$/;
+const URI_RE = {
+  play: /^uplay:\/\/launch\/[1-9][0-9]{0,9}\/0$/,
+  install: /^uplay:\/\/install\/[1-9][0-9]{0,9}$/,
+} as const;
 const CLIENTS = ["upc.exe", "UbisoftConnect.exe"];
 
 /**
- * play -> uplay://launch/<id>/0 (ADR 79, point 4; assumption U6: the /0 form is unverified).
+ * play -> uplay://launch/<id>/0 (ADR 79, point 4; assumption U6: the /0 form is unverified); install -> uplay://install/<id> (ADR 80).
  * Before that, with automatic detection, it checks Ubisoft Connect exists to give a better message.
  */
 export async function resolveUbisoftAction(
@@ -21,7 +24,7 @@ export async function resolveUbisoftAction(
   action: GameAction,
   ctx: LaunchContext,
 ): Promise<LaunchSpec | null> {
-  if (action !== "play") return null;
+  if (action !== "play" && action !== "install") return null;
   if (property.storeGameId === null) return null;
   const m = ID_RE.exec(property.storeGameId);
   if (!m) {
@@ -50,7 +53,8 @@ export async function resolveUbisoftAction(
       });
     }
   }
-  const uri = `uplay://launch/${m[1]}/0`;
-  if (!URI_RE.test(uri)) throw new ConnectorError("internal", "Built an invalid Ubisoft URI");
+  // install (ADR 80, point 11; assumption UB9): Ubisoft Connect opens that game's installation.
+  const uri = action === "play" ? `uplay://launch/${m[1]}/0` : `uplay://install/${m[1]}`;
+  if (!URI_RE[action].test(uri)) throw new ConnectorError("internal", "Built an invalid Ubisoft URI");
   return { kind: "uri", uri };
 }

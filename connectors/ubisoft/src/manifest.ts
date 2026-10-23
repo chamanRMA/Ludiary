@@ -25,3 +25,15 @@ export const UBISOFT_LOCATIONS: readonly LocationDeclaration[] = [
     ],
   },
 ];
+
+// ADR 80, point 12: the launcher's configuration cache, read by listLibrary. LocalAppData was checked in point 3; the
+// second source is Galaxy's. ctx.fs is confined to these folders.
+export const UBISOFT_CACHE: LocationDeclaration = {
+  id: "ubisoft-cache",
+  purpose: "library",
+  os: ["windows"],
+  sources: [
+    { kind: "known-folder", folder: "LocalAppData", relative: "Ubisoft Game Launcher\\cache\\configuration" },
+    { kind: "known-folder", folder: "ProgramFilesX86", relative: "Ubisoft\\Ubisoft Game Launcher\\cache\\configuration" },
+  ],
+};

@@ -1,6 +1,6 @@
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import { stat as nodeStat } from "node:fs/promises";
-import { ExecError, type ProcessLauncher } from "@ludiary/contracts";
+import { ExecError, isStrictLocalPath, type ProcessLauncher } from "@ludiary/contracts";
 
 export type SpawnFn = (command: string, args: readonly string[], options: SpawnOptions) => ChildProcess;
 
@@ -53,7 +53,6 @@ export function validateLaunchUri(uri: string, allowedSchemes: readonly string[]
 }
 
 const CONTROL = /\p{Cc}/u;
-const LOCAL_ABSOLUTE = /^[A-Za-z]:\\/; // drive letter + backslash: UNC, \\?\ and \\.\ start with two backslashes
 const MAX_COMMAND_LINE = 32_000; // CreateProcess limit is 32 767 (ADR 76)
 
 /** Env of the game: the user's, without LUDIARY_* test hooks (ADR 65) or any NODE_* variable. Windows names are case-insensitive. */
@@ -64,15 +63,7 @@ export function childEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 /** Upper bound of the quoted length of one argument (every quote or backslash counted as escaped). */
 const quotedLength = (a: string): number => a.length + 2 + (a.match(/["\\]/g)?.length ?? 0);
 
-const RESERVED = /^(con|prn|aux|nul|conin\$|conout\$|(com|lpt)[0-9¹²³])\s*(\..*)?$/i;
-
-const localPath = (p: unknown): p is string =>
-  typeof p === "string" &&
-  LOCAL_ABSOLUTE.test(p) &&
-  !CONTROL.test(p) &&
-  !/["<>|?*/]/.test(p) &&
-  !p.includes(":", 2) && // NTFS alternate data streams
-  p.slice(3).split("\\").every((c) => !RESERVED.test(c) && !/[. ]$/.test(c) && c !== "..");
+const localPath = isStrictLocalPath;
 
 /** Second barrier of exec (ADR 76 point 4). Throws ExecError('rejected'). */
 async function checkExec(spec: { executable: string; args: readonly string[]; cwd?: string }, stat: typeof nodeStat): Promise<void> {

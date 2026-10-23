@@ -92,7 +92,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
 | 78 | Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta, no instalados e Instalar (corte 2) | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de la 40 y la parte de Epic de la 43; sin tipos nuevos; `storeGameId` hasta 160 caracteres; punto 13 aplicado por defecto con (a), (a) y (a); corte 2 tras la prueba del corte 1; revisada por el auditor el mismo día sin críticos ni altos (punto 14): `.item` como entrada no confiable con regla estricta de ruta, solo el valor extraído en `json-field`, E5 comprobado y `AppDataPath` como primera fuente; E7 falso en la práctica: el corte 1 va sin portadas y sin `resolveMedia` (punto 15)) |
 | 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); prueba manual del 23-10-2026: detección correcta, U4 y U7 confirmados (punto 13); portadas, Instalar, cuenta y biblioteca revisados en la 80) |
-| 80 | Ubisoft: cuenta con ventana de login integrada, juegos poseídos y portadas con la caché local | Propuesta (vía C elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 42, 45, 74 y 79; revisa para Ubisoft la 43 y, de la 79, los puntos 1 y 5, el descarte de `configurations` y `access`; paso `embedded-login` y puerto `EmbeddedLogin` (subcomando del auxiliar de Go con WebView2), propósito `library`, `SyncContext.fs` y `readBytes`, aditivos, `contractVersion` 1; comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto) |
+| 80 | Ubisoft: cuenta con ventana de login integrada, juegos poseídos y portadas con la caché local | Propuesta (vía C elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 42, 45, 74 y 79; revisa para Ubisoft la 43 y, de la 79, los puntos 1 y 5, el descarte de `configurations` y `access`; paso `embedded-login` y puerto `EmbeddedLogin` (subcomando del auxiliar de Go con WebView2), propósito `library`, `SyncContext.fs` y `readBytes`, aditivos, `contractVersion` 1; comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto; revisión del auditor sobre el diseño incorporada el 23-10-2026 en el punto 18, que prevalece: filtrado completo de la ventana, sin `WEBVIEW2_*`, perfil vaciado antes de cerrar, ejecutor propio, carreras del motor, topes de `configurations`, copia parcheada en `third_party/go-webview2`) |
 
 ## Decisiones
 
@@ -4292,7 +4292,7 @@ Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](http
 - **Mitigaciones obligatorias** (el `auditor` las comprueba):
   - el guion inyectado es una constante del auxiliar, no lo aporta el conector, y solo lee del `localStorage` las claves con nombre en la página de captura; no toca formularios ni pulsaciones de teclas (punto 5);
   - la navegación de la ventana está limitada a los hosts del conector;
-  - la carpeta de datos del navegador es nueva en cada login y se borra al cerrar;
+  - la carpeta de datos del navegador es nueva en cada login y se borra al cerrar (revisado en el punto 18, A3: se vacía antes de cerrar y se borra en cuanto se libera);
   - lo capturado viaja solo por la tubería del auxiliar y se cifra enseguida;
   - el código es abierto.
 - **Lo que no cambia de la 43:** no se lee ninguna sesión de otros clientes. La sesión que se toma es la que nace en la ventana de Ludiary, no la de Ubisoft Connect ni la del navegador del usuario.
@@ -4328,22 +4328,23 @@ Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](http
   - modo Docker: la ventana necesita el escritorio del usuario y en fase 2 irá por el agente local (decisión 22);
   - portadas de los instalados **sin** cuenta (punto 16.2).
 
-#### 5. Componente: la ventana de login en el auxiliar de Go
+#### 5. Componente: la ventana de login en el auxiliar de Go (revisado en el punto 18: A1 a A3, M3, M5 y B4)
 
 - **Dónde:** un subcomando nuevo, `ludiary-tray.exe --embedded-login`, con la misma forma que `--pick-folder` y `--registry` (decisión 72): una línea JSON por stdin, una por stdout, y sale. No hay binario nuevo que firmar ni instalar: siguen siendo tres (decisiones 45 y 58).
 - **Librería (opciones):**
-  - **A. `github.com/wailsapp/go-webview2`, paquete `pkg/edge`** (se elige). MIT, sin CGO. Por defecto (sin la etiqueta de compilación `native_webview2loader`) usa `webviewloader`, un port a Go del cargador de Microsoft: **no se distribuye `WebView2Loader.dll`**. Admite carpeta de datos propia (`DataPath`) y desactivar el guardado de contraseñas y el autorrelleno (`PutIsPasswordAutosaveEnabled`, `PutIsGeneralAutofillEnabled`). La mantiene el proyecto Wails. Coste: su tipo `Chromium` no expone `NavigationStarting` ni `NewWindowRequested`; se añaden llamando a la interfaz COM desde el auxiliar o en una copia parcheada en `third_party/`, como la de `gogpu/systray` (decisión 45). Versión fijada en `go.mod` (UB11).
+  - **A. `github.com/wailsapp/go-webview2`, paquete `pkg/edge`** (se elige). MIT, sin CGO. Por defecto (sin la etiqueta de compilación `native_webview2loader`) usa `webviewloader`, un port a Go del cargador de Microsoft: **no se distribuye `WebView2Loader.dll`**. Admite carpeta de datos propia (`DataPath`) y desactivar el guardado de contraseñas y el autorrelleno (`PutIsPasswordAutosaveEnabled`, `PutIsGeneralAutofillEnabled`). La mantiene el proyecto Wails. Coste: su tipo `Chromium` no expone `NavigationStarting` ni `NewWindowRequested`; se añaden llamando a la interfaz COM desde el auxiliar o en una copia parcheada en `third_party/`, como la de `gogpu/systray` (decisión 45). Versión fijada en `go.mod` (UB11). **Revisado en el punto 18, M5:** copia parcheada en `third_party/go-webview2` con una lista cerrada de interfaces.
   - B. `github.com/jchv/go-webview2`: MIT, sin CGO y con ventana incluida, pero carga con `go-winloader` una copia incrustada de `WebView2Loader.dll`: un binario de Microsoft más dentro del nuestro, con su licencia, y le faltan los mismos eventos.
   - C. Un auxiliar en .NET con el control oficial: exige runtime o NativeAOT, ya descartado para la bandeja (decisión 45).
 - **Runtime de WebView2:** no se distribuye. Viene con Windows 11 y Microsoft lo instaló en casi todos los Windows 10 (UB12). Si falta, el auxiliar responde `runtime-missing` y el asistente lo explica con el enlace oficial de Microsoft (punto 16.3).
 - **Ventana:** propia (Win32), en primer plano como el selector de carpetas (`foregroundOwner` de `pickfolder.go`), de tamaño fijo como la de Galaxy (460 × 690), con el título ya traducido que manda el servidor. Sin barra de direcciones ni menús: el usuario ve solo la página de Ubisoft.
-- **Perfil:** carpeta de datos nueva en cada login, `%LOCALAPPDATA%\Ludiary\tmp\webview-<aleatorio>`, que crea y borra la plataforma (punto 6). Cookies, `localStorage` y caché viven ahí y desaparecen con ella: no se persiste nada. DevTools, guardado de contraseñas y autorrelleno, desactivados. Sin objetos del host ni mensajes web (`chrome.webview` no se usa).
-- **Navegación:** el documento principal solo navega por `https` a hosts exactos de `allowedHosts`; el resto se cancela en `NavigationStarting`. Los iframes y recursos de la página (un captcha, por ejemplo) no se tocan. Ventanas nuevas y descargas: denegadas. Los hosts bloqueados se devuelven al servidor para el registro (solo hosts, sin rutas ni consulta).
+- **Perfil:** carpeta de datos nueva en cada login, `%LOCALAPPDATA%\Ludiary\tmp\webview-<aleatorio>`, que crea y borra la plataforma (punto 6). Cookies, `localStorage` y caché viven ahí y desaparecen con ella: no se persiste nada. DevTools, guardado de contraseñas y autorrelleno, desactivados. Sin objetos del host ni mensajes web (`chrome.webview` no se usa). **Revisado en el punto 18:** más ajustes a `false` (A1), sin variables `WEBVIEW2_*` (A2), `ClearBrowsingData` antes de cerrar (A3) y `dataDir` con prefijo y raíz comprobados (B4).
+- **Navegación:** el documento principal solo navega por `https` a hosts exactos de `allowedHosts`; el resto se cancela en `NavigationStarting`. Los iframes y recursos de la página (un captcha, por ejemplo) no se tocan. Ventanas nuevas y descargas: denegadas. Los hosts bloqueados se devuelven al servidor para el registro (solo hosts, sin rutas ni consulta). **Revisado en el punto 18, A1:** los iframes sí se filtran por esquema, la regla vale también en redirecciones y se deniegan protocolos externos, permisos y certificados de cliente.
 - **Flujo:**
   1. carga `startUrl`;
   2. cuando el documento principal termina de cargar en `doneUrl` (mismo origen y ruta; la consulta no cuenta), navega a `captureUrl` si es distinta. Es lo que hacen Lutris y Galaxy: `/ready` → `/change_domain/`;
   3. en `captureUrl` ejecuta el guion fijo con `ExecuteScript` y lee el resultado. Si falta algún valor, reintenta cada 500 ms durante 10 s como mucho;
   4. responde y cierra la ventana.
+  - **Revisado en el punto 18:** máquina de estados y `Source()` comprobado antes de cada `ExecuteScript`, resultado de 64 KiB como mucho (M3); vaciado del perfil antes de cerrar (A3).
 - **Guion fijo:** es una constante en Go. Los parámetros entran como literal JSON generado con `json.Marshal`, nunca concatenados. Para cada campo pedido recorre sus `storageKeys`, hace `JSON.parse(localStorage.getItem(clave))` dentro de `try` y toma `[jsonField]` solo si es texto. Devuelve un objeto con esos nombres y nada más. No lee formularios, cookies, pulsaciones ni otras claves.
 - **Protocolo:**
   - stdin: `{"title","startUrl","doneUrl","captureUrl","allowedHosts":[…],"capture":[{"name","storageKeys":[…],"jsonField","maxLength"}],"dataDir"}`;
@@ -4351,12 +4352,15 @@ Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](http
   - código de salida: 0 con `captured` y `cancelled`, 1 con error y 2 con `bad-request`. Si stdin se cierra (el servidor canceló o murió), cierra la ventana y sale.
   - **Segunda barrera en el auxiliar:** URLs `https` sin usuario ni fragmento y con host en `allowedHosts`; como mucho 4 hosts, 4 campos y 3 claves por campo; nombres `^[A-Za-z][A-Za-z0-9]{0,31}$`; claves y `jsonField` `^[A-Za-z0-9_.-]{1,64}$`; `maxLength` de 1 a 8192; `dataDir` absoluta y existente. Un valor capturado con caracteres de control o más largo que `maxLength` no se devuelve (`capture-missing`).
   - El auxiliar no escribe registros ni ficheros: lo capturado solo sale por stdout.
+  - **Revisado en el punto 18, B4:** `dataDir` bajo `%LOCALAPPDATA%\Ludiary\tmp\` con prefijo `webview-`, `title` limitado, línea de 64 KiB y límite propio de unos 11 minutos.
 - **Qué controla Ludiary y qué no:**
   - **Controla** la ventana, a qué hosts navega, el guion (lee solo lo pedido), que el perfil sea nuevo y se borre, que no se guarde la contraseña, y que lo capturado vaya solo por la tubería al servidor, que lo cifra.
   - **No controla** el contenido ni los guiones de la página de Ubisoft (captcha y segundo factor incluidos), lo que Ubisoft guarde en su `localStorage`, ni el runtime de WebView2, que actualiza Microsoft y que sigue los ajustes de diagnóstico de Windows (UB12). Quien controla la ventana podría, técnicamente, leer lo que se escribe. El código no lo hace, es abierto y el `auditor` lo comprueba (punto 2).
 - **Solo localhost en Windows:** la ventana necesita el escritorio del usuario. En Docker irá por el agente local (fase 2).
 
-#### 6. Contrato y núcleo (amplía las decisiones 40 y 74; todo aditivo, `contractVersion` sigue en 1)
+#### 6. Contrato y núcleo (amplía las decisiones 40 y 74; todo aditivo, `contractVersion` sigue en 1; motor y plataforma revisados en el punto 18: A2, A3, M1, M2 y B1)
+
+- **Añadido al implementar (23-10-2026, revisado por el auditor):** `SyncContext.libraryLocations?: readonly ResolvedLocation[]`, las ubicaciones `library` ya resueltas, rellenado con la misma condición que `fs` (como `launchers` en `LaunchContext`). Sin él, el conector no sabe dónde está `configurations`.
 
 ```ts
 // packages/contracts/src/connector.ts — ADR 80
@@ -4424,13 +4428,15 @@ export interface EmbeddedLogin {
   - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento; `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión.
   - **La web** pinta el paso y su botón envía `submit` con `{ kind: 'continue' }`; la API no cambia (el cuerpo sigue admitiendo solo `continue` y `fields`). El núcleo entonces:
     1. incrementa la época de la tienda (77, A2);
-    2. llama a `EmbeddedLogin.run` con `allowedHosts` = `authHosts` **del manifiesto**, nunca del paso; con el título traducido; y con una señal que se aborta con `DELETE /api/wizards/:id`, al abrir otro asistente de la misma tienda o a los **10 minutos**. Mientras espera, la sesión del asistente no caduca;
+    2. llama a `EmbeddedLogin.run` con `allowedHosts` = `authHosts` **del manifiesto**, nunca del paso; con el título traducido; y con una señal que se aborta con `DELETE /api/wizards/:id`, al abrir otro asistente de la misma tienda o a los **10 minutos**. Mientras espera, la sesión del asistente no caduca. **Revisado en el punto 18, M2:** `AbortController` en la sesión, `busy` hasta el fin de `submit` y comprobación de sesión y época antes de llamar al conector;
     3. con `captured`, comprueba que llegan exactamente los nombres pedidos, cada uno con su `pattern` anclado y su `maxLength`. Si no: `rejected` con `wizard.embedded.failed`. Si cumplen, llama a `submit(ctx, stepId, { kind: 'embedded', values })` con los 30 s de siempre;
     4. con `cancelled`: `rejected` con `wizard.embedded.cancelled`, en el mismo paso. Con `unavailable`: `wizard.embedded.runtimeMissing` o `wizard.embedded.busy`. Con `failed`: `wizard.embedded.failed`.
   - **Sin el puerto** (Docker, Linux, pruebas): `rejected` con `wizard.embedded.unavailable` («Este inicio de sesión necesita Ludiary en el escritorio de Windows»).
   - **Registro:** solo el resultado (`captured`, `cancelled`…), la duración y `blockedHosts`. Nunca los valores, que son `Secret` desde que salen de la plataforma.
+  - **`kind: 'embedded'` desde la API:** se rechaza igual que `callback` (punto 18, B1).
+  - `failed` con `capture-missing` usa su propia clave, `wizard.embedded.captureMissing` (punto 18, B2).
   - La petición HTTP de ese `submit` sigue abierta mientras la ventana lo esté. Node no corta las respuestas lentas (`server.requestTimeout` solo mide la recepción de la petición). El `programador` comprueba que Fastify tampoco las corta; si lo hiciera, se amplía el límite solo para esa ruta.
-- **Plataforma (`packages/platform-windows/src/embedded-login.ts`):**
+- **Plataforma (`packages/platform-windows/src/embedded-login.ts`)** (revisado en el punto 18: ejecutor propio sin el `HelperRunner` actual, M1; entorno sin `WEBVIEW2_*`, A2; borrado pendiente con reintentos y sin seguir uniones, A3):
   - crea la carpeta de datos con `mkdtemp` bajo `%LOCALAPPDATA%\Ludiary\tmp\` y lanza el auxiliar sin shell;
   - escribe la línea del pedido y lee **una** línea de 64 KiB como mucho. La valida: solo los nombres pedidos, de texto, dentro de `maxLength` y sin caracteres de control; `blockedHosts`, como mucho 32 hosts con forma de host. Envuelve los valores con `makeSecret`;
   - al terminar borra la carpeta, con reintentos durante 5 s (los procesos de WebView2 tardan en soltarla);
@@ -4448,7 +4454,7 @@ export interface EmbeddedLogin {
   - el simulador (`mock.ts`) añade el paso;
   - la tarjeta de Ubisoft deja de ser `not-applicable`.
 
-#### 7. Asistente de Ubisoft (`connectors/ubisoft/src/wizard.ts` y `auth.ts`)
+#### 7. Asistente de Ubisoft (`connectors/ubisoft/src/wizard.ts` y `auth.ts`) (revisado en el punto 18, B2: segundo factor en el asistente, rotado mal formado y «Recordarme» en el cuerpo)
 
 | Id | Tipo | Qué hace |
 |---|---|---|
@@ -4460,7 +4466,7 @@ export interface EmbeddedLogin {
 - **Constantes** (`auth.ts`): `APP_ID` y `GENOME_ID` de la web de Ubisoft, los de Lutris (`util/ubisoft/consts.py`). La integración de Galaxy usa otro par, que queda como plan B (UB13). No son secretos (van en la URL pública del login) y el ADR no los copia, como en la 77. El mismo `APP_ID` va en la cabecera `Ubi-AppId`.
 - Sin paso `choose`: sin cuenta, Ubisoft sigue como hoy (instalados y Jugar), y cancelar lo deja así.
 
-#### 8. Sesión (decisión 46, mínimo de este corte)
+#### 8. Sesión (decisión 46, mínimo de este corte; redactor revisado en el punto 18, B3)
 
 - **Qué se guarda:** solo `rememberMeTicket`, cifrado en `secrets` con el ámbito `store:ubisoft`. El `ticket` y el `sessionId` viven en memoria durante una operación y se descartan.
 - **Forma aceptada (UB3):** `rememberMeTicket` y `ticket` deben cumplir `^[A-Za-z0-9+/=_.-]{64,8192}$`, y `sessionId`, `^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$`. Si no cumplen: `store.unexpected-response` (en el asistente, el núcleo ya lo rechaza por `pattern`).
@@ -4475,15 +4481,16 @@ export interface EmbeddedLogin {
   - `\b(?:Ubi_v1|rm_v1) t=\S+`;
   - `(?<![A-Za-z0-9+/=_.-])[A-Za-z0-9+/=_.-]{64,}`, superconjunto de la forma aceptada. El de la 77 no cubre `+`, `/`, `=` ni `.`. Se acepta que tape alguna ruta o texto largo sin espacios.
   - El `sessionId` no tiene patrón propio: nunca sale de la memoria ni de su cabecera `Secret`.
+  - **Revisado en el punto 18, B3:** el segundo patrón sustituye a `LONG_TOKEN` y va antes de `STEAM_KEY`; el primero lleva la bandera `i`.
 - **Nunca salen** los tickets ni el `sessionId`: las mismas reglas que en la 77, y tampoco por el auxiliar, que no registra nada (punto 5).
 
-#### 9. Biblioteca e ID (`connectors/ubisoft/src/library.ts`, `cache.ts` y `protobuf.ts`)
+#### 9. Biblioteca e ID (`connectors/ubisoft/src/library.ts`, `cache.ts` y `protobuf.ts`) (topes y lectura de `configurations` revisados en el punto 18, M4; `spaceId` a minúsculas, B2; `complete` con `untranslated`, B7)
 
 1. **Primero la caché, sin red:**
    - sin `ctx.fs` (la detección no es automática): error con `connectors.ubisoft.needsAutoDetection`, la clave de la 79, y la biblioteca no cambia;
    - sin `configurations` en ninguna ubicación `ubisoft-cache`: `scan.root-unreadable` con `connectors.ubisoft.errors.noCache` («Instala Ubisoft Connect y ábrelo una vez para ver aquí tus juegos de Ubisoft»).
    - Así, si falta la caché, no se gasta una renovación.
-2. **`configurations`** (`readBytes`, 64 MiB como mucho), con el formato comprobado en el punto 3:
+2. **`configurations`** (`readBytes`, 64 MiB como mucho; **8 MiB según el punto 18, M4**, que también baja los topes de registros y YAML y fija las opciones de `yaml`), con el formato comprobado en el punto 3:
    - **`protobuf.ts`:** lector mínimo del formato de cable. Varint de 10 bytes como mucho y sin pasar de `Number.MAX_SAFE_INTEGER`; longitudes comprobadas contra lo que queda; tipos de cable 0, 1, 2 y 5, y los desconocidos dentro de un mensaje se saltan. Cualquier otro tipo, o una longitud que se sale, es un fallo del fichero. Sin dependencias.
    - **Registros:** mensajes con campo 1 de longitud. Dentro: campo 1 varint (el ID), campo 2 varint (el segundo ID, que no se usa) y campo 3 de longitud (YAML en UTF-8). Como mucho 20 000 registros y 1 MiB de YAML por registro.
    - **YAML** con la biblioteca `yaml` (eemeli/yaml, licencia ISC, sin dependencias; el `auditor` la confirma según la decisión 60): esquema `core`, sin etiquetas propias y con el tope de alias por defecto. Un YAML que no se analiza se salta y se cuenta.
@@ -4499,7 +4506,7 @@ export interface EmbeddedLogin {
 5. **Por nodo:**
    - `spaceId` con forma de UUID; si no, se salta y deja `complete: false`;
    - sin ningún grupo con `type === 'PC'`: fuera y se cuenta (`notPc`), como hacen Lutris y Galaxy;
-   - **sin traducción** en el mapa: fuera y se cuenta (`untranslated`), **sin** tocar `complete`. Sin ID numérico no hay Jugar ni Instalar, y un ID distinto del del registro duplicaría los instalados. `shortcut:` el mismo que en la 77: un juego sin configuración en este equipo no aparece y, si estaba guardado y no está instalado, se da de baja; reaparece al abrir Ubisoft Connect;
+   - **sin traducción** en el mapa: fuera y se cuenta (`untranslated`), **sin** tocar `complete` (**revisado en el punto 18, B7:** con `untranslated > 0`, `complete: false`, y no se da de baja nada). Sin ID numérico no hay Jugar ni Instalar, y un ID distinto del del registro duplicaría los instalados. `shortcut:` el mismo que en la 77: un juego sin configuración en este equipo no aparece y, si estaba guardado y no está instalado, se da de baja; reaparece al abrir Ubisoft Connect;
    - entrada `{ storeGameId: <ID>, kind: 'game', title, media }`. `title` = `name` sin caracteres de control, recortado y de 300 como mucho; si falta, `Ubisoft <ID>`. `media`, del punto 10. Repetidos por `storeGameId`, fuera;
    - los juegos de Ubisoft comprados en Steam o Epic salen también si la API los da como poseídos en PC (decisión del usuario, punto 4; UB15).
 6. **`complete`:** `true` si `configurations` se leyó entera sin fallos de formato ni topes, `nodes.length === totalCount` y ningún nodo estaba mal formado. Si `configurations` falla a mitad, se usa lo leído con `complete: false`. El núcleo ya protege ante una lista vacía con juegos guardados (74).
@@ -4539,10 +4546,10 @@ listLibrary: listUbisoftLibrary,                   // library.ts
 - **Ficheros nuevos** en `connectors/ubisoft/src`: `auth.ts`, `wizard.ts`, `protobuf.ts`, `cache.ts` y `library.ts`. `launch.ts` y `manifest.ts` crecen. Dependencia nueva: `yaml`.
 - **Textos nuevos** (es y en):
   - del conector: `connectors.ubisoft.login.title`, `.login.body`, `.login.window`, `connectors.ubisoft.error.login`, `.error.expired`, `connectors.ubisoft.errors.noCache` y `connectors.ubisoft.disconnect.hint`;
-  - comunes: `wizard.embedded.open`, `.waiting`, `.cancelled`, `.failed`, `.busy`, `.runtimeMissing` (con el enlace oficial de Microsoft) y `.unavailable`.
+  - comunes: `wizard.embedded.open`, `.waiting`, `.cancelled`, `.failed`, `.captureMissing` (punto 18, B2), `.busy`, `.runtimeMissing` (con el enlace oficial de Microsoft) y `.unavailable`.
 - `checkConnectorManifest` lo acepta tal cual: `connection` con `authHosts`, `library` con `apiHosts`, y la ubicación `library` con `capabilities.library`.
 
-#### 13. Pruebas
+#### 13. Pruebas (ampliadas en el punto 18; donde no coincidan, por ejemplo con `untranslated`, vale el 18)
 
 **Fixtures inventadas**, construidas en las pruebas y sin copiar nada de la caché ni de respuestas reales:
 
@@ -4596,7 +4603,7 @@ Casos:
 8. Cambiar la contraseña en ubisoft.com y sincronizar: «Hay que volver a conectar»; reconectar.
 9. Desconectar: velo gris en los no instalados; los instalados siguen jugables.
 10. Con «solo carpetas manuales»: la tarjeta de Ubisoft muestra el aviso de detección automática.
-11. El registro exportado no contiene `rm_v1`, `Ubi_v1`, tickets, `sessionId`, el nombre de la cuenta, el correo, `spaceId` ni rutas. Anotar los `blockedHosts`: si el login necesitó otro host, se añade a `authHosts`.
+11. El registro exportado no contiene `rm_v1`, `Ubi_v1`, tickets, `sessionId`, el nombre de la cuenta, el correo, `spaceId` ni rutas. Anotar los `blockedHosts`: si el login necesitó otro host, se añade a `authHosts` (con nota en esta decisión y revisión del `auditor`, punto 18, B5).
 12. Opcional: con la verificación en dos pasos activada en la cuenta.
 
 #### 15. Orden de implementación y trabajo en paralelo
@@ -4605,11 +4612,11 @@ Casos:
 2. **En paralelo:**
    - `empaquetador`: `--embedded-login` en el auxiliar con `wailsapp/go-webview2` y sus eventos de navegación, y `embedded-login.ts` en `platform-windows`; avisos de licencia (MIT) según la decisión 60; tamaño del auxiliar antes y después;
    - `conectores`: `auth.ts`, `wizard.ts`, `protobuf.ts`, `cache.ts`, `library.ts`, `install`, manifiesto y textos, contra el `testkit`;
-   - `auditor`: revisión del diseño **antes del código**: el guion fijo y sus parámetros, la regla de navegación, el perfil temporal, la validación en las tres capas (auxiliar, plataforma y núcleo), que lo capturado no toque disco ni registro, el analizador binario de una entrada no confiable, la dependencia `yaml` y el `Ubi-AppId`.
+   - `auditor`: revisión del diseño **antes del código** (hecha el 23-10-2026, punto 18; el `empaquetador` hace la copia parcheada de M5): el guion fijo y sus parámetros, la regla de navegación, el perfil temporal, la validación en las tres capas (auxiliar, plataforma y núcleo), que lo capturado no toque disco ni registro, el analizador binario de una entrada no confiable, la dependencia `yaml` y el `Ubi-AppId`.
 3. **Después:** web (`ConnectWizard`, `real.ts` y simulador), `runtime`, CSP y revisión del `auditor` sobre el código.
 4. **Al final:** la prueba manual (punto 14) y el `documentalista`:
    - guía de conexión: la ventana de Ubisoft, por qué es distinta de GOG y Epic, y que la contraseña se escribe en la página oficial dentro de una ventana de Ludiary;
-   - privacidad: qué va a Ubisoft, y que la ventana es Microsoft Edge WebView2;
+   - privacidad: qué va a Ubisoft, y que la ventana es Microsoft Edge WebView2; también SmartScreen y los terceros que carga la página de Ubisoft (punto 18, B6);
    - aviso de vía no oficial;
    - solución de problemas: `noCache`, `runtimeMissing` y «Hay que volver a conectar».
 
@@ -4633,6 +4640,86 @@ El arquitecto recomendó leer `cache\configuration\configurations` y `cache\owne
 - `uplay://install/<id>` (UL8, ahora UB9).
 
 Su límite, que pesó frente a C: la biblioteca sería la del último inicio de sesión del launcher en este PC, sin saber de qué cuenta. Sus supuestos UL1 a UL8 quedan sustituidos por los UB de abajo.
+
+#### 18. Revisión del auditor sobre el diseño (23 de octubre de 2026)
+
+Sin críticos. **Se aceptan todos los hallazgos.** Lo que sigue **prevalece sobre los puntos 2 a 15** donde no coincida; los puntos afectados llevan una nota de remisión. El código lo hacen el `empaquetador` (auxiliar y plataforma), el `programador` (núcleo y redactor) y `conectores` (Ubisoft).
+
+- **A1 (alto). La ventana filtra todo, no solo el documento principal.** Revisa «Navegación» y «Perfil» del punto 5:
+  - `NavigationStarting` (documento principal): la regla de `https` y hosts exactos de `allowedHosts` se aplica **también cuando `IsRedirected` es verdadero**; una redirección a otro host o a `http` se cancela;
+  - `FrameNavigationStarting` (iframes): se cancela todo lo que no sea `https`, `about:blank` o `about:srcdoc`. El host de los iframes no se limita (el captcha puede venir de otro dominio);
+  - `LaunchingExternalUriScheme`: siempre `Cancel` (ninguna página abre `uplay://`, `ms-settings:` ni otro protocolo del sistema);
+  - `PermissionRequested`: siempre `Deny` (cámara, micrófono, ubicación, notificaciones, portapapeles…);
+  - `ClientCertificateRequested`: `Cancel`;
+  - `ServerCertificateErrorDetected`: **sin manejador**, para que WebView2 bloquee por defecto; nunca se acepta un certificado inválido;
+  - ajustes a `false`: `AreDefaultContextMenusEnabled`, `AreBrowserAcceleratorKeysEnabled`, `IsWebMessageEnabled`, `AreHostObjectsAllowed`, `IsStatusBarEnabled` y `AllowSingleSignOnUsingOSPrimaryAccount` (además de DevTools, guardado de contraseñas y autorrelleno del punto 5);
+  - ventanas nuevas y descargas siguen denegadas (`NewWindowRequested`, `DownloadStarting`).
+  - Pruebas (Go): redirección con `IsRedirected` a otro host y a `http` → cancelada; iframe `http`, `data:`, `javascript:` y `file:` → cancelado; `about:blank` y `about:srcdoc` → permitidos; los tres manejadores de denegación devuelven siempre su valor.
+- **A2 (alto). Sin variables `WEBVIEW2_*`.** El runtime admite variables de entorno que cambian la carpeta de datos, el runtime cargado o los argumentos del navegador (por ejemplo, abrir un puerto de depuración remota). Por eso:
+  - la plataforma lanza `--embedded-login` con un entorno **sin ninguna variable cuyo nombre empiece por `WEBVIEW2_`** (comparación sin distinguir mayúsculas);
+  - el auxiliar, como segunda barrera, hace `os.Unsetenv` de todas ellas antes de crear el entorno de WebView2 y pasa `AdditionalBrowserArguments` **vacío**;
+  - pruebas: plataforma con `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` en el entorno del servidor → el auxiliar doble no la recibe; auxiliar con esas variables puestas → quedan borradas antes de crear el entorno.
+- **A3 (alto). El perfil se vacía antes de cerrar y se borra en cuanto se libera.** Revisa «Perfil» del punto 5, la mitigación del punto 2 y la plataforma del punto 6:
+  - el auxiliar llama a `ICoreWebView2Profile2.ClearBrowsingData` (todos los tipos de datos) **antes de cerrar la ventana por cualquier vía**: captura, cancelación del usuario, stdin cerrado, error o su límite de tiempo (B4). Después cierra y sale cuando llega `ICoreWebView2Environment5.BrowserProcessExited`;
+  - la plataforma espera a la salida del auxiliar (que implica `BrowserProcessExited`) o, si no llega, a la salida del proceso más un margen corto, y borra la carpeta con los reintentos de 5 s del punto 6;
+  - si aun así no puede borrarla, **reintenta antes de cada login, al apagar el servidor y cada 10 minutos**, y registra solo el código `webview-cleanup-failed` (sin ruta);
+  - el borrado usa `lstat` y **no sigue uniones ni enlaces**: un punto de reanálisis dentro de la carpeta se elimina como enlace, sin entrar en su destino;
+  - la mitigación del punto 2 pasa a decir: «la carpeta de datos del navegador es nueva en cada login, **se vacía antes de cerrar y se borra en cuanto se libera**».
+  - Pruebas (plataforma): carpeta que no se suelta → queda pendiente y se borra en el siguiente login, al apagar o en el temporizador, con `webview-cleanup-failed` en el registro y sin ruta; una unión dentro de la carpeta que apunta fuera → se borra la unión y su destino queda intacto.
+- **M1 (medio). `embedded-login.ts` no usa el `HelperRunner` actual**, que cierra stdin tras escribir (y el auxiliar interpreta el cierre como cancelación, punto 5). Ejecutor propio:
+  - escribe la línea del pedido **sin cerrar stdin**;
+  - se resuelve con la **primera línea** de stdout **y** la salida del proceso (`exit`), no con una sola de las dos;
+  - admite `AbortSignal`; al abortar cierra stdin y, si el proceso no ha salido en unos **3 s**, lo mata;
+  - el proceso se registra para que `dispose()` de la plataforma lo aborte al apagar;
+  - stderr se ignora (no se lee ni se registra).
+- **M2 (medio). Carreras en el motor de asistentes.** Revisa el paso 2 del motor (punto 6):
+  - la sesión del asistente guarda su `AbortController`; lo abortan `cancel` (`DELETE /api/wizards/:id`), `cancelStore` (abrir otro asistente de la tienda o desconectarla), el apagado del servidor y los 10 minutos;
+  - `s.busy = true` desde que llega `continue` hasta que termina el `submit` del conector; otra petición sobre la misma sesión mientras tanto se rechaza como hoy con una sesión ocupada;
+  - antes de llamar al conector con los valores capturados, el núcleo comprueba que `sessions.get(id) === s` y que la época de la tienda no ha cambiado desde el paso 1; si no, `rejected` y los valores se descartan sin llegar al conector.
+  - Pruebas: `DELETE`, `cancelStore` y apagado durante la espera → la señal se aborta; captura que llega después de `cancelStore` o con la época cambiada → `rejected` y `submit` del conector no se llama.
+- **M3 (medio). Cuándo y qué se ejecuta.** Revisa «Flujo» y «Guion fijo» del punto 5:
+  - `ExecuteScript` solo se llama tras haber completado la carga en `doneUrl` (máquina de estados: `start` → `done` → `capture`; no se salta estados) y solo si `Source()` está en el origen y la ruta de `captureUrl`, **comprobado antes de cada reintento**; si la página se ha ido a otra ruta, no se ejecuta;
+  - **nunca** `AddScriptToExecuteOnDocumentCreated`;
+  - el resultado bruto de `ExecuteScript` se limita a **64 KiB**; de él solo se aceptan cadenas en los nombres pedidos;
+  - riesgo aceptado: el valor lo controla la página de Ubisoft. Una página manipulada, como mucho, haría que se conecte **otra cuenta**; no da acceso a nada del equipo.
+- **M4 (medio). `configurations` como entrada no confiable.** Revisa el punto 9.2:
+  - `readBytes` de `configurations` con un máximo de **8 MiB** (el fichero real mide 419 KiB, punto 3);
+  - como mucho **256 KiB de YAML por registro** y **5 000 registros**;
+  - los registros cuyo YAML no contiene `start_game` se descartan **antes de analizarlo** (búsqueda de bytes);
+  - `yaml` se llama con `{ schema: 'core', merge: false, maxAliasCount: 100, uniqueKeys: true, prettyErrors: false }` y se lee con `Object.hasOwn` o `getIn`, nunca con acceso directo por propiedad sobre objetos del documento;
+  - `protobuf.ts` **no es recursivo**: lee dos niveles fijos (fichero → registro → campos), sin descender en mensajes anidados desconocidos;
+  - `yaml` con **versión exacta ≥ 2.2.2** en `package.json` (hoy 2.9.1; ISC, sin dependencias; compatibilidad confirmada por el `auditor`);
+  - pruebas: un YAML con 100 000 `[` anidados → se salta y se cuenta, sin desbordar la pila; una clave `__proto__` → no contamina prototipos ni se toma como campo.
+- **M5 (medio). Superficie COM cerrada.** Revisa «Librería» del punto 5: se decide la **copia parcheada** de `wailsapp/go-webview2` en `third_party/go-webview2`, con `PATCHED.md` (qué se añade y por qué), `replace` en `go.mod` y el commit de origen, igual que `gogpu-systray` (decisión 45). El parche añade **solo** esta lista cerrada:
+  - eventos: `NavigationStarting` (con `IsRedirected`), `FrameNavigationStarting`, `NewWindowRequested`, `DownloadStarting`, `PermissionRequested`, `LaunchingExternalUriScheme`, `ClientCertificateRequested`, `NavigationCompleted`;
+  - interfaces: `ICoreWebView2Profile2.ClearBrowsingData` e `ICoreWebView2Environment5.BrowserProcessExited`;
+  - los ajustes de A1 y del punto 5.
+  - Si falla cualquier `QueryInterface` de esa lista (runtime demasiado antiguo), el auxiliar responde `runtime-missing` y **no abre la ventana**.
+  - El `auditor` comprueba las licencias de `webviewloader` y de las definiciones COM copiadas (pendiente).
+- **B1 (bajo).** `submit` rechaza `kind: 'embedded'` recibido desde la API igual que `callback`, con prueba en el núcleo.
+- **B2 (bajo). Asistente y sesión de Ubisoft.** Revisa los puntos 7 y 8:
+  - en el asistente, una renovación que pide el segundo factor (`twoFactorAuthenticationTicket`) → `auth.invalid` con `connectors.ubisoft.error.login`;
+  - un `rememberMeTicket` renovado que no cumple UB3 → `store.unexpected-response` y no se guarda nada;
+  - el `spaceId` de la API se pasa a minúsculas antes de buscarlo en el mapa;
+  - el cuerpo de `connectors.ubisoft.login.body` pide marcar «Recordarme» en la página de Ubisoft;
+  - `capture-missing` tiene mensaje propio, `wizard.embedded.captureMissing` («No se ha podido leer la sesión. Vuelve a intentarlo y marca "Recordarme"»), separado de `wizard.embedded.failed`.
+- **B3 (bajo). Redactor.** Revisa el punto 8: el patrón `(?<![A-Za-z0-9+/=_.-])[A-Za-z0-9+/=_.-]{64,}` **sustituye** a `LONG_TOKEN` (no se añade al lado) y va **antes de `STEAM_KEY`**; `(?:Ubi_v1|rm_v1) t=\S+` lleva la bandera `i`. Falsos positivos aceptados por escrito: tapa rutas, hashes y textos largos sin espacios.
+- **B4 (bajo). Límites del auxiliar.** Revisa el protocolo del punto 5:
+  - `dataDir` debe estar bajo `%LOCALAPPDATA%\Ludiary\tmp\` y su nombre empezar por `webview-`;
+  - `title` sin caracteres de control y de 200 como mucho; la ventana muestra además el host de la página cargada;
+  - la línea de stdin, 64 KiB como mucho;
+  - el auxiliar tiene su propio límite de unos **11 minutos** (por encima de los 10 del núcleo): al cumplirlo, vacía el perfil (A3) y sale.
+- **B5 (bajo).** Ampliar `authHosts` (por ejemplo, tras ver `blockedHosts` en la prueba manual, punto 14.11) exige una nota en esta decisión y la revisión del `auditor`.
+- **B6 (bajo).** La guía de privacidad menciona el aviso de SmartScreen que puede ver el usuario y que la página de login de Ubisoft carga terceros (captcha, analítica) que Ludiary no controla.
+- **B7 (bajo, adoptado).** Revisa el punto 9.5: **`complete: false` si `untranslated > 0`**. Así un juego poseído sin configuración en este equipo no aparece, pero tampoco da de baja uno ya guardado (decisión 74); el `shortcut:` del punto 9.5 queda reducido a «no aparece hasta abrir Ubisoft Connect».
+- **Pruebas añadidas por la revisión:** las de A1 a A3, M2 y M4 de arriba; M1 (primera línea sin `exit` → no se resuelve; `exit` sin línea → `failed`; abortar → stdin cerrado y muerte a los 3 s; `dispose()` aborta); M3 (`Source()` fuera de `captureUrl` → no se ejecuta; resultado de más de 64 KiB → `capture-missing`; valor que no es texto → descartado); M5 (un `QueryInterface` que falla → `runtime-missing` sin ventana); B1; B2 (2FA en el asistente, rotado mal formado, `spaceId` en mayúsculas); B3 (`RM_V1 t=` tapado, orden frente a `STEAM_KEY`); B4 (`dataDir` fuera de `tmp` o sin prefijo, `title` con controles o de 201, línea de 64 KiB + 1, límite de 11 minutos); B7 (`untranslated` > 0 → `complete: false`).
+
+#### 19. Prueba manual del usuario y correcciones (23 de octubre de 2026, Windows 11, cuenta real con segundo factor)
+
+El usuario: «funciona como un tiro de bien». Dos fallos encontrados en la prueba y corregidos antes de cerrar:
+- **Ventana en blanco:** la página cargaba pero no se pintaba. El controlador de WebView2 se crea con la ventana aún oculta y nunca recibía `put_IsVisible(TRUE)` (lo hacía el tipo `Chromium` de go-webview2, quitado por el punto 18). Ahora, tras mostrar la ventana, se ajustan los límites y se hace visible, también en `WM_SIZE`.
+- **`/ready` y `/change_domain/` dan 404** (comprobado con curl el 23-10-2026; venían de Lutris): la ventana se quedaba en la página de error de Chromium, cuyo origen no puede leer el `localStorage` del sitio. Ahora llegar a `doneUrl` cuenta aunque su carga falle (solo en ese estado y solo para esa URL; `atDone` en el auxiliar, con prueba), y `captureUrl` pasa a `https://connect.ubisoft.com/login`, la única página del host que responde 200. La primera visita a `/login` (la de la contraseña) nunca se lee: la máquina de estados exige pasar antes por `doneUrl`.
+- Registros reales, solo leyendo: login `captured`; la renovación rota el ticket en cada uso (`rotated=true`, UB4 confirmado en parte: rota; la duración no consta); `configurations` de 428 952 bytes con 1 516 registros, 1 YAML inválido; 26 juegos poseídos de PC (`totalCount=26`), 2 sin traducción (`complete: false`, B7); ningún ticket, sesión, correo, ruta ni usuario en los registros; ningún perfil `webview-*` restante. UB2 queda confirmado en lo que importa (alguna de las claves pedidas tiene `rememberMeTicket`).
 
 #### Supuestos (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
 
@@ -4714,7 +4801,7 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 78 (Epic): punto 13 aplicado por defecto («Conectado como <nombre>», mensaje si falta el launcher, sin instalados de Epic en «solo carpetas manuales»); el usuario puede cambiarlo. El usuario consigue Home – A Unique Horror Adventure (u otro juego pequeño) **antes del 29-10-2026** para la prueba manual del corte 1 (punto 11), que cierra los supuestos E pendientes (E5 ya comprobado; E7 falso, el corte 1 va sin portadas). La prueba del corte 2 comprueba primero que el catálogo con el token del usuario trae `categories` y `keyImages` (punto 15). El usuario decide si se actualizan las definiciones de los agentes `conectores` y `auditor`, que aún citan `legendary` (punto 14). El corte 2 cierra EA1 a EA10; si la sesión de Epic dura pocas horas (EA5), se decide aparte. Revisión del `auditor` antes y después del código de cada corte.
 - Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces (y un juego de Ubisoft comprado en Steam o Epic, previsiblemente también; supuesto U11 de la 79).
 - Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código. Prueba manual del 23-10-2026 (punto 13): detección correcta, U4 y U7 confirmados; quedan U1 a U3, U5, U6 y U8 a U11.
-- Decisión 80 (Ubisoft, cuenta con ventana de login integrada): vía C elegida por el usuario el 23-10-2026 y comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto, que el usuario puede cambiar. Revisión del `auditor` antes y después del código; la prueba manual (punto 14) cierra UB2 a UB9, UB13 y UB15. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
+- Decisión 80 (Ubisoft, cuenta con ventana de login integrada): vía C elegida por el usuario el 23-10-2026 y comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto, que el usuario puede cambiar. Revisión del `auditor` sobre el diseño hecha el 23-10-2026 e incorporada (punto 18, todos los hallazgos aceptados); falta la del código, que incluye comprobar las licencias de `webviewloader` y de las definiciones COM de la copia parcheada (M5). La prueba manual (punto 14) cierra UB2 a UB9, UB13 y UB15. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.

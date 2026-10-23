@@ -1,5 +1,5 @@
 // Operating-system ports (ADR 38). Types only, no I/O: implementations live in platform-* packages.
-import type { LocationDeclaration, ResolvedLocation, ScopedFileReader } from "./connector";
+import type { LocationDeclaration, ResolvedLocation, ScopedFileReader, Secret } from "./connector";
 
 /** Stores small secrets outside the database (ADR 14). Windows: Credential Manager. */
 export interface KeyStore {
@@ -149,4 +149,26 @@ export interface SecretCipher {
   encrypt(plaintext: string, aad: string): string;
   /** 'other-key': written under another slot (compartment, ADR 64). 'invalid': bad format, tag or AAD. */
   decrypt(blob: string, aad: string): { ok: true; value: string } | { ok: false; reason: "other-key" | "invalid" };
+}
+
+// ---------- Port added by ADR 80 ----------
+
+/** Login window on the user's desktop (localhost, Windows). Texts arrive translated. One window at a time. */
+export interface EmbeddedLogin {
+  run(
+    req: {
+      title: string;
+      startUrl: string;
+      doneUrl: string;
+      captureUrl: string;
+      allowedHosts: readonly string[];
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
+    },
+    signal: AbortSignal,
+  ): Promise<
+    | { kind: "captured"; values: Readonly<Record<string, Secret>>; blockedHosts: readonly string[] }
+    | { kind: "cancelled"; blockedHosts: readonly string[] }
+    | { kind: "unavailable"; reason: "runtime-missing" | "busy" }
+    | { kind: "failed"; reason: "capture-missing" | "failed" }
+  >;
 }

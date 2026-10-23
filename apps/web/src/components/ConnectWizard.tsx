@@ -31,7 +31,7 @@ interface Rejected {
 const errorOf = (e: unknown): Rejected =>
   e instanceof ApiError ? { key: e.key, ...(e.params ? { params: e.params } : {}) } : { key: "errors.generic" };
 const rejectedText = (t: TFunction, r: Rejected): string => t(i18next.exists(r.key) ? r.key : "errors.generic", r.params ? { ...r.params } : {});
-const stepFields = (s: WizardStepDto): readonly WizardFieldDto[] => (s.kind === "info" ? [] : (s.fields ?? []));
+const stepFields = (s: WizardStepDto): readonly WizardFieldDto[] => (s.kind === "info" || s.kind === "embedded-login" ? [] : (s.fields ?? []));
 
 /**
  * One connection wizard for stores and services; the same component serves the first run and Settings (ADR 69).
@@ -175,10 +175,18 @@ export function ConnectWizard({ target, resume, onDone, onCancel }: Props) {
         />
       ))}
 
+      {step.kind === "embedded-login" && busy && <p className={styles.note} role="status">{t("wizard.embedded.waiting")}</p>}
+
       {rejected && <p className={styles.rejected} role="alert">{rejectedText(t, rejected)}</p>}
 
       <div className={styles.buttons}>
-        {fields.length > 0 ? (
+        {step.kind === "embedded-login" ? (
+          // The request stays open while the window does (ADR 80); Cancel closes the wizard, which closes the window.
+          <button type="button" className={cx(ui.btn, ui.primary)} disabled={busy} onClick={() => void send({ kind: "continue" })}>
+            <Icon name="external" size={18} />
+            {t("wizard.embedded.open")}
+          </button>
+        ) : fields.length > 0 ? (
           <button type="button" className={cx(ui.btn, ui.primary)} disabled={!allValid || busy} onClick={submitFields}>
             {t("wizard.verify")}
           </button>

@@ -65,7 +65,7 @@
   "stores.steam.desc": "Your full library with a free Steam key, or just the installed games, with no key.",
   "stores.gog.desc": "Sign in to GOG and paste the final address to bring in your library.",
   "stores.epic.desc": "Sign in to Epic and paste the text between braces the page shows to bring in your library.",
-  "stores.ubisoft.desc": "No account: Ludiary detects the Ubisoft games you have installed.",
+  "stores.ubisoft.desc": "Sign in to Ubisoft to see all your games, or let Ludiary detect only the ones installed.",
   "stores.ea.desc": "No account: Ludiary detects the EA games you have installed.",
   "stores.unofficial.label": "Unofficial route: more information",
   "stores.unofficial.tip": "{store} does not offer an official way to read your library. Ludiary uses an unofficial route that may stop working without notice. Ludiary is not affiliated with {store}.",
@@ -258,5 +258,13 @@
   "wizard.connectedAs": "Connected as {name}",
   "connect.working": "Checking your sign-in…",
   "connect.failedTitle": "The connection could not be finished",
-  "connect.startAgain": "Start again"
+  "connect.startAgain": "Start again",
+  "wizard.embedded.open": "Open the sign-in window",
+  "wizard.embedded.waiting": "Sign in in the Ubisoft window; it will close by itself when done.",
+  "wizard.embedded.cancelled": "The sign-in was not completed. You can try again.",
+  "wizard.embedded.failed": "The sign-in could not be completed. Try again.",
+  "wizard.embedded.captureMissing": "The session could not be read. Try again and tick \"Remember me\".",
+  "wizard.embedded.busy": "A sign-in window is already open. Close it and try again.",
+  "wizard.embedded.runtimeMissing": "Microsoft Edge WebView2 is missing on this PC. Install it from https://developer.microsoft.com/microsoft-edge/webview2/ and try again.",
+  "wizard.embedded.unavailable": "This sign-in needs Ludiary on the Windows desktop."
 }
