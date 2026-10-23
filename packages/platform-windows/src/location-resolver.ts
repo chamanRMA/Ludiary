@@ -1,5 +1,5 @@
 import { stat } from "node:fs/promises";
-import type { LocalFiles, LocationDeclaration, LocationResolver, LocationSource, ResolvedLocation } from "@ludiary/contracts";
+import { LocationsUnreadableError, type LocalFiles, type LocationDeclaration, type LocationResolver, type LocationSource, type ResolvedLocation } from "@ludiary/contracts";
 import type { HelperRunner } from "./helper-io";
 import { buildRegistryRequest, parseRegistryResponse, type RegistryQuery } from "./registry-protocol";
 
@@ -20,12 +20,15 @@ const KNOWN_FOLDER_ENV = {
   RoamingAppData: "APPDATA",
 } as const;
 
+/** ENOENT/ENOTDIR mean absent; any other error (permissions, I/O) is "could not tell" and throws (ADR 79). */
 const defaultExists = async (path: string): Promise<boolean> => {
   try {
     await stat(path);
     return true;
-  } catch {
-    return false;
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return false;
+    throw e;
   }
 };
 
@@ -50,40 +53,64 @@ export class WindowsLocationResolver implements LocationResolver {
       const q = this.toQuery(source);
       if (q) queries.push(q);
     }
-    let answers: ReturnType<typeof parseRegistryResponse> = [];
+    // null: the helper itself failed. Unreadable is not absent (ADR 79): the error is raised at the end, carrying what did resolve.
+    let answers: ReturnType<typeof parseRegistryResponse> | null = [];
     if (queries.length > 0) {
       try {
         const text = await this.opts.runHelper(["--registry"], buildRegistryRequest(queries), { timeoutMs: 10_000 });
         answers = parseRegistryResponse(text, queries.length);
       } catch {
-        // Without the helper only known folders resolve; callers see fewer locations, not an error.
-        answers = queries.map(() => ({ ok: false as const, error: "failed" }));
+        answers = null;
       }
     }
 
     const seen = new Set<string>();
     const result: ResolvedLocation[] = [];
+    let failure: string | null = null;
     let next = 0;
     for (const source of decl.sources) {
       let candidates: string[] = [];
+      let subkeys: string[] | undefined;
       if (source.kind === "known-folder") {
         const folder = this.knownFolder(source);
         if (folder) candidates = [folder];
+      } else if (answers === null) {
+        failure ??= "registry helper unavailable";
       } else {
         const answer = answers[next++];
-        if (answer?.ok) candidates = answer.values;
+        if (answer?.ok) {
+          candidates = answer.values;
+          if (source.kind === "registry-subkeys") {
+            subkeys = answer.names;
+            // A subkeys answer without names (an old helper) cannot say which subkey each path came from: unusable.
+            if (!subkeys && candidates.length > 0) {
+              failure ??= "registry helper returned no subkey names";
+              candidates = [];
+            }
+          }
+        } else if (answer && answer.error !== "not-found" && answer.error !== "unsupported-type") {
+          failure ??= `registry source unreadable (${answer.error})`;
+        }
       }
-      for (const raw of candidates) {
+      for (const [i, raw] of candidates.entries()) {
         // UNC and device paths are dropped before any stat: it could open an SMB connection (ADR 72).
         if (!files.isLocalPath(raw) || !files.isAbsolute(raw)) continue;
         const normalized = files.normalize(raw);
-        const key = files.compareKey(normalized);
+        const subkey = subkeys?.[i];
+        // Two subkeys may share a path; they are different locations (ADR 79).
+        const key = subkey === undefined ? files.compareKey(normalized) : `${files.compareKey(normalized)}\u0000${subkey}`;
         if (seen.has(key)) continue;
-        if (!(await this.exists(normalized))) continue;
+        try {
+          if (!(await this.exists(normalized))) continue;
+        } catch {
+          failure ??= "location could not be checked";
+          continue;
+        }
         seen.add(key);
-        result.push({ declarationId: decl.id, path: normalized });
+        result.push(subkey === undefined ? { declarationId: decl.id, path: normalized } : { declarationId: decl.id, path: normalized, subkey });
       }
     }
+    if (failure) throw new LocationsUnreadableError(failure, result);
     return result;
   }
 

@@ -16,6 +16,7 @@ const CONNECTOR_CODES = [
   "tool.missing",
   "tool.failed",
   "scan.root-unreadable",
+  "scan.discovery-unavailable",
   "launch.launcher-missing",
   "launch.not-installed",
   "action.unsupported",

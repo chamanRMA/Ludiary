@@ -254,7 +254,7 @@ function Folders() {
         {maintenance?.lastScanAt ? t("settings.folders.lastScan", { when: relativeTime(maintenance.lastScanAt, i18n.language) }) : t("settings.folders.neverScanned")}
       </p>
       {error && <p className={ui.error} role="alert">{error}</p>}
-      <SimNote show={scanned} />
+      <SimNote show={scanned && isSimulated} />
       {isSimulated && <p className={ui.muted}>{t("settings.folders.simulatedPicker")}</p>}
     </>
   );

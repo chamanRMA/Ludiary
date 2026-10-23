@@ -1,5 +1,5 @@
 // Launching a game (ADR 40 rule 5, invariant 3, ADR 72). The only input is stored ids; the LaunchSpec never leaves here.
-import { ConnectorError, ExecError } from "@ludiary/contracts";
+import { ConnectorError, ExecError, LocationsUnreadableError } from "@ludiary/contracts";
 import type { LaunchContext, LaunchSpec, ResolvedLocation, StoreConnector } from "@ludiary/contracts";
 import { DOUBLE_LAUNCH_MS, LAUNCH_ORDER, type Env } from "./env";
 import { asKey, CoreError, toCoreError } from "./errors";
@@ -45,14 +45,19 @@ export function createLaunchService(env: Env): LaunchService {
     const mode = (await readSettings(env)).detection;
     if (mode !== "auto-and-manual" || !deps.locations) return { launchers: [], resolved: false };
     const out: ResolvedLocation[] = [];
+    let resolved = true;
     for (const decl of c.locations.filter((l) => l.purpose === "launcher")) {
       try {
         out.push(...(await deps.locations.resolve(decl)));
       } catch (e) {
+        // ADR 79: an unreadable registry proves nothing about the launcher.
         deps.log.warn("Could not resolve a launcher location", { connector: c.id, location: decl.id, error: e instanceof Error ? e.name : "unknown" });
+        // Keep what did resolve (e.g. a known folder) but do not claim the list is complete.
+        if (e instanceof LocationsUnreadableError) out.push(...e.partial);
+        resolved = false;
       }
     }
-    return { launchers: out, resolved: true };
+    return { launchers: out, resolved };
   }
 
   function reject(c: StoreConnector, why: string): never {

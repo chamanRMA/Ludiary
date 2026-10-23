@@ -2,10 +2,10 @@
 // the server stops, finished, cancelled or idle for 15 minutes. The connector decides the steps; the core validates
 // everything it returns and everything the web sends, and accepts each step once.
 import { ConnectorError } from "@ludiary/contracts";
-import type { ConnectionWizard, StoreConnector, StoreId, WizardContext, WizardDone, WizardField, WizardInput, WizardStep } from "@ludiary/contracts";
-import { memoryVault, syncContext } from "./contexts";
-import { MAX_WIZARDS, WIZARD_CALL_MS, WIZARD_TTL_MS, type Env, type WizardResponse } from "./env";
-import { CoreError, defaultKey, toErrorInfo } from "./errors";
+import type { ConnectionWizard, EmbeddedLogin, StoreConnector, StoreId, WizardContext, WizardDone, WizardField, WizardInput, WizardStep } from "@ludiary/contracts";
+import { bumpEpoch, epochOf, memoryVault, syncContext } from "./contexts";
+import { EMBEDDED_LOGIN_MS, MAX_WIZARDS, WIZARD_CALL_MS, WIZARD_TTL_MS, type Env, type WizardResponse } from "./env";
+import { asKey, CoreError, defaultKey, toErrorInfo } from "./errors";
 import type { CoreErrorInfo } from "./model";
 import { withTimeout } from "./timeout";
 import { storeScope } from "./vault";
@@ -19,6 +19,9 @@ const MAX_FIELDS = 4;
 const MAX_QUERY_PARAMS = 32;
 const MAX_QUERY_VALUE = 2048;
 const MAX_LABEL = 100;
+const CAPTURE_KEY = /^[A-Za-z0-9_.-]{1,64}$/;
+const HOST_SHAPE = /^[a-z0-9][a-z0-9.-]{0,252}$/;
+const MAX_CAPTURE_LENGTH = 8192;
 
 interface Session {
   id: string;
@@ -31,6 +34,8 @@ interface Session {
   state: Map<string, string>;
   touchedAt: number;
   busy: boolean;
+  /** ADR 80: aborts the login window; present only while it is open. */
+  abort: AbortController | null;
 }
 
 export interface WizardEngine {
@@ -40,6 +45,8 @@ export interface WizardEngine {
   cancel(wizardId: string): void;
   /** Drops the open wizard of a store, if any (disconnect). */
   cancelStore(store: StoreId): void;
+  /** Server shutdown: closes every open login window. */
+  shutdown(): void;
 }
 
 const rejected = (stepId: string, error: CoreErrorInfo): WizardResponse => ({ kind: "rejected", stepId, error });
@@ -81,6 +88,7 @@ function checkStep(step: unknown, c: StoreConnector): asserts step is WizardStep
   };
   if (s.kind === "info") return;
   if (s.kind === "input") return checkFields(s.fields);
+  if (s.kind === "embedded-login") return checkEmbedded(s, c, key, bad);
   if (s.kind !== "open-external") return bad("kind");
   if (s.awaits !== "callback" && s.awaits !== "input") bad("awaits");
   if (s.fields !== undefined) {
@@ -94,6 +102,41 @@ function checkStep(step: unknown, c: StoreConnector): asserts step is WizardStep
     bad("url");
   }
   if (!url || url.protocol !== "https:" || url.username !== "" || url.password !== "" || !c.authHosts.includes(url.hostname.toLowerCase())) bad("url host");
+}
+
+/** ADR 80 point 6: validation of an embedded-login step. */
+function checkEmbedded(s: Record<string, unknown>, c: StoreConnector, key: (v: unknown, what: string) => void, bad: (why: string) => never): void {
+  key(s.windowTitleKey, "windowTitleKey");
+  const httpsAuth = (v: unknown, what: string, plain: boolean): void => {
+    let url: URL | null = null;
+    try {
+      url = new URL(String(v));
+    } catch {
+      bad(what);
+    }
+    if (!url || url.protocol !== "https:" || url.username !== "" || url.password !== "" || !c.authHosts.includes(url.hostname.toLowerCase())) bad(`${what} host`);
+    if (url && (url.hash !== "" || (plain && /[?#]/.test(String(v))))) bad(`${what} query or fragment`);
+  };
+  httpsAuth(s.url, "url", false);
+  httpsAuth(s.doneUrl, "doneUrl", true);
+  httpsAuth(s.captureUrl, "captureUrl", true);
+  const capture = s.capture;
+  if (!Array.isArray(capture) || capture.length < 1 || capture.length > MAX_FIELDS) return bad("capture");
+  const names = new Set<string>();
+  for (const f of capture as Record<string, unknown>[]) {
+    if (!f || typeof f !== "object" || typeof f.name !== "string" || !FIELD_NAME.test(f.name) || names.has(f.name)) return bad("capture name");
+    names.add(f.name);
+    const keys = f.storageKeys;
+    if (!Array.isArray(keys) || keys.length < 1 || keys.length > 3 || !keys.every((k) => typeof k === "string" && CAPTURE_KEY.test(k))) bad("capture storageKeys");
+    if (typeof f.jsonField !== "string" || !CAPTURE_KEY.test(f.jsonField)) bad("capture jsonField");
+    if (!Number.isInteger(f.maxLength) || (f.maxLength as number) < 1 || (f.maxLength as number) > MAX_CAPTURE_LENGTH) bad("capture maxLength");
+    if (typeof f.pattern !== "string") bad("capture pattern");
+    try {
+      new RegExp(`^(?:${String(f.pattern)})$`);
+    } catch {
+      bad("capture pattern");
+    }
+  }
 }
 
 function stepFields(step: WizardStep): readonly WizardField[] | null {
@@ -228,8 +271,80 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
     }
   }
 
+  function drop(s: Session): void {
+    s.abort?.abort();
+    sessions.delete(s.id);
+  }
+
   function cancelStore(store: StoreId): void {
-    for (const [id, s] of sessions) if (s.store === store) sessions.delete(id);
+    for (const s of [...sessions.values()]) if (s.store === store) drop(s);
+  }
+
+  const embeddedRejected = (stepId: string, name: string, code: CoreErrorInfo["code"]): WizardResponse =>
+    rejected(stepId, { code, key: asKey(`wizard.embedded.${name}`) });
+
+  /** ADR 80 point 6: opens the login window for an `embedded-login` step and hands the captured values to the connector. */
+  async function runEmbedded(s: Session, step: Extract<WizardStep, { kind: "embedded-login" }>): Promise<WizardResponse> {
+    const port = deps.embeddedLogin;
+    if (!port) return embeddedRejected(step.id, "unavailable", "action-unavailable");
+    const abort = new AbortController();
+    const limit = deps.clock.timeout(EMBEDDED_LOGIN_MS);
+    limit.addEventListener("abort", () => abort.abort(), { once: true });
+    s.busy = true;
+    s.abort = abort;
+    try {
+      bumpEpoch(env, s.store);
+      const epoch = epochOf(env, s.store);
+      const started = deps.clock.now();
+      let result: Awaited<ReturnType<EmbeddedLogin["run"]>>;
+      try {
+        result = await port.run(
+          {
+            title: deps.t(step.windowTitleKey),
+            startUrl: step.url,
+            doneUrl: step.doneUrl,
+            captureUrl: step.captureUrl,
+            allowedHosts: [...s.connector.authHosts],
+            capture: step.capture.map(({ name, storageKeys, jsonField, maxLength }) => ({ name, storageKeys: [...storageKeys], jsonField, maxLength })),
+          },
+          abort.signal,
+        );
+      } catch {
+        result = { kind: "failed", reason: "failed" };
+      }
+      const outcome = result.kind === "unavailable" || result.kind === "failed" ? `${result.kind}:${result.reason}` : result.kind;
+      const blocked = "blockedHosts" in result ? result.blockedHosts.filter((h) => typeof h === "string" && HOST_SHAPE.test(h)).slice(0, 32) : [];
+      // Never the captured values (ADR 80): result, duration and blocked hosts only.
+      deps.log.info("Embedded login finished", { connector: s.store, result: outcome, durationMs: deps.clock.now() - started, blockedHosts: blocked.join(",") });
+      if (result.kind === "unavailable") {
+        return result.reason === "busy" ? embeddedRejected(step.id, "busy", "busy") : embeddedRejected(step.id, "runtimeMissing", "action-unavailable");
+      }
+      if (result.kind === "failed") return embeddedRejected(step.id, result.reason === "capture-missing" ? "captureMissing" : "failed", "invalid-input");
+      // Cancelled, disconnected, a newer wizard or a changed session while the window was open: the values are dropped.
+      if (result.kind === "cancelled" || abort.signal.aborted || sessions.get(s.id) !== s || epochOf(env, s.store) !== epoch) {
+        return embeddedRejected(step.id, "cancelled", "invalid-input");
+      }
+      const captured = result.values;
+      const wanted = step.capture.map((f) => f.name).sort();
+      const got = Object.keys(captured).sort();
+      const valid =
+        wanted.length === got.length &&
+        wanted.every((n, i) => n === got[i]) &&
+        step.capture.every((f) => {
+          const secret = captured[f.name];
+          const v = typeof secret?.reveal === "function" ? secret.reveal() : null;
+          return typeof v === "string" && v !== "" && v.length <= f.maxLength && !CONTROL.test(v) && new RegExp(`^(?:${f.pattern})$`).test(v);
+        });
+      if (!valid) return embeddedRejected(step.id, "failed", "invalid-input");
+      return await call(s, step.id, async (ctx) => {
+        if (sessions.get(s.id) !== s || epochOf(env, s.store) !== epoch) throw new ConnectorError("auth.required", "The session changed during the login");
+        return s.connection.submit(ctx, step.id, { kind: "embedded", values: captured });
+      });
+    } finally {
+      s.abort = null;
+      s.busy = false;
+      s.touchedAt = deps.clock.now();
+    }
   }
 
   return {
@@ -260,6 +375,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
         state: new Map(),
         touchedAt: deps.clock.now(),
         busy: false,
+        abort: null,
       };
       sessions.set(id, s);
       const response = await call(s, "start", (ctx) => connection.start(ctx));
@@ -273,7 +389,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
     async submit(wizardId, stepId, input) {
       const s = live(wizardId);
       const step = s.step;
-      if (!input || typeof input !== "object" || input.kind === "callback") throw new CoreError("invalid-input", "Invalid wizard input");
+      if (!input || typeof input !== "object" || input.kind === "callback" || input.kind === "embedded") throw new CoreError("invalid-input", "Invalid wizard input");
       if (s.busy || !step) return rejectedCode(step?.id ?? "start", "busy");
       if (stepId !== step.id) return rejectedCode(step.id, "invalid-input"); // out of turn, or a step already accepted
       const fields = stepFields(step);
@@ -292,6 +408,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
       }
       if (step.kind === "open-external" && step.awaits === "callback") return rejectedCode(step.id, "invalid-input"); // only by the return route
       if (input.kind !== "continue") return rejectedCode(step.id, "invalid-input");
+      if (step.kind === "embedded-login") return runEmbedded(s, step);
       return call(s, step.id, (ctx) => s.connection.submit(ctx, step.id, { kind: "continue" }));
     },
 
@@ -307,9 +424,14 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
     },
 
     cancel(wizardId) {
-      if (typeof wizardId === "string") sessions.delete(wizardId);
+      const s = typeof wizardId === "string" ? sessions.get(wizardId) : undefined;
+      if (s) drop(s);
     },
 
     cancelStore,
+
+    shutdown() {
+      for (const s of [...sessions.values()]) drop(s);
+    },
   };
 }

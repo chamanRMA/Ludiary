@@ -86,6 +86,10 @@ export interface SyncContext extends BaseContext {
   readonly secrets: SecretVault;
   readonly tools: ExternalToolRunner;
   readonly progress: ProgressReporter;
+  /** ADR 80. listLibrary only, with auto-detection only: read-only, confined to the resolved 'library' locations. */
+  readonly fs?: ScopedFileReader;
+  /** ADR 80. Same condition as `fs`: the resolved locations with purpose 'library' (empty when none exists on this PC). */
+  readonly libraryLocations?: readonly ResolvedLocation[];
 }
 
 export interface WizardContext extends SyncContext {
@@ -192,6 +196,8 @@ export interface ExternalToolRunner {
  */
 export interface ScopedFileReader {
   readText(path: string): Promise<string>;
+  /** ADR 80. Raw bytes; 'scan.root-unreadable' if the file is larger than maxBytes (at most 64 MiB). */
+  readBytes(path: string, maxBytes: number): Promise<Uint8Array>;
   readDir(path: string): Promise<readonly { name: string; isDirectory: boolean }[]>;
   exists(path: string): Promise<boolean>;
   join(...parts: string[]): string;
@@ -208,7 +214,8 @@ export type LocationSource =
 
 export interface LocationDeclaration {
   readonly id: string;
-  readonly purpose: "scan" | "launcher";
+  /** 'library' (ADR 80): resolved for listLibrary under the auto-detection rule; requires capabilities.library. */
+  readonly purpose: "scan" | "launcher" | "library";
   readonly os: readonly ("windows" | "linux" | "macos")[];
   readonly sources: readonly LocationSource[];
 }
@@ -216,7 +223,10 @@ export interface LocationDeclaration {
 export interface ResolvedLocation {
   readonly declarationId: string;
   readonly path: string;
+  /** Opaque to the core, ^[a-z0-9-]{1,32}$, stored with the root and handed back in ScanRoot. A connector may encode an id in it (ADR 79). */
   readonly tag?: string;
+  /** ADR 79. Only from a 'registry-subkeys' source: name of the subkey the path was read from. Untrusted text; the core does not store it. */
+  readonly subkey?: string;
 }
 export type ScanRoot =
   | { readonly origin: "user"; readonly path: string }
@@ -254,7 +264,22 @@ export type WizardStep =
       /** ADR 74. Only with awaits 'input': the link and the fields share one screen. */
       fields?: readonly WizardField[];
     }
-  | { kind: "input"; id: string; titleKey: I18nKey; bodyKey: I18nKey; fields: readonly WizardField[] };
+  | { kind: "input"; id: string; titleKey: I18nKey; bodyKey: I18nKey; fields: readonly WizardField[] }
+  | {
+      kind: "embedded-login";
+      id: string;
+      titleKey: I18nKey;
+      bodyKey: I18nKey;
+      /** Title of the login window; translated by the core (ADR 80). */
+      windowTitleKey: I18nKey;
+      /** https, host in authHosts. */
+      url: string;
+      /** https, host in authHosts, no query or fragment; matched on origin and path. */
+      doneUrl: string;
+      captureUrl: string;
+      /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. */
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+    };
 
 export interface WizardField {
   name: string;
@@ -271,7 +296,9 @@ export interface WizardField {
 export type WizardInput =
   | { kind: "continue" }
   | { kind: "fields"; values: Readonly<Record<string, string>> }
-  | { kind: "callback"; query: Readonly<Record<string, string>> };
+  | { kind: "callback"; query: Readonly<Record<string, string>> }
+  /** ADR 80. Built by the core only, never accepted from the API. */
+  | { kind: "embedded"; values: Readonly<Record<string, Secret>> };
 
 /** accountLabel: non-secret display name shown in Settings; never logged. */
 export interface WizardDone {
@@ -357,6 +384,7 @@ export type ConnectorErrorCode =
   | "tool.missing"
   | "tool.failed"
   | "scan.root-unreadable"
+  | "scan.discovery-unavailable"
   | "launch.launcher-missing"
   | "launch.not-installed"
   | "action.unsupported"
@@ -458,6 +486,9 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[] {
   }
 
   if (c.connection && c.authHosts.length === 0) problems.push("a connector with a connection wizard needs authHosts");
+  if (!cap.library && c.locations.some((l) => l.purpose === "library")) {
+    problems.push("a 'library' location requires capabilities.library");
+  }
   if (cap.library && c.apiHosts.length === 0 && c.externalTools.length === 0) {
     problems.push("capabilities.library requires apiHosts or externalTools");
   }

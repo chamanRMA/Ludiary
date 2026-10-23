@@ -78,9 +78,13 @@ export class FakeFiles implements LocalFiles {
   async isDirectory(p: string) {
     return this.dirs.has(this.compareKey(p));
   }
+  async isDirectoryStrict(p: string) {
+    return this.isDirectory(p);
+  }
   scoped(roots: readonly string[]) {
     return {
       readText: async () => "",
+      readBytes: async () => new Uint8Array(),
       readDir: async () => [],
       exists: async (p: string) => {
         const inside = await Promise.all(roots.map((r) => this.isInside(p, r)));

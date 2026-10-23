@@ -115,7 +115,7 @@ describe("real client: point B, the rest comes from the simulator", () => {
   it("delegates other stores' wizards, services, collections, backups and logs without touching the server", async () => {
     const { http, log } = fakeHttp(() => []);
     const sim = createMockApi(memory());
-    const names = ["getServices", "startWizard", "submitWizard", "cancelWizard", "disconnect", "getCollections", "createBackup", "exportLogs", "simulateExpiredSession"] as const;
+    const names = ["getServices", "startWizard", "submitWizard", "cancelWizard", "disconnect", "createBackup", "exportLogs", "simulateExpiredSession"] as const;
     for (const name of names) vi.spyOn(sim as LudiaryApi, name);
     const api = createRealApi(http, sim, null);
     const epic = { kind: "service", service: "rawg" } as const;
@@ -124,7 +124,6 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await api.submitWizard(epic, { kind: "continue" });
     await api.cancelWizard(epic);
     await api.disconnect(epic);
-    await api.getCollections();
     await api.createBackup();
     await api.exportLogs();
     await api.simulateExpiredSession("ubisoft");
@@ -283,7 +282,7 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await expect(api.getStores()).resolves.toEqual(real);
   });
 
-  it("maintenance: scan and sync times come from the real stores, the backup time from the simulator", async () => {
+  it("maintenance: scan and sync times come from the real stores; no fake backup time, no sample collections", async () => {
     const real = [
       { store: "steam", access: "official-api", connection: "disconnected", mode: "installed-only", sync: [{ operation: "scan", state: "idle", lastSuccessAt: 7_000 }] },
       { store: "gog", access: "unofficial-api", connection: "disconnected", mode: "library", sync: [{ operation: "library", state: "idle", lastSuccessAt: 9_000 }] },
@@ -293,7 +292,8 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await sim.createBackup();
     const m = await api.getMaintenance();
     expect(m).toMatchObject({ lastScanAt: 7_000, lastSyncAt: 9_000 });
-    expect(m.lastBackupAt).not.toBeNull();
+    expect(m.lastBackupAt).toBeNull(); // the simulator made one, but no real copy exists
+    expect(await api.getCollections()).toEqual([]);
     const none = await createRealApi(fakeHttp(() => []).http, createMockApi(memory())).getMaintenance();
     expect(none).toMatchObject({ lastScanAt: null, lastSyncAt: null });
   });

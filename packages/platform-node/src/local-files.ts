@@ -5,6 +5,8 @@ import { ConnectorError, PathEscapesRootsError, type LocalFiles, type ScopedFile
 /** ADR 72: limits of the scoped reader. */
 export const MAX_TEXT_BYTES = 1024 * 1024;
 export const MAX_DIR_ENTRIES = 10_000;
+/** ADR 80: hard ceiling of readBytes, whatever maxBytes the caller asks for. */
+export const MAX_BYTES_CEILING = 64 * 1024 * 1024;
 
 export interface NodeLocalFilesOptions {
   /** Path semantics to use; defaults to process.platform. Mainly for tests. */
@@ -92,6 +94,16 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
     }
   };
 
+  const isDirectoryStrict = async (value: string): Promise<boolean> => {
+    try {
+      return (await stat(value)).isDirectory();
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "ENOTDIR") return false;
+      throw e;
+    }
+  };
+
   const scoped = (roots: readonly string[]): ScopedFileReader => {
     const lexicalRoots = roots.filter(isAbsolute).map(normalize);
     let realRoots: Promise<string[]> | null = null;
@@ -168,6 +180,34 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
         }
       },
 
+      async readBytes(target, maxBytes) {
+        if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_BYTES_CEILING) {
+          throw new ConnectorError("internal", "maxBytes must be an integer from 1 to 64 MiB");
+        }
+        const real = await confine(target, true);
+        let handle;
+        try {
+          handle = await open(real, "r");
+          const info = await handle.stat();
+          if (!info.isFile()) throw new ConnectorError("scan.root-unreadable", "not a regular file");
+          if (info.size > maxBytes) throw new ConnectorError("scan.root-unreadable", "file is larger than maxBytes");
+          // One byte more than the limit, so a file that grows after stat() is still caught.
+          const buffer = Buffer.alloc(Math.min(info.size, maxBytes) + 1);
+          let total = 0;
+          while (total < buffer.length) {
+            const { bytesRead } = await handle.read(buffer, total, buffer.length - total, total);
+            if (bytesRead === 0) break;
+            total += bytesRead;
+          }
+          if (total > maxBytes) throw new ConnectorError("scan.root-unreadable", "file is larger than maxBytes");
+          return new Uint8Array(buffer.subarray(0, total));
+        } catch (err) {
+          throw unreadable("read file", err);
+        } finally {
+          await handle?.close().catch(() => {});
+        }
+      },
+
       async readDir(target) {
         const real = await confine(target, true);
         const result: { name: string; isDirectory: boolean }[] = [];
@@ -203,5 +243,5 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
     return win ? /^[a-z]:[\\/]/i.test(value) : p.isAbsolute(value);
   };
 
-  return { scoped, normalize, isAbsolute, isInside, compareKey, isDirectory, isLocalPath, realPath: realpathLoose };
+  return { scoped, normalize, isAbsolute, isInside, compareKey, isDirectory, isDirectoryStrict, isLocalPath, realPath: realpathLoose };
 }

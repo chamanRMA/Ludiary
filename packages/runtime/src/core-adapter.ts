@@ -71,7 +71,10 @@ export function summaryDto(g: GameSummary): GameSummaryDto {
 
 /** Only `rejected` differs: the core carries CoreErrorInfo, the wire carries TranslatedErrorDto. */
 export function wizardResponseDto(r: WizardResponse): WizardResponseDto {
-  return r.kind === "rejected" ? { kind: "rejected", stepId: r.stepId, error: errorDto(r.error) } : r;
+  if (r.kind === "rejected") return { kind: "rejected", stepId: r.stepId, error: errorDto(r.error) };
+  // ADR 80: the window parameters and the capture rules stay on the server.
+  if (r.kind === "embedded-login") return { kind: "embedded-login", id: r.id, titleKey: r.titleKey, bodyKey: r.bodyKey };
+  return r;
 }
 
 export function detailDto(g: GameDetail): GameDetailDto {

@@ -3,10 +3,10 @@ import { win32 } from "node:path";
 import { ConnectorError, PathEscapesRootsError, type ScopedFileReader } from "@ludiary/contracts";
 
 /**
- * Absolute Windows path -> file text. A key ending in a separator is an (empty) directory.
+ * Absolute Windows path -> file text (or raw bytes, ADR 80). A key ending in a separator is an (empty) directory.
  * Parent directories of files are implicit. Separators and case are not significant.
  */
-export type MemoryTree = Readonly<Record<string, string>>;
+export type MemoryTree = Readonly<Record<string, string | Uint8Array>>;
 
 export interface MemoryFilesOptions {
   os?: "windows";
@@ -20,6 +20,7 @@ export interface MemoryFilesOptions {
 
 export const READ_TEXT_MAX_BYTES = 1024 * 1024;
 export const READ_DIR_MAX_ENTRIES = 10_000;
+export const READ_BYTES_CEILING = 64 * 1024 * 1024;
 
 const ERR_KEY = "connectors.common.errors.scan.root-unreadable";
 
@@ -43,7 +44,7 @@ export interface MemoryFiles extends ScopedFileReader {
 }
 
 export function memoryFiles(tree: MemoryTree, opts: MemoryFilesOptions = {}): MemoryFiles {
-  const files = new Map<string, string>();
+  const files = new Map<string, string | Uint8Array>();
   const dirs = new Map<string, DirEntries>();
   const reads: string[] = [];
 
@@ -104,10 +105,22 @@ export function memoryFiles(tree: MemoryTree, opts: MemoryFilesOptions = {}): Me
     },
     async readText(path) {
       const key = guard(path);
-      const text = files.get(key);
-      if (text === undefined) throw unreadableError("File not found or not a file");
-      if (new TextEncoder().encode(text).length > READ_TEXT_MAX_BYTES) throw unreadableError("File larger than 1 MiB");
-      return text;
+      const content = files.get(key);
+      if (content === undefined) throw unreadableError("File not found or not a file");
+      const bytes = typeof content === "string" ? new TextEncoder().encode(content) : content;
+      if (bytes.length > READ_TEXT_MAX_BYTES) throw unreadableError("File larger than 1 MiB");
+      return typeof content === "string" ? content : new TextDecoder().decode(content);
+    },
+    async readBytes(path, maxBytes) {
+      const key = guard(path);
+      if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > READ_BYTES_CEILING) {
+        throw new ConnectorError("internal", "maxBytes must be an integer from 1 to 64 MiB");
+      }
+      const content = files.get(key);
+      if (content === undefined) throw unreadableError("File not found or not a file");
+      const bytes = typeof content === "string" ? new TextEncoder().encode(content) : content;
+      if (bytes.length > maxBytes) throw unreadableError("File larger than maxBytes");
+      return new Uint8Array(bytes);
     },
     async readDir(path) {
       const key = guard(path);

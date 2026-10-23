@@ -1,5 +1,5 @@
 // Operating-system ports (ADR 38). Types only, no I/O: implementations live in platform-* packages.
-import type { LocationDeclaration, ResolvedLocation, ScopedFileReader } from "./connector";
+import type { LocationDeclaration, ResolvedLocation, ScopedFileReader, Secret } from "./connector";
 
 /** Stores small secrets outside the database (ADR 14). Windows: Credential Manager. */
 export interface KeyStore {
@@ -61,9 +61,21 @@ export interface PlatformInfo {
 
 // ---------- Ports added by ADR 72 ----------
 
+/** Thrown by LocationResolver.resolve when a source could not be read. `partial`: the locations that did resolve (ADR 79). */
+export class LocationsUnreadableError extends Error {
+  constructor(message: string, readonly partial: readonly ResolvedLocation[] = []) {
+    super(message);
+    this.name = "LocationsUnreadableError";
+  }
+}
+
 /** ADR 38, 40 rule 8. Read-only: implementations never write the registry or launcher files (ADR 42). */
 export interface LocationResolver {
-  /** Every distinct existing path of the declaration on this OS, in source order (deduplicated with LocalFiles.compareKey). */
+  /**
+   * Every distinct existing path of the declaration on this OS, in source order (deduplicated with LocalFiles.compareKey).
+   * A key or value that does not exist is not an error (it yields nothing). Throws if a registry source could not be read
+   * (helper failed, access denied, any other error): absent and unreadable are not the same (ADR 79).
+   */
   resolve(decl: LocationDeclaration): Promise<readonly ResolvedLocation[]>;
 }
 
@@ -78,6 +90,8 @@ export interface LocalFiles {
   /** Equality key for uniqueness (lower-case on Windows). */
   compareKey(path: string): string;
   isDirectory(path: string): Promise<boolean>;
+  /** ADR 79. Like isDirectory (false when absent or not a directory), but throws if it cannot tell (permissions, I/O). */
+  isDirectoryStrict(path: string): Promise<boolean>;
   /** Canonical path (realpath of the deepest existing ancestor, missing tail unchanged). Throws if it cannot be resolved. */
   realPath(path: string): Promise<string>;
   /**
@@ -135,4 +149,26 @@ export interface SecretCipher {
   encrypt(plaintext: string, aad: string): string;
   /** 'other-key': written under another slot (compartment, ADR 64). 'invalid': bad format, tag or AAD. */
   decrypt(blob: string, aad: string): { ok: true; value: string } | { ok: false; reason: "other-key" | "invalid" };
+}
+
+// ---------- Port added by ADR 80 ----------
+
+/** Login window on the user's desktop (localhost, Windows). Texts arrive translated. One window at a time. */
+export interface EmbeddedLogin {
+  run(
+    req: {
+      title: string;
+      startUrl: string;
+      doneUrl: string;
+      captureUrl: string;
+      allowedHosts: readonly string[];
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
+    },
+    signal: AbortSignal,
+  ): Promise<
+    | { kind: "captured"; values: Readonly<Record<string, Secret>>; blockedHosts: readonly string[] }
+    | { kind: "cancelled"; blockedHosts: readonly string[] }
+    | { kind: "unavailable"; reason: "runtime-missing" | "busy" }
+    | { kind: "failed"; reason: "capture-missing" | "failed" }
+  >;
 }

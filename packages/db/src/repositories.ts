@@ -725,6 +725,8 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
       .onConflictDoUpdate({
         target: [scanRoots.userId, scanRoots.deviceId, scanRoots.origin, scanRoots.pathKey],
         set: { path: r.path, declarationId: r.declarationId, store: r.store, tag: r.tag },
+        // ADR 79: a folder already stored for another store is not taken over.
+        setWhere: eq(scanRoots.store, r.store ?? ""),
       })
       .run();
   }

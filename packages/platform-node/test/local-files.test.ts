@@ -111,6 +111,16 @@ describe("scoped reader", () => {
     expect(await code(fs.readText(path.join(root, "big.txt")))).toBe("scan.root-unreadable");
   });
 
+  it("readBytes returns raw bytes, enforces maxBytes and stays in the roots (ADR 80)", async () => {
+    const fs = files.scoped([root]);
+    writeFileSync(path.join(root, "raw.bin"), Buffer.from([0, 255, 1, 2]));
+    expect(Array.from(await fs.readBytes(path.join(root, "raw.bin"), 4))).toEqual([0, 255, 1, 2]);
+    expect(await code(fs.readBytes(path.join(root, "raw.bin"), 3))).toBe("scan.root-unreadable");
+    expect(await code(fs.readBytes(path.join(root, "sub"), 10))).toBe("scan.root-unreadable");
+    expect(await code(fs.readBytes(path.join(outside, "secret.txt"), 10))).toBe("internal");
+    expect(await code(fs.readBytes(path.join(root, "raw.bin"), 65 * 1024 * 1024))).toBe("internal");
+  });
+
   it("enforces the 10 000 entries limit", async () => {
     const fs = files.scoped([root]);
     const full = path.join(root, "full");
@@ -176,4 +186,13 @@ describe("path semantics (Windows rules, any host)", () => {
 it("systemClock", () => {
   expect(Math.abs(systemClock.now() - Date.now())).toBeLessThan(1000);
   expect(systemClock.timeout(50)).toBeInstanceOf(AbortSignal);
+});
+
+describe("isDirectoryStrict (ADR 79)", () => {
+  it("is false for absent paths and files (ENOENT, ENOTDIR) and true for folders", async () => {
+    expect(await files.isDirectoryStrict!(root)).toBe(true);
+    expect(await files.isDirectoryStrict!(path.join(root, "nope"))).toBe(false);
+    expect(await files.isDirectoryStrict!(path.join(root, "a.txt"))).toBe(false);
+    expect(await files.isDirectoryStrict!(path.join(root, "a.txt", "inside"))).toBe(false);
+  });
 });

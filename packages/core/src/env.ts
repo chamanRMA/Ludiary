@@ -1,5 +1,5 @@
 // Public facade types of the core (ADR 72, point 4) and the shared environment of its use-case modules.
-import type { Clock, ConnectorLogger, FolderPicker, HttpClient, LocalFiles, LocationResolver, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
+import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
 import type {
   CoreErrorInfo,
   CoreLogger,
@@ -37,7 +37,7 @@ export const DOUBLE_LAUNCH_MS = 5_000;
 export const LIBRARY_TIMEOUT_MS = 60_000;
 export const HOUR_MS = 3_600_000;
 /** ADR 50: automatic sync when the web opens, if the last successful one is older than this (stores not listed: 12 h). */
-export const AUTO_SYNC_MS: Readonly<Partial<Record<StoreId, number>>> = { steam: 6 * HOUR_MS, gog: 12 * HOUR_MS, epic: 12 * HOUR_MS };
+export const AUTO_SYNC_MS: Readonly<Partial<Record<StoreId, number>>> = { steam: 6 * HOUR_MS, gog: 12 * HOUR_MS, epic: 12 * HOUR_MS, ubisoft: 12 * HOUR_MS };
 export const AUTO_SYNC_DEFAULT_MS = 12 * HOUR_MS;
 /** ADR 50: after an error the automatic attempt waits this many floors, up to a day. */
 export const ERROR_BACKOFF_FACTOR = 2;
@@ -46,6 +46,8 @@ export const MAX_BACKOFF_MS = 24 * HOUR_MS;
 export const WIZARD_TTL_MS = 15 * 60_000;
 export const WIZARD_CALL_MS = 30_000;
 export const MAX_WIZARDS = 4;
+/** ADR 80: longest wait for the embedded login window; it is aborted after this. */
+export const EMBEDDED_LOGIN_MS = 10 * 60_000;
 /** Fixed order to pick the property to launch when none is given (ADR 72). */
 export const LAUNCH_ORDER: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
 
@@ -65,6 +67,8 @@ export interface CoreDeps {
   folderPicker?: FolderPicker;
   /** ADR 73, 74. Factory of the HttpClient of one connector (its apiHosts). maxBytes: the core passes 16 MiB for listLibrary, 2 MiB otherwise. Absent: no network, no media step. */
   http?: (hosts: readonly string[], signal: AbortSignal, log: ConnectorLogger, opts?: { maxBytes?: number }) => HttpClient;
+  /** ADR 80. Absent (Docker, Linux, tests): the embedded-login step is rejected as unavailable. */
+  embeddedLogin?: EmbeddedLogin;
   /** ADR 46, 74. */
   cipher: SecretCipher;
   secrets: SecretRepository;
@@ -127,6 +131,8 @@ export interface LudiaryCore {
   /** Idempotent. */
   cancelWizard(wizardId: string): Promise<void>;
   disconnect(store: StoreId): Promise<void>;
+  /** ADR 80. Server shutdown: aborts the open login windows. */
+  shutdown(): void;
 }
 
 /** Shared by the use-case modules. */

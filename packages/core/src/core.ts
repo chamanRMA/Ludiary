@@ -114,6 +114,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     submitWizard: (wizardId, stepId, input) => wizards.submit(wizardId, stepId, input),
     wizardCallback: (wizardId, query) => wizards.callback(wizardId, query),
     cancelWizard: async (wizardId) => wizards.cancel(wizardId),
+    shutdown: () => wizards.shutdown(),
 
     /**
      * ADR 74 point 9 and the user's answer to point 12.1: the connector wipes its secrets, then the whole scope, the

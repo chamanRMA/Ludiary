@@ -1,0 +1,13 @@
+{
+  "connectors.ubisoft.name": "Ubisoft",
+  "connectors.ubisoft.errors.invalidId": "Este juego de Ubisoft tiene un identificador no válido y no se puede abrir.",
+  "connectors.ubisoft.errors.launcherMissing": "No se encuentra Ubisoft Connect. Instálalo desde ubisoft.com y vuelve a intentarlo.",
+  "connectors.ubisoft.errors.noCache": "Instala Ubisoft Connect y ábrelo una vez para ver aquí tus juegos de Ubisoft.",
+  "connectors.ubisoft.needsAutoDetection": "Ubisoft Connect guarda sus juegos en el registro de Windows. Para verlos, activa la detección automática.",
+  "connectors.ubisoft.login.title": "Inicia sesión en Ubisoft",
+  "connectors.ubisoft.login.body": "Se abrirá una ventana con la página oficial de Ubisoft. Inicia sesión allí, también con el código de verificación si te lo pide, y marca «Recordarme»; la ventana se cerrará sola. Ludiary no guarda tu contraseña.",
+  "connectors.ubisoft.login.window": "Inicia sesión en Ubisoft",
+  "connectors.ubisoft.error.login": "Ubisoft no ha aceptado el inicio de sesión. Vuelve a intentarlo.",
+  "connectors.ubisoft.error.expired": "Hay que volver a iniciar sesión en Ubisoft.",
+  "connectors.ubisoft.disconnect.hint": "Ludiary borra su sesión de Ubisoft de este equipo. Para cerrar todas las sesiones, cambia la contraseña en ubisoft.com."
+}

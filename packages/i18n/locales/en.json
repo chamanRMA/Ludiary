@@ -40,6 +40,7 @@
   "connectors.common.errors.tool.missing": "An external tool needed for this store is missing.",
   "connectors.common.errors.tool.failed": "An external tool failed while working with this store.",
   "connectors.common.errors.scan.root-unreadable": "Ludiary cannot read one of the game folders. Check that it exists and that you have permission.",
+  "connectors.common.errors.scan.discovery-unavailable": "Ludiary could not check all the game folders this time. The games detected earlier are shown.",
   "connectors.common.errors.launch.launcher-missing": "The store's program was not found on this computer.",
   "connectors.common.errors.launch.not-installed": "This game is not installed on this computer.",
   "connectors.common.errors.action.unsupported": "This store does not support that action.",

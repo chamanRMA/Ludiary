@@ -78,16 +78,24 @@ export async function computeScanPlan(i: PlanInput): Promise<ScanPlan> {
   };
 }
 
-/** Discovered roots to store: new ones enabled, known ones keep id and switch; stored ones the connector stopped returning are deleted. */
+/**
+ * Discovered roots to store: new ones enabled, known ones keep id and switch; stored ones the connector stopped returning are deleted.
+ * Not deleted (returned in `kept`): when `lossy`, or when their declaration could not be resolved (ADR 79).
+ * A folder already stored for another store is skipped and counted in `conflicts`.
+ */
 export function planDiscoveredRoots(
   store: StoreId,
   returned: readonly ValidatedRoot[],
   stored: readonly ScanRootRecord[],
   newId: () => string,
-): { upsert: ScanRootRecord[]; delete: string[] } {
-  const mine = stored.filter((r) => r.origin === "discovered" && r.store === store);
+  opts: { keepDeclarations?: ReadonlySet<string>; lossy?: boolean } = {},
+): { upsert: ScanRootRecord[]; delete: string[]; kept: ScanRootRecord[]; conflicts: number } {
+  const discovered = stored.filter((r) => r.origin === "discovered");
+  const mine = discovered.filter((r) => r.store === store);
+  const others = new Set(discovered.filter((r) => r.store !== store).map((r) => r.pathKey));
   const byKey = new Map(mine.map((r) => [r.pathKey, r]));
-  const upsert = returned.map((r): ScanRootRecord => {
+  const own = returned.filter((r) => !others.has(r.pathKey));
+  const upsert = own.map((r): ScanRootRecord => {
     const known = byKey.get(r.pathKey);
     return {
       id: known?.id ?? newId(),
@@ -100,6 +108,13 @@ export function planDiscoveredRoots(
       enabled: known ? known.enabled : true,
     };
   });
-  const keep = new Set(returned.map((r) => r.pathKey));
-  return { upsert, delete: mine.filter((r) => !keep.has(r.pathKey)).map((r) => r.id) };
+  const returnedKeys = new Set(own.map((r) => r.pathKey));
+  const gone = mine.filter((r) => !returnedKeys.has(r.pathKey));
+  const keeps = (r: ScanRootRecord) => opts.lossy === true || (r.declarationId !== null && opts.keepDeclarations?.has(r.declarationId) === true);
+  return {
+    upsert,
+    delete: gone.filter((r) => !keeps(r)).map((r) => r.id),
+    kept: gone.filter(keeps),
+    conflicts: returned.length - own.length,
+  };
 }

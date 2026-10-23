@@ -19,7 +19,7 @@ export type RegistryErrorCode =
   | "access-denied"
   | "failed";
 
-export type RegistryResult = { ok: true; values: string[] } | { ok: false; error: string };
+export type RegistryResult = { ok: true; values: string[]; names?: string[] } | { ok: false; error: string };
 
 export function buildRegistryRequest(queries: readonly RegistryQuery[]): string {
   return JSON.stringify({ queries });
@@ -40,11 +40,24 @@ export function parseRegistryResponse(text: string, expected: number): RegistryR
     throw new Error("registry helper returned an unexpected number of results");
   }
   return obj.results.map((entry: unknown): RegistryResult => {
-    const r = entry as { ok?: unknown; values?: unknown; error?: unknown } | null;
+    const r = entry as { ok?: unknown; values?: unknown; names?: unknown; truncated?: unknown; error?: unknown } | null;
+    // ADR 79: more subkeys than the helper reads. A partial list proves nothing, so it is a failure.
+    if (r && r.ok === true && r.truncated === true) return { ok: false, error: "truncated" };
     // The helper omits `values` when the list is empty (omitempty).
     if (r && r.ok === true && r.values === undefined) return { ok: true, values: [] };
     if (r && r.ok === true && Array.isArray(r.values) && r.values.every((v) => typeof v === "string")) {
-      return { ok: true, values: r.values as string[] };
+      const values = r.values as string[];
+      if (r.names === undefined) return { ok: true, values };
+      // ADR 79: names run parallel to values; anything else makes this answer a failure.
+      const names = r.names;
+      if (
+        Array.isArray(names) &&
+        names.length === values.length &&
+        names.every((n) => typeof n === "string" && n.length >= 1 && n.length <= 255 && !/\p{Cc}/u.test(n))
+      ) {
+        return { ok: true, values, names: names as string[] };
+      }
+      return { ok: false, error: "failed" };
     }
     if (r && r.ok === false && typeof r.error === "string") return { ok: false, error: r.error };
     // The helper omits `ok` when it is false (omitempty): an entry with only an error is a failure.

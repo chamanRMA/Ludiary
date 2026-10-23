@@ -67,9 +67,11 @@ type registryRequest struct {
 }
 
 type registryResult struct {
-	OK     bool     `json:"ok"`
-	Values []string `json:"values,omitempty"`
-	Error  string   `json:"error,omitempty"`
+	OK        bool     `json:"ok"`
+	Values    []string `json:"values,omitempty"`
+	Truncated bool     `json:"truncated,omitempty"` // more than maxRegistrySubkeys subkeys: the list is partial (ADR 79)
+	Names     []string `json:"names,omitempty"`     // kind "subkeys" only: subkey name of each value, same order (ADR 79)
+	Error     string   `json:"error,omitempty"`
 }
 
 type registryResponse struct {
@@ -156,6 +158,13 @@ func readStringValue(k registry.Key, name string) (string, error) {
 	return value, nil
 }
 
+// subkeyOutcome: a subkey is skipped only when the value is absent or of another type (ADR 79).
+// Anything else (access-denied...) fails the whole query: a partial list is not an answer.
+func subkeyOutcome(err error) (skip bool, code string) {
+	code = registryErrorCode(err)
+	return code == "not-found" || code == "unsupported-type", code
+}
+
 func runRegistryQuery(q registryQuery) registryResult {
 	root, mask, code := validateRegistryQuery(q)
 	if code != "" {
@@ -180,22 +189,30 @@ func runRegistryQuery(q registryQuery) registryResult {
 	if err != nil && !errors.Is(err, io.EOF) {
 		return registryResult{Error: registryErrorCode(err)}
 	}
-	if len(names) > maxRegistrySubkeys {
+	truncated := len(names) > maxRegistrySubkeys
+	if truncated {
 		names = names[:maxRegistrySubkeys]
 	}
 	values := []string{}
+	subNames := []string{}
 	for _, name := range names {
 		sub, err := registry.OpenKey(key, name, mask)
 		if err != nil {
+			if skip, code := subkeyOutcome(err); !skip {
+				return registryResult{Error: code}
+			}
 			continue
 		}
 		value, err := readStringValue(sub, q.Value)
 		sub.Close()
 		if err == nil {
 			values = append(values, value)
+			subNames = append(subNames, name)
+		} else if skip, code := subkeyOutcome(err); !skip {
+			return registryResult{Error: code}
 		}
 	}
-	return registryResult{OK: true, Values: values}
+	return registryResult{OK: true, Values: values, Names: subNames, Truncated: truncated}
 }
 
 func handleRegistry(in io.Reader, out io.Writer) int {

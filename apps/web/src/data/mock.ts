@@ -90,6 +90,9 @@ const STEPS: Record<string, readonly WizardStepDto[]> = {
       fields: [field("authorizationCode", "connectors.epic.login.field", "^[0-9a-f]{32}$", 4096, { extract: "json-field:authorizationCode" })],
     },
   ],
+  ubisoft: [
+    { kind: "embedded-login", id: "login", titleKey: "connectors.ubisoft.login.title", bodyKey: "connectors.ubisoft.login.body" },
+  ],
   rawg: [
     {
       kind: "open-external",
@@ -118,7 +121,7 @@ const STEPS: Record<string, readonly WizardStepDto[]> = {
 };
 
 const targetId = (t: WizardTarget): string => (t.kind === "store" ? t.store : t.service);
-const ACCOUNT_LABELS: Record<string, string> = { steam: "demo_steam", gog: "demo_gog", epic: "demo_epic" };
+const ACCOUNT_LABELS: Record<string, string> = { steam: "demo_steam", gog: "demo_gog", epic: "demo_epic", ubisoft: "demo_ubisoft" };
 
 // --- Seed data -----------------------------------------------------------------------------------
 
@@ -199,7 +202,7 @@ const STORE_META: Record<StoreId, Pick<StoreStatusDto, "access" | "connection" |
   steam: { access: "official-api", connection: "disconnected", mode: "library" },
   gog: { access: "unofficial-api", connection: "disconnected", mode: "library" },
   epic: { access: "unofficial-api", connection: "disconnected", mode: "library" },
-  ubisoft: { access: "local-only", connection: "not-applicable", mode: "installed-only" },
+  ubisoft: { access: "unofficial-api", connection: "disconnected", mode: "library" },
   ea: { access: "local-only", connection: "not-applicable", mode: "installed-only" },
 };
 
@@ -292,7 +295,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       if (id === "steam" && step.id === "choose" && input.kind === "fields" && input.values["mode"] === "installed-only") {
         return finish(target, true);
       }
-      const fields = step.kind === "info" ? undefined : step.fields;
+      const fields = step.kind === "info" || step.kind === "embedded-login" ? undefined : step.fields;
       if (fields && input.kind === "fields") {
         for (const f of fields) {
           const check = validateField(input.values[f.name] ?? "", f);

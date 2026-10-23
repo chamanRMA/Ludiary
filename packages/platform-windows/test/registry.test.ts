@@ -1,8 +1,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { LocationsUnreadableError } from "@ludiary/contracts";
 import { createNodeLocalFiles } from "../../platform-node/src";
 import {
   buildRegistryRequest,
@@ -29,6 +30,14 @@ describe("--registry protocol parsing", () => {
       { ok: false, error: "not-found" },
       { ok: true, values: [] },
     ]);
+  });
+
+  it("accepts names parallel to values and fails the answer otherwise (ADR 79)", () => {
+    const parse = (r: object) => parseRegistryResponse(JSON.stringify({ results: [r] }), 1)[0];
+    expect(parse({ ok: true, values: ["d:/a", "d:/b"], names: ["900001", "900002"] })).toEqual({ ok: true, values: ["d:/a", "d:/b"], names: ["900001", "900002"] });
+    for (const names of [["1"], ["1", ""], ["1", "ab"], ["1", 2], ["1", "x".repeat(256)], "12"]) {
+      expect(parse({ ok: true, values: ["d:/a", "d:/b"], names })).toEqual({ ok: false, error: "failed" });
+    }
   });
 
   it("rejects malformed answers", () => {
@@ -112,9 +121,96 @@ describe("WindowsLocationResolver (helper injected)", () => {
     expect(checked).toEqual(["C:\\Steam", "C:\\Program Files (x86)\\Steam"]);
   });
 
-  it("falls back to known folders when the helper fails", async () => {
-    const resolver = make({ error: "bad-request" }, ["C:\\Program Files (x86)\\Steam"]);
+  it("throws when the registry cannot be read: helper failed, access-denied, failed (ADR 79)", async () => {
+    const existing = ["C:\\Program Files (x86)\\Steam"];
+    await expect(make({ error: "bad-request" }, existing).resolve(decl)).rejects.toThrow();
+    const failing: HelperRunner = async () => {
+      throw new Error("spawn failed");
+    };
+    await expect(new WindowsLocationResolver({ files, runHelper: failing, env }).resolve(decl)).rejects.toThrow();
+    for (const error of ["access-denied", "failed", "invalid-key"]) {
+      await expect(make({ results: [{ ok: false, error }, { ok: true, values: [] }] }, existing).resolve(decl)).rejects.toThrow(error);
+    }
+  });
+
+  it("treats not-found and unsupported-type as absence, with the known folder still resolving (ADR 79)", async () => {
+    const resolver = make({ results: [{ ok: false, error: "not-found" }, { ok: false, error: "unsupported-type" }] }, ["C:\\Program Files (x86)\\Steam"]);
     expect(await resolver.resolve(decl)).toEqual([{ declarationId: "steam-root", path: "C:\\Program Files (x86)\\Steam" }]);
+  });
+
+  it("keeps two subkeys that share a path, and fails a truncated list (ADR 79)", async () => {
+    const d = {
+      id: "ubi",
+      purpose: "scan" as const,
+      os: ["windows" as const],
+      sources: [{ kind: "registry-subkeys" as const, hive: "HKLM" as const, key: "K", value: "InstallDir" }],
+    };
+    const same = make({ results: [{ ok: true, values: ["D:/G/", "D:/G/"], names: ["900001", "900002"] }] }, ["D:\\G"]);
+    expect(await same.resolve(d)).toEqual([
+      { declarationId: "ubi", path: "D:\\G", subkey: "900001" },
+      { declarationId: "ubi", path: "D:\\G", subkey: "900002" },
+    ]);
+    const cut = make({ results: [{ ok: true, values: ["D:/G/"], names: ["900001"], truncated: true }] }, ["D:\\G"]);
+    await expect(cut.resolve(d)).rejects.toThrow(/truncated/);
+  });
+
+  it("throws LocationsUnreadableError carrying the locations that did resolve (ADR 79)", async () => {
+    const resolver = make({ error: "bad-request" }, ["C:\\Program Files (x86)\\Steam"]);
+    const err = await resolver.resolve(decl).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LocationsUnreadableError);
+    expect((err as LocationsUnreadableError).partial).toEqual([{ declarationId: "steam-root", path: "C:\\Program Files (x86)\\Steam" }]);
+    const failing = new WindowsLocationResolver({ files, runHelper: async () => "{}", env, exists: async () => { throw Object.assign(new Error("x"), { code: "EACCES" }); } });
+    await expect(failing.resolve({ ...decl, sources: [decl.sources[2]!] })).rejects.toBeInstanceOf(LocationsUnreadableError);
+  });
+
+  it("a registry-subkeys answer without names is unusable and fails (ADR 79)", async () => {
+    const d = {
+      id: "ubi",
+      purpose: "scan" as const,
+      os: ["windows" as const],
+      sources: [{ kind: "registry-subkeys" as const, hive: "HKLM" as const, key: "K", value: "InstallDir" }],
+    };
+    const err = await make({ results: [{ ok: true, values: ["D:/G/"] }] }, ["D:\\G"]).resolve(d).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LocationsUnreadableError);
+    expect((err as LocationsUnreadableError).partial).toEqual([]);
+  });
+
+  it("the default existence check treats ENOENT and ENOTDIR as absence", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ludiary-exists-"));
+    try {
+      writeFileSync(path.join(dir, "f.txt"), "x");
+      const env2 = { ProgramData: dir };
+      const resolve = (relative: string) =>
+        new WindowsLocationResolver({ files, runHelper: async () => "{}", env: env2 }).resolve({
+          id: "k", purpose: "scan", os: ["windows"], sources: [{ kind: "known-folder", folder: "ProgramData", relative }],
+        });
+      expect(await resolve("f.txt")).toHaveLength(1);
+      expect(await resolve("missing")).toEqual([]);
+      expect(await resolve("f.txt\\inside")).toEqual([]); // ENOTDIR
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("sets subkey only on registry-subkeys locations (ADR 79)", async () => {
+    const d = {
+      id: "ubi",
+      purpose: "scan" as const,
+      os: ["windows" as const],
+      sources: [
+        { kind: "registry-subkeys" as const, hive: "HKLM" as const, key: "SOFTWARE\\Ubisoft\\Launcher\\Installs", value: "InstallDir", view: "32" as const },
+        { kind: "registry-value" as const, hive: "HKLM" as const, key: "SOFTWARE\\Ubisoft\\Launcher", value: "InstallDir" },
+      ],
+    };
+    const resolver = make(
+      { results: [{ ok: true, values: ["D:/Ubisoft Games/A/", "D:/Ubisoft Games/B/"], names: ["900001", "900002"] }, { ok: true, values: ["C:/Ubi"] }] },
+      ["D:\\Ubisoft Games\\A", "D:\\Ubisoft Games\\B", "C:\\Ubi"],
+    );
+    expect(await resolver.resolve(d)).toEqual([
+      { declarationId: "ubi", path: "D:\\Ubisoft Games\\A", subkey: "900001" },
+      { declarationId: "ubi", path: "D:\\Ubisoft Games\\B", subkey: "900002" },
+      { declarationId: "ubi", path: "C:\\Ubi" },
+    ]);
   });
 
   it("ignores other operating systems and refuses '..' in known folders", async () => {

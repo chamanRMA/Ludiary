@@ -72,7 +72,8 @@ export function Cover({ game, height = 190, bare }: { game: Pick<GameSummaryDto,
 /** Tells the user a button only touched the simulated state. */
 export function SimNote({ show }: { show: boolean }) {
   const { t } = useTranslation();
-  return show && isSimulated ? (
+  // Not only in the simulator: the real client still delegates some actions to it, and they must say so (ADR 74 point 7).
+  return show ? (
     <p className={ui.muted} role="status">
       {t("common.simulated")}
     </p>

@@ -30,7 +30,7 @@ import { ApiError, type Http } from "./http";
  * detection mode, language and scan roots.
  *
  * Store accounts (ADR 74, 77): `startWizard`, `submitWizard`, `cancelWizard`, `disconnect` and `wizardCallback` for the stores
- * in REAL_WIZARD_STORES (Steam, GOG and Epic).
+ * in REAL_WIZARD_STORES (Steam, GOG, Epic and Ubisoft).
  *
  * Delegated to `sim`, method by method, and never stored in the server: the same wizard methods for the other
  * stores and services, `getServices`, collections, backups, log export, `simulateExpiredSession`, and the settings the
@@ -58,7 +58,7 @@ function sessionStore(): WizardIdStorage | null {
 }
 
 /** Stores whose wizard is served by the real server (ADR 77 point 8). */
-export const REAL_WIZARD_STORES: readonly StoreId[] = ["steam", "gog", "epic"];
+export const REAL_WIZARD_STORES: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft"];
 const realStore = (t: WizardTarget): StoreId | null => (t.kind === "store" && REAL_WIZARD_STORES.includes(t.store) ? t.store : null);
 const expired = (): ApiError => new ApiError(404, "not-found", "wizard.expired");
 
@@ -151,14 +151,14 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
   }
 
   async function getMaintenance(): Promise<MaintenanceDto> {
-    // Backups are simulated. Scan and sync times are real: the simulator's "5 minutes ago" would be a lie.
-    const [local, stores] = await Promise.all([sim.getMaintenance(), getStores()]);
+    // Backups are not implemented yet: never show the simulator's backup time as if a copy existed. Scan and sync are real.
+    const stores = await getStores();
     const latest = (operation?: "library" | "scan"): number | null => {
       const times = stores.flatMap((s) => s.sync.filter((x) => operation === undefined || x.operation === operation).map((x) => x.lastSuccessAt ?? 0));
       const max = Math.max(0, ...times);
       return max > 0 ? max : null;
     };
-    return { lastBackupAt: local.lastBackupAt, lastScanAt: latest("scan"), lastSyncAt: latest() };
+    return { lastBackupAt: null, lastScanAt: latest("scan"), lastSyncAt: latest() };
   }
 
   const api: LudiaryApi = {
@@ -253,7 +253,8 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
 
     // ---- Simulated (point B): same behavior as before, nothing is stored in the server
     getServices: () => sim.getServices(),
-    getCollections: () => sim.getCollections(),
+    // shortcut: no collections on the server yet; the simulator's samples would look like the user's own, so none.
+    getCollections: async () => [],
     createBackup: () => sim.createBackup(),
     exportLogs: () => sim.exportLogs(),
     simulateExpiredSession: (store) => sim.simulateExpiredSession(store),

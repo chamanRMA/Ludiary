@@ -1,6 +1,6 @@
 // Scan and synchronization (ADR 40 rules 1-4, ADR 42, 50, 72).
-import { ConnectorError } from "@ludiary/contracts";
-import type { ConnectorLogger, ResolvedLocation, ScanRoot, StoreConnector, StoreId } from "@ludiary/contracts";
+import { ConnectorError, LocationsUnreadableError } from "@ludiary/contracts";
+import type { ConnectorLogger, ResolvedLocation, ScanRoot, ScopedFileReader, StoreConnector, StoreId } from "@ludiary/contracts";
 import { storedActiveRoots } from "./active-roots";
 import { connectorLogger, epochOf, LIBRARY_MAX_BYTES, syncContext } from "./contexts";
 import {
@@ -148,6 +148,25 @@ export function createSyncService(env: Env): SyncService {
     }
   }
 
+  /**
+   * ADR 80: 'library' locations, only with auto-detection (the permission to look at launcher folders, ADR 42).
+   * Absent proves nothing and gives an empty reader; unreadable is `scan.discovery-unavailable` and the sync fails (ADR 79).
+   */
+  async function libraryFiles(c: StoreConnector): Promise<{ fs: ScopedFileReader; locations: readonly ResolvedLocation[] } | undefined> {
+    const decls = c.locations.filter((l) => l.purpose === "library");
+    if (decls.length === 0 || !deps.locations || (await readSettings(env)).detection !== "auto-and-manual") return undefined;
+    const found: ResolvedLocation[] = [];
+    for (const decl of decls) {
+      try {
+        found.push(...(await deps.locations.resolve(decl)));
+      } catch (e) {
+        deps.log.warn("Could not resolve a library location", { connector: c.id, location: decl.id, error: e instanceof Error ? e.name : "unknown" });
+        throw new ConnectorError("scan.discovery-unavailable", "A library location could not be read");
+      }
+    }
+    return { fs: deps.files.scoped(found.map((r) => r.path)), locations: found };
+  }
+
   async function doLibrary(c: StoreConnector, t0: number, prev: SyncStateRecord | null): Promise<void> {
     const listLibrary = c.listLibrary;
     if (!listLibrary) return;
@@ -162,7 +181,8 @@ export function createSyncService(env: Env): SyncService {
 
     const epoch = epochOf(env, c.id);
     try {
-      const ctx = await syncContext(env, c, signal, { maxBytes: LIBRARY_MAX_BYTES, epoch: "guard" });
+      const lib = await libraryFiles(c);
+      const ctx = await syncContext(env, c, signal, { maxBytes: LIBRARY_MAX_BYTES, epoch: "guard", ...(lib ? { fs: lib.fs, libraryLocations: lib.locations } : {}) });
       const snapshot = await withTimeout(signal, () => listLibrary.call(c, ctx));
       if (!snapshot || typeof snapshot !== "object") throw new ConnectorError("store.unexpected-response", "listLibrary returned nothing");
       const valid = validateLibraryEntries({ entries: snapshot.entries, connector: c, log: deps.log });
@@ -281,6 +301,7 @@ export function createSyncService(env: Env): SyncService {
 
     const roots: ScanRoot[] = [];
     let discovered: { upsert: ScanRootRecord[]; delete: string[] } = { upsert: [], delete: [] };
+    let discoveryUnavailable = false;
     let entries: ScannedEntry[] = [];
     let unreadable: string[] = [];
     let error: CoreErrorInfo | null = null;
@@ -294,9 +315,12 @@ export function createSyncService(env: Env): SyncService {
           storedActiveRoots(mode, stored, c.id).filter((r) => r.origin === "discovered");
         if (mode === "auto-and-manual" && deps.locations) {
           const found = await discover(c, signal, locale, log);
+          discoveryUnavailable = !found || found.unresolved.size > 0 || found.lossy;
           if (found) {
-            discovered = planDiscoveredRoots(c.id, found, stored, newId);
-            discoveredActive = discovered.upsert.filter((r) => r.enabled);
+            const plan = planDiscoveredRoots(c.id, found.roots, stored, newId, { keepDeclarations: found.unresolved, lossy: found.lossy });
+            if (plan.conflicts > 0) deps.log.warn("Discovered folders already belong to another store", { connector: c.id, count: plan.conflicts });
+            discovered = plan;
+            discoveredActive = [...plan.upsert, ...plan.kept].filter((r) => r.enabled);
           }
         }
         for (const r of discoveredActive) {
@@ -337,7 +361,13 @@ export function createSyncService(env: Env): SyncService {
           status: "error",
           error: { code: "scan.root-unreadable", key: asKey("connectors.common.errors.scan.root-unreadable") },
         }
-      : { ...base, lastSuccessAt: at, status: "idle", error: null };
+      : {
+          ...base,
+          lastSuccessAt: at,
+          status: "idle",
+          // ADR 79: a warning, not a failure. The scan ran on the stored folders.
+          error: discoveryUnavailable ? { code: "scan.discovery-unavailable", key: asKey("connectors.common.errors.scan.discovery-unavailable") } : null,
+        };
 
     const plan = await computeScanPlan({
       store: c.id,
@@ -362,16 +392,28 @@ export function createSyncService(env: Env): SyncService {
     await deps.syncState.put(plan.sync);
   }
 
-  /** Locations -> discoverRoots (ADR 42, 72). Returns null when it could not be done: stored roots are then left as they are. */
-  async function discover(c: StoreConnector, signal: AbortSignal, locale: string, log: ConnectorLogger): Promise<ValidatedRoot[] | null> {
+  /**
+   * Locations -> discoverRoots (ADR 42, 72, 79). Returns null when it could not be done: stored roots are then left as they are.
+   * A declaration that cannot be read (but did not make everything fail) goes to `unresolved`: its stored roots are kept.
+   * `lossy`: the list was cut, so nothing stored may be deleted from it.
+   */
+  async function discover(
+    c: StoreConnector,
+    signal: AbortSignal,
+    locale: string,
+    log: ConnectorLogger,
+  ): Promise<{ roots: ValidatedRoot[]; unresolved: Set<string>; lossy: boolean } | null> {
     const resolver = deps.locations;
     if (!resolver) return null;
     try {
       const resolved: ResolvedLocation[] = [];
+      const unresolved = new Set<string>();
       for (const decl of c.locations.filter((l) => l.purpose === "scan")) {
         try {
           resolved.push(...(await withTimeout(signal, () => resolver.resolve(decl))));
         } catch (e) {
+          if (e instanceof LocationsUnreadableError) resolved.push(...e.partial);
+          unresolved.add(decl.id);
           deps.log.warn("Could not resolve a location", { connector: c.id, location: decl.id, error: e instanceof Error ? e.name : "unknown" });
         }
       }
@@ -382,7 +424,9 @@ export function createSyncService(env: Env): SyncService {
           discoverRoots.call(c, { signal, log, locale, locations: resolved, fs: deps.files.scoped(resolved.map((l) => l.path)) }),
         );
       }
-      return await validateDiscoveredRoots(returned, c, deps.files, deps.log);
+      const validated = await validateDiscoveredRoots(returned, c, deps.files, deps.log);
+      for (const id of validated.unresolved) unresolved.add(id);
+      return { roots: validated.roots, unresolved, lossy: validated.truncated };
     } catch (e) {
       deps.log.warn("Root discovery failed", { connector: c.id, code: toErrorInfo(e).code });
       return null;

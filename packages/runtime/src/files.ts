@@ -50,8 +50,11 @@ function userName(): string {
 // shortcut: a key right after "%3D" (encoded "=") joins the D to the run and is missed; no code path logs encoded queries.
 const STEAM_KEY = /(?<![0-9A-Fa-f])[0-9A-Fa-f]{32}(?![0-9A-Fa-f])/g;
 const STEAM_ID = /(?<!\d)7656119\d{10}(?!\d)/g;
-// ADR 77 point 5: long opaque tokens (GOG refresh tokens, client secrets). Same net as above, for 64+ char runs.
-const LONG_TOKEN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{64,}(?![A-Za-z0-9_-])/g; // not \b: a token may start or end with "-"
+// ADR 80 point 8: Ubisoft authorization headers, whatever follows "t=".
+const UBI_HEADER = /\b(?:Ubi_v1|rm_v1) t=\S+/gi;
+// ADR 77 point 5 and ADR 80 (B3): long opaque tokens (GOG, Ubisoft tickets), 64+ chars. Superset of the Ubisoft accepted
+// form (adds + / = .). Replaces the ADR 77 pattern. Accepted false positives: long paths, hashes and texts without spaces.
+const LONG_TOKEN = /(?<![A-Za-z0-9+/=_.-])[A-Za-z0-9+/=_.-]{64,}/g;
 
 const EPIC_TOKEN = /eg1~[A-Za-z0-9._-]+/g;
 
@@ -70,7 +73,7 @@ export function makeRedactor(home: string, user: string): (text: string) => stri
     // ADR 74 point 6: the net under Secret. A Steam Web API key (32 hex) and a SteamID64 are never written to a log.
     // Long tokens first: a hex run inside one must not split it below the 64-char threshold.
     // ADR 78: Epic eg1~ tokens (JWT with dots), before the long-token pattern.
-    return out.replace(EPIC_TOKEN, "[redacted]").replace(LONG_TOKEN, "[redacted]").replace(STEAM_KEY, "[redacted]").replace(STEAM_ID, "[redacted]");
+    return out.replace(EPIC_TOKEN, "[redacted]").replace(UBI_HEADER, "[redacted]").replace(LONG_TOKEN, "[redacted]").replace(STEAM_KEY, "[redacted]").replace(STEAM_ID, "[redacted]");
   };
 }
 

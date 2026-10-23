@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { appendFileSync } from "node:fs";
 import { isSea } from "node:sea";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
 import type { UserDialogs } from "@ludiary/contracts";
 import {
   CredentialManagerKeyStore,
@@ -12,6 +12,7 @@ import {
   HelperProcessTrayHost,
   WindowsLocationResolver,
   createHelperRunner,
+  HelperProcessEmbeddedLogin,
   createWindowsPlatformInfo,
   createWindowsProcessLauncher,
   type KeyringBinding,
@@ -52,7 +53,7 @@ function credentialService(service: string, env: NodeJS.ProcessEnv): string {
   return `${APP_ID}-test-${createHash("sha256").update(dataDir).digest("hex").slice(0, 8)}`;
 }
 
-function compose(): RuntimeDeps {
+function compose(serverRole: boolean): RuntimeDeps {
   const env = runtimeEnv();
   const platform = createWindowsPlatformInfo({ appId: APP_ID, execPath: process.execPath, env });
   const nativeDir = env["LUDIARY_NATIVE_DIR"] || join(platform.installDir, "native");
@@ -74,6 +75,16 @@ function compose(): RuntimeDeps {
   // web/ next to the executable (ADR 72 point 9); LUDIARY_WEB_DIR exists only in the test variant (ADR 65).
   const webDir = env["LUDIARY_WEB_DIR"] || join(platform.installDir, "web");
 
+  // ADR 80: login window of Ubisoft. The profile folders live under %LOCALAPPDATA%\Ludiary\tmp, where the helper requires them.
+  // No LOCALAPPDATA (or a relative one): the port is not registered and the step reports "unavailable". The helper
+  // checks the same folder again with the known-folder API, so a mismatch is refused there as well.
+  const localAppData = env["LOCALAPPDATA"];
+  const embeddedLogin =
+    localAppData && isAbsolute(localAppData)
+      ? new HelperProcessEmbeddedLogin({ helperPath: trayHelper, tmpRoot: join(localAppData, "Ludiary", "tmp"), env })
+      : undefined;
+  // Only the server role sweeps leftover login profiles: the launcher must never touch one that is in use.
+  if (serverRole) embeddedLogin?.start();
   let sqlite: SqliteAddon | undefined;
   const deps: RuntimeDeps = {
     version: __LUDIARY_VERSION__,
@@ -86,7 +97,11 @@ function compose(): RuntimeDeps {
     createLocationResolver: (files) => new WindowsLocationResolver({ files, runHelper, env }),
     createProcessLauncher: (allowedSchemes) => createWindowsProcessLauncher({ allowedSchemes }),
     folderPicker: new HelperProcessFolderPicker(runHelper),
-    dispose: () => runHelper.dispose(),
+    ...(embeddedLogin ? { embeddedLogin } : {}),
+    dispose: () => {
+      runHelper.dispose();
+      embeddedLogin?.dispose();
+    },
     // Loaded lazily through a getter so that roles that never touch SQLite do not pay for it.
     get sqliteAddon() {
       sqlite ??= loadAddon(join(nativeDir, "better_sqlite3.node"));
@@ -117,7 +132,7 @@ process.on("uncaughtException", (e) => {
 
 // In a SEA the user arguments start at argv[1]; when run as a plain script they start at argv[2].
 const args = process.argv.slice(isSea() ? 1 : 2);
-main(args, compose()).then(
+main(args, compose(args.includes("--server"))).then(
   (code) => process.exit(code),
   (e: unknown) => {
     crashLog(e);
