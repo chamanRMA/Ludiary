@@ -157,6 +157,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       // Safety net: a stuck step must never leave a zombie server. The OS releases the instance lock on exit.
       setTimeout(() => process.exit(EXIT.ok), 5_000).unref();
       await tray?.stop().catch(() => {});
+      core.shutdown(); // closes any open login window before the server waits for its pending request (ADR 80)
       await server.close().catch(() => {});
       // A scan in flight must not find the database closed; the 5 s safety net above bounds the wait.
       await Promise.race([waitForScans(), new Promise((r) => setTimeout(r, 3_000))]).catch(() => {});

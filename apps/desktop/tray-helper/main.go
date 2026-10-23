@@ -78,6 +78,8 @@ func main() {
 			os.Exit(handleRegistry(os.Stdin, os.Stdout))
 		case "--pick-folder":
 			os.Exit(handlePickFolder(os.Stdin, os.Stdout))
+		case "--embedded-login": // ADR 80
+			os.Exit(handleEmbeddedLogin(os.Stdin, os.Stdout))
 		}
 	}
 

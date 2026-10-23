@@ -248,6 +248,7 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
       "shared.akamai.steamstatic.com",
       "shared.cloudflare.steamstatic.com",
       "shared.steamstatic.com",
+      "static3.cdn.ubi.com",
     ]);
   });
 });

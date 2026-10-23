@@ -197,6 +197,24 @@ for (const l of goMods) {
   const lf = readdirSync(dir).find((f) => /^(licen[sc]e|copying)/i.test(f));
   lines.push("=".repeat(70), `go: ${path}@${ver}`, "", lf ? readFileSync(join(dir, lf), "utf8").trim() : "(no license file found)", "");
 }
+// Licenses that live in a subpackage of a module (e.g. go-webview2/webviewloader is ISC, the module is MIT) or notices
+// shipped next to the code (NOTICE*): collect them too, from the packages that are actually linked.
+const pkgDirs = execFileSync("go", ["list", "-deps", "-f", "{{.ImportPath}} {{.Dir}}	{{with .Module}}{{.Path}} {{.Dir}}{{end}}"], { cwd: trayDir, env: goEnv, encoding: "utf8" })
+  .split("\n").map((l) => l.trim()).filter(Boolean);
+const subSeen = new Set();
+for (const l of pkgDirs) {
+  const [pkgPart, modPart = ""] = l.split("	");
+  const modDir = modPart.slice(modPart.indexOf(" ") + 1);
+  const pkgDir = pkgPart.slice(pkgPart.indexOf(" ") + 1);
+  if (!modDir) continue; // standard library: no module
+  if (!pkgDir || pkgDir === modDir || !pkgDir.startsWith(modDir) || modPart.startsWith("github.com/ludiary/tray-helper")) continue;
+  for (const f of readdirSync(pkgDir).filter((n) => /^(licen[sc]e|copying|notice)/i.test(n))) {
+    const full = join(pkgDir, f);
+    if (subSeen.has(full)) continue;
+    subSeen.add(full);
+    lines.push("=".repeat(70), `go: ${pkgPart.split(" ")[0]} (${f})`, "", readFileSync(full, "utf8").trim(), "");
+  }
+}
 // The Go standard library is linked into ludiary-tray.exe but has no module, so `go list` above skips it.
 const goRoot = execFileSync("go", ["env", "GOROOT"], { env: goEnv, encoding: "utf8" }).trim();
 const goVersion = execFileSync("go", ["env", "GOVERSION"], { env: goEnv, encoding: "utf8" }).trim();

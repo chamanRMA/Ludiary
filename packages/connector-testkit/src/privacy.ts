@@ -23,7 +23,11 @@ export const FICTIONAL_EPIC_VALUES = [
   "eg1~epic-test.refresh.token-2",
   "eg1~epic-test.client.token",
 ] as const;
+/** ADR 80 point 13: fictional Ubisoft values; any other value after "rm_v1 t=" or "Ubi_v1 t=" is rejected. */
+export const FICTIONAL_UBISOFT_SESSION_ID = "00000000-0000-4000-8000-000000000001";
 const ALLOWED = [
+  /(?<![A-Za-z0-9_-])ubisoft-test-[a-z0-9-]+(?![A-Za-z0-9_-])/g,
+  new RegExp(FICTIONAL_UBISOFT_SESSION_ID, "g"),
   // Fictional Epic ids: 32 hex starting with 24 zeros. No real id has that shape.
   /(?<![0-9A-Za-z])0{24}[0-9a-f]{8}(?![0-9A-Za-z])/g,
   ...FICTIONAL_EPIC_VALUES.map((v) => new RegExp(`(?<![A-Za-z0-9._~-])${v.replace(/[.]/g, "\\.")}(?![A-Za-z0-9._~-])`, "g")),
@@ -35,6 +39,7 @@ const ALLOWED = [
 const RULES: readonly { rule: string; re: RegExp }[] = [
   { rule: "SteamID64", re: /7656119\d{10}/ },
   { rule: "32-hex key", re: /(?<![0-9A-Za-z])[0-9A-Fa-f]{32}(?![0-9A-Za-z])/ },
+  { rule: "Ubisoft authorization value", re: /(?:rm_v1|Ubi_v1) t=\S/i },
   { rule: "unlisted eg1 token", re: /eg1~/ },
   { rule: "LastOwner", re: /LastOwner/i },
   { rule: "user profile path", re: /[A-Za-z]:(?:\\{1,2}|\/)Users(?:\\{1,2}|\/)/i },

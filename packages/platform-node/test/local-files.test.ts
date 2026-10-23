@@ -126,6 +126,16 @@ describe("scoped reader", () => {
     expect(await code(fs.readText(path.join(root, "big.txt")))).toBe("store.unexpected-response");
   });
 
+  it("readBytes returns raw bytes, enforces maxBytes and stays in the roots (ADR 80)", async () => {
+    const fs = files.scoped([root]);
+    writeFileSync(path.join(root, "raw.bin"), Buffer.from([0, 255, 1, 2]));
+    expect(Array.from(await fs.readBytes(path.join(root, "raw.bin"), 4))).toEqual([0, 255, 1, 2]);
+    expect(await code(fs.readBytes(path.join(root, "raw.bin"), 3))).toBe("scan.root-unreadable");
+    expect(await code(fs.readBytes(path.join(root, "sub"), 10))).toBe("scan.root-unreadable");
+    expect(await code(fs.readBytes(path.join(outside, "secret.txt"), 10))).toBe("internal");
+    expect(await code(fs.readBytes(path.join(root, "raw.bin"), 65 * 1024 * 1024))).toBe("internal");
+  });
+
   it("enforces the 10 000 entries limit", async () => {
     const fs = files.scoped([root]);
     const full = path.join(root, "full");

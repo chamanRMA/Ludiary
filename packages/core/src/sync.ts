@@ -1,6 +1,6 @@
 // Scan and synchronization (ADR 40 rules 1-4, ADR 42, 50, 72).
 import { ConnectorError, LocationsUnreadableError } from "@ludiary/contracts";
-import type { ConnectorLogger, ResolvedLocation, ScanRoot, StoreConnector, StoreId } from "@ludiary/contracts";
+import type { ConnectorLogger, ResolvedLocation, ScanRoot, ScopedFileReader, StoreConnector, StoreId } from "@ludiary/contracts";
 import { storedActiveRoots } from "./active-roots";
 import { connectorLogger, epochOf, LIBRARY_MAX_BYTES, syncContext } from "./contexts";
 import {
@@ -148,6 +148,25 @@ export function createSyncService(env: Env): SyncService {
     }
   }
 
+  /**
+   * ADR 80: 'library' locations, only with auto-detection (the permission to look at launcher folders, ADR 42).
+   * Absent proves nothing and gives an empty reader; unreadable is `scan.discovery-unavailable` and the sync fails (ADR 79).
+   */
+  async function libraryFiles(c: StoreConnector): Promise<{ fs: ScopedFileReader; locations: readonly ResolvedLocation[] } | undefined> {
+    const decls = c.locations.filter((l) => l.purpose === "library");
+    if (decls.length === 0 || !deps.locations || (await readSettings(env)).detection !== "auto-and-manual") return undefined;
+    const found: ResolvedLocation[] = [];
+    for (const decl of decls) {
+      try {
+        found.push(...(await deps.locations.resolve(decl)));
+      } catch (e) {
+        deps.log.warn("Could not resolve a library location", { connector: c.id, location: decl.id, error: e instanceof Error ? e.name : "unknown" });
+        throw new ConnectorError("scan.discovery-unavailable", "A library location could not be read");
+      }
+    }
+    return { fs: deps.files.scoped(found.map((r) => r.path)), locations: found };
+  }
+
   async function doLibrary(c: StoreConnector, t0: number, prev: SyncStateRecord | null): Promise<void> {
     const listLibrary = c.listLibrary;
     if (!listLibrary) return;
@@ -162,7 +181,8 @@ export function createSyncService(env: Env): SyncService {
 
     const epoch = epochOf(env, c.id);
     try {
-      const ctx = await syncContext(env, c, signal, { maxBytes: LIBRARY_MAX_BYTES, epoch: "guard" });
+      const lib = await libraryFiles(c);
+      const ctx = await syncContext(env, c, signal, { maxBytes: LIBRARY_MAX_BYTES, epoch: "guard", ...(lib ? { fs: lib.fs, libraryLocations: lib.locations } : {}) });
       const snapshot = await withTimeout(signal, () => listLibrary.call(c, ctx));
       if (!snapshot || typeof snapshot !== "object") throw new ConnectorError("store.unexpected-response", "listLibrary returned nothing");
       const valid = validateLibraryEntries({ entries: snapshot.entries, connector: c, log: deps.log });

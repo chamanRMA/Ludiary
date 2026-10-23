@@ -1,5 +1,5 @@
 // Parser of the launcher's *.item manifests (ADR 78, point 3; assumption E2).
-import { ConnectorError } from "@ludiary/contracts";
+import { ConnectorError, isStrictLocalPath } from "@ludiary/contracts";
 import { buildStoreId, cleanText, isObject } from "./ids";
 
 export const MAX_TITLE = 300;
@@ -11,15 +11,11 @@ export interface EpicItem {
   readonly installLocation: string;
 }
 
-// eslint-disable-next-line no-control-regex
-const BAD_CHARS = /[\u0000-\u001f\u007f"<>|?*]/;
-const RESERVED = /^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|(?:COM|LPT)[0-9¹²³])(?:\..*)?$/i;
-
-/** InstallLocation comes from a file any local user can write (ADR 78 audit): strict Windows path rules. */
-function isSafeLocation(p: string): boolean {
-  if (!/^[A-Za-z]:\\[^\\]/.test(p) || BAD_CHARS.test(p) || p.indexOf(":", 2) !== -1) return false;
-  return p.slice(3).split("\\").every((c) => c !== "" && c !== "." && c !== ".." && !/[. ]$/.test(c) && !RESERVED.test(c));
-}
+/**
+ * InstallLocation comes from a file any local user can write (ADR 78 audit): the shared strict rule, plus no empty
+ * component and no drive root (the folder must have a name so its parent can be derived).
+ */
+const isSafeLocation = (p: string): boolean => isStrictLocalPath(p) && p.slice(3).split("\\").every((c) => c !== "");
 const bad = (msg: string): ConnectorError => new ConnectorError("store.unexpected-response", msg);
 const hasCategory = (cats: readonly unknown[], name: string): boolean =>
   cats.some((c) => typeof c === "string" && new RegExp(`^${name}(/|$)`, "i").test(c));

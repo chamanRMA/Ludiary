@@ -1,4 +1,5 @@
 import type {
+  EmbeddedLogin,
   FolderPicker,
   KeyStore,
   LocalFiles,
@@ -62,6 +63,8 @@ export interface RuntimeDeps {
   createProcessLauncher?: (allowedSchemes: readonly string[]) => ProcessLauncher;
   /** Absent: this mode cannot open a native folder dialog. */
   folderPicker?: FolderPicker;
+  /** ADR 80. Absent (Docker, Linux): the embedded-login step is rejected as unavailable. */
+  embeddedLogin?: EmbeddedLogin;
   /** Connectors to register. Defaults to the static list of `connectors.ts` (ADR 38); only tests override it. */
   connectors?: readonly StoreConnector[];
   /** Releases what the platform keeps open (helper processes, e.g. a folder dialog) when the server shuts down. */

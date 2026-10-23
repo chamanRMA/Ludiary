@@ -8,7 +8,7 @@ const csp = [
   "style-src 'self'",
   "font-src 'self'",
   // ADR 71: covers load straight from the stores' CDNs (union of connector mediaHosts).
-  "img-src 'self' data: https://cdn1.epicgames.com https://cdn2.unrealengine.com https://images.gog.com https://shared.akamai.steamstatic.com https://shared.cloudflare.steamstatic.com https://shared.steamstatic.com",
+  "img-src 'self' data: https://cdn1.epicgames.com https://cdn2.unrealengine.com https://images.gog.com https://shared.akamai.steamstatic.com https://shared.cloudflare.steamstatic.com https://shared.steamstatic.com https://static3.cdn.ubi.com",
   "connect-src 'self'",
   "manifest-src 'self'",
   "base-uri 'none'",

@@ -94,6 +94,7 @@ export async function composeCore(
       ...(locations ? { locations } : {}),
       ...(launcher ? { launcher } : {}),
       ...(deps.folderPicker ? { folderPicker: deps.folderPicker } : {}),
+      ...(deps.embeddedLogin ? { embeddedLogin: deps.embeddedLogin } : {}),
       http: deps.http ?? ((hosts, signal, log, opts) => createHttpClient({ hosts, signal, log, ...(opts?.maxBytes ? { maxBytes: opts.maxBytes } : {}) })),
       clock: systemClock,
       newId: randomUUID,

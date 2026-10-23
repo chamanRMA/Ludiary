@@ -47,6 +47,16 @@ describe("memoryFiles", () => {
   });
 });
 
+describe("memoryFiles.readBytes (ADR 80)", () => {
+  it("returns bytes, enforces maxBytes and the roots", async () => {
+    const fs = memoryFiles({ "C:\\L\\f.bin": new Uint8Array([0, 255, 7]), "C:\\o\\x": "x" }, { roots: ["C:\\L"] });
+    expect(Array.from(await fs.readBytes("C:\\L\\f.bin", 3))).toEqual([0, 255, 7]);
+    await expect(fs.readBytes("C:\\L\\f.bin", 2)).rejects.toMatchObject({ code: "scan.root-unreadable" });
+    await expect(fs.readBytes("C:\\L\\none", 2)).rejects.toMatchObject({ code: "scan.root-unreadable" });
+    await expect(fs.readBytes("C:\\o\\x", 2)).rejects.toMatchObject({ code: "internal" });
+  });
+});
+
 describe("contexts", () => {
   it("capture logs and progress", () => {
     const ctx = scanContext({ roots: ["C:\\x"] });

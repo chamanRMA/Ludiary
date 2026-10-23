@@ -15,3 +15,11 @@ export {
   type WindowsProcessLauncherOptions,
 } from "./process-launcher";
 export { buildRegistryRequest, parseRegistryResponse, type RegistryQuery, type RegistryResult } from "./registry-protocol";
+export {
+  HelperProcessEmbeddedLogin,
+  helperEnv,
+  interpret as interpretEmbeddedLogin,
+  removeTree,
+  type EmbeddedLoginSpawn,
+  type HelperEmbeddedLoginOptions,
+} from "./embedded-login";
