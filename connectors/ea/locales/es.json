@@ -1,0 +1,6 @@
+{
+  "connectors.ea.name": "EA",
+  "connectors.ea.errors.invalidId": "Este juego de EA tiene un identificador no válido y no se puede abrir.",
+  "connectors.ea.errors.launcherMissing": "No se encuentra la app de EA. Instálala desde ea.com y vuelve a intentarlo.",
+  "connectors.ea.errors.installerDataMissing": "Este juego de EA ya no está en su carpeta. Vuelve a escanear tus carpetas."
+}

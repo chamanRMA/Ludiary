@@ -52,7 +52,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; fila de EA de la tabla y `readText` con UTF-16 en la 81 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario); consecuencia sobre Ubisoft concretada en la 79 |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`) |
@@ -92,6 +92,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
 | 78 | Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta, no instalados e Instalar (corte 2) | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de la 40 y la parte de Epic de la 43; sin tipos nuevos; `storeGameId` hasta 160 caracteres; punto 13 aplicado por defecto con (a), (a) y (a); corte 2 tras la prueba del corte 1; revisada por el auditor el mismo día sin críticos ni altos (punto 14): `.item` como entrada no confiable con regla estricta de ruta, solo el valor extraído en `json-field`, E5 comprobado y `AppDataPath` como primera fuente; E7 falso en la práctica: el corte 1 va sin portadas y sin `resolveMedia` (punto 15)) |
 | 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); pendiente de prueba manual y de la revisión del código) |
+| 81 | Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` | Vigente (recomendada; encargada por el usuario el 23-10-2026; amplía las 40, 42 y 72; sin tipos nuevos ni `discoverRoots`; carpetas manuales admitidas; `readText` con UTF-16 con BOM; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: analizador sin expresiones de coste no acotado, `exists` antes de `readText` al lanzar, ID estable aceptado con comprobación manual, fichero de más de 1 MiB o no normal como `store.unexpected-response` en todas las tiendas); pendiente de la revisión del código y de la prueba manual). La 80 (Ubisoft) se escribe en otra copia de trabajo |
 
 ## Decisiones
 
@@ -571,7 +572,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79; fila de EA de la tabla y `readText` con UTF-16 revisados en la decisión 81)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -875,7 +876,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 | GOG | `unofficial-api` | sí | sí | ~~`exec` (cliente de Galaxy)~~ `exec` del ejecutable del juego; Galaxy, opcional (revisado en la decisión 76) |
 | Epic | `unofficial-api` | sí | sí | ~~`uri` del launcher de Epic, a verificar~~ `uri` (`com.epicgames.launcher`) del launcher (revisado en la decisión 78) |
 | Ubisoft | `local-only` | no | sí | ~~`uri` (`uplay`), a verificar~~ `uri` (`uplay://launch/<id>/0`); supuestos U4 y U6 (revisado en la decisión 79) |
-| EA | `local-only` | no | sí | `uri` o `exec`, a validar con juegos reales |
+| EA | `local-only` | no | sí | ~~`uri` o `exec`, a validar con juegos reales~~ `uri` (`origin2://game/launch?offerIds=…`); supuestos EAD8 y EAD9 (revisado en la decisión 81) |
 
 **Motivo:** un contrato que solo describe (datos y especificaciones de lanzamiento) y deja la ejecución, la persistencia y la validación al núcleo concentra en un único sitio lo delicado: lanzar procesos, guardar secretos y tocar el disco. Los conectores, que son la parte que más se romperá, quedan pequeños, sin E/S propia y comprobables con respuestas grabadas sustituyendo `http`, `fs` y `tools` por los dobles de `connector-testkit`. Alternativas descartadas: que el conector lance el juego él mismo (dispersa la superficie de ejecución de procesos y rompe el invariante 3); que el conector reciba la clave o los tokens descifrados en bruto y gestione su persistencia (multiplica los puntos donde puede filtrarse un secreto); un asistente de conexión con interfaz propia por conector (obliga a meter React en los conectores; los pasos declarativos bastan para OpenID, códigos de autorización y claves).
 
@@ -4261,6 +4262,253 @@ Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](http
 - El `auditor` revisa antes de cerrar: el ID en el `tag` y su validación, la regla de ruta copiada, «ausente frente a ilegible» en la plataforma y en el núcleo, la URI construida desde el grupo, y que ni el registro ni los errores lleven rutas o títulos.
 - Los agentes `programador` y `conectores` tienen aquí su especificación; el `tester` escribe `docs/manual-tests/ubisoft.md` (punto 9); el `documentalista` actualiza las guías del punto 10.
 
+### 81. Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` (amplía las decisiones 40, 42 y 72; revisa la fila de EA de la tabla de la 40 y el comentario de `ScopedFileReader.readText`)
+
+**Decisión (recomendada, 23 de octubre de 2026):** el usuario encarga el conector de la app de EA (antes Origin) en la rama `feature/eaconector`, que sale de `feature/ubisoftconector`. Es el hermano de la 79: EA es `local-only` (decisión 40), sin cuenta ni API, así que el corte es detectar los juegos instalados y jugarlos. La numeración salta la 80 (Ubisoft), que se escribe en otra copia de trabajo.
+
+**Punto de partida:** en el PC del usuario no está la app de EA (comprobado el 23-10-2026, solo leyendo: no existen `HKLM\SOFTWARE\Electronic Arts\EA Desktop` ni su equivalente en `WOW6432Node`, ni `Origin`; no están registrados los esquemas `origin`, `origin2`, `link2ea` ni `eadm`; no existen `C:\ProgramData\EA Desktop` ni `C:\ProgramData\Origin`). Todo lo de EA sale de fuentes públicas (Lutris, la integración de GOG Galaxy para la app de EA, GameFinder, otros gestores de código abierto y foros) y queda como supuesto (lista del final) hasta la prueba manual del punto 9.
+
+#### 1. Alcance
+
+- **Entra:**
+  - detección de los juegos de EA instalados leyendo el fichero `__Installer\installerdata.xml` de la carpeta de cada juego, con autodetección de las carpetas por defecto **y con carpetas manuales** (decisión 42; a diferencia de Ubisoft, el ID está en un fichero de la carpeta del juego);
+  - título sacado del propio fichero;
+  - Jugar con `origin2://game/launch?offerIds=…`, con comprobación previa de que la app de EA está instalada;
+  - el conector `connectors/ea` registrado en `runtime`, con sus textos;
+  - un cambio pequeño de la plataforma que vale para todas las tiendas: `readText` entiende UTF-16 con BOM (punto 2).
+- **No aplica** (como en la 79): Instalar, cuenta, `connection` y `listLibrary`. `actions: ['play']`.
+- **Queda fuera:**
+  - **portadas** (punto 5);
+  - **DLC:** `dlc: 'none'`. Los DLC de EA se instalan dentro de la carpeta del juego base y no tienen `__Installer` propio (supuesto EAD10);
+  - **emparejamiento entre tiendas:** un juego de EA comprado en Steam o Epic puede salir dos veces si el usuario añade esa carpeta a EA (supuesto EAD12);
+  - **tiempo de juego** (corte 2b, punto 7);
+  - **cuenta de EA** (juegos no instalados, portadas por la API de EA): queda para una decisión posterior, como en Ubisoft. Las vías conocidas (GraphQL de EA que usa Lutris, entitlements que usa la integración de Galaxy) exigen sesión y no son oficiales.
+
+#### 2. Contrato (amplía las decisiones 40 y 72; `contractVersion` sigue en 1)
+
+- **Nada nuevo en los tipos.** No hace falta `subkey` ni `tag` con ID (el ID sale del fichero) ni `discoverRoots`: sin él, el núcleo ya usa las ubicaciones `scan` resueltas como raíces (`sync.ts`, `discover`).
+- **`ScopedFileReader.readText` decodifica UTF-16 con BOM.** Fuentes de terceros que leen `installerdata.xml` advierten que aparece en UTF-8 y en UTF-16 (supuesto EAD3). Hoy `readText` decodifica todo como UTF-8 y quita un BOM UTF-8: un fichero UTF-16 llegaría como texto basura y el juego no saldría. Se decide en la plataforma, no en el conector:
+  - `packages/platform-node/src/local-files.ts`: si los primeros bytes son `FF FE`, se decodifican los siguientes como UTF-16 LE; si son `FE FF`, como UTF-16 BE (`swap16` sobre una copia; con longitud impar, el último byte se descarta). Si no, como hoy (UTF-8, quitando el BOM). Mismo tope de 1 MiB en bytes.
+  - Comentario de `ScopedFileReader` en `contracts`: «UTF-8 (a leading BOM is removed) or UTF-16 LE/BE with BOM (ADR 81)».
+  - UTF-16 sin BOM no se detecta: llega con caracteres NUL y el analizador del conector lo rechaza (punto 3).
+  - `memoryFiles` del `testkit` no cambia (guarda texto, no bytes).
+  - Para Steam, GOG y Epic solo cambia a mejor: un fichero UTF-16 que antes fallaba al analizarse ahora se lee bien.
+- `contractVersion` sigue en 1: es un comportamiento de un puerto del SO más permisivo, sin campos nuevos.
+
+#### 3. Escaneo
+
+- **Fuente única: `<carpeta del juego>\__Installer\installerdata.xml`.** Es el manifiesto del instalador de EA. En el formato actual (raíz `DiPManifest`) trae `contentIDs/contentID` (los ID de oferta del juego, varios si hay ediciones) y `gameTitles/gameTitle` con atributo `locale`; también `runtime/launcher/filePath` (supuestos EAD1 y EAD2). Lo usan Lutris, el gestor de la integración de Galaxy, EverythingBox (septiembre de 2026), Mira, nicedeck y la lista de un proyecto de manifiestos que toma «el primer `contentID`».
+- **Descartadas como fuente:**
+  - `C:\ProgramData\EA Desktop\530c1147…\IS` (el «IS.json»): cifrado con AES-256-CBC y una clave que sale del hardware del equipo (placa, BIOS, CPU, número de serie de `C:`), según GameFinder. Descifrarlo exigiría leer datos del hardware y reimplementar un cifrado sin documentar que cambia con cualquier pieza: se descarta.
+  - `C:\ProgramData\EA Desktop\InstallData\…`: no consta un formato público; la integración de Galaxy define la ruta pero no la usa.
+  - `C:\ProgramData\Origin\LocalContent\*.mfst` (Origin): Origin cerró el 17-04-2025; además, los `.mfst` solo dan el ID y Playnite pedía el resto (ruta, ejecutable) a una API pública de Origin que ya no consta.
+  - Registro `HKLM\SOFTWARE\WOW6432Node\Origin Games\<contentId>`: según el hilo de Lutris de diciembre de 2023, las subclaves no se borran al desinstalar y también listan DLC; no sirve para saber qué está instalado. Si la prueba manual muestra que lleva la carpeta, puede servir para **encontrar** carpetas no estándar (como el registro en GOG), en una decisión aparte (supuesto EAD6).
+  - Registro por juego `HKLM\SOFTWARE\[WOW6432Node\]<Editor>\<Juego>\Install Dir`: la clave cambia en cada juego (`Respawn\Apex`, `Maxis\The Sims 4`…) y solo se conoce leyendo `installerdata.xml`; no es una declaración fija.
+  - Entradas `Uninstall` del instalador de EA: obligan a recorrer todo `Uninstall` (choca con el tope de 256 subclaves, como vio la 79).
+- **Manifiesto, `locations`:**
+  - `ea-libraries` (`scan`): `{ kind: 'known-folder', folder: 'ProgramFiles', relative: 'EA Games' }`, la carpeta por defecto de la app de EA (Lutris, EverythingBox; supuesto EAD5), y `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'Origin Games' }`, la de Origin, donde siguen los juegos que se instalaron antes de la migración (supuesto EAD5). Solo salen las que existen.
+  - `ea-desktop` (`launcher`): `{ kind: 'known-folder', folder: 'ProgramFiles', relative: 'Electronic Arts\\EA Desktop\\EA Desktop' }`. El instalador de la app de EA no deja elegir carpeta (foro de EA) y ahí están `EADesktop.exe` y `EALauncher.exe` (supuesto EAD7).
+  - No hay fuentes de registro, así que `LocationsUnreadableError` no aparece por EA. Las reglas de la 79 («ausente frente a ilegible» por declaración, raíces sin robo entre tiendas, topes que no borran) se aplican sin cambios porque viven en el núcleo y la plataforma.
+- **Carpetas manuales y «solo carpetas manuales»:** funcionan, porque el escaneo no depende del registro. Un usuario que instala en `D:\EA Games` añade esa carpeta en Ajustes; la guía lo explica. **No** hace falta el aviso `needsAutoDetection` de Ubisoft. Con «configurarlo más tarde» no hay carpetas y no sale nada, como ya dice el asistente de primer arranque (decisión 69).
+- **`scanInstalled`** (`connectors/ea/src/scan.ts`), para cada raíz (descubierta o del usuario), con profundidad 1 como GOG:
+  1. Candidatas: la propia raíz y sus subcarpetas directas (`readDir`), como mucho 2000 por raíz.
+  2. En cada candidata, `ctx.fs.exists(join(candidata, '__Installer', 'installerdata.xml'))`. Si no existe, no es de EA y se pasa a la siguiente sin leer nada más.
+  3. `readText` y `parseInstallerData` (abajo). Si no es válido: `store.unexpected-response`, se salta ese fichero y se cuenta.
+  4. Entrada: `storeGameId` = el **primer** ID válido, `kind: 'game'`, `title` del fichero, `installPath` = la candidata. Sin `media`, `launchData` ni `executables`: el resto de ID se lee al lanzar (punto 4), como hace GOG con su `.info`, para que una actualización del juego valga enseguida.
+  5. Un `storeGameId` ya visto se salta y se registra el ID (el núcleo también lo hace).
+  - **Errores**, con la clasificación `isHandled` de GOG, copiada: `readDir` de la raíz con error, o un `exists`/`readText` con error de lectura → la raíz va a `unreadableRoots` y conserva sus instalaciones; `PathEscapesRootsError` en una subcarpeta → se salta esa candidata; ~~en la propia raíz → raíz ilegible; un fichero de más de 1 MiB → `scan.root-unreadable` (lo da `readText`), la raíz conserva sus juegos~~ (revisado por el auditor, punto 12, M3: `PathEscapesRootsError` solo deja la raíz ilegible si falla `readDir` de la raíz; un fichero de más de 1 MiB o que no es un fichero normal es `store.unexpected-response` y cuenta como fichero inválido); otro `internal` se propaga.
+  - **Ninguna ruta sale de un fichero ni del registro** (las raíces son carpetas conocidas o del usuario, y `installPath` es una carpeta que Ludiary ha recorrido), así que aquí **no hace falta** la regla estricta de ruta de la 79. `runtime/launcher/filePath` no se lee.
+  - En el registro, solo contadores (`invalidFiles`, `invalidIds`, `duplicates`), códigos e ID de EA; nunca rutas ni títulos.
+- **`parseInstallerData(text)`** (`connectors/ea/src/installerdata.ts`, pura, sin dependencias; no hay librería de XML en el repositorio y no se añade una para leer dos listas). **Revisado por el auditor (punto 12, A1 y B1 a B3):** las expresiones de esta lista dicen qué se extrae; cómo se extrae (sin expresiones de coste no acotado), la decodificación y el tratamiento de los ID son los del punto 12, que prevalece.
+  1. Si el texto contiene un carácter NUL (UTF-16 sin BOM) o `<!DOCTYPE` o `<!ENTITY`: inválido. No se expande ninguna entidad declarada.
+  2. Se quitan los comentarios `<!-- … -->`.
+  3. Formato: `<DiPManifest\b` → actual; si no, `<game\b` → antiguo de Origin (supuesto EAD4); si no, inválido.
+  4. **ID:** primer bloque `<contentIDs\b[^>]*>…</contentIDs>`; dentro, cada `<contentID\b[^>]*>([^<]*)</contentID>`. `\b` impide que `<contentIDs>` cuente como `<contentID>` (fallo real que corrigió Mira en su lector). Cada valor se decodifica (abajo), se recorta y debe cumplir `^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$` (la regla de EverythingBox: los ID raros se rechazan, nunca se limpian). Sin repetidos, en orden, como mucho 16 (los demás se ignoran y se cuentan). Ninguno válido: inválido.
+  5. **Título:** en el formato actual, cada `<gameTitle\b[^>]*\blocale="([^"]*)"[^>]*>([^<]*)</gameTitle>` dentro de `<gameTitles>`; en el antiguo, `<localeInfo\b[^>]*\blocale="([^"]*)"[^>]*>` seguido de su `<title>([^<]*)</title>`. Se elige `en_US`, si no el primer `en_*`, si no el primero. No se usa el idioma de la interfaz: el título queda estable al cambiar de idioma y se parece más al de las demás tiendas para el emparejamiento futuro (decisión 51).
+  6. **Decodificación:** `&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;` y referencias numéricas `&#…;`/`&#x…;` a puntos de código válidos que no sean de control; cualquier otra entidad se deja tal cual. Un `CDATA` no casa con `[^<]*` y deja el título sin valor (pasa al respaldo).
+  7. Limpieza del título: sin caracteres de control, recortado, 300 como mucho. Si queda vacío, el último componente de la carpeta (regla de la 79) y, si también, `EA <id>` (un dato, no un texto de la interfaz).
+  8. Devuelve `{ ids, title }` o `null`.
+
+#### 4. Lanzamiento
+
+**Opciones:**
+
+- **A. URI `origin2://game/launch?offerIds=<id>[,<id>…]`** (recomendada). La app de EA se abre (si hace falta, pide iniciar sesión) y arranca el juego.
+  - Ventajas: es la vía de Lutris, de la integración de Galaxy para la app de EA (mantenida tras el cierre de Origin) y de EverythingBox (septiembre de 2026); no necesita saber el ejecutable; respeta lo que exigen los juegos de EA, que casi siempre necesitan la app abierta (su DRM la vuelve a abrir aunque se lance el `.exe`, según el hilo de Lutris).
+  - Costes: depende de que la app de EA esté instalada y registre `origin2`; Ludiary no sabe si el juego arrancó; la decisión 22 recoge fallos de las URI de EA en algunos juegos.
+- **B. `exec` del ejecutable de `runtime/launcher/filePath`.** Descartada en este corte: a menudo no es una ruta sino una referencia al registro, como `[HKEY_LOCAL_MACHINE\SOFTWARE\Respawn\Apex\Install Dir]EasyAntiCheat_launcher.exe` (GameFinder). Resolverla exige leer una clave del registro que nombra un fichero, no una declaración fija (choca con la regla 8 de la 40); quedarse con la cola relativa a `installPath` supone que `Install Dir` es la carpeta del juego; y aun así el juego reabre la app de EA. Queda como plan B, con su propia decisión, si la prueba manual muestra que la URI falla.
+- **C. `link2ea://launchgame/<id>?platform=…&theme=…`.** Descartada: es el puente que usan Steam y Epic para los juegos de EA comprados en esas tiendas (todos los ejemplos encontrados llevan `platform=steam` y un `theme` con el nombre corto del juego, que `installerdata.xml` no da). No aplica a lo comprado en la app de EA.
+- **D. `origin://launchgame/<id>`** (forma antigua de Origin): descartada. Es la que, según el hilo del foro de EA, daba error de acceso; la que funcionaba era `origin2` con el `contentID` numérico. Lo más probable es que los fallos de la decisión 22 vengan de ahí y de usar ID `Origin.SFT.…` (supuesto EAD9).
+
+**Qué ID se pasan.** `offerIds` es plural: Lutris pasa todos los `contentID` separados por comas, y la integración de Galaxy y EverythingBox uno solo. Se eligen **todos**, con el guardado delante: si el fichero lista varias ediciones y el usuario posee solo una, la app de EA encuentra la suya (supuesto EAD8). La prueba manual compara las dos formas; si con varios falla, se pasa a uno solo cambiando la construcción, la aserción y su prueba en el mismo commit. Sin `&autoDownload=1`: Lutris lo añade también al jugar, pero la integración de Galaxy solo al instalar, y aquí el juego ya está instalado.
+
+**`resolveAction` de EA** (`connectors/ea/src/launch.ts`):
+
+1. Acción distinta de `play`: `null`. `storeGameId` nulo: `null`.
+2. `storeGameId` debe cumplir el patrón del punto 3; si no, `action.unsupported` con `connectors.ea.errors.invalidId`. `installPath` nulo: `launch.not-installed`.
+3. Si `ctx.launchersResolved`, se busca la app de EA como en la 79: para cada ubicación de `ea-desktop`, `ctx.fs.exists` de `EADesktop.exe` o de `EALauncher.exe`.
+   - Alguno existe: se sigue.
+   - Ninguno existe y ninguna comprobación falló: `launch.launcher-missing` con `connectors.ea.errors.launcherMissing` («No se encuentra la app de EA. Instálala desde ea.com y vuelve a intentarlo»).
+   - Alguna comprobación dio error de lectura: se sigue a la URI (la comprobación solo mejora el mensaje).
+   - Sin `launchersResolved`: no se comprueba nada.
+4. Lee `<installPath>\__Installer\installerdata.xml` con `ctx.fs` (confinado a `installPath`) y `parseInstallerData`. Primero `exists` y después `readText` (revisado por el auditor, punto 12, M1):
+   - el fichero no existe: `launch.not-installed` con `connectors.ea.errors.installerDataMissing` (el juego se desinstaló o se movió; el siguiente escaneo lo corrige);
+   - válido y contiene el ID guardado: `ids` = el guardado y después los demás del fichero, en su orden, 16 como mucho;
+   - válido pero sin el ID guardado: `launch.not-installed` con la misma clave (en esa carpeta hay ahora otro juego);
+   - ilegible, `PathEscapesRootsError` o inválido: `ids` = solo el guardado (la URI es segura igual); se registra el código, no la ruta.
+5. `const uri = \`origin2://game/launch?offerIds=${ids.join(",")}\``, **afirmada** al final con `^origin2://game/launch\?offerIds=I(,I){0,15}$`, donde `I` es el patrón del punto 3; si no cumple (fallo del conector), `internal`. Los caracteres del patrón (`A-Za-z0-9._:-`) y la coma no necesitan codificarse en la consulta y los acepta `validateLaunchUri`.
+6. Devuelve `{ kind: 'uri', uri }`.
+
+- Ningún `ConnectorError` lleva rutas ni títulos en `message` ni en `params`; como mucho el ID.
+- **Núcleo y plataforma:** sin reglas nuevas. `checkSpec` comprueba el esquema contra `uriSchemes` y la plataforma vuelve a validar la URI (decisión 72).
+- **Invariante 3:** la API recibe solo IDs. La URI se construye con ID que salen de un fichero local de la carpeta del juego, cada uno validado con un patrón cerrado antes de interpolarlo, y con el guardado en la base de datos siempre presente.
+
+#### 5. Portadas
+
+- **No entran: sin portada, con el degradado** (decisión 71). `resolveMedia` no existe y `apiHosts` y `mediaHosts` están vacíos: **el conector no hace ninguna petición de red.** Ni la CSP ni la guía de privacidad cambian.
+- No se ha encontrado una vía pública y sin cuenta: Lutris saca `packArt` y `keyArt` del GraphQL de EA con la sesión del usuario; la integración de Galaxy, de las ofertas con token; la API pública de Origin (`api1.origin.com/ecommerce2/public/supercat/…`) que usaba Playnite devolvió 404 en la prueba del 23-10-2026 y Origin ya no existe.
+- **Gancho para un proveedor común:** si la decisión 80 (Ubisoft) u otra posterior crea un proveedor externo de portadas para las tiendas sin ellas (IGDB o RAWG, decisiones 6 y 31), EA entra sin tocar el conector: sus entradas ya llevan un título limpio y un `storeGameId` estable. Aquí no se diseña.
+
+#### 6. Manifiesto de EA
+
+```ts
+// connectors/ea/src/index.ts (sketch)
+export function createEaConnector(): StoreConnector {
+  return {
+    contractVersion: 1,
+    id: "ea",
+    nameKey: "connectors.ea.name" as I18nKey,
+    access: "local-only",
+    capabilities: {
+      library: false, scan: true, dlc: "none",
+      actions: ["play"], launchKinds: ["uri"], uriSchemes: ["origin2"],
+      storePlaytime: false, price: false,
+    },
+    minSyncIntervalMs: 60_000,          // only scans (ADR 50)
+    authHosts: [], apiHosts: [], mediaHosts: [],
+    locations: EA_LOCATIONS,            // ea-libraries, ea-desktop (point 3)
+    externalTools: [],
+    scanInstalled: scanEaInstalled,     // no discoverRoots: resolved locations are the roots
+    resolveAction: resolveEaAction,
+  };
+}
+```
+
+- `checkConnectorManifest` lo acepta tal cual (`local-only` sin `connection`; `play` con `uri` y su esquema).
+- **Paquete `connectors/ea`** (`@ludiary/connector-ea`, `"private": true`), con la forma de `connectors/ubisoft`: `src/` (`manifest.ts`, `installerdata.ts`, `scan.ts`, `launch.ts`, `index.ts`), `locales/es.json` y `en.json` (`connectors.ea.*`: `name`, `errors.invalidId`, `errors.launcherMissing`, `errors.installerDataMissing`) y pruebas con `connector-testkit`. Sin `paths.ts` (punto 3).
+- **`runtime`:** `createConnectors()` añade `createEaConnector()`. `packages/i18n/src/connectors.ts` añade su línea.
+- **Web:** la tarjeta de EA ya existe en el simulador como `not-applicable` e `installed-only`, con `C:\Program Files\EA Games` como carpeta detectada (decisión 68); pasa a datos reales. Jugar usa `game.launching` con `{store}` = EA.
+
+#### 7. Proceso y tiempo de juego
+
+Fuera de este corte (corte 2b). Mismo caso que Ubisoft para la 55: el proceso que abre la URI es la app de EA, no el juego. Se vigilarán los procesos cuyo ejecutable esté dentro de `installPath`. La 55 se revalida con EA en ese corte.
+
+#### 8. Pruebas automáticas
+
+Fixtures **inventadas**: ID ficticios (`9000001`, `9000002`, `OFB-TEST:900001`), títulos inventados y rutas bajo `D:\EA Games` o `C:\Program Files\EA Games`, nunca `C:\Users\…`. Los `installerdata.xml` de prueba se escriben a mano (formato actual y antiguo), no se copian de un juego real. Sin respuestas grabadas (no hay red). La comprobación de fixtures de la decisión 48 se aplica igual.
+
+- **`connectors/ea`:**
+  - `parseInstallerData`: formato actual con un ID y con varios; `<contentIDs>` y `<gameTitles>` no cuentan como elementos sueltos; ID con espacios alrededor (se recortan), vacío, que empieza por `.`, con `/`, `?`, `&`, `%`, `,`, espacio interior o de 65 caracteres → se rechazan sin limpiar; repetidos; más de 16; ningún ID válido → `null`; preferencia `en_US`, otro `en_*`, primero; entidades (`&amp;`, `&#8482;`, `&#x2122;`, una desconocida que queda tal cual, una numérica de control que no se decodifica); comentario con un `<contentID>` dentro (ignorado); `<!DOCTYPE>` o `<!ENTITY>` → `null`; carácter NUL → `null`; formato antiguo `<game>` con `localeInfo`/`title`; raíz desconocida → `null`; título vacío, solo espacios, con caracteres de control o de más de 300.
+  - `scanInstalled` con `memoryFiles`: raíz con dos juegos en subcarpetas; la propia raíz como carpeta de juego; subcarpeta sin `__Installer` (sin lecturas); fichero inválido → se salta y se cuenta; `readDir` de la raíz ilegible → `unreadableRoots`; `readText` ilegible → `unreadableRoots`; `PathEscapesRootsError` en subcarpeta → se salta, en la raíz → ilegible; otro error → se propaga; mismo ID en dos carpetas → una entrada; raíz del usuario igual que la descubierta; título de respaldo con el nombre de la carpeta; el registro no contiene rutas ni títulos.
+  - `resolveAction` con un `ScopedFileReader` doble: `play` → `origin2://game/launch?offerIds=9000001,9000002` exacto, con el guardado delante aunque en el fichero vaya segundo; `install` y otras → `null`; ID guardado inválido → `action.unsupported` sin construir la URI; `installPath` nulo → `launch.not-installed`; fichero ausente o sin el ID guardado → `launch.not-installed`; fichero ilegible, que escapa o inválido → URI solo con el guardado; `EADesktop.exe` o `EALauncher.exe` presentes → URI; ninguno → `launch.launcher-missing`; `exists` que lanza → URI; `launchersResolved: false` → URI sin comprobar; ningún error lleva una ruta.
+  - `assertConnectorConformance`.
+- **`platform-node`:** `readText` con BOM UTF-8 (se quita), UTF-16 LE con BOM, UTF-16 BE con BOM (con un carácter no ASCII, por ejemplo `ñ` y `™`), UTF-16 de longitud impar, y sin BOM (UTF-8, como hoy); el tope de 1 MiB sigue en bytes.
+- **`runtime`:** `createConnectors` registra EA; el esquema `origin2` llega a la lista de esquemas de la plataforma.
+- **`i18n`:** paridad con `connectors/ea/locales`.
+- **Playwright** (pendiente con los de las decisiones 72 a 79): carpeta temporal con un juego de EA inventado como raíz descubierta y `ProcessLauncher` que graba. Casos: el juego sale con el título del fichero y el degradado; Jugar graba la URI esperada; con «solo carpetas manuales» y la carpeta añadida a mano, el juego sigue saliendo.
+
+#### 9. Prueba manual (la prepara el tester en `docs/manual-tests/ea.md`; la hace el usuario)
+
+- **Preparación:** instalar la app de EA desde ea.com, crear o usar una cuenta gratuita de EA e instalar **The Sims 4** (el juego base es gratuito desde octubre de 2022, es de EA y exige su app, así que es el caso representativo) en la carpeta por defecto. Su tamaño no se ha podido comprobar y es grande. Alternativa más pequeña: un juego antiguo que el usuario ya tenga en su cuenta de EA (por ejemplo, de los regalos «On the House» de Origin), que además probaría el formato antiguo del fichero.
+- **Qué comprobar** (copiar al ADR, saneados, los valores que se piden; nada de nombres de usuario ni ID de cuenta):
+  1. `reg query "HKLM\SOFTWARE\Electronic Arts\EA Desktop"` y la misma en `WOW6432Node`: nombres de los valores (por si hace falta una fuente de registro para la app) y si la carpeta es `C:\Program Files\Electronic Arts\EA Desktop\EA Desktop` con `EADesktop.exe` y `EALauncher.exe` (EAD7).
+  2. `reg query "HKCR\origin2\shell\open\command"` y `HKCR\link2ea`: qué esquemas registra la app y a qué apuntan (EAD9).
+  3. En la carpeta del juego, `__Installer\installerdata.xml`: `Format-Hex -Count 4` (codificación, EAD3), etiqueta raíz, cuántos `contentID` y de qué forma, qué `locale` tienen los `gameTitle` y qué pone `runtime/launcher/filePath` (EAD1, EAD2, EAD4).
+  4. `reg query "HKLM\SOFTWARE\WOW6432Node\Origin Games" /s`: ¿existe la subclave del juego y lleva la carpeta en algún valor? (EAD6).
+  5. ¿Existen `C:\ProgramData\EA Desktop\machine.ini` (o `.inf`) y `%LOCALAPPDATA%\Electronic Arts\EA Desktop\user_*.ini`, y tienen `downloadinplacedir`? Solo el nombre de la clave y la forma de la ruta (EAD6).
+  6. Ludiary con autodetección: Ajustes muestra `C:\Program Files\EA Games` como detectada de EA; el juego sale con su título y el degradado.
+  7. Jugar con la app de EA **cerrada** y **abierta**: se abre la app y arranca el juego (EAD8, EAD11). Si falla, probar con Win+R `origin2://game/launch?offerIds=<primer ID>` y anotar cuál funciona. Si el juego tiene varios `contentID`, comprobar que la URI con comas llega entera a la app de EA a través de `rundll32` (punto 12, NV1): el registro de la app de EA o el resultado deben coincidir con los de la misma URI escrita en Win+R.
+  7b. Estabilidad del ID (punto 12, M2): anotar la lista de `contentIDs` antes y después de que la app de EA actualice el juego. Si el primero cambia, se aplica la opción (b) de M2.
+  8. Crear desde la app de EA un acceso directo del juego (si lo permite) y copiar su destino.
+  9. «Solo carpetas manuales»: el juego desaparece; añadir `C:\Program Files\EA Games` a mano: vuelve a salir.
+  10. Desinstalar el juego desde la app de EA y escanear: desaparece. ¿Queda la carpeta `__Installer`? (EAD13).
+  11. El registro exportado no contiene la ruta del juego, su título ni la de la app de EA.
+  12. Opcional, al terminar: desinstalar la app de EA dejando el juego guardado en Ludiary y pulsar Jugar: «No se encuentra la app de EA».
+
+#### 10. Orden de implementación y trabajo en paralelo
+
+1. **En paralelo:**
+   - `programador` (pequeño): UTF-16 en `readText`, el comentario de `contracts` y sus pruebas.
+   - `conectores`: `connectors/ea` completo contra `connector-testkit` (puntos 3, 4 y 6). No depende del paso anterior: `memoryFiles` ya devuelve texto.
+   - `auditor`: revisión de este diseño (analizador de XML sin librería, ID en la URI, lectura al lanzar, UTF-16) antes del código.
+2. **Después:** registro en `runtime`, textos, Playwright y revisión del `auditor` sobre el código.
+3. **Al final:** prueba manual del usuario (punto 9), con los supuestos cerrados en este ADR, y el `documentalista`:
+   - guía de usuario: EA se detecta en `C:\Program Files\EA Games` y en las carpetas que añada el usuario; sin portadas por ahora; Jugar abre la app de EA;
+   - solución de problemas: «No se encuentra la app de EA» y «No veo mis juegos de EA» (instalados en otra carpeta: añadirla en Ajustes);
+   - privacidad: el conector de EA no se conecta a internet; solo lee la carpeta de cada juego.
+
+#### 11. Lo que decide el usuario
+
+**Aplicado por defecto (23-10-2026), salvo que el usuario diga otra cosa:** 11.1 (a).
+
+1. **Jugar sin la app de EA instalada:** (a) mensaje «No se encuentra la app de EA» (recomendado, lo mismo que en Steam, GOG y Ubisoft); (b) intentar la URI igual y dejar que Windows muestre su diálogo.
+2. **Juego para la prueba manual:** (a) The Sims 4 (recomendado: gratuito, de EA y con su app); (b) un juego pequeño que ya tenga en su cuenta de EA, si importa el espacio.
+3. **Qué va después:** (a) fusionar Ubisoft (79 y 80) y EA y hacer sus pruebas manuales (recomendado: con EA las cinco tiendas detectan instalados y cada rama abierta complica la fusión); (b) el corte 2b (tiempo de juego), para cerrar la 55; (c) el emparejamiento entre tiendas; (d) un proveedor de portadas para Ubisoft y EA.
+
+#### 12. Revisión del auditor sobre el diseño (23 de octubre de 2026)
+
+Sin críticos. Lo que sigue prevalece sobre los puntos 2, 3 y 4 donde no coincida. El código lo hace el agente `conectores` (y el `programador` el cambio de plataforma de M3).
+
+- **A1 (alto). Analizador sin expresiones de coste no acotado.** Medido por el auditor: 44 000 caracteres de `<gameTitle locale="x" ` repetido tardan 52 s con la expresión del punto 3, y `<contentIDs>` repetido, 5 s con 480 KB. El servidor es de un solo hilo: un fichero así lo congela entero. Se decide:
+  - comentarios (`<!--` … `-->`), `CDATA` y el bloque `<contentIDs>` … `</contentIDs>` (y `<gameTitles>`) se localizan con `indexOf`, nunca con una expresión que recorra el texto con `[\s\S]*?`;
+  - las etiquetas se reconocen con cuantificadores acotados (por ejemplo, atributos de 512 caracteres como mucho, `[^<>]{0,512}`), y el valor de un elemento con `[^<]{0,1024}`;
+  - el atributo `locale` se lee aparte, sobre el texto ya aislado de la etiqueta, con `\blocale="([^"<>]{1,32})"`;
+  - el final del nombre de una etiqueta se comprueba con `(?=[\s/>])` en vez de `\b` (`<contentID` seguido de `s` no casa, y tampoco `<contentID-x`);
+  - `<!DOCTYPE` y `<!ENTITY` se buscan sin distinguir mayúsculas;
+  - prueba de rendimiento: cada una de las entradas hostiles del auditor (y una de 1 MiB de etiquetas abiertas sin cerrar) se analiza en **menos de 200 ms**.
+- **M1 (medio). Al lanzar, `exists` antes de `readText`.** `exists` falso → `launch.not-installed` con `installerDataMissing`; `exists` o `readText` con error de lectura (o `PathEscapesRootsError`) → URI solo con el ID guardado. Así una carpeta borrada no se confunde con un fichero ilegible.
+- **M2 (medio). Estabilidad del ID.** Se decide **(a)**: aceptar EAD2 (el primer `contentID` es estable) y comprobarlo en la prueba manual (punto 9, paso 7b, antes y después de una actualización). **(b)**, si falla: que el núcleo conserve el `storeGameId` de una propiedad cuyo `installPath` no cambia, en su propia decisión.
+- **M3 (medio). Problemas permanentes de un fichero no son una raíz ilegible.**
+  - `PathEscapesRootsError` solo deja la raíz ilegible si falla `readDir` de la propia raíz; en una candidata o en su fichero, se salta la candidata.
+  - **Cambio de plataforma, para todas las tiendas:** `readText` de un fichero de más de 1 MiB o que no es un fichero normal lanza `store.unexpected-response` en vez de `scan.root-unreadable`. Es permanente: marcar la raíz como ilegible conservaría para siempre juegos que quizá ya no están. Los conectores lo cuentan como fichero inválido y siguen (en Steam, GOG y Epic ya es lo que hacen con `store.unexpected-response`). El comentario de `ScopedFileReader` en `contracts` lo dice. `contractVersion` sigue en 1. Las pruebas de `platform-node` y del `testkit` (`memoryFiles`, que debe imitarlo) cambian con él.
+- **B1 (bajo). CDATA:** un título en `CDATA` se toma tal cual, sin decodificar entidades, localizándolo con `indexOf` (`<![CDATA[` … `]]>`); un `CDATA` sin cerrar invalida el título (pasa al respaldo).
+- **B2 (bajo). ID en bruto.** Los `contentID` **no** se decodifican: cualquier `&` en el valor lo invalida (el patrón ya no lo admite). Solo se recortan los espacios.
+- **B3 (bajo). Entidades del título** en una sola pasada (sin doble decodificación: `&amp;lt;` da `&lt;`), excluyendo referencias numéricas a sustitutos (`0xD800`–`0xDFFF`), mayores de `0x10FFFF` y de control. Tras decodificar UTF-16 en la plataforma, `toWellFormed()` sustituye los sustitutos sueltos.
+- **B4 (bajo). Un solo patrón.** `ID_BODY = "[A-Za-z0-9][A-Za-z0-9._:-]{0,63}"` común para validar y para la aserción final de la URI. «Los demás» son los del fichero **distintos del guardado**. El guardado se busca en la lista completa **antes** de cortarla a 16 (si va el 20.º, se lanza con él delante y 15 más).
+- **B5 (bajo).** Las subcarpetas candidatas se recorren ordenadas por nombre (sin distinguir mayúsculas) para que el ID que gana entre repetidos sea estable.
+- **NV1 (no verificado).** Que las comas de la URI lleguen intactas a la app de EA a través de `rundll32` (`openUri`). Pasa a la prueba manual (punto 9, paso 7). Si se pierden, se lanza solo con el ID guardado.
+- **Pruebas añadidas por la revisión:** las de rendimiento de A1; `<contentID-x>` y `<CONTENTIDS>`; `<!doctype>` en minúsculas; `exists` falso frente a `readText` ilegible al lanzar; fichero de más de 1 MiB y carpeta con el nombre del fichero → fichero inválido, raíz legible; `PathEscapesRootsError` en el fichero de la raíz → se salta, raíz legible; ID con `&amp;` → rechazado; `&amp;lt;` → `&lt;`; `&#xD800;` y `&#x110000;` sin decodificar; UTF-16 con un sustituto suelto; título en `CDATA`; guardado en posición 20; orden de candidatas.
+
+#### Supuestos de EA (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
+
+- **EAD1:** cada juego instalado por la app de EA tiene `__Installer\installerdata.xml` en su carpeta, con raíz `DiPManifest`, `contentIDs/contentID` y `gameTitles/gameTitle locale="…"`. Fuentes: Lutris (`ea_app.py`), nicedeck, EverythingBox (PR 479), Mira (PR 62), GameFinder (wiki), foro de EA.
+- **EAD2:** el **primer** `contentID` es estable y es el que identifica el juego (lo usan Lutris para casar con la cuenta y el proyecto 626-game-manifest, que lo exige explícitamente; ejemplos numéricos de 8 cifras).
+- **EAD3 (sin verificar en un equipo):** el fichero puede estar en UTF-8 o en UTF-16 con BOM (EverythingBox dice leer los dos).
+- **EAD4 (sin verificar):** los juegos antiguos de Origin usan una raíz `<game>` con `metadata/localeInfo/title` (EverythingBox) y también `contentIDs/contentID`.
+- **EAD5:** la carpeta por defecto de la app de EA es `C:\Program Files\EA Games` (Lutris dentro de Wine, EverythingBox) y la de Origin era `C:\Program Files (x86)\Origin Games` (sin verificar).
+- **EAD6 (sin verificar):** no hay una fuente sin cifrar que dé la carpeta de los juegos instalados fuera de la carpeta por defecto. Candidatos para una decisión aparte: `Origin Games\<contentId>` en el registro (no se borra al desinstalar, según Lutris), `machine.inf`/`machine.ini` con `machine.downloadinplacedir` (foro de EA) y `user_<n>.ini` con `user.downloadinplacedir` (hilo de Lutris).
+- **EAD7:** la app de EA se instala siempre en `C:\Program Files\Electronic Arts\EA Desktop\EA Desktop`, sin elegir carpeta, con `EADesktop.exe` y `EALauncher.exe` (foro de EA, instalador de Lutris). Si no, el mensaje de 11.1 saldría por error con la app instalada: se añadiría una fuente de registro (paso 1 de la prueba).
+- **EAD8 (sin verificar):** `origin2://game/launch?offerIds=<id1>,<id2>` arranca el juego del ID que posee el usuario. Lutris usa la lista; la integración de Galaxy y EverythingBox, un solo ID.
+- **EAD9:** la app de EA registra `origin2` (la integración de Galaxy comprueba ese manejador antes de lanzar). Los fallos de la decisión 22 corresponden a `origin://` y a ID `Origin.SFT.…` (un solo hilo del foro de EA, sin verificar).
+- **EAD10 (sin verificar):** los DLC no tienen `__Installer` propio fuera de la carpeta del juego base.
+- **EAD11 (sin verificar):** la URI funciona con la app cerrada y abierta.
+- **EAD12 (sin verificar):** un juego de EA comprado en Steam o Epic también lleva `__Installer\installerdata.xml`; solo saldría en EA si el usuario añade esa carpeta, y entonces Jugar por `origin2` podría no funcionar (la compra está en otra tienda).
+- **EAD13 (sin verificar):** al desinstalar desde la app de EA se borra la carpeta del juego, incluido `__Installer`. Si queda, el juego seguiría apareciendo: se decidiría exigir algo más (por ejemplo, el ejecutable de `filePath`).
+- **EAD14:** sin cuenta no hay vía pública para las portadas (punto 5).
+
+Fuentes consultadas el 23 de octubre de 2026: [Lutris, `services/ea_app.py`](https://github.com/lutris/lutris/blob/master/lutris/services/ea_app.py); [Lutris, incidencia 5160](https://github.com/lutris/lutris/issues/5160); [GameFinder, wiki de EA Desktop](https://github.com/erri120/GameFinder/wiki/EA-Desktop) y [`EADesktopHandler.cs`](https://github.com/erri120/GameFinder/blob/master/src/GameFinder.StoreHandlers.EADesktop/EADesktopHandler.cs); integración de GOG Galaxy para la app de EA: [`plugin.py`](https://github.com/BellezaEmporium/galaxy-integration-ead/blob/galaxy-2.1/src/plugin.py) y [`lgames_manifests.py`](https://github.com/BellezaEmporium/galaxy-integration-ead/blob/galaxy-2.1/src/lgames_manifests.py); [Playnite (copia antigua), `OriginLibrary.cs`](https://github.com/ofear/playnite/blob/master/source/Plugins/OriginLibrary/OriginLibrary.cs); [EverythingBox, PR 479](https://github.com/cubman3134/EverythingBox/pull/479); [Mira, PR 62](https://github.com/Mira-Launcher/Mira/pull/62); [nicedeck, paquete `launcher`](https://pkg.go.dev/github.com/mateussouzaweb/nicedeck/src/platforms/launcher); [626-game-manifest, PR 25](https://github.com/estevanhernandez-stack-ed/626-game-manifest/pull/25); [foro de EA, lanzar un juego por orden](https://forums.ea.com/discussions/ea-play-general-discussion-en/launch-ea-game-using-command/7575680) (solo el extracto del buscador; la página devolvió 403); [foro de EA, carpeta de instalación de la app](https://forums.ea.com/discussions/ea-app-feedback-en/ea-desktop-client-custom-installation-folder/7480080/replies/7480081); [foro de EA, `machine.inf`](https://forums.ea.com/discussions/ea-app-technical-issues-fr/changer-le-r%c3%a9pertoire-dinstallation-sur-ea-desktop-impossible/7519697); [foros de Steam sobre `link2ea`](https://steamcommunity.com/discussions/forum/1/5330625727564017662/); [heise, cierre de Origin](https://heise.de/-10248905).
+
+**Motivo:** es el corte más pequeño que pone EA en la biblioteca y lo hace jugable, **sin red, sin secretos, sin migración y sin tipos nuevos**. `installerdata.xml` es la única fuente sin cifrar que da a la vez el ID y el título, y como está en la carpeta del juego, EA funciona también con carpetas manuales (mejor que Ubisoft). La URI `origin2` deja a la app de EA lo que sus juegos le exigen de todos modos y es la vía de todas las herramientas actuales. Leer el fichero al lanzar evita `launchData` y vale tras una actualización. Alternativas descartadas: descifrar `IS` (clave ligada al hardware); el registro de `Origin Games` (no se limpia al desinstalar); `exec` (referencias al registro y el juego reabre la app); `link2ea` (para compras en Steam o Epic); una librería de XML para leer dos listas.
+
+**Consecuencias:**
+
+- Cuarta tienda en la biblioteca y segunda `local-only`. No añade hosts, ni CSP, ni cambios de privacidad.
+- La fila de EA de la tabla de la decisión 40 pasa de «`uri` o `exec`, a validar con juegos reales» a «`uri` (`origin2://game/launch?offerIds=…`), decidido en la 81; supuestos EAD8 y EAD9».
+- `ScopedFileReader.readText` acepta UTF-16 con BOM en todas las tiendas y, tras la revisión del auditor (punto 12, M3), da `store.unexpected-response` para un fichero de más de 1 MiB o que no es un fichero normal.
+- Límite conocido: los juegos instalados fuera de `C:\Program Files\EA Games` (y de la carpeta de Origin) solo aparecen si el usuario añade su carpeta, hasta que una fuente de EAD6 se confirme.
+- El `auditor` revisa antes de cerrar: el analizador de XML (entidades, DTD, comentarios, `\b`), los ID en la URI y la aserción, la lectura al lanzar confinada a `installPath`, UTF-16 en `readText`, y que ni el registro ni los errores lleven rutas o títulos.
+- Los agentes `programador` y `conectores` tienen aquí su especificación; el `tester` escribe `docs/manual-tests/ea.md` (punto 9); el `documentalista` actualiza las guías del punto 10.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -4305,10 +4553,11 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 78 (Epic): punto 13 aplicado por defecto («Conectado como <nombre>», mensaje si falta el launcher, sin instalados de Epic en «solo carpetas manuales»); el usuario puede cambiarlo. El usuario consigue Home – A Unique Horror Adventure (u otro juego pequeño) **antes del 29-10-2026** para la prueba manual del corte 1 (punto 11), que cierra los supuestos E pendientes (E5 ya comprobado; E7 falso, el corte 1 va sin portadas). La prueba del corte 2 comprueba primero que el catálogo con el token del usuario trae `categories` y `keyImages` (punto 15). El usuario decide si se actualizan las definiciones de los agentes `conectores` y `auditor`, que aún citan `legendary` (punto 14). El corte 2 cierra EA1 a EA10; si la sesión de Epic dura pocas horas (EA5), se decide aparte. Revisión del `auditor` antes y después del código de cada corte.
 - Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces (y un juego de Ubisoft comprado en Steam o Epic, previsiblemente también; supuesto U11 de la 79).
 - Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect); el usuario elige el juego de la prueba manual (11.2, recomendado Trackmania) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos U1 a U11. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
+- Decisión 81 (EA): punto 11.1 aplicado por defecto (mensaje si no está la app de EA); el usuario elige el juego de la prueba manual (11.2, recomendado The Sims 4) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos EAD1 a EAD14, la estabilidad del ID (M2; si falla, opción (b) en su propia decisión) y las comas a través de `rundll32` (NV1). Si la URI falla con varios ID (EAD8), se pasa a uno; si falla en general, el `exec` (opción B del punto 4) va en su propia decisión. Fuente de carpetas fuera de la de por defecto (EAD6), en una decisión aparte si la prueba la confirma.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 79 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 81 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

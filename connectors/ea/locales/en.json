@@ -1,0 +1,6 @@
+{
+  "connectors.ea.name": "EA",
+  "connectors.ea.errors.invalidId": "This EA game has an invalid identifier and cannot be launched.",
+  "connectors.ea.errors.launcherMissing": "The EA app was not found. Install it from ea.com and try again.",
+  "connectors.ea.errors.installerDataMissing": "This EA game is no longer in its folder. Scan your folders again."
+}

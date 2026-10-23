@@ -2,6 +2,20 @@ import { open, opendir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { ConnectorError, PathEscapesRootsError, type LocalFiles, type ScopedFileReader } from "@ludiary/contracts";
 
+/** UTF-16 LE/BE with BOM or UTF-8 (a leading BOM is removed) (ADR 81). UTF-16 without BOM is not detected. */
+function decodeText(bytes: Buffer): string {
+  const b0 = bytes[0];
+  const b1 = bytes[1];
+  if ((b0 === 0xff && b1 === 0xfe) || (b0 === 0xfe && b1 === 0xff)) {
+    const even = bytes.subarray(2, bytes.length - ((bytes.length - 2) % 2)); // an odd trailing byte is dropped
+    const copy = Buffer.from(even); // swap16 works in place: never on the shared read buffer
+    // toWellFormed is ES2024 (the lib is ES2023): a lone surrogate becomes U+FFFD.
+    return ((b0 === 0xfe ? copy.swap16() : copy).toString("utf16le") as string & { toWellFormed(): string }).toWellFormed();
+  }
+  const text = bytes.toString("utf8");
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
 /** ADR 72: limits of the scoped reader. */
 export const MAX_TEXT_BYTES = 1024 * 1024;
 export const MAX_DIR_ENTRIES = 10_000;
@@ -157,8 +171,8 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
         try {
           handle = await open(real, "r");
           const info = await handle.stat();
-          if (!info.isFile()) throw new ConnectorError("scan.root-unreadable", "not a regular file");
-          if (info.size > MAX_TEXT_BYTES) throw new ConnectorError("scan.root-unreadable", "file is larger than 1 MiB");
+          if (!info.isFile()) throw new ConnectorError("store.unexpected-response", "not a regular file");
+          if (info.size > MAX_TEXT_BYTES) throw new ConnectorError("store.unexpected-response", "file is larger than 1 MiB");
           // Read one byte more than the limit so a file that grows after stat() is still caught.
           const buffer = Buffer.alloc(MAX_TEXT_BYTES + 1);
           let total = 0;
@@ -167,10 +181,8 @@ export function createNodeLocalFiles(options: NodeLocalFilesOptions = {}): Local
             if (bytesRead === 0) break;
             total += bytesRead;
           }
-          if (total > MAX_TEXT_BYTES) throw new ConnectorError("scan.root-unreadable", "file is larger than 1 MiB");
-          let text = buffer.subarray(0, total).toString("utf8");
-          if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-          return text;
+          if (total > MAX_TEXT_BYTES) throw new ConnectorError("store.unexpected-response", "file is larger than 1 MiB");
+          return decodeText(buffer.subarray(0, total));
         } catch (err) {
           throw unreadable("read file", err);
         } finally {

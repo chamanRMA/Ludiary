@@ -90,3 +90,16 @@ describe("parseVdf", () => {
     }
   });
 });
+
+describe("parseVdf performance on hostile input (no unbounded regex)", () => {
+  it.each([`"a" {`, `"a" "`, "//", '"' + "\\\\", "a ", `"k" "v"\n[`, "{"])("1 MiB of %j finishes fast", (unit) => {
+    const text = unit.repeat(Math.ceil((1024 * 1024) / unit.length)).slice(0, 1024 * 1024);
+    const t = performance.now();
+    try {
+      parseVdf(text);
+    } catch {
+      /* rejecting is fine; only the time matters */
+    }
+    expect(performance.now() - t).toBeLessThan(200);
+  });
+});

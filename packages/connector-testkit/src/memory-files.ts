@@ -105,8 +105,9 @@ export function memoryFiles(tree: MemoryTree, opts: MemoryFilesOptions = {}): Me
     async readText(path) {
       const key = guard(path);
       const text = files.get(key);
+      if (text === undefined && dirs.has(key)) throw new ConnectorError("store.unexpected-response", "Not a regular file");
       if (text === undefined) throw unreadableError("File not found or not a file");
-      if (new TextEncoder().encode(text).length > READ_TEXT_MAX_BYTES) throw unreadableError("File larger than 1 MiB");
+      if (new TextEncoder().encode(text).length > READ_TEXT_MAX_BYTES) throw new ConnectorError("store.unexpected-response", "File larger than 1 MiB");
       return text;
     },
     async readDir(path) {

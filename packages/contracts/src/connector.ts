@@ -185,9 +185,9 @@ export interface ExternalToolRunner {
 }
 
 /**
- * Read-only and confined to the roots it was created with (ADR 72): UTF-8 without BOM; readText at most
+ * Read-only and confined to the roots it was created with (ADR 72): UTF-8 (a leading BOM is removed) or UTF-16 LE/BE with BOM (ADR 81); readText at most
  * 1 MiB; readDir at most 10 000 entries. Every path is resolved with realpath and rejected if it ends
- * outside the roots. Read failures are ConnectorError 'scan.root-unreadable'; a path outside the roots
+ * outside the roots. Read failures are ConnectorError 'scan.root-unreadable'; a file over 1 MiB or not a regular file is 'store.unexpected-response' (ADR 81); a path outside the roots
  * is 'internal' (a connector bug). `join` follows the OS path semantics.
  */
 export interface ScopedFileReader {

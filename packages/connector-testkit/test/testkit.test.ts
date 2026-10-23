@@ -38,7 +38,7 @@ describe("memoryFiles", () => {
   });
   it("applies the size limits and unreadable paths", async () => {
     const fs = memoryFiles({ "C:\\big.txt": "a".repeat(READ_TEXT_MAX_BYTES + 1), "C:\\p\\x": "" }, { unreadable: ["C:\\p"] });
-    await expect(fs.readText("C:\\big.txt")).rejects.toMatchObject({ code: "scan.root-unreadable" });
+    await expect(fs.readText("C:\\big.txt")).rejects.toMatchObject({ code: "store.unexpected-response" });
     await expect(fs.readText("C:\\missing.txt")).rejects.toMatchObject({ code: "scan.root-unreadable" });
     await expect(fs.readDir("C:\\p")).rejects.toMatchObject({ code: "scan.root-unreadable" });
     const many: Record<string, string> = {};
