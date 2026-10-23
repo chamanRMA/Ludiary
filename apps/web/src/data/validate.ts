@@ -13,16 +13,50 @@ export function extractValue(raw: string, extract: WizardFieldDto["extract"]): s
   const name = extract.slice(sep + 1);
   try {
     if (kind === "json-field") {
-      const field = (JSON.parse(raw) as Record<string, unknown>)[name];
-      return typeof field === "string" ? field : raw;
+      return pickJsonField(raw, name);
     }
     // ADR 77 audit M1: a pasted address must be an address with the parameter; never echo the text back.
     if (kind === "url-query") return new URL(raw).searchParams.get(name);
   } catch {
-    if (kind === "url-query") return null;
-    /* not JSON: the user may have pasted the bare value */
+    return null;
   }
   return raw;
+}
+
+/** ADR 78 point 7 (same rule as the core): JSON, else the part between "{" and "}", else the bare value. */
+function pickJsonField(text: string, name: string): string | null {
+  const field = (o: unknown): string | null => {
+    const v = o !== null && typeof o === "object" ? (o as Record<string, unknown>)[name] : undefined;
+    return typeof v === "string" ? v : null;
+  };
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed === "string") return parsed; // a quoted value is a bare value
+    if (parsed !== null && typeof parsed === "object") return field(parsed); // any other JSON (a number) falls through
+  } catch {
+    /* not JSON: try the braces, then the bare value */
+  }
+  const open = text.indexOf("{");
+  if (open === -1) return text.replace(/^["']|["']$/g, "");
+  try {
+    return field(JSON.parse(text.slice(open, text.lastIndexOf("}") + 1)));
+  } catch {
+    return null;
+  }
+}
+
+/** Values to send: for fields with `extract`, only the extracted and validated value, never the pasted text. */
+export function valuesToSend(
+  fields: readonly (Pick<WizardFieldDto, "name" | "pattern" | "maxLength" | "extract">)[],
+  values: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of fields) {
+    const raw = values[f.name] ?? "";
+    const r = f.extract ? validateField(raw, f) : null;
+    out[f.name] = r ? (r.ok ? r.value : "") : raw; // never the pasted text when extract fails
+  }
+  return out;
 }
 
 /** Trim, length, extract, then pattern. Never logs the value. */

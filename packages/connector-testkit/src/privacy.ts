@@ -16,7 +16,17 @@ export const FICTIONAL_GOG_VALUES = [
   "gog-test-refresh-token",
   "gog-test-refresh-token-2",
 ] as const;
+/** ADR 78 point 10: fictional Epic tokens (they meet the acceptance pattern). */
+export const FICTIONAL_EPIC_VALUES = [
+  "eg1~epic-test.access.token",
+  "eg1~epic-test.refresh.token",
+  "eg1~epic-test.refresh.token-2",
+  "eg1~epic-test.client.token",
+] as const;
 const ALLOWED = [
+  // Fictional Epic ids: 32 hex starting with 24 zeros. No real id has that shape.
+  /(?<![0-9A-Za-z])0{24}[0-9a-f]{8}(?![0-9A-Za-z])/g,
+  ...FICTIONAL_EPIC_VALUES.map((v) => new RegExp(`(?<![A-Za-z0-9._~-])${v.replace(/[.]/g, "\\.")}(?![A-Za-z0-9._~-])`, "g")),
   new RegExp(`(?<!\\d)${FICTIONAL_STEAM_ID}(?!\\d)`, "g"),
   new RegExp(`(?<![0-9A-Za-z])${FICTIONAL_API_KEY}(?![0-9A-Za-z])`, "g"),
   ...FICTIONAL_GOG_VALUES.map((v) => new RegExp(`(?<![0-9A-Za-z-])${v}(?![0-9A-Za-z-])`, "g")),
@@ -25,6 +35,7 @@ const ALLOWED = [
 const RULES: readonly { rule: string; re: RegExp }[] = [
   { rule: "SteamID64", re: /7656119\d{10}/ },
   { rule: "32-hex key", re: /(?<![0-9A-Za-z])[0-9A-Fa-f]{32}(?![0-9A-Za-z])/ },
+  { rule: "unlisted eg1 token", re: /eg1~/ },
   { rule: "LastOwner", re: /LastOwner/i },
   { rule: "user profile path", re: /[A-Za-z]:(?:\\{1,2}|\/)Users(?:\\{1,2}|\/)/i },
   { rule: "email address", re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/ },

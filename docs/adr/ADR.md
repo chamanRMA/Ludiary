@@ -52,10 +52,10 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario); consecuencia sobre Ubisoft concretada en la 79 |
-| 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11) |
+| 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`) |
 | 44 | Nombre del proyecto (Ludiary) y ámbito de los paquetes | Vigente (confirmada por el usuario) |
 | 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Vigente (confirmada por el usuario tras el prototipo); ampliada en las 62 a 65; la actualización con vuelta atrás pasa a la 58 |
 | 46 | Cifrado de secretos y rotación de la clave | Vigente (confirmada por el usuario; amplía la 14); token de instalación revisado en la 63 |
@@ -90,6 +90,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 75 | Portadas guardadas en el equipo y servidas por el servidor local | **Descartada** por el usuario el 22-10-2026: la caché del navegador ya las guarda 10 años; la 71 sigue vigente |
 | 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11.1 pendiente del usuario; punto 11.2 resuelto en la 77); vía de la cuenta y orden del emparejamiento revisados en la 77 |
 | 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
+| 78 | Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta, no instalados e Instalar (corte 2) | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de la 40 y la parte de Epic de la 43; sin tipos nuevos; `storeGameId` hasta 160 caracteres; punto 13 aplicado por defecto con (a), (a) y (a); corte 2 tras la prueba del corte 1; revisada por el auditor el mismo día sin críticos ni altos (punto 14): `.item` como entrada no confiable con regla estricta de ruta, solo el valor extraído en `json-field`, E5 comprobado y `AppDataPath` como primera fuente; E7 falso en la práctica: el corte 1 va sin portadas y sin `resolveMedia` (punto 15)) |
 | 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); pendiente de prueba manual y de la revisión del código) |
 
 ## Decisiones
@@ -570,7 +571,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -860,7 +861,7 @@ Reglas del lado del núcleo:
 4. **Validación de salidas.** El núcleo valida todo lo que devuelve un conector: identificadores no vacíos y de longitud acotada, `installPath` dentro de una raíz del contexto, URL de medios en `https`, URL del asistente en `authHosts`.
 5. **Lanzamiento (invariante 3).** La API solo recibe el ID de un juego canónico guardado y, opcionalmente, el ID de una de sus propiedades; el núcleo carga la `StoredProperty` de la base de datos y llama a `resolveAction`. Antes de ejecutar, el núcleo comprueba: que la acción y el tipo están en las capacidades; para `uri`, que el esquema está en `uriSchemes`; para `exec`, que `executable` es una ruta absoluta existente dentro de `installPath` de esa propiedad ~~o de una ubicación resuelta de tipo `launcher`~~ (revisado en la decisión 77: las ubicaciones `launcher` no amplían el confinamiento; solo vale `installPath`), y que ningún argumento contiene caracteres de control. `ProcessLauncher` ejecuta sin shell, con argumentos como lista, y abre las URI con la API del sistema, no con `cmd /c start`. La `LaunchSpec` no sale nunca por la API; la única excepción futura es el modo servidor sin agente (decisión 22), que devuelve al navegador solo especificaciones `uri` con esquema permitido.
 6. **Secretos.** Los conectores guardan y leen sus tokens solo con `secrets`; el cifrado (algoritmo pendiente) y la clave (decisión 14) son del núcleo y de la plataforma. Los `Secret` no se pueden imprimir por accidente y el registro filtra además cualquier valor que coincida con un secreto conocido.
-7. **Herramientas externas.** `legendary` y `gogdl` las ejecuta el núcleo con su directorio de configuración en una carpeta temporal privada, rehidratada desde el almacén cifrado y borrada al terminar. Comprobado en octubre de 2026: `legendary` deriva su directorio de configuración de `XDG_CONFIG_HOME` (así lo usa Heroic, PR #2803), y `gogdl` recibe la ruta del JSON donde guarda sus tokens. El nombre exacto del argumento de `gogdl` está por confirmar con su ayuda en línea.
+7. **Herramientas externas.** `legendary` y `gogdl` las ejecuta el núcleo con su directorio de configuración en una carpeta temporal privada, rehidratada desde el almacén cifrado y borrada al terminar. Comprobado en octubre de 2026: `legendary` deriva su directorio de configuración de `XDG_CONFIG_HOME` (así lo usa Heroic, PR #2803), y `gogdl` recibe la ruta del JSON donde guarda sus tokens. El nombre exacto del argumento de `gogdl` está por confirmar con su ayuda en línea. (Revisada en la decisión 77 para GOG y en la 78 para Epic: ninguna de las dos usa herramientas externas; la regla queda para un uso futuro, como descargar juegos.)
 8. **Ubicaciones descubiertas.** Los conectores declaran en `locations` qué valores de registro o carpetas conocidas necesitan (por ejemplo, el directorio de Steam o los manifiestos del launcher de EA). La plataforma los resuelve de forma genérica, sin saber nada de tiendas. Solo se resuelven si el usuario aceptó la autodetección (decisión 42). Ajustes muestra las ubicaciones detectadas junto a sus carpetas y permite desactivarlas.
 9. **Traducciones.** Cada conector trae `locales/es.json` y `locales/en.json` con sus claves bajo `connectors.<id>.*`; los códigos de error comunes se traducen en `connectors.common.errors.<code>`. Los parámetros de los mensajes no llevan secretos.
 10. **Prohibido en un conector:** importar módulos `node:*` de E/S, usar `fetch`, `process.env` o `child_process`, escribir en disco, tocar la base de datos, conocer el `user_id`, emparejar juegos y reintentar en bucle sin espera.
@@ -872,7 +873,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 |---|---|---|---|---|
 | Steam | `official-api` | sí | sí | `uri` (`steam`) |
 | GOG | `unofficial-api` | sí | sí | ~~`exec` (cliente de Galaxy)~~ `exec` del ejecutable del juego; Galaxy, opcional (revisado en la decisión 76) |
-| Epic | `unofficial-api` | sí | sí | `uri` del launcher de Epic, a verificar |
+| Epic | `unofficial-api` | sí | sí | ~~`uri` del launcher de Epic, a verificar~~ `uri` (`com.epicgames.launcher`) del launcher (revisado en la decisión 78) |
 | Ubisoft | `local-only` | no | sí | ~~`uri` (`uplay`), a verificar~~ `uri` (`uplay://launch/<id>/0`); supuestos U4 y U6 (revisado en la decisión 79) |
 | EA | `local-only` | no | sí | `uri` o `exec`, a validar con juegos reales |
 
@@ -934,7 +935,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 - Con «configurarlo más tarde», la biblioteca se limita a lo que llegue por API (Steam, GOG y Epic conectados).
 - La lista de ubicaciones detectadas y su estado se guarda por dispositivo (decisión 47).
 
-### 43. Credenciales en los asistentes de conexión (revisa la decisión 11)
+### 43. Credenciales en los asistentes de conexión (revisa la decisión 11; parte de Epic revisada en la decisión 78)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** el principio de «sin pegar claves a mano» de la decisión 11 se sustituye por «sin escribir nada y sin editar ficheros». Cuando una tienda obliga a trasladar un dato, el asistente lo pide con un botón **Pegar desde el portapapeles** y lo valida en el momento.
 
@@ -945,7 +946,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
   - Modo alternativo **«Steam sin clave: solo instalados»**, que usa solo el escaneo local (decisión 42), para quien no quiera crear la clave.
   - **Descartado:** la lista XML del perfil de la comunidad (Valve la declara obsoleta y recorta las bibliotecas grandes); deducir la biblioteca de ficheros locales como `localconfig.vdf` (no oficial, solo refleja este PC y no la propiedad completa); y obtener la clave o tokens a partir de la sesión del cliente o de cookies de Steam (choca con las condiciones de uso y con el invariante 5).
 - **Epic:**
-  - Se usa el inicio de sesión con ventana integrada de `legendary` (versión 0.20.14 o posterior en Windows, según su README): abre el login oficial de Epic en una ventana y recoge el código automáticamente, sin copiar nada.
+  - ~~Se usa el inicio de sesión con ventana integrada de `legendary` (versión 0.20.14 o posterior en Windows, según su README): abre el login oficial de Epic en una ventana y recoge el código automáticamente, sin copiar nada.~~ (Revisado en la decisión 78: no se usa `legendary`; la vía es la del punto siguiente.)
   - Si esa ventana no está disponible, se abre el login en el navegador y el usuario pega la respuesta. El asistente extrae `authorizationCode` del JSON pegado, así que no hace falta seleccionar solo el código.
   - **Descartado:** `legendary auth --import`, que lee la sesión del Epic Games Launcher y además la cierra.
 - **GOG:** se abre el login oficial y al terminar el usuario pega la dirección final de la página. El asistente extrae el código de la URL. Supuesto: es el flujo de `gogdl`, con redirección fija a una página de GOG, lo que impide que la vuelta llegue a nuestro servidor. Una ventana integrada como la de Epic queda como mejora posterior.
@@ -955,7 +956,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 **Consecuencias:**
 
 - El tipo de paso `input` de la decisión 40 incorpora `paste: true` y un `extract` opcional (`'json-field:authorizationCode'`, `'url-query:code'`) que el núcleo aplica antes de validar.
-- La ventana integrada de `legendary` la abre un proceso del servidor en el escritorio del usuario: solo funciona en modo localhost.
+- ~~La ventana integrada de `legendary` la abre un proceso del servidor en el escritorio del usuario: solo funciona en modo localhost.~~ (Sin efecto tras la decisión 78.)
 - El documentalista prepara guías con capturas para crear la clave de Steam y hacer públicos los detalles de juego.
 
 ### 44. Nombre del proyecto y ámbito de los paquetes
@@ -3641,6 +3642,339 @@ Fuentes consultadas el 22 de octubre de 2026: [gogapidocs, autenticación](https
 - Los juegos poseídos en Steam y en GOG salen duplicados hasta el corte del emparejamiento. La guía lo dice.
 - El `documentalista` actualiza las guías del punto 11; el `tester` amplía `docs/manual-tests/gog.md` (punto 10).
 
+### 78. Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta con código pegado, juegos no instalados e Instalar (corte 2) (amplía las decisiones 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de Epic de la tabla de la 40, y la parte de Epic de la 43)
+
+**Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario encarga «ponte con el conector de Epic». Se hace en **dos cortes dentro de esta decisión**, con la misma forma que GOG: el corte 1 equivale a la 76 (instalados, Jugar y portadas, sin cuenta) y el corte 2 a la 77 (login, sesión cifrada, juegos no instalados e Instalar). Reutiliza todo lo de Steam y GOG: ubicaciones, `discoverRoots`, escaneo con `ctx.fs` confinado, `resolveAction` con `uri`, `resolveMedia` con `HttpClient` y `apiHosts`, CSP derivada de `mediaHosts`, asistente con paso `open-external` con campo y Pegar, solo el refresh token cifrado, época por tienda, velo gris e `install`. El corte 2 empieza cuando el corte 1 pasa la prueba manual.
+
+**Punto de partida (comprobado el 22-10-2026 en el equipo del usuario, solo lectura):** launcher en `E:\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe`; esquema `com.epicgames.launcher` registrado con la orden `"…\EpicGamesLauncher.exe" %1`; existe `C:\ProgramData\Epic\UnrealEngineLauncher\LauncherInstalled.dat` con `InstallationList` vacía y existe `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests` sin ningún `.item`. No hay juegos de Epic instalados: la prueba manual exige instalar uno (punto 11). Lo demás sale de fuentes públicas y queda como supuesto (listas del final).
+
+#### 1. Alcance
+
+- **Corte 1, entra:**
+  - detección de los juegos instalados leyendo los manifiestos `*.item` del launcher (punto 3);
+  - Jugar con la URI del launcher (punto 4);
+  - portadas sin cuenta desde el catálogo de Epic con un token de aplicación (punto 5);
+  - el conector `connectors/epic` registrado en `runtime`, con sus textos, y la CSP ampliada con sus hosts de imágenes.
+- **Corte 2, entra:** asistente de login con el JSON pegado, sesión cifrada (solo el refresh token), `listLibrary` con los juegos poseídos (títulos y portadas del catálogo), Instalar, desconectar y `expired` con el velo gris, y «Conectado como <nombre>».
+- **Fuera, en los dos cortes:**
+  - **`legendary` y `ExternalToolRunner`** (punto 2).
+  - **DLC y complementos:** se distinguen para no mostrarlos como juegos, pero no se informan (`dlc: 'none'`), igual que en la 76 y la 77 (decisiones 21 y 52).
+  - **Emparejamiento entre tiendas** (decisión 77, punto 1): un juego poseído en Epic y en otra tienda sale una vez por tienda.
+  - **Tiempo de juego de Epic** (`library/api/public/playtime`, que usa Playnite): `storePlaytime` sigue en `false`.
+  - **Lanzar sin launcher** (`exec`, punto 4) y **descargar juegos**.
+  - **Ventana integrada de login** (decisión 43): sin `legendary` no hay ventana; una propia necesitaría otra decisión.
+
+#### 2. Vía de acceso: HTTP directo frente a `legendary`
+
+- **A. HTTP directo desde el conector con el `HttpClient` de la 74** (se elige). Las mismas razones que la 77 con `gogdl`, y más fuertes:
+  - el corte 1 no necesita cuenta, y el corte 2 son pocas peticiones: canje, renovación, biblioteca paginada y catálogo;
+  - no hay binario Python empaquetado con PyInstaller que distribuir, firmar y actualizar, ni una GPL-3.0 más cuyo código correspondiente publicar con cada versión (decisión 60);
+  - no hace falta el `ExternalToolRunner` (carpeta temporal privada, rehidratarla y volver a cifrarla), y los tokens nunca tocan el disco en claro;
+  - `legendary` solo aportaría lo que este corte no hace: descargar y lanzar sin launcher.
+- **B. `legendary auth --code` y `legendary list`** (regla 7 de la 40). Ventaja: se hereda su mantenimiento. Costes: el binario, el `ExternalToolRunner` completo, analizar su salida (con tokens) y su caché propia en disco.
+- **Revisa para Epic la regla 7 de la decisión 40:** Epic no usa `legendary` y su manifiesto mantiene `externalTools: []`. Tras la 77 y esta, **ninguna tienda usa herramientas externas**: `ExternalToolId` conserva sus dos valores sin cambiar el tipo, por si algún día se descargan juegos, y `ExternalToolRunner` sigue sin implementar.
+- **Revisa la parte de Epic de la decisión 43:** la ventana integrada de `legendary` desaparece; la vía es la que la 43 dejaba como alternativa: abrir el login en el navegador y pegar el JSON, del que el núcleo extrae `authorizationCode` (punto 7).
+
+**Identificador de cliente.** Epic no ofrece a terceros un registro OAuth que dé acceso a la biblioteca: los servicios de cuenta de Epic Online Services son para juegos y no tienen ese permiso (supuesto EA1). Se usa el cliente público del launcher (`launcherAppClient2`, `client_id` y `client_secret` publicados en `legendary`, `egs-api` y Playnite), como hacen `legendary`, Heroic, Playnite y `egs-api`.
+
+- **Invariante 8:** la vía oficial que existe, el login de Epic, se usa: el usuario escribe su contraseña y su segundo factor en `epicgames.com`, nunca en Ludiary. No se lee ni se cierra ninguna sesión del launcher (se mantiene descartado `legendary auth --import`, decisión 43). Lo no oficial es presentarse con el cliente del launcher: `access: 'unofficial-api'` e icono de fragilidad.
+- **Riesgo de condiciones de uso (no es asesoría legal):** el mismo que la 77 con GOG. Mitigación igual: fallo aislado en el conector, escaneo y Jugar sin cuenta, la guía lo explica y el proyecto no se declara afiliado.
+- **El `client_secret` del launcher no es un secreto del invariante 5**, por las mismas razones que el de Galaxy (77, punto 2). Va como constante **solo** en `connectors/epic/src/auth.ts`, con un comentario; el ADR no copia su valor ni el del `client_id`, que están en las fuentes citadas. La cabecera `authorization: basic <base64(id:secreto)>` se calcula en código a partir de las dos constantes (no se guarda en base64 en ningún fichero) y se envía como `Secret`. Ambos son 32 caracteres hexadecimales: el redactor ya los tapa (patrón de la clave de Steam).
+- **Sin imitar al launcher:** no se envían su `User-Agent` ni otras cabeceras propias (`X-Epic-Device-ID`, etiquetas). `egs-api` y Playnite piden tokens sin `User-Agent` propio (supuesto EA8). Si Epic lo exigiera, se decide aparte.
+
+#### 3. Escaneo (corte 1)
+
+- **Fuente: los manifiestos `*.item` del launcher** en `<datos>\Manifests`. Cada uno es un JSON con, entre otros, `DisplayName`, `AppName`, `CatalogNamespace`, `CatalogItemId`, `InstallLocation`, `LaunchExecutable`, `bIsIncompleteInstall`, `MainGameAppName` y `AppCategories` (supuesto E2).
+  - **Descartado `LauncherInstalled.dat`:** solo trae `InstallLocation`, `NamespaceId`, `ItemId` y `AppName`, sin título, sin estado incompleto y sin DLC; los `.item` ya lo cubren.
+  - **Descartado leer la carpeta del juego** (`.egstore\*.mancpn`, que tendría los tres ID): sin verificar (supuesto E10). Jugar pasa por el launcher, que solo conoce los juegos con `.item`, así que el `.item` es la fuente que importa.
+- **Ubicación (`locations`):** `epic-launcher-data` (`scan`), con dos fuentes en este orden (revisado tras el auditor, punto 14):
+  1. `{ kind: 'registry-value', hive: 'HKLM', key: 'SOFTWARE\\Epic Games\\EpicGamesLauncher', value: 'AppDataPath', view: '64' }`. Comprobado el 22-10-2026 en el equipo del usuario: existe en la vista de 64 bits, con barra final, y **no** existe en `WOW6432Node`. El resolvedor ya normaliza la ruta (la barra final no importa) y descarta repetidos con la carpeta conocida.
+  2. De respaldo, `{ kind: 'known-folder', folder: 'ProgramData', relative: 'Epic\\EpicGamesLauncher\\Data' }`, la carpeta por defecto según GameFinder, que existe en el equipo del usuario aunque el launcher esté en `E:` (supuesto E1).
+  - ~~No se añade el valor de registro `AppDataPath`: solo serviría si alguien mueve los datos del launcher, y no consta que eso pase.~~ (Revisado tras el auditor.) Ninguna ubicación `launcher` en el corte 1 (punto 4).
+- **Problema propio de Epic:** los manifiestos están en `ProgramData` y los juegos en cualquier otra carpeta, pero el núcleo exige `installPath` dentro de una raíz (regla 4 de la 40) y, al lanzar, dentro de una raíz activa (76, punto 2). Lo resuelve `discoverRoots`, como en GOG:
+- **`discoverRoots`** (lee con `ctx.fs`, confinado a la carpeta de datos):
+  - devuelve la propia carpeta de datos con `tag: 'manifests'`;
+  - si existe `Manifests`, lee sus `*.item` (como mucho 2000, mismas reglas de lectura que abajo) y, de cada juego válido y completo, devuelve la carpeta **padre** de `InstallLocation` con `tag: 'library'`, o la propia carpeta con `tag: 'game'` si el padre es la raíz de una unidad. Todas con `declarationId: 'epic-launcher-data'`. Sin repetidos (clave en minúsculas, barras normalizadas). Si `Manifests` no existe, solo la carpeta de datos.
+  - El núcleo valida como siempre (absolutas, existentes, como mucho 64) y Ajustes las muestra con su interruptor (decisión 42).
+- **`scanInstalled`:**
+  1. Si entre `ctx.roots` no está la carpeta de datos (desactivada, o modo «solo carpetas manuales»), devuelve vacío: Epic no detecta instalados sin sus manifiestos. La guía lo dice (punto 13.3).
+  2. `readDir` de `<datos>\Manifests`; ficheros que cumplan `\.item$` sin distinguir mayúsculas, como mucho 2000, en orden. Cada uno con `readText` (1 MiB), quitando el BOM, y `JSON.parse`.
+  3. Campos obligatorios: `AppName`, `CatalogNamespace`, `CatalogItemId` e `InstallLocation` de texto, los tres primeros con las formas del punto 6. Si falta alguno: `store.unexpected-response` y se salta ese fichero. ~~`InstallLocation` absoluta con letra de unidad y sin caracteres de control (se cambian `/` por `\` y se quita la barra final).~~ `InstallLocation` cumple la **regla estricta de ruta** del punto 14, M1 (revisado tras el auditor); si no, se salta y se cuenta, nunca `internal`.
+  4. `bIsIncompleteInstall === true`: se salta y se cuenta (descarga o actualización a medias; el launcher no lo abriría).
+  5. **DLC y complementos:** `MainGameAppName` presente y distinto de `AppName`, o `AppCategories` con `addons`: se salta y se cuenta. **No juegos:** `AppCategories` presente y sin `games` (sin `AppCategories`, juego: punto 15) (motores, complementos de Unreal, aplicaciones), o `CatalogNamespace === 'ue'`: se salta y se cuenta (supuesto E2).
+  6. `InstallLocation` debe estar dentro de alguna **otra** raíz de `ctx.roots` (comparación de texto sin distinguir mayúsculas, con límite de componente, **antes** de tocar el disco: `ctx.fs` trata una ruta fuera de raíces como fallo del conector) y existir (`ctx.fs.exists`). Si no está dentro (el usuario desactivó esa carpeta) o no existe (juego movido o borrado sin el launcher): se salta y se cuenta. `PathEscapesRootsError`: se salta.
+  7. Entrada: `storeGameId` del punto 6, `kind: 'game'`, `title` = `DisplayName` sin caracteres de control, recortado y de 300 como mucho (si falta, `Epic <AppName>`, un dato y no un texto de la interfaz), `installPath` = `InstallLocation`. Sin `media`, `launchData` ni `executables`.
+  8. Un `storeGameId` ya visto se salta.
+- **Errores** (misma clasificación que GOG, `isHandled` copiado): `readDir` de `Manifests` con error, o un `.item` bloqueado o con error de E/S, marca **todas** las raíces de `ctx.roots` como ilegibles. `Manifests` **inexistente** no es un error: resultado vacío con las raíces legibles, y el núcleo da de baja las instalaciones de Epic (el launcher no tiene ninguna; revisado tras el auditor, M3). Motivo: las instalaciones no cuelgan de la carpeta de datos sino de otras raíces, y marcar solo la de datos dejaría que el núcleo diera de baja todo Epic por un fallo pasajero. JSON mal formado: se salta ese fichero. Otro `internal` se propaga.
+- **Registro:** solo contadores y códigos. Ni rutas, ni títulos, ni ID de Epic (son hexadecimales de 32 que el redactor tapa igualmente).
+
+#### 4. Jugar e Instalar
+
+**Opciones para Jugar:**
+
+- **A. URI del launcher** (se elige): `com.epicgames.launcher://apps/<namespace>%3A<catalogItemId>%3A<appName>?action=launch&silent=true`. Es el formato de los accesos directos que crea el propio launcher (supuesto E3).
+  - Ventajas: el launcher hace lo que un `exec` no puede: muchos juegos de Epic necesitan que se les pase al arrancar un código de intercambio de la sesión del usuario (`-AUTH_PASSWORD=<código> -AUTH_TYPE=exchangecode`) y, algunos, un token de propiedad (`-epicovt=<fichero>`). Así lo hace `legendary` al lanzar sin launcher (supuesto E9). Además, el launcher sincroniza las partidas en la nube, aplica actualizaciones pendientes y abre la superposición. Es la misma forma que Steam: sin `exec` y sin confinamiento de ejecutables.
+  - Costes: exige el launcher instalado (lo está si hay `.item`) y lo arranca en segundo plano si estaba cerrado; la detección del proceso de la 55 es indirecta, como en Steam.
+- **B. `exec` de `InstallLocation\LaunchExecutable`.** Funcionaría con juegos sin DRM, pero rompería en silencio los que exigen autenticación de Epic. Hacerlo bien exige la sesión del usuario (corte 2) y reimplementar el lanzamiento de `legendary` (código de intercambio, token de propiedad, argumentos `-epicapp`, `-epicenv`, `-epicusername`…). Se descarta.
+- **C. La forma corta `apps/<appName>`** (foros): la usan algunos, pero el launcher actual escribe la de tres partes en sus accesos directos. Se descarta.
+
+**`resolveAction`** (`connectors/epic/src/launch.ts`):
+
+1. Acción distinta de `play` (corte 1) o de `play` e `install` (corte 2): `null`.
+2. `storeGameId` debe cumplir el patrón del punto 6; si no, `action.unsupported` con `connectors.epic.errors.invalidId`. ~~Se parte en sus tres segmentos~~ La URI se construye con **los tres grupos de captura** del patrón (no partiendo el texto por `:`), que por el patrón no necesitan codificarse, unidos con `%3A`; antes de devolverla se comprueba con una aserción final que la URI entera cumple `^com\.epicgames\.launcher://apps/[A-Za-z0-9_-]{1,64}%3A[0-9a-f]{32}%3A[A-Za-z0-9._-]{1,60}\?action=(launch&silent=true|install)$` (revisado tras el auditor).
+3. `play`: `installPath` nulo → `launch.not-installed`. Devuelve `{ kind: 'uri', uri: 'com.epicgames.launcher://apps/<ns>%3A<cat>%3A<app>?action=launch&silent=true' }`. **Sin comprobar el launcher:** si el juego tiene `.item`, el launcher está instalado; si se desinstaló después, Windows muestra su propio aviso de «no hay aplicación para este enlace». `shortcut:` se añade la comprobación si la prueba manual muestra que ese caso es habitual.
+4. `install` (corte 2): la misma URI con `?action=install` (sin `silent`, para que el launcher muestre su diálogo; supuesto E4). Si `ctx.launchersResolved` y la ubicación `epic-launcher` no tiene `EpicGamesLauncher.exe`: `launch.launcher-missing` con `connectors.epic.errors.launcherMissing` («Para instalar este juego hace falta el launcher de Epic Games. Descárgalo de epicgames.com»). ~~La ubicación y la comprobación solo se añaden **si la prueba del corte 1 confirma el supuesto E5**; si no, Instalar devuelve la URI sin comprobar.~~ (Revisado tras el auditor: E5 está comprobado; la comprobación va siempre en el corte 2.) **Launcher presente** = alguna ubicación `epic-launcher` resuelta cuya ruta es un fichero que existe y acaba en `EpicGamesLauncher.exe` (sin distinguir mayúsculas); la ubicación ya apunta al `.exe`, no a una carpeta.
+- **Ubicación del corte 2:** `epic-launcher` (`launcher`) con dos fuentes: `{ kind: 'registry-value', hive: 'HKCU', key: 'Software\\Epic Games\\EOS', value: 'ModSdkCommand' }` (la ruta del ejecutable del launcher, según su instalador; supuesto E5) y `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe' }`, la carpeta por defecto. Solo la de registro encontraría el launcher del usuario en `E:`. ~~por eso no se usa sin confirmarla, para no dar un falso «hace falta el launcher».~~ Comprobado el 22-10-2026: `ModSdkCommand` existe en `HKCU`, con la ruta del `.exe` con `/` como separador y sin comillas. La plataforma no cambia por ello: el resolvedor de ubicaciones ya normaliza cada ruta (`files.normalize`) y comprueba que existe antes de devolverla (`location-resolver.ts`). Una prueba del resolvedor con una ruta con `/` lo fija.
+- **Núcleo y plataforma:** sin cambios. `checkSpec` ya valida esquema y forma; `validateLaunchUri` acepta `%3A`, `?`, `&` y `=`. `uriSchemes: ['com.epicgames.launcher']` cumple `SCHEME_RE`.
+- La web pinta «Abriendo Epic Games…» con `game.launching` (y `game.installing` en el corte 2) y `{store}`.
+
+#### 5. Portadas
+
+- **Corte 1, sin cuenta: catálogo de Epic con un token de aplicación** (se elige).
+  - `POST https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/token`, formulario `grant_type=client_credentials` y `token_type=eg1`, con la cabecera `basic` del punto 2. Da un token de aplicación, sin usuario, que `legendary` y `egs-api` usan para lo público (supuesto E7). Vive en memoria durante esa llamada a `resolveMedia`, como `Secret`, y no se guarda.
+  - Por cada **namespace** del lote (los DLC comparten el del juego): `GET https://catalog-public-service-prod06.ol.epicgames.com/catalog/api/shared/namespace/<ns>/bulk/items?id=<cat>&id=<cat>…&includeDLCDetails=false&includeMainGameDetails=true&country=US&locale=<ctx.locale>`, con `authorization: bearer <token>` como `Secret`. Es la petición de `legendary`, Playnite y `egs-api` (supuesto E11). El `id` repetido no cabe en `query` (un objeto), así que el conector construye la consulta en la propia `url` con `URLSearchParams`; el `HttpClient` ya la conserva y añade la de `query`.
+  - **Descartadas:** el GraphQL de la tienda (`store.epicgames.com/graphql`, protegido contra clientes que no son navegadores y con consultas sin documentar); la variante entre namespaces `POST …/catalog/api/shared/bulk/namespaces/items` de `egs-api` (menos peticiones, pero la forma de su respuesta no consta: se revisa si la biblioteca grande no cabe en tiempo, punto 8); y el feed público de promociones (solo juegos en oferta).
+- **`resolveMedia`** (`connectors/epic/src/media.ts`), con las reglas de la 76:
+  - cada ID se revalida con el patrón del punto 6 antes de nada; uno que no cumpla se omite sin petición; **si no queda ningún ID válido, no se pide el token de aplicación** y se devuelve un mapa vacío (revisado tras el auditor);
+  - como mucho **50 ID por petición de catálogo**, también aquí (el lote del núcleo ya es de 50, pero la regla es del conector);
+  - token primero: 400, 401 o 403 → `store.unexpected-response` para el lote; 429 → `store.rate-limited`;
+  - como mucho **6 peticiones de catálogo a la vez**, 8 s cada una; con el primer 429 no se lanzan más y se lanza `store.rate-limited` con `Retry-After`;
+  - 200: objeto con una entrada por ID de catálogo. De cada una, `keyImages` (lista de `{ type, url }`): `coverUrl` = la de `DieselGameBoxTall` o, si falta, `OfferImageTall`; `heroUrl` = la de `DieselGameBox` o, si falta, `OfferImageWide`. Cada URL: `https`, host en `mediaHosts`, sin usuario ni contraseña, 2048 caracteres como mucho. Una de otro host se omite y se cuenta, registrando **solo el host** (no es dato personal y cierra el supuesto E8). Un ID que no vuelve queda fuera del mapa;
+  - 404 de un namespace: sus ID quedan fuera del mapa; cualquier otro estado o un cuerpo que no es un objeto: `store.unexpected-response` para el lote (lanzar en vez de omitir, por la misma razón que la 76).
+  - **Si Epic no acepta el token de aplicación en el catálogo** (supuesto E7 falso): el corte 1 queda sin portadas (degradado) y se quita `resolveMedia` del manifiesto en el mismo cambio, sin otra decisión; con el corte 2 llegan por `listLibrary` (abajo). **Es lo que pasa (comprobado el 22-10-2026, punto 15):** `resolveEpicMedia` queda implementado y probado, pero **no se declara** en el manifiesto, porque enviaría a Epic los ID de los juegos instalados sin obtener nada. El corte 1 no tiene portadas para los instalados hasta conectar la cuenta.
+- **Corte 2:** `listLibrary` ya pide el catálogo para los títulos (punto 8) y devuelve `media` con las mismas reglas en cada entrada, con el token del usuario. Los juegos poseídos tienen portada aunque falle E7.
+- **`mediaHosts`: `['cdn1.epicgames.com', 'cdn2.unrealengine.com']`.** Las dos aparecen en las imágenes del feed público de la tienda (comprobado el 22-10-2026; las verticales en `cdn1.epicgames.com/offer/…` y `cdn1.epicgames.com/spt-assets/…`, otras en `cdn2.unrealengine.com`). La CSP y `vite.config.ts` las añaden (prueba de paridad de la 71). Que los `keyImages` del catálogo usen solo esos hosts está sin verificar (supuesto E8): si la prueba muestra otro, se añade tras comprobarlo.
+- **Privacidad (invariante 9):** salen hacia Epic los namespace e ID de catálogo de los juegos de Epic detectados y la IP, con el token de aplicación, sin cookies ni `User-Agent` propio; lo mismo que pediría el launcher. El documentalista lo añade a la guía.
+
+#### 6. Identificador de la propiedad (cambio pequeño del núcleo)
+
+- **`storeGameId` = `<namespace>:<catalogItemId>:<appName>`**, con el patrón `^[A-Za-z0-9_-]{1,64}:[0-9a-f]{32}:[A-Za-z0-9._-]{1,60}$` (supuesto E6). El ID de catálogo y el namespace **solo si es un hexadecimal de 32** (revisado tras el auditor: un namespace legible como `fn` se deja tal cual) se pasan a minúsculas al leerlos, en el escaneo y en la biblioteca, para que el mismo juego dé el mismo ID por las dos vías.
+  - Motivo: es lo único que necesitan a la vez la URI (los tres) y el catálogo (los dos primeros), y llega igual del `.item` y de la biblioteca. Con solo el ID de catálogo, Instalar un juego no instalado no podría construir la URI (`StoreEntry` no lleva `launchData`). Con solo `appName`, no se podría pedir el catálogo.
+- **El núcleo limita hoy `storeGameId` a 64 caracteres** (`packages/core/src/validate.ts`, en las validaciones del escaneo y de la biblioteca), y el de Epic llega a 158. **Se decide subir el límite a 160** en las dos validaciones. La columna es `text` sin límite y el índice único no cambia. Es una relajación compatible: `contractVersion` sigue en 1. El comentario de `StoreEntry.storeGameId` y de `InstalledEntry.storeGameId` en `contracts` dice «1 a 160 caracteres, sin caracteres de control ni separadores de línea». La regla de la prueba de conformidad para ID hostiles (`{1,64}`) no cambia: solo mira los ID hostiles.
+
+#### 7. Cuenta (corte 2): login, canje y sesión
+
+- **Ida (URL fija construida en `auth.ts`):** `https://www.epicgames.com/id/login?redirectUrl=<url codificada>`, con `redirectUrl` = `https://www.epicgames.com/id/api/redirect?clientId=<client_id>&responseType=code`. Es la URL a la que redirige `legendary.gl/epiclogin` (comprobado el 22-10-2026). Se abre en pestaña nueva. `authHosts: ['www.epicgames.com']`.
+- **Vuelta:** la página final, en `www.epicgames.com`, es un JSON con `warning`, `redirectUrl`, `authorizationCode`, `exchangeCode` y `sid` (forma comprobada el 22-10-2026 sin sesión, con los códigos nulos; supuesto EA2). El usuario copia la página y pulsa Pegar.
+- **Paso `login`:** `open-external`, `awaits: 'input'`, con la URL de ida. Cuerpo: «Inicia sesión en Epic Games en la pestaña nueva. Al terminar verás un texto entre llaves: cópialo entero y pulsa Pegar. Epic avisa de no compartir ese código: Ludiary lo usa solo en este equipo para hablar con Epic». Campo `authorizationCode`: `secret: true`, `paste: true`, `extract: 'json-field:authorizationCode'`, `pattern: '^[0-9a-f]{32}$'` (supuesto EA3), `maxLength: 4096`. Un solo paso, sin `choose`, como GOG. El simulador (`apps/web/src/data/mock.ts`) cambia el paso de Epic de `awaits: 'callback'` a este.
+- **`extract: 'json-field:…'` más tolerante (núcleo y web, mismo cambio):** hoy el núcleo (`cleanField` en `packages/core/src/wizards.ts`) rechaza todo lo que no sea un JSON, y la web (`validate.ts`) acepta además el valor suelto: no coinciden. Se decide la misma regla en los dos: (1) se analiza el texto como JSON; (2) si falla, se analiza el trozo entre la primera `{` y la última `}` (Chrome copia también la casilla «Dar formato» si se selecciona toda la página); (3) si el texto no tiene `{`, se toma tal cual, sin comillas alrededor (`legendary` también acepta el código suelto). Lo extraído pasa después por `pattern`, que es la validación de verdad. Sin cambios de tipos. **Precisado tras el auditor:** si el JSON analizado es un objeto, vale el campo pedido solo si es texto (si falta o no es texto, no hay valor); si es un texto JSON (`"…"`), vale ese texto como valor suelto; cualquier otro JSON (número, lista, `null`) se trata como valor suelto, que luego no pasará `pattern`.
+  - **Solo viaja el valor extraído (M2):** con `json-field`, la web envía al servidor **solo** el valor extraído, nunca el texto pegado. `exchangeCode` y `sid` de la misma página son credenciales: ni la web ni el núcleo ni el conector los leen, los registran ni los devuelven en un error o un mensaje.
+  - Sin comprobación de host como la de `url-query` (77, M1): un JSON no tiene origen que comprobar. El riesgo es el mismo que aceptó la 77: que alguien convenza al usuario de pegar un código de **otra** cuenta, lo que solo conecta Ludiary a esa cuenta. Se acepta.
+- **Canje** (`exchangeCode`): `POST https://account-public-service-prod03.ol.epicgames.com/account/api/oauth/token`, cabecera `basic`, formulario `grant_type=authorization_code`, `code` (como `Secret`) y `token_type=eg1` (supuesto EA4).
+  - 200 con `access_token` y `refresh_token` que cumplen `^eg1~[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$` y miden de 16 a 8192: correcto (`eg1` es un JWT firmado con el prefijo `eg1~`). Si no: `store.unexpected-response`.
+  - 400 o 401: `auth.invalid` con `connectors.epic.error.code` («El código ha caducado o ya se usó. Vuelve a iniciar sesión y copia el texto nuevo»). Si el cuerpo trae `errorCode` igual a `errors.com.epicgames.oauth.corrective_action_required` (Epic pide aceptar algo en su web): `auth.invalid` con `connectors.epic.error.corrective` («Epic te pide confirmar algo en su web. Entra en epicgames.com, acéptalo y vuelve a conectar») (supuesto EA6). Del cuerpo de error solo se compara `errorCode` con esa constante; `errorMessage` nunca se lee ni se registra.
+  - 429: `store.rate-limited`. Otro estado: `store.unexpected-response`.
+  - De la respuesta se lee además `displayName` → `accountLabel` (sin caracteres de control, recortado a 64; si falta, `done` sin nombre). **No hace falta otra petición para el nombre**, a diferencia de GOG. `account_id` y lo demás se descartan; se registran solo los números `refresh_expires` y `expires_in` (segundos), que no son datos personales, para cerrar el supuesto EA5; también en cada renovación.
+- **Al enviar:** canje → `secrets.set('refreshToken', …)` → `done` (con nombre si lo hay). El token de acceso del canje se descarta. Nada pasa por `wizardState` (77, B4).
+- **Renovación** (`refreshSession`, al principio de cada `listLibrary`): el mismo `POST` con `grant_type=refresh_token`, `refresh_token` (como `Secret`) y `token_type=eg1`.
+  - 200 válido: **lo primero** es `secrets.set('refreshToken', <nuevo>)` (Epic entrega uno nuevo en cada renovación; supuesto EA5). Si `set` falla, se propaga el error (77, A2).
+  - 400, 401 o 403: `auth.expired` con `connectors.epic.error.expired`. 429 y red: como en la 77. Sin `refreshToken` legible: `auth.required`.
+- **Duración de la sesión (supuesto EA5):** no consta cuánto vale un refresh token del launcher sin usar; una documentación de la comunidad muestra 28 800 s (8 h) para otro cliente. Si fuera tan corta, quien abra Ludiary una vez al día tendría que reconectar casi siempre. Se sabrá con el número registrado en la prueba manual; si es corto, se decide aparte (por ejemplo, avisar en la tarjeta de Epic). No se añade nada antes de saberlo.
+- **`status`, `disconnect`, época, `expired` y velo gris:** idénticos a la 77 (puntos 5 y 9), con el ámbito `store:epic`. Sin revocación remota: `legendary` tiene un `DELETE …/oauth/sessions/kill/<token>`, pero el `HttpClient` no admite `DELETE` y no se amplía por esto. `connectors.epic.disconnect.hint`: «Ludiary borra su sesión de Epic de este equipo. Para cerrar todas las sesiones, cambia la contraseña en epicgames.com».
+- **Redactor** (`makeRedactor`, `runtime/src/files.ts`): añade `eg1~[A-Za-z0-9._-]+` → `[redacted]`, antes del patrón de tokens largos. Es superconjunto del patrón de aceptación (sin él, la cabecera del JWT, de menos de 64 caracteres, quedaría a la vista; no es secreta, pero así no queda nada del token). El código de autorización, el `client_secret`, el `client_id` y los ID de Epic son hexadecimales de 32: ya los tapa el patrón de la clave de Steam.
+
+#### 8. Biblioteca (corte 2)
+
+- **Tiempo límite (añadido tras la auditoría del código, 22-10-2026):** cada petición al catálogo de la biblioteca lleva 8 s como `resolveMedia`, para que una lenta no consuma los 60 s de la operación. Las peticiones ya en vuelo cuando falla otra terminan solas (el `HttpClient` no tiene señal por petición; limitación aceptada como en la 76). El reparto de concurrencia (6 a la vez) vive en `connectors/epic/src/pool.ts`.
+- **`listLibrary`** (`connectors/epic/src/library.ts`):
+  1. `refreshSession`.
+  2. `GET https://library-service.live.use1a.on.epicgames.com/library/api/public/items` con `includeMetadata=true` y `platform=Windows` (Playnite), `authorization: bearer` como `Secret`. Página siguiente con `cursor` = `responseMetadata.nextCursor` hasta que no venga (supuesto EA7). El cursor debe ser texto de 1 a 2048 caracteres sin caracteres de control y se pasa por `query`, nunca pegado a la URL; un cursor repetido (bucle) es `store.unexpected-response` (revisado tras el auditor). Como mucho 200 páginas y 50 000 registros; si se supera: `store.unexpected-response`. 401 o 403: `auth.expired`; 429; otro estado o un cuerpo sin `records` como lista: `store.unexpected-response`.
+  3. De cada registro, `namespace`, `catalogItemId` y `appName` con las formas del punto 6. Uno mal formado se salta y deja `complete: false` (regla de la 74). `namespace === 'ue'` (contenido de Unreal Engine) se salta y se cuenta, sin tocar `complete`. Repetidos por `storeGameId`, fuera.
+  4. Catálogo por namespace con la petición del punto 5, pero con el token del usuario; como mucho 50 ID por petición y **6 peticiones a la vez**. Como mucho **2000 namespaces por sincronización** (revisado tras el auditor): los que sobren no se piden y la instantánea sale con `complete: false`, así nada se da de baja por no caber. Por elemento:
+     - `categories` con una ruta `addons`, o `mainGameItem` o `mainGameItemList` presentes (punto 15): DLC, se salta y se cuenta;
+     - con una ruta que empiece por `games`: juego, `{ storeGameId, kind: 'game', title, media }`, con `title` saneado y de 300 como mucho (si falta, `Epic <appName>`) y `media` con las reglas del punto 5;
+     - lo demás (aplicaciones, contenido digital, motores): se salta y se cuenta por tipo (supuesto EA10);
+     - un ID pedido que no vuelve: se salta y se cuenta, sin tocar `complete`; el mismo `shortcut:` que la 77 (un juego retirado del catálogo no aparece).
+     - 401 o 403: `auth.expired`; 429: `store.rate-limited`; otro estado o un cuerpo que no es un objeto: `store.unexpected-response` para toda la sincronización (la biblioteca no se toca).
+  5. `complete: true` si todo fue bien, no hubo registros mal formados y no se superó el tope de namespaces.
+- **Tiempo (supuesto EA9):** 1 renovación, unas pocas páginas y unas N/6 rondas de catálogo (N = namespaces). Con 1000 juegos y unos 300 ms por petición son unos 50 s, cerca de los 60 s de la operación (74). `shortcut:` si una biblioteca real no cabe, se pasa a la petición entre namespaces del punto 5, tras comprobar su respuesta. Las bibliotecas de Epic crecen con los juegos gratuitos semanales: el tester anota el número de juegos y la duración en la prueba.
+- **Núcleo:** sin cambios. Mismo `storeGameId` que el escaneo = misma propiedad; el título de la API sustituye a `DisplayName` (regla de la 74); intervalos de la 50 y la 74 (30 minutos de suelo, 12 horas al abrir la web).
+
+#### 9. Manifiesto y contrato (`contractVersion` sigue en 1)
+
+```ts
+// connectors/epic/src/index.ts — cut 1 (ADR 78)
+export function createEpicConnector(): StoreConnector {
+  return {
+    contractVersion: 1,
+    id: "epic",
+    nameKey: "connectors.epic.name" as I18nKey,
+    access: "unofficial-api",
+    capabilities: {
+      library: false, scan: true, dlc: "none",
+      actions: ["play"], launchKinds: ["uri"], uriSchemes: ["com.epicgames.launcher"],
+      storePlaytime: false, price: false,
+    },
+    minSyncIntervalMs: 1_800_000,                 // ADR 50
+    authHosts: [],
+    apiHosts: ["account-public-service-prod03.ol.epicgames.com", "catalog-public-service-prod06.ol.epicgames.com"],
+    mediaHosts: ["cdn1.epicgames.com", "cdn2.unrealengine.com"],
+    locations: EPIC_LOCATIONS,                    // epic-launcher-data (point 3)
+    externalTools: [],                            // point 2
+    scanInstalled: scanEpicInstalled,
+    discoverRoots: discoverEpicRoots,
+    // resolveMedia: resolveEpicMedia — not declared: the catalog answers app tokens with stubs (point 15)
+    resolveAction: resolveEpicAction,
+  };
+}
+// cut 2: library: true; actions ["play", "install"]; authHosts ["www.epicgames.com"];
+// apiHosts += "library-service.live.use1a.on.epicgames.com"; locations += epic-launcher (always: E5 verified, see points 4 and 14);
+// connection: epicConnection; listLibrary: listEpicLibrary.
+```
+
+- **Sin tipos nuevos.** Cambios fuera del conector, todos pequeños y compatibles:
+  - corte 1: límite de `storeGameId` a 160 en `core` y su comentario en `contracts` (punto 6); ID inventados de Epic en `privacy.ts` (punto 10);
+  - corte 2: `json-field` tolerante en `core` y `web` (punto 7); patrón `eg1~` del redactor; tokens inventados en `privacy.ts`.
+- **Paquete `connectors/epic`** (`@ludiary/connector-epic`, `"private": true`): `src/` (`manifest.ts`, `item.ts`, `ids.ts`, `scan.ts`, `launch.ts`, `auth.ts`, `media.ts`, `index.ts`; en el corte 2 también `wizard.ts` y `library.ts`), `locales/es.json` y `en.json` (`connectors.epic.*`), `fixtures/` y pruebas con `connector-testkit`. `auth.ts` existe ya en el corte 1: las constantes del cliente y el token de aplicación.
+- **`runtime`:** `createConnectors()` añade `createEpicConnector()`; `packages/i18n/src/connectors.ts` su línea. La plataforma ya admite `uri`.
+- **Web:** corte 1, la tarjeta de Epic queda como quedó la de GOG en la 76 (modo solo instalados activo, asistente aún en el simulador). Corte 2, `real.ts` amplía la lista cerrada de tiendas con asistente real a `['steam', 'gog', 'epic']`, sin `sessionStorage` (sin redirección, como GOG).
+- **Textos nuevos** (es y en): `connectors.epic.errors.invalidId`, `connectors.epic.errors.launcherMissing` (corte 2), `connectors.epic.login.title`, `.login.body`, `.login.field`, `connectors.epic.error.code`, `.error.corrective`, `.error.expired` y `connectors.epic.disconnect.hint`.
+
+#### 10. Pruebas
+
+- **Fixtures inventadas.** La comprobación de privacidad (`packages/connector-testkit/src/privacy.ts`) rechaza cualquier hexadecimal de 32, y los namespace, ID de catálogo, `client_id`, `client_secret` y códigos de Epic lo son. Por eso **no hay ninguna respuesta real grabada** de Epic, ni siquiera del catálogo público, y:
+  - `ALLOWED` admite como ficticios los hexadecimales de 32 que empiezan por 24 ceros: `(?<![0-9A-Za-z])0{24}[0-9a-f]{8}(?![0-9A-Za-z])`. Ningún ID real tiene esa forma. Se usan namespace `000000000000000000000000000000a1`…, ID de catálogo `00000000000000000000000000000001`…, `appName` `TestGame01`…, código `00000000000000000000000000c0de01` y `account_id` `00000000000000000000000000000a01`;
+  - corte 2: `FICTIONAL_EPIC_VALUES` con `eg1~epic-test.access.token`, `eg1~epic-test.refresh.token`, `eg1~epic-test.refresh.token-2` y `eg1~epic-test.client.token` (cumplen el patrón de aceptación). `displayName` `TestUser`;
+  - imágenes con la forma `https://cdn1.epicgames.com/offer/000000000000000000000000000000a1/test-cover_1200x1600-0000`; rutas bajo `C:\Games` o `D:\Epic Games`, nunca `C:\Users\…`;
+  - las pruebas comparan la cabecera `basic` con la calculada desde las constantes de `auth.ts`; el `client_secret` no aparece en ningún fichero de `fixtures/` ni de pruebas. Una prueba del repositorio comprueba que su valor solo está en `connectors/epic/src/auth.ts` (como la B1 de la 77). **Precisado tras el auditor:** la prueba recorre **todos** los ficheros de `git ls-files`, incluidos `docs/` y `.claude/`, y busca tanto el secreto como `base64(client_id:client_secret)`.
+  - `privacy.ts` añade una regla propia, «Epic eg1 token», que rechaza cualquier `eg1~` seguido de caracteres de token que no sea uno de `FICTIONAL_EPIC_VALUES` (revisado tras el auditor).
+- **Corte 1, `connectors/epic`:**
+  - `.item`: con y sin BOM, JSON roto, sin cada campo obligatorio, `InstallLocation` relativa, con `/`, con barra final o con control, y cada caso de la regla estricta del punto 14, M1 (se salta y se cuenta, nunca `internal`); `bIsIncompleteInstall`; DLC por `MainGameAppName` y por `addons`; `AppCategories` sin `games`; namespace `ue`; título ausente, no ASCII y de más de 300; ID de catálogo en mayúsculas (sale en minúsculas).
+  - `discoverRoots`: carpeta de datos siempre; padres agrupados sin distinguir mayúsculas; raíz de unidad → carpeta del juego con `tag: 'game'`; sin `Manifests` → solo la carpeta de datos; incompletos y DLC no generan raíz.
+  - `scanInstalled` con `memoryFiles`: sin la carpeta de datos entre las raíces → vacío; juego dentro de una raíz activa; juego cuya raíz no está (desactivada) → se salta **sin** tocar el disco fuera de raíces; `InstallLocation` inexistente; `.item` bloqueado y `readDir` de `Manifests` con error → **todas** las raíces ilegibles; `Manifests` inexistente → vacío con las raíces legibles; unión que escapa → se salta; tope de 2000; ID repetido; el registro no lleva rutas, títulos ni ID.
+  - `resolveAction`: URI exacta de `play` con los tres segmentos y `%3A`, construida desde los grupos y con la aserción final; namespace `fn` conservado y namespace hexadecimal en mayúsculas pasado a minúsculas; ID que no cumple el patrón (con `:` de más, `/`, `?`, `&`, espacios, mayúsculas en el ID de catálogo) → `action.unsupported` sin eco; `installPath` nulo → `not-installed`; otras acciones → `null`.
+  - `resolveMedia` con `fakeHttp`: token de aplicación (formulario y cabecera exactos); agrupación por namespace con `id` repetido en la URL; `DieselGameBoxTall` y su respaldo `OfferImageTall`; host no permitido omitido; ID que no vuelve; 404; 401 y 403 del token; 429 que corta en seguida; más de 8 s; 500 y cuerpo que no es objeto → lanza; como mucho 6 en vuelo; más de 50 ID de un namespace → varias peticiones; lote sin ningún ID válido → ninguna petición, ni la del token; el token de aplicación nunca aparece en el registro ni en un error.
+  - `assertConnectorConformance`.
+- **Corte 1, fuera del conector:** `core`, un `storeGameId` de 158 caracteres se acepta en escaneo y biblioteca y uno de 161 se rechaza; `runtime`, registro de los tres conectores y paridad de la CSP con los dos hosts nuevos; `i18n`, paridad con `connectors/epic/locales`; `privacy.ts`, el patrón de ceros se admite y un hexadecimal de 32 cualquiera sigue rechazado; Playwright, un árbol de datos de Epic en una carpeta temporal (manifiesto y carpeta del juego), `LocationResolver` doble y `ProcessLauncher` que graba: el juego sale con el icono de vía no oficial y Jugar graba la URI exacta.
+- **Corte 2:** las mismas pruebas que la 77 adaptadas: URL de ida exacta (con `redirectUrl` codificada); canje con formulario, cabecera y `token_type` exactos; 400 y 401 → `auth.invalid`; `corrective_action_required` → su clave; `errorMessage` nunca en el resultado ni en el registro; tokens que no cumplen el patrón; `displayName` saneado y ausente; `refresh_expires` y `expires_in` registrados como números; renovación con `set` **antes** de la primera petición a la biblioteca; 400, 401 y 403 → `auth.expired`; paginación con cursor, cursor repetido, cursor vacío, de más de 2048 o con control, tope de páginas y registros, registro mal formado (`complete: false`), namespace `ue`; más de 2000 namespaces → `complete: false` sin pedir los que sobran; catálogo con juego, DLC (`addons` y `mainGameItem`), aplicación y ID que no vuelve; `bearer` solo hacia los hosts de Epic que lo necesitan, nunca hacia el CDN; Instalar con launcher, sin launcher y con `ModSdkCommand` con `/`; época cambiada a mitad. En `core` y `web`, `json-field` con JSON, con texto alrededor de las llaves, con el código suelto, entre comillas, con un texto JSON, con un número o una lista, con un JSON sin el campo y con el campo no de texto; la web envía solo el valor extraído; `exchangeCode` y `sid` con valor no aparecen en la petición, en el registro ni en ningún error. En `runtime`, el redactor tapa un token `eg1~` entero. Playwright: asistente de Epic contra un Epic doble → no instalados → Instalar graba la URI con `action=install` → desconectar deja el velo.
+- **Guía manual** (`docs/manual-tests/epic.md`, la prepara el `tester` y la hace el usuario; punto 11).
+
+#### 11. Prueba manual (corte 1, y sección «Account» para el corte 2)
+
+- **Preparación:** iniciar sesión en el launcher de Epic, conseguir **Home – A Unique Horror Adventure** (gratis en la tienda de Epic del 22-10-2026 a las 17:00 al 29-10-2026 a las 16:00, hora peninsular, según el feed público de promociones consultado el 22-10-2026; es un juego 2D pequeño) e instalarlo en una carpeta con espacios y una «ñ», por ejemplo `E:\Epic Games ñ`. Si el usuario ya tiene en su cuenta otro juego pequeño de Epic, vale ese. Hay que conseguirlo **antes del 29-10-2026**.
+- **Corte 1, qué comprobar:**
+  1. En `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests` aparece un `.item`. Copiar al ADR, saneados (sin rutas de usuario), los nombres de sus campos y los valores de `AppCategories`, `bIsIncompleteInstall`, `MainGameAppName` y la forma (longitud y caracteres, no el valor) de `CatalogNamespace`, `CatalogItemId` y `AppName` (E2, E6). Mirar si la carpeta del juego tiene `.egstore\*.mancpn` y qué campos lleva (E10).
+  2. ~~`reg query "HKCU\Software\Epic Games\EOS" /v ModSdkCommand`: anotar si existe y si apunta al `EpicGamesLauncher.exe` de `E:` (E5).~~ Ya comprobado el 22-10-2026 (E5). Se mira solo que Ajustes muestra la carpeta de datos resuelta por `AppDataPath` (E1).
+  3. Ludiary con autodetección: Ajustes muestra la carpeta de datos y la biblioteca de Epic; tras el escaneo, el juego sale con su título y su portada vertical (E7, E8). Si no hay portada, anotar el host de la imagen del registro.
+  4. Jugar con el launcher **cerrado**: arranca el launcher en segundo plano y luego el juego, sin mostrar la ventana del launcher (E3). Repetir con el launcher abierto.
+  5. Desactivar en Ajustes la carpeta de la biblioteca: el juego desaparece tras el escaneo. Volver a activarla.
+  6. Con «solo carpetas manuales»: Epic no muestra el juego (comportamiento decidido, punto 13.3).
+  7. Desinstalar desde el launcher y escanear: el juego desaparece.
+  8. El registro exportado no contiene rutas, títulos ni ID de Epic.
+- **Corte 2, sección «Account (ADR 78)»:**
+  1. Conectar en Chrome, Edge y Firefox: el login abre en pestaña nueva, la página final es el JSON y Pegar lo acepta, copiando la página entera y copiando solo el código (EA2, EA3). Anotar solo la forma del código.
+  2. «Conectado como <nombre>».
+  3. Juegos no instalados: el número coincide con la biblioteca de la web de Epic sin DLC; anotar el número de juegos y lo que tarda la primera sincronización (EA9). Ningún juego poseído falta; si falta alguno, anotar su título.
+  4. El juego instalado sale una sola vez, con el título de la API.
+  5. Instalar un juego no instalado: el launcher abre su diálogo de instalación (E4). Si no hace nada, anotar qué pasa.
+  6. Anotar el `refresh_expires` y el `expires_in` del registro (EA5). Sincronizar dos veces separadas por más de 30 minutos y al día siguiente: sigue conectado, o pasa a «Hay que volver a conectar».
+  7. Cambiar la contraseña en epicgames.com y sincronizar: `expired`; reconectar.
+  8. Desconectar: velo gris en los no instalados; el instalado sigue jugable.
+  9. El registro exportado no contiene `authorizationCode`, `eg1~`, `bearer`, `basic`, el nombre de la cuenta ni ID de Epic.
+
+#### 12. Orden de implementación y trabajo en paralelo
+
+1. **Primero** (`programador`, pequeño): límite de `storeGameId` a 160 en `core` con su comentario en `contracts` y sus pruebas; el patrón de ID ficticios en `privacy.ts`.
+2. **En paralelo:**
+   - `conectores`: `connectors/epic` del corte 1 completo contra `connector-testkit` (puntos 3 a 6 y 9, y sus pruebas);
+   - `programador`: registro en `runtime`, CSP y `vite.config.ts`, línea de `i18n`;
+   - `auditor`: revisión de este diseño antes del código (el cliente del launcher en el repositorio, el token de aplicación, la regla de raíces de `scanInstalled` y el límite de 160).
+3. **Después:** Playwright y revisión del `auditor` sobre el código.
+4. **Prueba manual del corte 1** (punto 11) con los supuestos E cerrados en este ADR, y el `documentalista`: guía (Epic detectado solo con autodetección; Jugar abre el launcher), privacidad (catálogo de Epic con los ID detectados) y aviso de vía no oficial.
+5. **Corte 2**, con lo aprendido: primero `json-field` tolerante en `core` y `web`, el redactor y los valores ficticios; en paralelo `conectores` (`auth.ts`, `wizard.ts`, `library.ts`, `install`, la ubicación `epic-launcher`) y `programador` (`real.ts`, simulador); revisión del `auditor` antes y después; prueba manual de la cuenta; `documentalista`: guía de conexión con capturas (copiar el texto entre llaves, el aviso de Epic), privacidad y solución de problemas.
+
+#### 13. Lo que decide el usuario (solo producto)
+
+**Aplicado por defecto (22-10-2026), salvo que el usuario diga otra cosa**, por analogía con lo que eligió en Steam y GOG: 13.1 (a), 13.2 (a) y 13.3 (a).
+
+1. **Nombre de la cuenta:** (a) «Conectado como <nombre>», con `displayName` de la respuesta del canje, sin petición extra (recomendado); (b) solo «Conectado».
+2. **Instalar sin el launcher de Epic:** (a) mensaje «Hace falta el launcher de Epic Games» (E5 ya comprobado); (b) abrir la ficha de la tienda en el navegador, que necesita una decisión nueva (como el 12.2 de la 77).
+3. **Modo «solo carpetas manuales»:** (a) Epic no detecta instalados sin sus manifiestos, y la guía lo dice (recomendado: cero código, y Jugar necesita el launcher igualmente); (b) añadir la carpeta del juego a mano y leer `.egstore\*.mancpn`, solo si la prueba confirma E10, en un cambio pequeño posterior.
+4. **Juego de prueba:** Home – A Unique Horror Adventure, que hay que conseguir antes del 29-10-2026, u otro juego pequeño que ya tenga en su cuenta.
+
+#### 14. Revisión del auditor sobre el diseño (22 de octubre de 2026)
+
+Sin críticos ni altos. Todo queda incorporado en los puntos anteriores; aquí, el resumen y lo que no cabe en ellos.
+
+- **M1. Los `.item` son entrada no confiable.** `C:\ProgramData\Epic` da control total a `BUILTIN\Usuarios` (comprobado el 22-10-2026): cualquier cuenta del equipo puede escribir un manifiesto. `InstallLocation` debe cumplir la **misma regla que `localPath` de `process-launcher.ts`** (decisión 76, segunda barrera), y además no ser la raíz de una unidad:
+  - empieza por `^[A-Za-z]:\\` (sin UNC, `\\?\` ni `\\.\`), tras cambiar `/` por `\` y quitar las barras finales;
+  - ningún componente vacío, `.` ni `..`, ni acabado en punto o en espacio;
+  - ningún `:` después de la posición 1 y ninguno de `"<>|?*` ni caracteres de control;
+  - ningún componente que sea un nombre reservado de dispositivo (`CON`, `PRN`, `AUX`, `NUL`, `COM0` a `COM9`, `LPT0` a `LPT9`, sin distinguir mayúsculas y también con extensión);
+  - no es una raíz de unidad (`C:\`).
+  - Si no cumple: se salta y se cuenta, **nunca** `internal` (un fichero de otro usuario no debe parar el escaneo). La misma regla vale en `discoverRoots` antes de proponer una raíz. El efecto máximo de un `.item` falso, una vez dentro de las raíces, es mostrar un juego inexistente o con otro título, y Jugar solo abre una URI del launcher con ID validados: no hay `exec`.
+- **M2. `json-field`:** la web envía solo el valor extraído; `exchangeCode` y `sid` nunca se leen, registran ni devuelven (punto 7).
+- **M3. `Manifests` inexistente frente a ilegible:** inexistente → vacío con las raíces legibles (baja de las instalaciones); `readDir` con error → todas las raíces ilegibles (punto 3).
+- **Bajos, incorporados:** regla exacta de `json-field` según el tipo de JSON (punto 7); cursor validado y repetido → `store.unexpected-response` (punto 8); tope de 2000 namespaces por sincronización con `complete: false` (punto 8); 50 ID por petición y sin token de aplicación si no hay lote válido (punto 5); URI desde los grupos del patrón con aserción final y namespace en minúsculas solo si es hexadecimal de 32 (puntos 4 y 6); prueba del `client_secret` sobre todo `git ls-files` y también en base64 (punto 10); regla propia de `privacy.ts` para `eg1~` (punto 10); `expires_in` registrado junto a `refresh_expires` (punto 7).
+- **E5 comprobado** (`ModSdkCommand` en `HKCU`, con `/` y sin comillas): la ubicación `epic-launcher` y la comprobación de Instalar van siempre en el corte 2; launcher presente = ubicación resuelta al `.exe` (punto 4). **`AppDataPath`** (`HKLM`, vista de 64 bits, con barra final; no existe en `WOW6432Node`) pasa a primera fuente de la carpeta de datos, con la carpeta conocida de respaldo (punto 3). E1 queda a medias.
+- **Fuera del ADR, para el usuario:** las definiciones de los agentes `conectores` y `auditor` (`.claude/agents/`) aún citan `legendary`. No se tocan aquí; decide el usuario si se actualizan.
+
+#### 15. Peticiones reales sin cuenta y decisiones de implementación del corte 1 (22 de octubre de 2026)
+
+**Comprobado por el agente `conectores` con peticiones reales sin cuenta:**
+
+- El token de aplicación (`client_credentials`, `token_type=eg1`) responde 200 con `expires_in` 14 400, sin `User-Agent` propio (EA8, en parte).
+- El catálogo por namespace responde 401 sin token y 200 con el token de aplicación. Para los 11 juegos de terceros del feed de juegos gratuitos devuelve un elemento incompleto: sin `keyImages`, con `categories` solo `audience` o `public` y con títulos internos (`DevGeneralAudience`). Solo Fortnite (namespace `fn`) trae `keyImages` (`DieselGameBox` y `DieselGameBoxTall`, en `cdn1.epicgames.com`).
+- **Consecuencia:** E7 es falso en la práctica y `resolveMedia` no se declara (punto 5). El corte 1 queda sin portadas para los instalados hasta conectar la cuenta. La CSP mantiene los dos hosts, que usará el corte 2.
+
+**Riesgo para el corte 2:** si el catálogo también devolviera elementos incompletos sin `categories` con el token del **usuario**, `listLibrary`, que filtra por rutas `games` (punto 8), saldría vacía. Es lo **primero** que comprueba la prueba manual del corte 2, antes del resto de la sección «Account». Si pasa, se decide aparte el criterio de juego (por ejemplo, el `.item` o los registros de la biblioteca).
+
+**Decisiones del conector, incorporadas al diseño:**
+
+- **DLC:** también se marca DLC un elemento del catálogo con `mainGameItemList`, además de `mainGameItem` (punto 8).
+- **`.item` sin `AppCategories`:** se trata como juego (revisa para ese caso el paso 5 del escaneo del punto 3, que lo saltaba). `shortcut:` un manifiesto antiguo o recortado no debe esconder un juego instalado; un `AppCategories` presente y sin `games` se sigue saltando.
+- **Jugar sin `installPath`:** `launch.not-installed` sin `messageKey`. La interfaz usa el texto común `connectors.common.errors.launch.not-installed`.
+- **E5:** cerrado (punto 14).
+
+#### Supuestos de Epic, corte 1 (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
+
+- **E1 (a medias):** los manifiestos están en `<AppDataPath>\Manifests`. Comprobado el 22-10-2026: `AppDataPath` existe en `HKLM\SOFTWARE\Epic Games\EpicGamesLauncher` (vista de 64 bits, con barra final, no en `WOW6432Node`), la carpeta `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests` existe con el launcher en `E:`, y GameFinder la da como carpeta por defecto. Falta ver que el launcher escribe ahí el `.item` del juego de prueba.
+- **E2 (sin verificar):** cada `.item` es un JSON con `DisplayName`, `AppName`, `CatalogNamespace`, `CatalogItemId`, `InstallLocation`, `LaunchExecutable`, `bIsIncompleteInstall`, `MainGameAppName` y `AppCategories`; los juegos llevan `games` en `AppCategories`, y los DLC, `addons` o un `MainGameAppName` distinto. Fuentes: ejemplo de la wiki de GameFinder y el artículo de jayd.ml; la regla de categorías no tiene fuente directa.
+- **E3:** `com.epicgames.launcher://apps/<namespace>%3A<catalogItemId>%3A<appName>?action=launch&silent=true` arranca el juego. Es el formato de los accesos directos del launcher (hilo de los foros de Steam con el de Final Fantasy VII Remake); el esquema está registrado en el equipo del usuario (comprobado). Falta ver el arranque con el launcher cerrado.
+- **E4 (sin verificar):** la misma URI con `action=install` abre el diálogo de instalación. Sin fuente directa.
+- **E5 (comprobado el 22-10-2026 en el equipo del usuario):** `HKCU\Software\Epic Games\EOS`, valor `ModSdkCommand`, guarda la ruta de `EpicGamesLauncher.exe` (la de `E:`), con `/` como separador y sin comillas. GameFinder cita `ModSdkMetadataDir` en esa clave.
+- **E6 (sin verificar):** el ID de catálogo es un hexadecimal de 32; el namespace cumple `[A-Za-z0-9_-]{1,64}` y el `appName`, `[A-Za-z0-9._-]{1,60}`, con el mismo uso de mayúsculas en el `.item` y en la biblioteca. Los del feed público son hexadecimales de 32 en minúsculas (comprobado el 22-10-2026); hay `appName` legibles (`Fortnite`) y otros hexadecimales.
+- **E7 (falso en la práctica, comprobado el 22-10-2026):** el catálogo acepta el token de `client_credentials` (200; sin token, 401), pero para los juegos de terceros devuelve elementos incompletos, sin `keyImages`. Detalle en el punto 15.
+- **E8 (en parte):** las imágenes están en `cdn1.epicgames.com` y `cdn2.unrealengine.com` (comprobado en el feed público el 22-10-2026); los tipos `DieselGameBoxTall` y `DieselGameBox` del catálogo, y sus hosts, sin verificar.
+- **E9:** muchos juegos necesitan el launcher o un código de intercambio para arrancar. Comprobado en el código de `legendary` (`core.py`, `get_launch_parameters`: `-AUTH_PASSWORD` con un código de intercambio y `-epicovt` con un token de propiedad para los juegos que lo piden). Qué juegos concretos lo exigen no consta.
+- **E10 (sin verificar):** la carpeta del juego tiene `.egstore\*.mancpn` con `AppName`, `CatalogNamespace` y `CatalogItemId`. Sin fuente; no se usa (punto 13.3).
+- **E11:** `GET …/catalog/api/shared/namespace/<ns>/bulk/items?id=…` devuelve un objeto con una entrada por ID de catálogo, con `title`, `categories`, `keyImages` y `mainGameItem`. La petición la confirman `legendary` (`egs.py`), Playnite (`EpicAccountClient.cs`) y `egs-api` (`egs.rs`); la forma de la respuesta, solo por cómo la usa `legendary`.
+
+#### Supuestos de la cuenta de Epic, corte 2
+
+- **EA1 (sin verificar):** Epic no ofrece a terceros un registro OAuth con acceso a la biblioteca y tolera el uso del cliente del launcher. Solo consta su uso público por `legendary`, Heroic, Playnite y `egs-api`.
+- **EA2:** la URL de login y la página final en JSON con `authorizationCode`. Comprobado el 22-10-2026: `legendary.gl/epiclogin` redirige a esa URL, y `www.epicgames.com/id/api/redirect` responde, sin sesión, `{"warning":…,"redirectUrl":…,"authorizationCode":null,"exchangeCode":null,"sid":null}`. Falta con sesión.
+- **EA3 (sin verificar):** el código es un hexadecimal de 32 en minúsculas (lo que espera la prueba de `validate.test.ts` y el uso público). `legendary` acepta el JSON o el código suelto (comprobado en `cli.py`).
+- **EA4:** `POST /account/api/oauth/token` con formulario, autenticación `basic` del cliente y `token_type=eg1`; respuesta con `access_token`, `refresh_token`, `expires_in`, `refresh_expires`, `account_id` y `displayName`; `eg1` es un JWT firmado con el prefijo `eg1~`. Confirmado en `legendary` (`egs.py`), `egs-api` (`login.rs`), Playnite y la documentación de la comunidad (FortniteEndpointsDocumentation, `Token.md`).
+- **EA5 (sin verificar):** cada renovación entrega un refresh token nuevo; su duración no consta (28 800 s en la documentación de la comunidad, para otro cliente). Se cierra con `refresh_expires` y `expires_in` registrados.
+- **EA6 (sin verificar):** un código o un refresh token no válidos dan 400 o 401 con `errorCode`; `corrective_action_required` existe. `legendary` trata cualquier 4xx con `errorCode` como credenciales no válidas.
+- **EA7:** `GET library-service…/library/api/public/items` con `includeMetadata`, paginado con `responseMetadata.nextCursor` y `cursor`. Confirmado en `legendary`, `egs-api` y Playnite (este con `platform=Windows`). Que cada registro traiga `namespace`, `catalogItemId` y `appName`, por cómo lo usa `legendary`; sin ver una respuesta.
+- **EA8 (confirmado el 22-10-2026 para el token de aplicación):** Epic no exige un `User-Agent` del launcher: `client_credentials` con `token_type=eg1` da 200 sin `User-Agent` propio. Falta con los tokens de usuario.
+- **EA9 (sin verificar):** límites de peticiones del catálogo y de la biblioteca sin documentar; 6 peticiones a la vez y unos 300 ms por petición.
+- **EA10 (sin verificar):** `categories` usa rutas `games…`, `addons…`, `applications` y otras, como en el feed público (comprobado allí el 22-10-2026); `mainGameItem` marca un DLC (por `includeMainGameDetails` de `legendary`).
+
+Fuentes consultadas el 22 de octubre de 2026: [`legendary`, `api/egs.py`](https://github.com/derrod/legendary/blob/master/legendary/api/egs.py), [`cli.py`](https://github.com/derrod/legendary/blob/master/legendary/cli.py) y [`core.py`](https://github.com/derrod/legendary/blob/master/legendary/core.py); [`legendary.gl/epiclogin`](https://legendary.gl/epiclogin) (redirección); [`www.epicgames.com/id/api/redirect`](https://www.epicgames.com/id/api/redirect); [`egs-api`](https://docs.rs/crate/egs-api/0.9.0), [`egs.rs`](https://github.com/AchetaGames/egs-api-rs/blob/master/src/api/egs.rs) y [`login.rs`](https://github.com/AchetaGames/egs-api-rs/blob/master/src/api/login.rs); [Playnite, `EpicAccountClient.cs`](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/EpicLibrary/Services/EpicAccountClient.cs); [FortniteEndpointsDocumentation, `Token.md`](https://github.com/LeleDerGrasshalmi/FortniteEndpointsDocumentation/blob/main/EpicGames/AccountService/Authentication/Token.md); [GameFinder, Epic Games Store](https://github.com/erri120/GameFinder/wiki/Epic-Games-Store); [jayd.ml, bibliotecas de Epic y Steam](https://jayd.ml/games/2020/05/16/epic-games-store-steam-libraries.html); [foros de Steam, acceso directo de Epic](https://steamcommunity.com/discussions/forum/1/4286935719733617676/); [feed público de promociones de Epic](https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=es-ES&country=ES&allowCountries=ES).
+
+**Motivo:** con los manifiestos del launcher, la URI de sus propios accesos directos y el catálogo, Epic cabe en el contrato **sin tipos nuevos**: lo único que el contrato no permitía era un ID de 158 caracteres, y subir un límite de validación es la forma más pequeña de llevar en el ID todo lo que piden la URI y el catálogo, sin `launchData` en la biblioteca. Jugar por el launcher es lo único que funciona con los juegos que exigen la sesión de Epic al arrancar, y es la misma forma que Steam. HTTP directo evita, como en la 77, un binario Python, una GPL más y el `ExternalToolRunner`. Separar dos cortes deja validar escaneo, Jugar y portadas, el mayor riesgo, sin secretos, y aplazar los supuestos de la cuenta (duración de la sesión, forma de la biblioteca) a cuando haya un juego real con el que comprobarlos. Alternativas descartadas: `legendary` (punto 2); `exec` directo (punto 4); `LauncherInstalled.dat` y `.mancpn` como fuente (punto 3); el GraphQL de la tienda para las portadas (punto 5); guardar el ID de catálogo solo y el resto en `launchData` (Instalar no podría construir la URI).
+
+**Consecuencias:**
+
+- Tercera tienda con salida de red y dos hosts de imágenes más en la CSP. Primer token de aplicación (sin usuario) obtenido con un cliente público.
+- La regla 7 de la decisión 40 queda revisada también para Epic: ninguna tienda usa herramientas externas, y la licencia de `legendary` deja de afectar a la distribución (decisión 60). La parte de Epic de la decisión 43 queda revisada: sin ventana de `legendary`, el JSON pegado es la vía.
+- La fila de Epic de la tabla de la 40 pasa a «`uri` (`com.epicgames.launcher`) del launcher».
+- El núcleo acepta `storeGameId` de hasta 160 caracteres para todas las tiendas.
+- Sin carpeta de datos del launcher (modo «solo carpetas manuales»), Epic no muestra instalados.
+- Antes de cerrar cada corte, el `auditor` revisa: las constantes del cliente y su única aparición en `auth.ts`, el token de aplicación, la regla de raíces y de errores de `scanInstalled`, el límite de 160, y en el corte 2 el orden de guardado, la cabecera `bearer` como `Secret`, el `json-field` tolerante, el redactor `eg1~` y las fixtures.
+- El `tester` prepara `docs/manual-tests/epic.md` (punto 11); el `documentalista`, las guías de los pasos 4 y 5 del punto 12.
+
+#### 16. Prueba manual del usuario (23 de octubre de 2026, Windows 11, launcher en `E:\Epic Games\Launcher`, cuenta real)
+
+El usuario: «sale perfecto». Antes de conectar la cuenta salía solo el juego instalado, sin portada (como prevé el punto 15: sin `resolveMedia`); al conectar salieron todos los juegos de la cuenta, con portada. Revisión de los registros reales, solo leyendo:
+- **Escaneo (corte 1):** `games=1 incomplete=0 dlc=0 notGame=0 outsideRoots=0 missing=0 invalid=0`: el `.item` real se lee con los campos previstos (E1, E2 en lo usado) y la URI de Jugar funciona (E3, según el usuario).
+- **Cuenta (corte 2):** canje y renovación correctos; con el token del usuario el catálogo sí trae `categories` y `keyImages`, así que el riesgo del punto 15 (biblioteca vacía por stubs) **no se da**. Se saltaron 27 DLC (`type_dlc=27`), ninguna imagen de host ajeno (`foreignImageHosts` vacío) y ningún registro mal formado.
+- **EA5, cerrado:** `refreshExpires=31540000` (unos 365 días) y `accessExpires=129600` (36 h). La reconexión periódica no es un problema.
+- **Privacidad:** en `server.log` y `launcher.log` no aparece ningún `eg1~`, `authorizationCode`, `exchangeCode`, hexadecimal de 32, correo, ruta de usuario, nombre de usuario de Windows ni `.exe`.
+- Sin probar en esta pasada: Instalar desde Ludiary (E4), desinstalar, reconectar y sesión caducada; el usuario no dio detalle paso a paso más allá de «sale perfecto».
 ### 79. Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` (amplía las decisiones 40, 42 y 72; revisa la fila de Ubisoft de la tabla de la 40 y, de la 72, qué hace `LocationResolver` cuando el registro no se puede leer)
 
 **Decisión (recomendada, 22 de octubre de 2026):** el usuario encarga el conector de Ubisoft Connect en la rama `feature/ubisoftconector`. Es el equivalente de la 76 para Ubisoft, pero más pequeño: Ubisoft no tiene cuenta ni API (decisiones 11, 16 y 40), así que el corte entero es detectar los juegos instalados y jugarlos. La numeración salta la 78 (Epic), que está en otra rama sin fusionar.
@@ -3968,6 +4302,7 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Puntos de producto de la decisión 72: A y B decididos por el usuario. (C), orden de los cortes, **resuelto** el 22-10-2026: tras la cuenta de Steam (74) el usuario encargó GOG (76), antes del corte 2b.
 - Decisión 76, punto 11.1 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste). El punto 11.2 queda **resuelto** el 22-10-2026: el usuario eligió (b), la cuenta de GOG ahora, pero sin el emparejamiento, que va en su propio corte; el corte 2b va después (decisión 77).
 - Decisión 77: punto 12 aplicado por defecto («Conectado como <nombre>» y mensaje si no hay Galaxy); el usuario puede cambiarlo. Prueba manual de la cuenta (punto 10) para cerrar los supuestos GA1 a GA13, y revisión del `auditor` antes y después del código.
+- Decisión 78 (Epic): punto 13 aplicado por defecto («Conectado como <nombre>», mensaje si falta el launcher, sin instalados de Epic en «solo carpetas manuales»); el usuario puede cambiarlo. El usuario consigue Home – A Unique Horror Adventure (u otro juego pequeño) **antes del 29-10-2026** para la prueba manual del corte 1 (punto 11), que cierra los supuestos E pendientes (E5 ya comprobado; E7 falso, el corte 1 va sin portadas). La prueba del corte 2 comprueba primero que el catálogo con el token del usuario trae `categories` y `keyImages` (punto 15). El usuario decide si se actualizan las definiciones de los agentes `conectores` y `auditor`, que aún citan `legendary` (punto 14). El corte 2 cierra EA1 a EA10; si la sesión de Epic dura pocas horas (EA5), se decide aparte. Revisión del `auditor` antes y después del código de cada corte.
 - Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces (y un juego de Ubisoft comprado en Steam o Epic, previsiblemente también; supuesto U11 de la 79).
 - Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect); el usuario elige el juego de la prueba manual (11.2, recomendado Trackmania) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos U1 a U11. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.

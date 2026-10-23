@@ -83,6 +83,16 @@ importers:
         specifier: 8.3.4
         version: 8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)
 
+  connectors/epic:
+    dependencies:
+      '@ludiary/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+    devDependencies:
+      '@ludiary/connector-testkit':
+        specifier: workspace:*
+        version: link:../../packages/connector-testkit
+
   connectors/gog:
     dependencies:
       '@ludiary/contracts':
@@ -189,6 +199,9 @@ importers:
       '@ludiary/api-contract':
         specifier: workspace:*
         version: link:../api-contract
+      '@ludiary/connector-epic':
+        specifier: workspace:*
+        version: link:../../connectors/epic
       '@ludiary/connector-gog':
         specifier: workspace:*
         version: link:../../connectors/gog

@@ -165,7 +165,7 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
     const { port } = await start([]);
     const { call } = await login(port);
     const stores = (await (await call("/api/stores")).json()) as { store: string; access: string; mode: string; connection: string }[];
-    expect(stores.map((s) => s.store)).toEqual(["steam", "gog", "ubisoft"]);
+    expect(stores.map((s) => s.store)).toEqual(["steam", "gog", "epic", "ubisoft"]);
     expect(stores[0]).toMatchObject({ store: "steam", access: "official-api", mode: "installed-only" });
     expect(stores[1]).toMatchObject({ store: "gog", access: "unofficial-api", mode: "installed-only" });
     const cancelled = await call("/api/scan-roots/pick", "POST", {});
@@ -180,7 +180,7 @@ describe("composition with doubles: runtime -> api -> core -> db -> Steam connec
     expect(root.status).toBe(200);
     expect(await root.text()).toContain("<title>spa</title>");
     const csp = root.headers.get("content-security-policy")!;
-    expect(csp).toContain("img-src 'self' data: https://images.gog.com https://shared.akamai.steamstatic.com");
+    expect(csp).toContain("img-src 'self' data: https://cdn1.epicgames.com https://cdn2.unrealengine.com https://images.gog.com https://shared.akamai.steamstatic.com");
     const js = await fetch(`http://127.0.0.1:${port}/assets/app-abc.js`);
     expect(js.headers.get("cache-control")).toContain("immutable");
     expect(js.headers.get("content-type")).toContain("text/javascript");
@@ -239,9 +239,11 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
 
   it("unions the media hosts and URI schemes of the registered connectors", () => {
     const connectors = createConnectors();
-    expect(unionUriSchemes(connectors)).toEqual(["goggalaxy", "steam", "uplay"]); // ADR 77: GOG declares goggalaxy for install
-    expect(connectors.map((c) => c.id)).toEqual(["steam", "gog", "ubisoft"]);
+    expect(unionUriSchemes(connectors)).toEqual(["com.epicgames.launcher", "goggalaxy", "steam", "uplay"]); // ADR 77: GOG declares goggalaxy for install; ADR 78: Epic; ADR 79: Ubisoft
+    expect(connectors.map((c) => c.id)).toEqual(["steam", "gog", "epic", "ubisoft"]);
     expect(unionMediaHosts(connectors)).toEqual([
+      "cdn1.epicgames.com",
+      "cdn2.unrealengine.com",
       "images.gog.com",
       "shared.akamai.steamstatic.com",
       "shared.cloudflare.steamstatic.com",

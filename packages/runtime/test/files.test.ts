@@ -5,6 +5,10 @@ import { makeRedactor, redactHome } from "../src/files";
 describe("log redaction (ADR 35)", () => {
   const redact = makeRedactor("C:\\Users\\ana", "ana");
 
+  it("redacts Epic eg1~ tokens with their dots (ADR 78)", () => {
+    expect(redact("token eg1~aaa.bbb_c-d.eee end")).toBe("token [redacted] end");
+  });
+
   it("removes the home folder whatever the case or slash", () => {
     expect(redact("at C:\\Users\\ana\\a.js")).toBe("at ~\\a.js");
     expect(redact("at C:\\USERS\\ANA\\b.js")).toBe("at ~\\b.js");

@@ -428,7 +428,7 @@ describe("validation of connector output (ADR 40 rule 4)", () => {
   }
 
   it("drops invalid entries without failing the scan", async () => {
-    const long = "x".repeat(65);
+    const long = "x".repeat(161);
     const h = await scanned([
       entry("ok", "Fine", `${LIB}\\Fine`),
       entry("rel", "Relative", "Fine\\Rel"),
@@ -447,6 +447,11 @@ describe("validation of connector output (ADR 40 rule 4)", () => {
     expect((await h.core.storeStatus())[0]!.sync[0]!.status).toBe("idle");
     expect(h.logs.some((l) => l.includes("not stored"))).toBe(true);
     expect(h.logs.join("\n")).not.toContain("Elsewhere");
+  });
+
+  it("accepts a 158-character id (ADR 78)", async () => {
+    const h = await scanned([entry("x".repeat(158), "Epic sized", `${LIB}\\E`)]);
+    expect(await titles(h)).toEqual(["Epic sized"]);
   });
 
   it("keeps the first of a repeated id", async () => {

@@ -1,0 +1,8 @@
+{
+  "records": [
+    { "namespace": "000000000000000000000000000000a1", "catalogItemId": "00000000000000000000000000000001", "appName": "TestGame01", "sandboxType": "PUBLIC" },
+    { "namespace": "000000000000000000000000000000a1", "catalogItemId": "00000000000000000000000000000002", "appName": "TestDlc01", "sandboxType": "PUBLIC" },
+    { "namespace": "ue", "catalogItemId": "00000000000000000000000000000009", "appName": "UEPlugin01" }
+  ],
+  "responseMetadata": { "nextCursor": "cursor-two" }
+}

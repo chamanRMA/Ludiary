@@ -53,6 +53,8 @@ const STEAM_ID = /(?<!\d)7656119\d{10}(?!\d)/g;
 // ADR 77 point 5: long opaque tokens (GOG refresh tokens, client secrets). Same net as above, for 64+ char runs.
 const LONG_TOKEN = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{64,}(?![A-Za-z0-9_-])/g; // not \b: a token may start or end with "-"
 
+const EPIC_TOKEN = /eg1~[A-Za-z0-9._-]+/g;
+
 /** Builds the redaction patterns for one home folder and user name (exported for tests). */
 export function makeRedactor(home: string, user: string): (text: string) => string {
   // Windows paths are case-insensitive and stack traces may use either slash; the lookahead stops
@@ -67,7 +69,8 @@ export function makeRedactor(home: string, user: string): (text: string) => stri
     if (userPattern) out = out.replace(userPattern, "<user>");
     // ADR 74 point 6: the net under Secret. A Steam Web API key (32 hex) and a SteamID64 are never written to a log.
     // Long tokens first: a hex run inside one must not split it below the 64-char threshold.
-    return out.replace(LONG_TOKEN, "[redacted]").replace(STEAM_KEY, "[redacted]").replace(STEAM_ID, "[redacted]");
+    // ADR 78: Epic eg1~ tokens (JWT with dots), before the long-token pattern.
+    return out.replace(EPIC_TOKEN, "[redacted]").replace(LONG_TOKEN, "[redacted]").replace(STEAM_KEY, "[redacted]").replace(STEAM_ID, "[redacted]");
   };
 }
 

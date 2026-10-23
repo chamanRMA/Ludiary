@@ -93,7 +93,7 @@ export async function validateEntries(a: ValidateEntriesArgs): Promise<ScannedEn
       unsupported++;
       continue;
     }
-    if (typeof id !== "string" || id.length < 1 || id.length > 64 || id.trim() === "" || ID_FORBIDDEN.test(id)) {
+    if (typeof id !== "string" || id.length < 1 || id.length > 160 || id.trim() === "" || ID_FORBIDDEN.test(id)) {
       invalid++;
       continue;
     }
@@ -233,7 +233,7 @@ export function validateLibraryEntries(a: {
       continue;
     }
     const id = e.storeGameId;
-    if (typeof id !== "string" || id.length < 1 || id.length > 64 || id.trim() === "" || ID_FORBIDDEN.test(id) || !isNonEmptyText(e.title, 300)) {
+    if (typeof id !== "string" || id.length < 1 || id.length > 160 || id.trim() === "" || ID_FORBIDDEN.test(id) || !isNonEmptyText(e.title, 300)) {
       invalid++;
       continue;
     }
