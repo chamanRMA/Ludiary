@@ -93,6 +93,9 @@ const STEPS: Record<string, readonly WizardStepDto[]> = {
   ubisoft: [
     { kind: "embedded-login", id: "login", titleKey: "connectors.ubisoft.login.title", bodyKey: "connectors.ubisoft.login.body" },
   ],
+  ea: [
+    { kind: "embedded-login", id: "login", titleKey: "connectors.ea.login.title", bodyKey: "connectors.ea.login.body" },
+  ],
   rawg: [
     {
       kind: "open-external",
@@ -121,7 +124,7 @@ const STEPS: Record<string, readonly WizardStepDto[]> = {
 };
 
 const targetId = (t: WizardTarget): string => (t.kind === "store" ? t.store : t.service);
-const ACCOUNT_LABELS: Record<string, string> = { steam: "demo_steam", gog: "demo_gog", epic: "demo_epic", ubisoft: "demo_ubisoft" };
+const ACCOUNT_LABELS: Record<string, string> = { steam: "demo_steam", gog: "demo_gog", epic: "demo_epic", ubisoft: "demo_ubisoft", ea: "demo_ea" };
 
 // --- Seed data -----------------------------------------------------------------------------------
 
@@ -203,7 +206,7 @@ const STORE_META: Record<StoreId, Pick<StoreStatusDto, "access" | "connection" |
   gog: { access: "unofficial-api", connection: "disconnected", mode: "library" },
   epic: { access: "unofficial-api", connection: "disconnected", mode: "library" },
   ubisoft: { access: "unofficial-api", connection: "disconnected", mode: "library" },
-  ea: { access: "local-only", connection: "not-applicable", mode: "installed-only" },
+  ea: { access: "unofficial-api", connection: "disconnected", mode: "library" },
 };
 
 const ROOTS: ScanRootDto[] = [

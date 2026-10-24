@@ -2,10 +2,13 @@ import {
   ConnectorError,
   PathEscapesRootsError,
   type ConnectorErrorCode,
+  type DiscoveryContext,
   type InstalledEntry,
+  type ResolvedLocation,
   type ScanContext,
   type ScanResult,
   type ScanRoot,
+  isStrictLocalPath,
 } from "@ludiary/contracts";
 import { MAX_IDS, parseInstallerData } from "./installerdata";
 
@@ -102,4 +105,74 @@ export async function scanEaInstalled(ctx: ScanContext): Promise<ScanResult> {
   unreadableRoots.push(...partial.values());
   if (counts.invalidFiles + counts.ignoredIds + counts.duplicates > 0) ctx.log.warn("EA installs skipped", counts);
   return { entries, unreadableRoots };
+}
+
+const SETTINGS_FILE_RE = /^(?:machine|user_\d{1,24})\.ini$/i;
+const MAX_SETTINGS_FILES = 16;
+const MAX_SETTINGS_BYTES = 64 * 1024;
+const MAX_PATH_CHARS = 520;
+const KEYS = ["user.downloadinplacedir", "machine.downloadinplacedir"];
+
+/** Value of `downloadinplacedir` as a clean local path, or null (missing key or invalid path). Pure. */
+export function parseDownloadInPlaceDir(text: string): { found: boolean; path: string | null } {
+  for (const line of text.split(/\r?\n/)) {
+    const eq = line.indexOf("=");
+    if (eq < 0 || !KEYS.includes(line.slice(0, eq).trim().toLowerCase())) continue;
+    let v = line.slice(eq + 1).trim();
+    if (v.length > MAX_PATH_CHARS) return { found: true, path: null };
+    let end = v.length;
+    while (end > 3 && v[end - 1] === "\\") end--; // keeps the backslash of a drive root such as F:\
+    v = v.slice(0, end);
+    return { found: true, path: isStrictLocalPath(v) ? v : null };
+  }
+  return { found: false, path: null };
+}
+
+/**
+ * Library folders (ADR 81, EAD6): the default folders that exist plus `downloadinplacedir` of the EA app settings.
+ * The settings folders are only read, never returned. Counters only in the log: file names carry the account id.
+ */
+export async function discoverEaRoots(ctx: DiscoveryContext): Promise<readonly ResolvedLocation[]> {
+  const out: ResolvedLocation[] = [];
+  const seen = new Set<string>();
+  const add = (path: string): void => {
+    const key = (path.length > 3 && path.endsWith("\\") ? path.slice(0, -1) : path).toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ declarationId: "ea-libraries", path, tag: "library" });
+  };
+  for (const loc of ctx.locations) if (loc.declarationId === "ea-libraries") add(loc.path);
+
+  const c = { files: 0, unreadable: 0, invalidPaths: 0 };
+  for (const loc of ctx.locations) {
+    if (loc.declarationId !== "ea-settings") continue;
+    ctx.signal.throwIfAborted();
+    try {
+      if (!(await ctx.fs.exists(loc.path))) continue; // absent (no EA app) is not unreadable
+      const names = (await ctx.fs.readDir(loc.path))
+        .filter((e) => !e.isDirectory && SETTINGS_FILE_RE.test(e.name))
+        .map((e) => e.name)
+        .sort()
+        .slice(0, MAX_SETTINGS_FILES);
+      for (const name of names) {
+        ctx.signal.throwIfAborted();
+        try {
+          c.files++;
+          const r = parseDownloadInPlaceDir(new TextDecoder().decode(await ctx.fs.readBytes(ctx.fs.join(loc.path, name), MAX_SETTINGS_BYTES)));
+          if (r.path !== null) add(r.path);
+          else if (r.found) c.invalidPaths++;
+        } catch (e) {
+          if (!isHandled(e)) throw e;
+          c.unreadable++;
+        }
+      }
+    } catch (e) {
+      if (!isHandled(e)) throw e;
+      c.unreadable++;
+    }
+  }
+  if (c.unreadable + c.invalidPaths > 0) ctx.log.warn("EA settings skipped", c);
+  // Partial roots must not replace the saved ones (a root like F:\ would vanish): the core keeps them on this error.
+  if (c.unreadable > 0) throw new ConnectorError("scan.root-unreadable", "Some EA settings could not be read");
+  return out;
 }

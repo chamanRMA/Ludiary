@@ -145,7 +145,8 @@ func handleEmbeddedLogin(in io.Reader, out io.Writer) int {
 	}
 	defer windows.CoUninitialize()
 
-	run = &loginRun{req: req, script: script, machine: captureMachine{doneURL: req.DoneURL, captureURL: req.CaptureURL}}
+	run = &loginRun{req: req, script: script, machine: captureMachine{
+		doneURL: req.DoneURL, captureURL: req.CaptureURL, exact: req.Capture[0].Source == srcDocumentJSON}}
 	res := run.execute(reader)
 	return writeResult(out, res)
 }
@@ -312,9 +313,13 @@ func (r *loginRun) setTitleHost(raw string) {
 	procSetWindowTextW.Call(r.hwnd, uintptr(unsafe.Pointer(p)))
 }
 
-func (r *loginRun) onMainNavigation(uri string, _ bool) bool {
+func (r *loginRun) onMainNavigation(uri string, _ bool, navID uint64) bool {
 	if r.finishing || !allowMainNavigation(uri, r.req.AllowedHosts) { // redirects take the same road
 		r.blocked.add(uri)
+		return false
+	}
+	if r.machine.onStarting(uri, navID) == actFail { // document-json: the page being read navigated away
+		r.finish(loginResult{Error: "capture-missing"})
 		return false
 	}
 	r.setTitleHost(uri)
@@ -329,7 +334,7 @@ func (r *loginRun) onFrameNavigation(uri string) bool {
 	return true
 }
 
-func (r *loginRun) onNavigationCompleted(success bool) {
+func (r *loginRun) onNavigationCompleted(success bool, navID uint64) {
 	if r.finishing || r.browser == nil {
 		return
 	}
@@ -337,12 +342,7 @@ func (r *loginRun) onNavigationCompleted(success bool) {
 	if err != nil {
 		return
 	}
-	// Reaching doneUrl is the only signal needed there, and Ubisoft's /ready answers 404 (checked 23-10-2026). Every other
-	// page must load: a failed load shows Chromium's error page, whose origin cannot read the site's localStorage.
-	if !success && !r.machine.atDone(src) {
-		return
-	}
-	switch r.machine.onLoaded(src) {
+	switch r.machine.onCompleted(navID, success, src) {
 	case actNavigateToCapture:
 		if r.browser.Navigate(r.req.CaptureURL) != nil {
 			r.finish(loginResult{Error: "failed"})
@@ -350,6 +350,8 @@ func (r *loginRun) onNavigationCompleted(success bool) {
 	case actCapture:
 		r.capStart = time.Now()
 		r.attemptCapture()
+	case actFail:
+		r.finish(loginResult{Error: "capture-missing"})
 	}
 }
 
@@ -357,6 +359,10 @@ func (r *loginRun) onNavigationCompleted(success bool) {
 func (r *loginRun) attemptCapture() {
 	src, err := r.browser.Source()
 	if err != nil || !r.machine.mayExecute(src) {
+		if r.machine.exact { // nothing launched a new navigation to wait for
+			r.finish(loginResult{Error: "capture-missing"})
+			return
+		}
 		r.machine.leftCapture()
 		return
 	}

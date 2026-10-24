@@ -124,7 +124,8 @@ describe("HelperProcessEmbeddedLogin", () => {
     ['{"captured":{"rememberMeTicket":5},"blockedHosts":[]}', 0, { kind: "failed", reason: "capture-missing" }],
     ['{"captured":{"rememberMeTicket":"a\\u0000b"},"blockedHosts":[]}', 0, { kind: "failed", reason: "capture-missing" }],
     [`{"captured":{"rememberMeTicket":"${"a".repeat(101)}"},"blockedHosts":[]}`, 0, { kind: "failed", reason: "capture-missing" }],
-    ['{"cancelled":true,"blockedHosts":["not a host"]}', 0, { kind: "failed", reason: "failed" }],
+    ['{"cancelled":true,"blockedHosts":["not a host","nucleus:","a.example.com"]}', 0, { kind: "cancelled", blockedHosts: ["a.example.com"] }],
+    ['{"cancelled":true,"blockedHosts":[5]}', 0, { kind: "failed", reason: "failed" }],
   ])("interprets %s (exit %i)", async (line, code, expected) => {
     const p = make().run(REQ, new AbortController().signal);
     await tick();

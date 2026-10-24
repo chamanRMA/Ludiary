@@ -52,10 +52,10 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; propósito `library`, `SyncContext.fs`, `readBytes`, paso `embedded-login`, puerto `EmbeddedLogin` y fila de Ubisoft en la 80; fila de EA de la tabla y `readText` con UTF-16 en la 81 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; propósito `library`, `SyncContext.fs`, `readBytes`, paso `embedded-login`, puerto `EmbeddedLogin` y fila de Ubisoft en la 80; fila de EA de la tabla y `readText` con UTF-16 en la 81; fila de EA otra vez y `source` en la captura de `embedded-login` en la 82 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario); consecuencia sobre Ubisoft concretada en la 79 |
-| 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`); para Ubisoft, ventana de login integrada en la 80 (decisión expresa del usuario) |
+| 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`); para Ubisoft, ventana de login integrada en la 80 (decisión expresa del usuario); para EA, en la 82 (decisión expresa del usuario, 23-10-2026) |
 | 44 | Nombre del proyecto (Ludiary) y ámbito de los paquetes | Vigente (confirmada por el usuario) |
 | 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Vigente (confirmada por el usuario tras el prototipo); ampliada en las 62 a 65; la actualización con vuelta atrás pasa a la 58 |
 | 46 | Cifrado de secretos y rotación de la clave | Vigente (confirmada por el usuario; amplía la 14); token de instalación revisado en la 63 |
@@ -92,8 +92,9 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
 | 78 | Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta, no instalados e Instalar (corte 2) | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de la 40 y la parte de Epic de la 43; sin tipos nuevos; `storeGameId` hasta 160 caracteres; punto 13 aplicado por defecto con (a), (a) y (a); corte 2 tras la prueba del corte 1; revisada por el auditor el mismo día sin críticos ni altos (punto 14): `.item` como entrada no confiable con regla estricta de ruta, solo el valor extraído en `json-field`, E5 comprobado y `AppDataPath` como primera fuente; E7 falso en la práctica: el corte 1 va sin portadas y sin `resolveMedia` (punto 15)) |
 | 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); prueba manual del 23-10-2026: detección correcta, U4 y U7 confirmados (punto 13); portadas, Instalar, cuenta y biblioteca revisados en la 80) |
-| 80 | Ubisoft: cuenta con ventana de login integrada, juegos poseídos y portadas con la caché local | Propuesta (vía C elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 42, 45, 74 y 79; revisa para Ubisoft la 43 y, de la 79, los puntos 1 y 5, el descarte de `configurations` y `access`; paso `embedded-login` y puerto `EmbeddedLogin` (subcomando del auxiliar de Go con WebView2), propósito `library`, `SyncContext.fs` y `readBytes`, aditivos, `contractVersion` 1; comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto; revisión del auditor sobre el diseño incorporada el 23-10-2026 en el punto 18, que prevalece: filtrado completo de la ventana, sin `WEBVIEW2_*`, perfil vaciado antes de cerrar, ejecutor propio, carreras del motor, topes de `configurations`, copia parcheada en `third_party/go-webview2`) |
-| 81 | Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` | Vigente (recomendada; encargada por el usuario el 23-10-2026; amplía las 40, 42 y 72; sin tipos nuevos ni `discoverRoots`; carpetas manuales admitidas; `readText` con UTF-16 con BOM; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: analizador sin expresiones de coste no acotado, `exists` antes de `readText` al lanzar, ID estable aceptado con comprobación manual, fichero de más de 1 MiB o no normal como `store.unexpected-response` en todas las tiendas); pendiente de la revisión del código y de la prueba manual). La 80 (Ubisoft) se escribe en otra copia de trabajo |
+| 80 | Ubisoft: cuenta con ventana de login integrada, juegos poseídos y portadas con la caché local | Propuesta (vía C elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 42, 45, 74 y 79; revisa para Ubisoft la 43 y, de la 79, los puntos 1 y 5, el descarte de `configurations` y `access`; paso `embedded-login` y puerto `EmbeddedLogin` (subcomando del auxiliar de Go con WebView2), propósito `library`, `SyncContext.fs` y `readBytes`, aditivos, `contractVersion` 1; comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto; revisión del auditor sobre el diseño incorporada el 23-10-2026 en el punto 18, que prevalece: filtrado completo de la ventana, sin `WEBVIEW2_*`, perfil vaciado antes de cerrar, ejecutor propio, carreras del motor, topes de `configurations`, copia parcheada en `third_party/go-webview2`); captura del texto JSON, `captureUrl` con consulta y llegada a `doneUrl` por navegación (sustituye a `atDone`) añadidas en la 82 |
+| 81 | Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` | Vigente (recomendada; encargada por el usuario el 23-10-2026; amplía las 40, 42 y 72; sin tipos nuevos; `discoverRoots` con `downloadinplacedir` de los ajustes de la app de EA tras cerrar EAD6 (punto 13); carpetas manuales admitidas; `readText` con UTF-16 con BOM; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: analizador sin expresiones de coste no acotado, `exists` antes de `readText` al lanzar, ID estable aceptado con comprobación manual, fichero de más de 1 MiB o no normal como `store.unexpected-response` en todas las tiendas); pendiente de la revisión del código y de la prueba manual). La 80 (Ubisoft) se escribe en otra copia de trabajo; cuenta, portadas, Instalar y `access` revisados en la 82 |
+| 82 | Cuenta de EA con la ventana de login integrada | Propuesta (vía elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 74, 80 y 81; revisa para EA la 43 y, de la 81, cuenta, portadas, Instalar y `access`; reutiliza el paso `embedded-login` de la 80 con `source: 'document-json'`, `captureUrl` con consulta exacta y llegada a `doneUrl` por navegación; solo el `access_token` cifrado con su caducidad, sin renovación; GraphQL `getEntitlements` y `getOffers` con el `contentId` de la 81; portadas en `drop-assets.ea.com`, sin confirmar; Instalar con `autoDownload=1`; contraseña en la ventana confirmada expresamente por el usuario el 23-10-2026 y 12.2 (a) decidida por él; 12.1, 12.3 y 12.4 aplicados por defecto; revisión del `auditor` sobre el diseño incorporada (punto 13); falta la del código y la prueba manual). **Revisada en su punto 14 (24-10-2026, decisión del usuario):** Google no funciona en la ventana integrada; EA conecta solo en el navegador del usuario con un paso `open-external` a la URL de token y pegando el JSON (`extract: 'json-field:access_token'`, como Epic), `authHosts` solo `accounts.ea.com`, la 43 vuelve a valer tal cual para EA, `document-json` sin uso por ahora y el armado por `NavigationId` sigue para Ubisoft; supuesto EAA13 |
 
 ## Decisiones
 
@@ -573,7 +574,7 @@ Además:
 - La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
-### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79; propósito `library`, `SyncContext.fs`, `ScopedFileReader.readBytes`, paso `embedded-login`, entrada `embedded` y puerto `EmbeddedLogin` añadidos, y fila de Ubisoft de la tabla revisada otra vez, en la decisión 80; fila de EA de la tabla y `readText` con UTF-16 revisados en la decisión 81)
+### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79; propósito `library`, `SyncContext.fs`, `ScopedFileReader.readBytes`, paso `embedded-login`, entrada `embedded` y puerto `EmbeddedLogin` añadidos, y fila de Ubisoft de la tabla revisada otra vez, en la decisión 80; fila de EA de la tabla y `readText` con UTF-16 revisados en la decisión 81; fila de EA revisada otra vez y `source` en la captura de `embedded-login` en la decisión 82)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** todos los conectores implementan la interfaz `StoreConnector` (versión de contrato 1), definida en `packages/contracts`. El conector **describe**; el núcleo **ejecuta, guarda y decide**. El conector no ve la base de datos, la clave de cifrado, el `user_id`, el sistema de ficheros completo ni la red directamente: todo le llega por un contexto que construye el núcleo.
 
@@ -877,7 +878,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 | GOG | `unofficial-api` | sí | sí | ~~`exec` (cliente de Galaxy)~~ `exec` del ejecutable del juego; Galaxy, opcional (revisado en la decisión 76) |
 | Epic | `unofficial-api` | sí | sí | ~~`uri` del launcher de Epic, a verificar~~ `uri` (`com.epicgames.launcher`) del launcher (revisado en la decisión 78) |
 | Ubisoft | ~~`local-only`~~ `unofficial-api` (revisado en la decisión 80) | ~~no~~ sí, con cuenta por ventana de login integrada (decisión 80) | sí | ~~`uri` (`uplay`), a verificar~~ `uri` (`uplay://launch/<id>/0`); supuestos U4 y U6 (revisado en la decisión 79) |
-| EA | `local-only` | no | sí | ~~`uri` o `exec`, a validar con juegos reales~~ `uri` (`origin2://game/launch?offerIds=…`); supuestos EAD8 y EAD9 (revisado en la decisión 81) |
+| EA | ~~`local-only`~~ `unofficial-api` (revisado en la decisión 82) | ~~no~~ sí, con cuenta por ventana de login integrada (decisión 82) | sí | ~~`uri` o `exec`, a validar con juegos reales~~ `uri` (`origin2://game/launch?offerIds=…`); supuestos EAD8 y EAD9 (revisado en la decisión 81) |
 
 **Motivo:** un contrato que solo describe (datos y especificaciones de lanzamiento) y deja la ejecución, la persistencia y la validación al núcleo concentra en un único sitio lo delicado: lanzar procesos, guardar secretos y tocar el disco. Los conectores, que son la parte que más se romperá, quedan pequeños, sin E/S propia y comprobables con respuestas grabadas sustituyendo `http`, `fs` y `tools` por los dobles de `connector-testkit`. Alternativas descartadas: que el conector lance el juego él mismo (dispersa la superficie de ejecución de procesos y rompe el invariante 3); que el conector reciba la clave o los tokens descifrados en bruto y gestione su persistencia (multiplica los puntos donde puede filtrarse un secreto); un asistente de conexión con interfaz propia por conector (obliga a meter React en los conectores; los pasos declarativos bastan para OpenID, códigos de autorización y claves).
 
@@ -885,7 +886,7 @@ Capacidades previstas por tienda (orientativas; el agente de conectores las veri
 
 - `capabilities` alimenta la interfaz: filtros, botones disponibles y avisos de fragilidad para las APIs no oficiales.
 - Confirmado por el usuario: en la pantalla de tiendas, cada conector con `access: 'unofficial-api'` (hoy Epic y GOG) muestra un icono de alerta junto a su nombre. Al pasar el ratón o al enfocarlo con el teclado (decisión 37), un tooltip traducido explica que se usa una vía no oficial que puede dejar de funcionar sin aviso y que el proyecto no está afiliado a la tienda. La clave común es `connectors.common.access.unofficial`.
-- Las tiendas sin cuenta (~~Ubisoft y EA~~ EA; Ubisoft tiene cuenta desde la decisión 80) no tienen `connection` ni `listLibrary`; solo muestran instalados (decisión 16).
+- Las tiendas sin cuenta (~~Ubisoft y EA~~ ~~EA~~ ninguna; Ubisoft tiene cuenta desde la decisión 80 y EA desde la 82) no tienen `connection` ni `listLibrary`; solo muestran instalados (decisión 16).
 - El modelo de datos detallado (pendiente) debe guardar `launchData`, `executables`, `storePlaytimeMinutes` y el estado de sincronización por tienda con código y clave de error.
 - La decisión 11 decía «sin pegar claves a mano»: el paso `input` existe porque Steam exige la API key del usuario y el flujo de Epic puede requerir copiar un código de autorización. El asistente lo guía paso a paso y lo valida con `pattern`. La propuesta de la decisión 43 lo resuelve con el botón de pegar y la extracción automática.
 - El agente de conectores no necesita decisiones nuevas para empezar Steam; sí para el valor del intervalo y para la detección de procesos.
@@ -937,7 +938,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 - Con «configurarlo más tarde», la biblioteca se limita a lo que llegue por API (Steam, GOG y Epic conectados).
 - La lista de ubicaciones detectadas y su estado se guarda por dispositivo (decisión 47).
 
-### 43. Credenciales en los asistentes de conexión (revisa la decisión 11; parte de Epic revisada en la decisión 78; para Ubisoft, ventana de login integrada en la decisión 80)
+### 43. Credenciales en los asistentes de conexión (revisa la decisión 11; parte de Epic revisada en la decisión 78; para Ubisoft, ventana de login integrada en la decisión 80; para EA, en la decisión 82, retirada en su punto 14)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** el principio de «sin pegar claves a mano» de la decisión 11 se sustituye por «sin escribir nada y sin editar ficheros». Cuando una tienda obliga a trasladar un dato, el asistente lo pide con un botón **Pegar desde el portapapeles** y lo valida en el momento.
 
@@ -1117,6 +1118,9 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 El botón manual respeta el suelo. Tras un error, el siguiente intento automático espera el doble del suelo, hasta 24 horas; el manual sigue disponible tras el suelo.
 
 **Motivo:** son valores muy por debajo de cualquier límite conocido. Por ejemplo, el límite citado habitualmente para la API web de Steam es de 100 000 llamadas al día por clave; supuesto, porque no aparece en el texto oficial consultado. Las APIs no oficiales reciben menos tráfico para no llamar la atención. Alternativa descartada: un único valor para todas (penaliza a Steam o arriesga a Epic y GOG).
+
+**Revisión del 24-10-2026 (decisión del usuario, en la prueba de EA):** el botón manual ya no respeta el intervalo del conector: el usuario puede **forzar** la sincronización. Dos frenos: entre dos sincronizaciones forzadas de una misma tienda hay como mínimo **1 minuto** (constante del núcleo `MANUAL_SYNC_FLOOR_MS`), y si pulsa Sincronizar cuando una tienda conectada aún está dentro de su intervalo, la web le pide confirmación con un aviso de no abusar (las tiendas pueden limitar las peticiones o bloquear la cuenta). La sincronización automática sigue con los intervalos de arriba. Motivo: tras conectar o cambiar algo en la tienda, esperar 30 minutos sin poder hacer nada resultaba confuso, y el botón no decía por qué no hacía nada.
+- **EA, el mismo día:** la biblioteca se filtra como Lutris: solo cuenta como juego un derecho cuyo producto dice `BASE_GAME`; los que vienen sin producto o sin tipo (39 de 54 en la cuenta real, entre ellos DLC como *Battlefield 4 China Rising* y entradas sin título) quedan fuera y se cuentan. Revisa el «sin tipo, juego» de la 82.
 
 ### 51. Normalización de nombres y ediciones dudosas
 
@@ -4270,7 +4274,7 @@ Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](http
 - El `auditor` revisa antes de cerrar: el ID en el `tag` y su validación, la regla de ruta copiada, «ausente frente a ilegible» en la plataforma y en el núcleo, la URI construida desde el grupo, y que ni el registro ni los errores lleven rutas o títulos.
 - Los agentes `programador` y `conectores` tienen aquí su especificación; el `tester` escribe `docs/manual-tests/ubisoft.md` (punto 9); el `documentalista` actualiza las guías del punto 10.
 
-### 80. Cuenta de Ubisoft con ventana de login integrada, juegos poseídos y portadas con la caché local (amplía las decisiones 40, 42, 45, 74 y 79; revisa para Ubisoft la decisión 43 por decisión expresa del usuario; revisa de la 79 los puntos 1 y 5, el descarte de `configurations` del punto 3 y `access: 'local-only'`)
+### 80. Cuenta de Ubisoft con ventana de login integrada, juegos poseídos y portadas con la caché local (amplía las decisiones 40, 42, 45, 74 y 79; revisa para Ubisoft la decisión 43 por decisión expresa del usuario; revisa de la 79 los puntos 1 y 5, el descarte de `configurations` del punto 3 y `access: 'local-only'`; captura del texto JSON, `captureUrl` con consulta y llegada a `doneUrl` por navegación, que sustituye a `atDone` del punto 19, añadidas en la decisión 82)
 
 **Decisión (vía elegida por el usuario el 23 de octubre de 2026; diseño recomendado por el arquitecto):** tras la prueba manual de la 79 (punto 13), el usuario pide «ver los no instalados + carátulas» de Ubisoft. El arquitecto recomendó leer la caché local (opción A). **El usuario eligió la opción C:** una **ventana de login integrada** (WebView2, abierta por el auxiliar de Go) con la página oficial de Ubisoft, de la que Ludiary toma la sesión al terminar. Con esa sesión, la API interna de Ubisoft da los juegos poseídos. La caché local `configurations`, cuyo formato ya está comprobado (punto 3), traduce el ID de la API (`spaceId`) al ID numérico del registro y da las portadas. La opción A queda como **alternativa descartada por el usuario**.
 
@@ -4342,7 +4346,7 @@ Fuentes consultadas el 22 de octubre de 2026: [Playnite, `UplayLibrary.cs`](http
 - **Navegación:** el documento principal solo navega por `https` a hosts exactos de `allowedHosts`; el resto se cancela en `NavigationStarting`. Los iframes y recursos de la página (un captcha, por ejemplo) no se tocan. Ventanas nuevas y descargas: denegadas. Los hosts bloqueados se devuelven al servidor para el registro (solo hosts, sin rutas ni consulta). **Revisado en el punto 18, A1:** los iframes sí se filtran por esquema, la regla vale también en redirecciones y se deniegan protocolos externos, permisos y certificados de cliente.
 - **Flujo:**
   1. carga `startUrl`;
-  2. cuando el documento principal termina de cargar en `doneUrl` (mismo origen y ruta; la consulta no cuenta), navega a `captureUrl` si es distinta. Es lo que hacen Lutris y Galaxy: `/ready` → `/change_domain/`;
+  2. (revisado en la 82, puntos 3 c y 13 M1: arma con el `NavigationStarting` a `doneUrl` y pasa a `done` con el `NavigationCompleted` de esa navegación) cuando el documento principal termina de cargar en `doneUrl` (mismo origen y ruta; la consulta no cuenta), navega a `captureUrl` si es distinta. Es lo que hacen Lutris y Galaxy: `/ready` → `/change_domain/`;
   3. en `captureUrl` ejecuta el guion fijo con `ExecuteScript` y lee el resultado. Si falta algún valor, reintenta cada 500 ms durante 10 s como mucho;
   4. responde y cierra la ventana.
   - **Revisado en el punto 18:** máquina de estados y `Source()` comprobado antes de cada `ExecuteScript`, resultado de 64 KiB como mucho (M3); vaciado del perfil antes de cerrar (A3).
@@ -4374,11 +4378,12 @@ export type WizardStep =
       windowTitleKey: I18nKey;
       /** https, host in authHosts. */
       url: string;
-      /** https, host in authHosts, no query or fragment; matched on origin and path. */
+      /** https, host in authHosts, no query or fragment; matched on origin and path. Reached by navigation (ADR 82, point 3 c). */
       doneUrl: string;
+      /** ADR 82, point 3 b: with "document-json", query allowed and exact match. */
       captureUrl: string;
-      /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. */
-      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+      /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. ADR 82: `source`, same for every field. */
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
     };
 
 export type WizardInput =
@@ -4412,7 +4417,7 @@ export interface EmbeddedLogin {
     req: {
       title: string; startUrl: string; doneUrl: string; captureUrl: string;
       allowedHosts: readonly string[];
-      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; maxLength: number }[]; // source: ADR 82
     },
     signal: AbortSignal,
   ): Promise<
@@ -4426,7 +4431,7 @@ export interface EmbeddedLogin {
 
 - **Por qué un tipo de paso y no que el conector abra la ventana:** las llamadas al conector tienen 30 s (decisión 74) y un login dura minutos. Además, el conector no hace E/S propia (decisión 40): solo describe la ventana, y la abren el núcleo y la plataforma.
 - **Motor de asistentes (`packages/core/src/wizards.ts`):**
-  - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento; `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión.
+  - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento (revisado en la 82: consulta en `captureUrl` con `document-json`; `url` y `doneUrl` con el mismo origen y ruta → `internal`); `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión.
   - **La web** pinta el paso y su botón envía `submit` con `{ kind: 'continue' }`; la API no cambia (el cuerpo sigue admitiendo solo `continue` y `fields`). El núcleo entonces:
     1. incrementa la época de la tienda (77, A2);
     2. llama a `EmbeddedLogin.run` con `allowedHosts` = `authHosts` **del manifiesto**, nunca del paso; con el título traducido; y con una señal que se aborta con `DELETE /api/wizards/:id`, al abrir otro asistente de la misma tienda o a los **10 minutos**. Mientras espera, la sesión del asistente no caduca. **Revisado en el punto 18, M2:** `AbortController` en la sesión, `busy` hasta el fin de `submit` y comprobación de sesión y época antes de llamar al conector;
@@ -4679,7 +4684,7 @@ Sin críticos. **Se aceptan todos los hallazgos.** Lo que sigue **prevalece sobr
   - antes de llamar al conector con los valores capturados, el núcleo comprueba que `sessions.get(id) === s` y que la época de la tienda no ha cambiado desde el paso 1; si no, `rejected` y los valores se descartan sin llegar al conector.
   - Pruebas: `DELETE`, `cancelStore` y apagado durante la espera → la señal se aborta; captura que llega después de `cancelStore` o con la época cambiada → `rejected` y `submit` del conector no se llama.
 - **M3 (medio). Cuándo y qué se ejecuta.** Revisa «Flujo» y «Guion fijo» del punto 5:
-  - `ExecuteScript` solo se llama tras haber completado la carga en `doneUrl` (máquina de estados: `start` → `done` → `capture`; no se salta estados) y solo si `Source()` está en el origen y la ruta de `captureUrl`, **comprobado antes de cada reintento**; si la página se ha ido a otra ruta, no se ejecuta;
+  - (Revisado en la 82, puntos 3 y 13 M1: `done` por navegación y, con `document-json`, coincidencia exacta con `captureUrl`.) `ExecuteScript` solo se llama tras haber completado la carga en `doneUrl` (máquina de estados: `start` → `done` → `capture`; no se salta estados) y solo si `Source()` está en el origen y la ruta de `captureUrl`, **comprobado antes de cada reintento**; si la página se ha ido a otra ruta, no se ejecuta;
   - **nunca** `AddScriptToExecuteOnDocumentCreated`;
   - el resultado bruto de `ExecuteScript` se limita a **64 KiB**; de él solo se aceptan cadenas en los nombres pedidos;
   - riesgo aceptado: el valor lo controla la página de Ubisoft. Una página manipulada, como mucho, haría que se conecte **otra cuenta**; no da acceso a nada del equipo.
@@ -4719,7 +4724,7 @@ Sin críticos. **Se aceptan todos los hallazgos.** Lo que sigue **prevalece sobr
 
 El usuario: «funciona como un tiro de bien». Dos fallos encontrados en la prueba y corregidos antes de cerrar:
 - **Ventana en blanco:** la página cargaba pero no se pintaba. El controlador de WebView2 se crea con la ventana aún oculta y nunca recibía `put_IsVisible(TRUE)` (lo hacía el tipo `Chromium` de go-webview2, quitado por el punto 18). Ahora, tras mostrar la ventana, se ajustan los límites y se hace visible, también en `WM_SIZE`.
-- **`/ready` y `/change_domain/` dan 404** (comprobado con curl el 23-10-2026; venían de Lutris): la ventana se quedaba en la página de error de Chromium, cuyo origen no puede leer el `localStorage` del sitio. Ahora llegar a `doneUrl` cuenta aunque su carga falle (solo en ese estado y solo para esa URL; `atDone` en el auxiliar, con prueba), y `captureUrl` pasa a `https://connect.ubisoft.com/login`, la única página del host que responde 200. La primera visita a `/login` (la de la contraseña) nunca se lee: la máquina de estados exige pasar antes por `doneUrl`.
+- **`/ready` y `/change_domain/` dan 404** (comprobado con curl el 23-10-2026; venían de Lutris): la ventana se quedaba en la página de error de Chromium, cuyo origen no puede leer el `localStorage` del sitio. Ahora llegar a `doneUrl` cuenta aunque su carga falle (solo en ese estado y solo para esa URL; `atDone` en el auxiliar, con prueba; sustituido por el armado por navegación de la 82, puntos 3 c y 13 M1), y `captureUrl` pasa a `https://connect.ubisoft.com/login`, la única página del host que responde 200. La primera visita a `/login` (la de la contraseña) nunca se lee: la máquina de estados exige pasar antes por `doneUrl`.
 - Registros reales, solo leyendo: login `captured`; la renovación rota el ticket en cada uso (`rotated=true`, UB4 confirmado en parte: rota; la duración no consta); `configurations` de 428 952 bytes con 1 516 registros, 1 YAML inválido; 26 juegos poseídos de PC (`totalCount=26`), 2 sin traducción (`complete: false`, B7); ningún ticket, sesión, correo, ruta ni usuario en los registros; ningún perfil `webview-*` restante. UB2 queda confirmado en lo que importa (alguna de las claves pedidas tiene `rememberMeTicket`).
 
 #### Supuestos (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
@@ -4757,7 +4762,7 @@ Fuentes añadidas para la vía C, consultadas el 23 de octubre de 2026: [Lutris,
 - Un juego poseído sin configuración en este equipo no aparece hasta abrir Ubisoft Connect; la guía lo explica.
 - Una dependencia nueva, `yaml`, en `connectors/ubisoft`.
 - El `auditor` revisa el diseño antes del código y el código antes de cerrar; el `tester` amplía `docs/manual-tests/ubisoft.md` (punto 14); el `documentalista`, las guías del punto 15.
-### 81. Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` (amplía las decisiones 40, 42 y 72; revisa la fila de EA de la tabla de la 40 y el comentario de `ScopedFileReader.readText`)
+### 81. Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` (amplía las decisiones 40, 42 y 72; revisa la fila de EA de la tabla de la 40 y el comentario de `ScopedFileReader.readText`; cuenta, portadas, Instalar y `access` revisados en la decisión 82)
 
 **Decisión (recomendada, 23 de octubre de 2026):** el usuario encarga el conector de la app de EA (antes Origin) en la rama `feature/eaconector`, que sale de `feature/ubisoftconector`. Es el hermano de la 79: EA es `local-only` (decisión 40), sin cuenta ni API, así que el corte es detectar los juegos instalados y jugarlos. La numeración salta la 80 (Ubisoft), que se escribe en otra copia de trabajo.
 
@@ -4803,6 +4808,7 @@ Fuentes añadidas para la vía C, consultadas el 23 de octubre de 2026: [Lutris,
 - **Manifiesto, `locations`:**
   - `ea-libraries` (`scan`): `{ kind: 'known-folder', folder: 'ProgramFiles', relative: 'EA Games' }`, la carpeta por defecto de la app de EA (Lutris, EverythingBox; supuesto EAD5), y `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'Origin Games' }`, la de Origin, donde siguen los juegos que se instalaron antes de la migración (supuesto EAD5). Solo salen las que existen.
   - `ea-desktop` (`launcher`): `{ kind: 'known-folder', folder: 'ProgramFiles', relative: 'Electronic Arts\\EA Desktop\\EA Desktop' }`. El instalador de la app de EA no deja elegir carpeta (foro de EA) y ahí están `EADesktop.exe` y `EALauncher.exe` (supuesto EAD7).
+  - `ea-settings` (`scan`, añadida en el punto 13): carpetas de ajustes de la app de EA, leídas por `discoverRoots` y nunca escaneadas.
   - No hay fuentes de registro, así que `LocationsUnreadableError` no aparece por EA. Las reglas de la 79 («ausente frente a ilegible» por declaración, raíces sin robo entre tiendas, topes que no borran) se aplican sin cambios porque viven en el núcleo y la plataforma.
 - **Carpetas manuales y «solo carpetas manuales»:** funcionan, porque el escaneo no depende del registro. Un usuario que instala en `D:\EA Games` añade esa carpeta en Ajustes; la guía lo explica. **No** hace falta el aviso `needsAutoDetection` de Ubisoft. Con «configurarlo más tarde» no hay carpetas y no sale nada, como ya dice el asistente de primer arranque (decisión 69).
 - **`scanInstalled`** (`connectors/ea/src/scan.ts`), para cada raíz (descubierta o del usuario), con profundidad 1 como GOG:
@@ -4812,7 +4818,7 @@ Fuentes añadidas para la vía C, consultadas el 23 de octubre de 2026: [Lutris,
   4. Entrada: `storeGameId` = el **primer** ID válido, `kind: 'game'`, `title` del fichero, `installPath` = la candidata. Sin `media`, `launchData` ni `executables`: el resto de ID se lee al lanzar (punto 4), como hace GOG con su `.info`, para que una actualización del juego valga enseguida.
   5. Un `storeGameId` ya visto se salta y se registra el ID (el núcleo también lo hace).
   - **Errores**, con la clasificación `isHandled` de GOG, copiada: `readDir` de la raíz con error, o un `exists`/`readText` con error de lectura → la raíz va a `unreadableRoots` y conserva sus instalaciones; `PathEscapesRootsError` en una subcarpeta → se salta esa candidata; ~~en la propia raíz → raíz ilegible; un fichero de más de 1 MiB → `scan.root-unreadable` (lo da `readText`), la raíz conserva sus juegos~~ (revisado por el auditor, punto 12, M3: `PathEscapesRootsError` solo deja la raíz ilegible si falla `readDir` de la raíz; un fichero de más de 1 MiB o que no es un fichero normal es `store.unexpected-response` y cuenta como fichero inválido); otro `internal` se propaga.
-  - **Ninguna ruta sale de un fichero ni del registro** (las raíces son carpetas conocidas o del usuario, y `installPath` es una carpeta que Ludiary ha recorrido), así que aquí **no hace falta** la regla estricta de ruta de la 79. `runtime/launcher/filePath` no se lee.
+  - (Revisado en el punto 13: las raíces de `downloadinplacedir` salen de un fichero y pasan por `isStrictLocalPath`.) **Ninguna ruta sale de un fichero ni del registro** (las raíces son carpetas conocidas o del usuario, y `installPath` es una carpeta que Ludiary ha recorrido), así que aquí **no hace falta** la regla estricta de ruta de la 79. `runtime/launcher/filePath` no se lee.
   - En el registro, solo contadores (`invalidFiles`, `invalidIds`, `duplicates`), códigos e ID de EA; nunca rutas ni títulos.
 - **`parseInstallerData(text)`** (`connectors/ea/src/installerdata.ts`, pura, sin dependencias; no hay librería de XML en el repositorio y no se añade una para leer dos listas). **Revisado por el auditor (punto 12, A1 y B1 a B3):** las expresiones de esta lista dicen qué se extrae; cómo se extrae (sin expresiones de coste no acotado), la decodificación y el tratamiento de los ID son los del punto 12, que prevalece.
   1. Si el texto contiene un carácter NUL (UTF-16 sin BOM) o `<!DOCTYPE` o `<!ENTITY`: inválido. No se expande ninguna entidad declarada.
@@ -4858,7 +4864,7 @@ Fuentes añadidas para la vía C, consultadas el 23 de octubre de 2026: [Lutris,
 - **Núcleo y plataforma:** sin reglas nuevas. `checkSpec` comprueba el esquema contra `uriSchemes` y la plataforma vuelve a validar la URI (decisión 72).
 - **Invariante 3:** la API recibe solo IDs. La URI se construye con ID que salen de un fichero local de la carpeta del juego, cada uno validado con un patrón cerrado antes de interpolarlo, y con el guardado en la base de datos siempre presente.
 
-#### 5. Portadas
+#### 5. Portadas (revisado en la decisión 82: con la cuenta de EA, desde `packArt`)
 
 - **No entran: sin portada, con el degradado** (decisión 71). `resolveMedia` no existe y `apiHosts` y `mediaHosts` están vacíos: **el conector no hace ninguna petición de red.** Ni la CSP ni la guía de privacidad cambian.
 - No se ha encontrado una vía pública y sin cuenta: Lutris saca `packArt` y `keyArt` del GraphQL de EA con la sesión del usuario; la integración de Galaxy, de las ofertas con token; la API pública de Origin (`api1.origin.com/ecommerce2/public/supercat/…`) que usaba Playnite devolvió 404 en la prueba del 23-10-2026 y Origin ya no existe.
@@ -4974,6 +4980,19 @@ Sin críticos. Lo que sigue prevalece sobre los puntos 2, 3 y 4 donde no coincid
 - **NV1 (no verificado).** Que las comas de la URI lleguen intactas a la app de EA a través de `rundll32` (`openUri`). Pasa a la prueba manual (punto 9, paso 7). Si se pierden, se lanza solo con el ID guardado.
 - **Pruebas añadidas por la revisión:** las de rendimiento de A1; `<contentID-x>` y `<CONTENTIDS>`; `<!doctype>` en minúsculas; `exists` falso frente a `readText` ilegible al lanzar; fichero de más de 1 MiB y carpeta con el nombre del fichero → fichero inválido, raíz legible; `PathEscapesRootsError` en el fichero de la raíz → se salta, raíz legible; ID con `&amp;` → rechazado; `&amp;lt;` → `&lt;`; `&#xD800;` y `&#x110000;` sin decodificar; UTF-16 con un sustituto suelto; título en `CDATA`; guardado en posición 20; orden de candidatas.
 
+#### 13. EAD6 cerrado: carpetas de la app de EA desde sus ajustes (23 de octubre de 2026)
+
+Prevalece sobre los puntos 3 y 11 y sobre EAD6 donde no coincida.
+
+- **Comprobado en el equipo del usuario** (solo leyendo, sin copiar nombres): `%LOCALAPPDATA%\Electronic Arts\EA Desktop\user_<número>.ini` lleva `user.downloadinplacedir=F:\` y `C:\ProgramData\EA Desktop\machine.ini` lleva `machine.downloadinplacedir=C:\Program Files\EA Games\`. El juego real `F:\SteamWorld Dig\__Installer\installerdata.xml` es un `DiPManifest` en UTF-8 con un solo `contentID` (confirma EAD1; EAD3 en parte: UTF-8 sí, UTF-16 sin ver).
+- **Implementado en el conector:**
+  - ubicación nueva `ea-settings` (propósito `scan`): `LocalAppData\Electronic Arts\EA Desktop` y `ProgramData\EA Desktop`;
+  - `discoverRoots` lee en ellas `machine.ini` y `user_<n>.ini` (16 ficheros como mucho, 64 KiB cada uno), busca la clave con `indexOf` por línea, sin expresiones de coste no acotado, y añade el valor como raíz `ea-libraries` (sin repetidos);
+  - el valor se valida con `isStrictLocalPath` (regla estricta de la 79); una raíz de unidad (`F:\`) vale como biblioteca;
+  - las carpetas de ajustes **nunca** son raíz: solo se leen;
+  - el nombre `user_<n>.ini` lleva el ID de la cuenta: **nunca** va al registro, solo contadores (`files`, `unreadable`, `invalidPaths`).
+- **Revisa del punto 3** «Ninguna ruta sale de un fichero ni del registro»: ahora una raíz sale de un fichero de la app de EA, y por eso pasa por `isStrictLocalPath`. El registro `Origin Games` sigue descartado.
+
 #### Supuestos de EA (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
 
 - **EAD1:** cada juego instalado por la app de EA tiene `__Installer\installerdata.xml` en su carpeta, con raíz `DiPManifest`, `contentIDs/contentID` y `gameTitles/gameTitle locale="…"`. Fuentes: Lutris (`ea_app.py`), nicedeck, EverythingBox (PR 479), Mira (PR 62), GameFinder (wiki), foro de EA.
@@ -4981,7 +5000,7 @@ Sin críticos. Lo que sigue prevalece sobre los puntos 2, 3 y 4 donde no coincid
 - **EAD3 (sin verificar en un equipo):** el fichero puede estar en UTF-8 o en UTF-16 con BOM (EverythingBox dice leer los dos).
 - **EAD4 (sin verificar):** los juegos antiguos de Origin usan una raíz `<game>` con `metadata/localeInfo/title` (EverythingBox) y también `contentIDs/contentID`.
 - **EAD5:** la carpeta por defecto de la app de EA es `C:\Program Files\EA Games` (Lutris dentro de Wine, EverythingBox) y la de Origin era `C:\Program Files (x86)\Origin Games` (sin verificar).
-- **EAD6 (sin verificar):** no hay una fuente sin cifrar que dé la carpeta de los juegos instalados fuera de la carpeta por defecto. Candidatos para una decisión aparte: `Origin Games\<contentId>` en el registro (no se borra al desinstalar, según Lutris), `machine.inf`/`machine.ini` con `machine.downloadinplacedir` (foro de EA) y `user_<n>.ini` con `user.downloadinplacedir` (hilo de Lutris).
+- **EAD6 (cerrado el 23-10-2026, punto 13: `downloadinplacedir` de `machine.ini` y `user_<n>.ini` da la carpeta; texto original a continuación):** no hay una fuente sin cifrar que dé la carpeta de los juegos instalados fuera de la carpeta por defecto. Candidatos para una decisión aparte: `Origin Games\<contentId>` en el registro (no se borra al desinstalar, según Lutris), `machine.inf`/`machine.ini` con `machine.downloadinplacedir` (foro de EA) y `user_<n>.ini` con `user.downloadinplacedir` (hilo de Lutris).
 - **EAD7:** la app de EA se instala siempre en `C:\Program Files\Electronic Arts\EA Desktop\EA Desktop`, sin elegir carpeta, con `EADesktop.exe` y `EALauncher.exe` (foro de EA, instalador de Lutris). Si no, el mensaje de 11.1 saldría por error con la app instalada: se añadiría una fuente de registro (paso 1 de la prueba).
 - **EAD8 (sin verificar):** `origin2://game/launch?offerIds=<id1>,<id2>` arranca el juego del ID que posee el usuario. Lutris usa la lista; la integración de Galaxy y EverythingBox, un solo ID.
 - **EAD9:** la app de EA registra `origin2` (la integración de Galaxy comprueba ese manejador antes de lanzar). Los fallos de la decisión 22 corresponden a `origin://` y a ID `Origin.SFT.…` (un solo hilo del foro de EA, sin verificar).
@@ -5000,9 +5019,312 @@ Fuentes consultadas el 23 de octubre de 2026: [Lutris, `services/ea_app.py`](htt
 - Cuarta tienda en la biblioteca y segunda `local-only`. No añade hosts, ni CSP, ni cambios de privacidad.
 - La fila de EA de la tabla de la decisión 40 pasa de «`uri` o `exec`, a validar con juegos reales» a «`uri` (`origin2://game/launch?offerIds=…`), decidido en la 81; supuestos EAD8 y EAD9».
 - `ScopedFileReader.readText` acepta UTF-16 con BOM en todas las tiendas y, tras la revisión del auditor (punto 12, M3), da `store.unexpected-response` para un fichero de más de 1 MiB o que no es un fichero normal.
-- Límite conocido: los juegos instalados fuera de `C:\Program Files\EA Games` (y de la carpeta de Origin) solo aparecen si el usuario añade su carpeta, hasta que una fuente de EAD6 se confirme.
+- Límite conocido (revisado en el punto 13): se detectan solos los juegos de la carpeta por defecto, de la de Origin y de la carpeta de descarga de la app de EA (`downloadinplacedir`). Los instalados en otra carpeta (por ejemplo, una carpeta anterior que el usuario cambió después) solo aparecen si el usuario la añade.
 - El `auditor` revisa antes de cerrar: el analizador de XML (entidades, DTD, comentarios, `\b`), los ID en la URI y la aserción, la lectura al lanzar confinada a `installPath`, UTF-16 en `readText`, y que ni el registro ni los errores lleven rutas o títulos.
 - Los agentes `programador` y `conectores` tienen aquí su especificación; el `tester` escribe `docs/manual-tests/ea.md` (punto 9); el `documentalista` actualiza las guías del punto 10.
+
+### 82. Cuenta de EA con la ventana de login integrada (amplía las decisiones 40, 74, 80 y 81; revisa para EA la decisión 43 por elección del usuario; revisa de la 81 la cuenta, las portadas, Instalar y `access: 'local-only'`; amplía el auxiliar de la 80 con la captura del texto JSON de la página y la llegada a `doneUrl` por navegación; vía de conexión revisada en su punto 14: navegador y pegar, sin ventana integrada y sin revisar la 43)
+
+**Decisión (vía elegida por el usuario el 23 de octubre de 2026; diseño recomendado por el arquitecto):** tras el corte de instalados de la 81, el usuario quiere para EA lo mismo que para Ubisoft: los juegos no instalados de su cuenta, con portadas, e Instalar. **Eligió la misma vía que en Ubisoft:** la ventana de login integrada de la 80 (WebView2 desde el auxiliar de Go) con la página oficial de EA. La diferencia con Ubisoft es lo que se captura: no hay nada útil en el `localStorage`. La ventana, con su propia sesión, navega al final a una URL de EA que responde con un JSON que lleva un token de acceso, y la captura lee **solo** ese `access_token` del texto de la página. Con él, el GraphQL de EA da los juegos poseídos con el mismo `contentId` que `installerdata.xml` (81), sin caché local ni traducción por fichero.
+
+**Revisado el 24-10-2026 (punto 14, decisión del usuario):** la ventana integrada no sirve para iniciar sesión con Google. EA se conecta solo en el navegador del usuario, abriendo la misma URL de token y pegando el JSON, como en Epic. Lo que sigue sobre la ventana (puntos 1 a 3 y 8 a 12) queda revisado por el punto 14 donde no coincida; la sesión, la biblioteca, las portadas e Instalar (puntos 4 a 7) no cambian.
+
+#### 1. Alcance
+
+- **Entra:**
+  - el asistente de EA con el paso `embedded-login` de la 80 (punto 2);
+  - un cambio pequeño del auxiliar y del contrato del paso: captura del texto JSON de la página y llegada a `doneUrl` por navegación (punto 3);
+  - la sesión mínima: el token de acceso cifrado con su caducidad, sin renovación (punto 4);
+  - `listLibrary` con los juegos poseídos y su `contentId` (punto 5);
+  - portadas desde `packArt` (punto 6);
+  - Instalar con `origin2://…&autoDownload=1` (punto 7);
+  - «Conectado como <nombre>», desconectar, `expired` y el velo gris, como en la 77 y la 80;
+  - el mensaje «No se encuentra la app de EA» de la 81 también para Instalar.
+- **Fuera:**
+  - renovación sin el usuario (no hay token de renovación en este flujo; punto 4 y 12.2);
+  - DLC (`dlc: 'none'`, se saltan y se cuentan);
+  - tiempo de juego, emparejamiento entre tiendas, suscripciones (EA Play) más allá de lo que la API dé como poseído;
+  - inicio de sesión con proveedores externos (Google, Apple, consolas…): si la página los ofrece y salen de `authHosts`, la ventana los bloquea (punto 2);
+  - modo Docker (la ventana necesita el escritorio del usuario; fase 2 con el agente local);
+  - portadas de los instalados sin cuenta (como en la 81).
+- **Revisión de la 43 para EA (retirada en el punto 14: para EA vuelve a valer la 43 tal cual).** Es la misma que la 80 hizo para Ubisoft (80, punto 2), con las mismas mitigaciones obligatorias: el usuario escribe la contraseña en la página oficial de EA, pero dentro de una ventana que controla Ludiary. El usuario eligió esta vía y la confirmó expresamente el 23-10-2026 (punto 12). Steam, GOG y Epic no cambian.
+- **Reglas fijas de esta decisión:**
+  - Ludiary **no saca cookies** de la ventana ni las guarda: la sesión de EA vive en el perfil temporal de la ventana, que se vacía y se borra al cerrar (80, A3);
+  - no se usa el `client_secret` de la app de EA ni ninguna huella de hardware, y no se imita a la app de EA ni su `User-Agent`;
+  - solo cruza la tubería del auxiliar el `access_token`, validado en tres capas (auxiliar, plataforma y núcleo), como en la 80.
+
+#### 2. Login y captura (`connectors/ea/src/wizard.ts` y `auth.ts`) (revisado en el punto 14: la tabla del paso, `authHosts` y la entrada `embedded` dejan de aplicar; la URL de token y «Al recibir» siguen)
+
+**Recorrido comprobado el 23-10-2026** (peticiones públicas sin cuenta): `https://www.ea.com/login` responde 303 a `accounts.ea.com/connect/auth` (`client_id=EADOTCOM-WEB-SERVER`, vuelta a `https://www.ea.com/login_check`), que responde 302 a `signin.ea.com/p/juno/login`, donde se escribe la contraseña. Por otro lado, `accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none` responde con un JSON: sin sesión, `login_required`; con la sesión de la ventana, un token de acceso. Así lo hacen Lutris y la integración antigua de Origin para Galaxy (supuestos EAA1 y EAA2).
+
+| Id | Tipo | Qué hace |
+|---|---|---|
+| `login` | `embedded-login` | `url`: `https://www.ea.com/login`. `doneUrl`: `https://www.ea.com/login_check` (se llega por navegación, punto 3). `captureUrl`: `https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none`, constante en `auth.ts` (con consulta, punto 3). `capture`: un solo campo, `accessToken`, con `source: 'document-json'`, `jsonField` `access_token`, el `pattern` del punto 4 y `maxLength` 8192. Cuerpo: «Se abrirá una ventana con la página oficial de EA. Inicia sesión allí, también con el código de verificación si te lo pide; la ventana se cerrará sola. Ludiary no guarda tu contraseña». |
+
+- **`authHosts` = `allowedHosts`:** `www.ea.com`, `accounts.ea.com` y `signin.ea.com`, los tres del recorrido comprobado (tres de los cuatro que admite el auxiliar). Si la prueba manual muestra en `blockedHosts` otro host necesario, se amplía con nota en esta decisión y revisión del `auditor` (80, B5).
+- **Sin parámetro de idioma:** no se ha comprobado cuál acepta `www.ea.com/login`; la página usa el suyo. Si la prueba muestra uno, se añade según `ctx.locale` en un cambio pequeño.
+- **Constantes:** `ORIGIN_JS_SDK` y `nucleus:rest` van en una URL pública y no son secretos. No hay `client_secret` ni cabeceras de la app de EA.
+- **Qué pasa en cada caso:**
+  - el usuario inicia sesión: la ventana pasa por `login_check`, navega a la URL de token y la captura lee `access_token`;
+  - la URL de token responde `login_required` o sin `access_token` (por ejemplo, porque la sesión no se creó): tras los reintentos de 10 s, `capture-missing` → `wizard.embedded.captureMissing`;
+  - si EA respondiera con una redirección a `nucleus:rest#…` en vez de un JSON, la ventana la cancela como protocolo externo (80, A1): nada sale y el resultado es `capture-missing`.
+- **Texto común:** `wizard.embedded.captureMissing` pasa a «No se ha podido leer la sesión. Vuelve a intentarlo», sin «marca "Recordarme"», que era de Ubisoft. El cuerpo de Ubisoft ya lo pide (80, B2).
+- **Al recibir `embedded`** (`submit`, con los 30 s de siempre):
+  1. consulta de identidad al GraphQL (punto 5) con el token capturado; prueba que el token vale, como la renovación en la 80;
+  2. 401 o 403: `auth.invalid` con `connectors.ea.error.login` («EA no ha aceptado el inicio de sesión. Vuelve a intentarlo»); 429: `store.rate-limited`; otro fallo: su código;
+  3. `secrets.set('accessToken', …)` y `secrets.set('accessTokenExpiresAt', …)` (punto 4);
+  4. `done` con `accountLabel` = el nombre visible de la respuesta, sin caracteres de control y recortado a 64; si falta, sin nombre.
+- Sin paso `choose`: sin cuenta, EA sigue como en la 81 (instalados y Jugar), y cancelar lo deja así.
+
+#### 3. Cambio del auxiliar y del paso `embedded-login` (amplía la 80, puntos 5 y 6; aditivo, `contractVersion` sigue en 1; según el punto 14, `document-json` y `captureUrl` con consulta quedan sin uso por ahora y la llegada por navegación sigue para Ubisoft)
+
+Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado no cambia (se repite el paso 1 de su prueba manual, punto 10).
+
+**a) Modo de captura `document-json`.**
+
+- Contrato: cada campo de `capture` admite `source?: 'local-storage' | 'document-json'`, por defecto `'local-storage'` (lo de hoy). Con `'document-json'`, `storageKeys` va vacío o ausente; con `'local-storage'`, de 1 a 3 claves como hoy. Todos los campos de un paso usan el mismo `source`. Lo mismo en el puerto `EmbeddedLogin` y en el protocolo del auxiliar (`"source"` en cada campo).
+- **Segundo guion fijo**, constante en Go, con los parámetros como literal JSON de `json.Marshal` (igual que el primero):
+  - toma el `textContent` del primer `pre` hijo de `body` si existe (Chromium pinta así un documento JSON, supuesto EAA3) y, si no, `document.body.textContent`;
+  - si ese texto pasa de 64 KiB, devuelve todo a `null`;
+  - `JSON.parse` dentro de `try`; solo vale un objeto que no sea una lista;
+  - por cada campo, toma la propiedad propia `[jsonField]` solo si es texto;
+  - devuelve un objeto con los nombres pedidos y nada más.
+- No lee cookies, `localStorage`, formularios ni pulsaciones. Siguen el límite de 64 KiB del resultado, la comprobación de `Source()` antes de cada `ExecuteScript` y los reintentos de 500 ms durante 10 s (80, M3).
+
+**b) `captureUrl` con consulta, solo en `document-json`.**
+
+- El núcleo (`wizards.ts`) y el auxiliar aceptan consulta en `captureUrl` solo si el paso usa `document-json`; con `local-storage` sigue sin consulta. Fragmento, nunca. `doneUrl` sigue sin consulta.
+- Con `document-json`, la coincidencia con `captureUrl` (al llegar a ella y antes de cada `ExecuteScript`) es **exacta** en esquema, host, ruta y consulta, no solo en origen y ruta. Motivo: en EA la ruta `/connect/auth` también aparece durante el login con otro `client_id`; solo se lee la página a la que navegó el propio auxiliar.
+
+**c) Llegada a `doneUrl` por navegación.**
+
+- Hoy (80, punto 19) la máquina pasa de `start` a `done` cuando el documento principal **termina de cargar** en `doneUrl`, aunque la carga falle (`atDone`). En EA, `login_check` probablemente es una redirección (supuesto EAA4) y nunca termina de cargar como tal.
+- Nueva regla, para todas las tiendas:
+  1. en `start`, un `NavigationStarting` **permitido** del documento principal (también con `IsRedirected`) cuyo URL coincide con `doneUrl` en origen y ruta deja la máquina **armada**;
+  2. armada, el siguiente `NavigationCompleted` del documento principal, con éxito o sin él y en el URL que sea, pasa a `done`; entonces el auxiliar navega a `captureUrl` (o captura, si son la misma);
+  3. sin armar, ninguna carga cuenta. `atDone` se sustituye por esta regla (la cubre) y su prueba se adapta.
+- Sigue sin saltarse estados: `capture` exige `done`, y `done` exige haber navegado a `doneUrl`. La primera visita a una página con la ruta de `captureUrl` nunca se lee.
+
+**Pruebas del auxiliar (Go):** guion `document-json` construido con `json.Marshal` (comillas, barras y saltos de línea escapados); `captureUrl` con otra consulta → no se captura; texto en `pre` y sin `pre`; texto de más de 64 KiB → `capture-missing`; JSON que es una lista, texto o número, y `access_token` ausente o que no es texto → `capture-missing`; campos con `source` mezclado, `storageKeys` con `document-json` o consulta en `captureUrl` con `local-storage` → `bad-request`; armado por un `NavigationStarting` con `IsRedirected` → la siguiente carga, en otro URL, lleva a `captureUrl`; un `NavigationStarting` cancelado por el filtro no arma; sin armar no se captura; el recorrido de Ubisoft (`/ready` con 404 y después `/login`) sigue capturando.
+
+#### 4. Sesión y errores (decisión 46, mínimo de este corte)
+
+- **Qué se guarda,** cifrado en `secrets` con el ámbito `store:ea`: `accessToken` y `accessTokenExpiresAt` (milisegundos, en texto; no es secreto, pero va junto al token para no añadir tabla). Nada más: este flujo no da token de renovación y Ludiary no guarda cookies.
+- **Forma aceptada:** `^[A-Za-z0-9+/=_.-]{64,8192}$` (supuesto EAA5). Es un subconjunto del patrón del redactor de la 80 (B3, `[A-Za-z0-9+/=_.-]{64,}`), así que **el redactor no cambia**. Si la prueba muestra otra forma, se cambian a la vez el patrón de aceptación y el del redactor, con el segundo como superconjunto del primero (como UB3).
+- **Caducidad:** `accessTokenExpiresAt = ctx.now() + 50 minutos` al capturar. Supuesto EAA6: el token dura unos 60 minutos (`expires_in` de 3599 s en la integración antigua de Origin para Galaxy; sin verificar); los 10 minutos de margen evitan pedir con un token a punto de caducar. No se lee `expires_in` para no capturar un segundo valor; si la prueba muestra otra duración, se cambia la constante.
+- **`connection.status`** (local): `connected` si se leen los dos valores y `now < accessTokenExpiresAt`; si no, `expired`.
+- **En `listLibrary`:**
+  - sin token legible: `auth.required` (la tienda se ve `expired`);
+  - caducado por la hora: `auth.expired` con `connectors.ea.error.expired` («La sesión de EA ha caducado. Vuelve a conectar para actualizar tus juegos de EA»), **sin ninguna petición**;
+  - 401 o 403: `auth.expired`, igual;
+  - 429: `store.rate-limited` con `Retry-After`; error de red: su código, sin pasar a `expired`; otro estado: `store.unexpected-response`.
+  - Con `auth.*` el núcleo pasa la tienda a `expired` y no toca la biblioteca. La fila del secreto no se borra.
+- **Lo que esto supone para el usuario** (consecuencia del mínimo, decisión de producto en 12.2): la biblioteca de EA se actualiza en la sincronización que sigue a conectar. Pasada una hora, la tienda queda `expired`: los juegos ya guardados siguen en la biblioteca con el velo gris, los instalados se juegan y **Instalar sigue funcionando** (la URI no necesita el token). Para actualizar la lista hay que volver a conectar, con el login completo, porque el perfil de la ventana es nuevo en cada login (80, A3).
+- **Época, desconectar, `expired` y velo gris:** idénticos a la 77 y la 80, con el ámbito `store:ea`. Sin revocación remota. `connectors.ea.disconnect.hint`: «Ludiary borra su sesión de EA de este equipo. Para cerrar todas las sesiones, cambia la contraseña en ea.com».
+- **Nunca salen** el token, el nombre de la cuenta, ningún ID de persona ni el correo: ni en registros, ni en errores, ni en el auxiliar (que no registra nada).
+
+#### 5. Biblioteca y traducción de ID (`connectors/ea/src/library.ts`)
+
+- **Petición:** `POST https://service-aggregation-layer.juno.ea.com/graphql` con `authorization` = `makeSecret('Bearer ' + token.reveal())` y cuerpo JSON `{ query, variables }`, con las consultas como constantes en `library.ts`. Sin `User-Agent`, `Origin` ni `Referer` propios. Si EA rechaza el `POST`, se pasa a `GET` con la consulta en la URL, como Lutris, en el mismo commit que su prueba (supuesto EAA7). En todas: 401 o 403 → `auth.expired`; 429 → `store.rate-limited`; `errors` en el cuerpo, otro estado o sin la lista esperada → `store.unexpected-response`.
+- **Identidad** (solo en el asistente): el nombre visible del jugador (`me { player { displayName } }` según Lutris; supuesto EAA8, sin verificar). No se piden los ID de persona.
+- **Orden en `listLibrary`:**
+  1. token y caducidad (punto 4), sin red si no valen;
+  2. **`getEntitlements`**, paginada con `next`. De cada derecho solo se lee el ID de oferta. Topes: 200 páginas y 50 000 derechos; un `next` repetido (ciclo) o un tope superado → `store.unexpected-response`. Los ID de oferta deben cumplir `ID_BODY` de la 81 (punto 12, B4; por ejemplo `Origin.OFR.…`); si no, se saltan y dejan `complete: false`. Sin repetidos;
+  3. **`getOffers`** en lotes de 50 ID (supuesto EAA9). De cada oferta solo se leen el ID de oferta, `contentId`, el título, `packArt` y el campo que dice si es juego base o contenido adicional;
+  4. **por oferta:**
+     - contenido adicional: fuera y se cuenta (`notGame`); sin el campo de tipo: se trata como juego y se cuenta (`noType`), porque perder un juego es peor que mostrar un DLC;
+     - `contentId` ausente o que no cumple `ID_BODY`: fuera y se cuenta (`untranslated`), con `complete: false` (regla B7 de la 80);
+     - entrada `{ storeGameId: contentId, kind: 'game', title, media }`. `title` sin caracteres de control, recortado y de 300 como mucho; si falta, `EA <contentId>`. `media`, del punto 6;
+     - repetidos por `storeGameId` (varias ediciones con el mismo `contentId`): gana la oferta de ID menor y se cuenta (`duplicateContent`);
+  5. **`complete`:** `true` si se leyeron todas las páginas, `getOffers` devolvió todas las ofertas pedidas y no hubo ID inválidos ni `untranslated`. El núcleo ya protege ante una lista vacía con juegos guardados (74).
+- **Traducción de ID:** no hace falta caché ni fichero. El `contentId` de la oferta es el mismo que el `contentID` de `installerdata.xml` con el que la 81 guarda el instalado (supuesto EAA10), así que mismo ID = misma propiedad, y el título de la API sustituye al del fichero (regla de la 74). Si la prueba muestra que la API da otro de los `contentID` del fichero (ediciones), el juego saldría dos veces; se decidiría aparte.
+- **Juegos comprados en otra tienda:** salen si la API los da como poseídos, con el mismo criterio que eligió el usuario para Ubisoft (80, punto 16).
+- **Registro:** solo contadores (`pages`, `entitlements`, `offers`, `notGame`, `noType`, `untranslated`, `duplicateContent`, `invalidArt`). Ni nombre, ni ID de persona, ni títulos, ni ID de oferta.
+- **Núcleo:** la operación `library` de la 74 no cambia. Sin ubicaciones `library` ni `ctx.fs`. `minSyncIntervalMs` pasa de 60 s a 30 minutos, como GOG, Epic y Ubisoft (los escaneos no están sujetos a ese suelo, decisión 72), y `trigger: 'open'` sigue en 12 h.
+
+#### 6. Portadas
+
+- **Fuente:** `packArt` de la oferta. Vale solo si es un texto con una URL `https`, sin usuario ni puerto, con el host exacto de `mediaHosts` y de 1024 caracteres como mucho; entonces es `coverUrl`. Si no (otro host, otra forma, un objeto), sin portada y se cuenta (`invalidArt`).
+- **`mediaHosts: ['drop-assets.ea.com']`.** El host de `packArt` **no está confirmado**: es el que usa la web de EA para sus imágenes (supuesto EAA11). La CSP (`img-src`) y `vite.config.ts` lo añaden (prueba de paridad de la 71). Si la prueba manual muestra otro host, se cambian `mediaHosts`, la CSP y `vite.config.ts` en el mismo commit, con nota aquí y revisión del `auditor`.
+- `resolveMedia` no existe: el navegador pide las imágenes con la IP del usuario, como en las demás tiendas (invariante 9).
+- Los instalados poseídos tienen portada por la misma entrada; sin cuenta, siguen sin portada (81, punto 5).
+
+#### 7. Instalar
+
+- `resolveAction('install')` (`connectors/ea/src/launch.ts`):
+  1. `storeGameId` debe cumplir `ID_BODY`; si no, `action.unsupported` con `connectors.ea.errors.invalidId`;
+  2. misma comprobación de la app de EA que `play` (81, punto 4.3), con `launch.launcher-missing` y `connectors.ea.errors.launcherMissing`;
+  3. no se lee `installerdata.xml` (el juego no está instalado);
+  4. `const uri = \`origin2://game/launch?offerIds=${id}&autoDownload=1\``, con **un solo ID**, el guardado;
+  5. **aserción final:** `^origin2://game/launch\?offerIds=ID_BODY&autoDownload=1$`, con el mismo `ID_BODY` de la 81; si no cumple (fallo del conector), `internal`;
+  6. `{ kind: 'uri', uri }`.
+- Es la URI de Lutris y de la integración de Galaxy para la app de EA (supuesto EAA12). `validateLaunchUri` la acepta (`&` y `=` están en su rango y no hay comillas) y `openWithShellHandler` la pasa a `rundll32` sin shell; que el `&` llegue intacto a la app de EA es NV2, como NV1 en la 81.
+- `actions: ['play', 'install']`. Sin cambios en el núcleo ni en `uriSchemes`. La web pinta «Abriendo la app de EA…» (`game.installing` con `{store}`).
+
+#### 8. Manifiesto (cambios sobre la 81; `authHosts` y textos revisados en el punto 14)
+
+- `access: 'unofficial-api'` (antes `'local-only'`), con su icono de fragilidad.
+- `capabilities`: `library: true`, `scan: true`, `dlc: 'none'`, `actions: ['play', 'install']`, `launchKinds: ['uri']`, `uriSchemes: ['origin2']`, `storePlaytime: false`, `price: false`.
+- `minSyncIntervalMs: 1_800_000` (decisión 50; los escaneos no están sujetos a él).
+- `authHosts: ['www.ea.com', 'accounts.ea.com', 'signin.ea.com']`, `apiHosts: ['service-aggregation-layer.juno.ea.com']`, `mediaHosts: ['drop-assets.ea.com']`.
+- `locations` sin cambios (`ea-libraries` y `ea-desktop`); sin ubicación `library`.
+- `connection: eaConnection` (`wizard.ts`) y `listLibrary: listEaLibrary` (`library.ts`).
+- `checkConnectorManifest` lo acepta tal cual: `connection` con `authHosts` y `library` con `apiHosts`.
+- **Ficheros nuevos** en `connectors/ea/src`: `auth.ts`, `wizard.ts` y `library.ts`; `launch.ts` y `manifest.ts` crecen. Sin dependencias nuevas.
+- **Textos nuevos** (es y en): `connectors.ea.login.title`, `.login.body`, `.login.window`, `connectors.ea.error.login`, `.error.expired` y `connectors.ea.disconnect.hint`. Cambia el común `wizard.embedded.captureMissing` (punto 2).
+- **Web:** `real.ts` amplía la lista de tiendas con asistente real a `['steam', 'gog', 'epic', 'ubisoft', 'ea']`; el simulador añade el paso de EA; la tarjeta de EA deja de ser `not-applicable`.
+- La fila de EA de la tabla de la 40 pasa a `unofficial-api` con cuenta por ventana de login integrada (por el punto 14, con cuenta por navegador y pegar).
+
+#### 9. Pruebas
+
+**Fixtures inventadas**, sin copiar nada de respuestas reales: token `ea-test-access-token-…` de 64 caracteres o más; nombre `TestUser`; ofertas `Origin.OFR.50.0000001`…; `contentId` `9000001`…; `packArt` `https://drop-assets.ea.com/test/9000001.jpg`. `privacy.ts` añade esas constantes a `ALLOWED` y una regla que rechaza `"access_token"` seguido de cualquier otro valor.
+
+- **Auxiliar (Go):** las del punto 3.
+- **Plataforma:** `embedded-login.ts` pasa `source` al auxiliar y valida la respuesta igual que hoy; un campo con `source` desconocido → `failed`.
+- **Núcleo (`wizards.ts`):** `document-json` con `storageKeys` → `internal`; consulta en `captureUrl` con `local-storage` → `internal`; `source` mezclado → `internal`; consulta en `captureUrl` con `document-json` → aceptado; el resto de pruebas de la 80 sigue pasando.
+- **`connectors/ea`:**
+  - asistente: paso exacto (`url`, `doneUrl`, `captureUrl`, `capture`); con `embedded`, consulta de identidad con la cabecera como `Secret`; `set` de los dos valores con `accessTokenExpiresAt = now + 50 min`; nombre saneado o ausente; 401 → `auth.invalid`; token con otra forma → rechazado por el núcleo antes de llegar al conector;
+  - sesión: `status` `connected` antes de la hora y `expired` después; `listLibrary` caducado → `auth.expired` **sin ninguna petición**; sin token → `auth.required`; 401, 403, 429 y error de red;
+  - `getEntitlements`: varias páginas con `next`; `next` repetido; 201 páginas; 50 001 derechos; ID de oferta inválido → saltado y `complete: false`;
+  - `getOffers`: lotes de 50 exactos; oferta no devuelta → `complete: false`; contenido adicional → fuera; sin tipo → juego y `noType`; sin `contentId` → `untranslated` y `complete: false`; dos ofertas con el mismo `contentId` → la de ID menor; `errors` en el cuerpo;
+  - portadas: `packArt` válido → `coverUrl` exacta; otro host, `http`, con usuario o puerto, de 1025 caracteres o que no es texto → sin portada y `invalidArt`;
+  - `install` → `origin2://game/launch?offerIds=9000001&autoDownload=1` exacto; ID inválido → `action.unsupported` sin construir la URI; sin la app → `launch.launcher-missing`;
+  - ningún registro ni error lleva el token, el nombre, ID de oferta, títulos ni rutas;
+  - `assertConnectorConformance`.
+- **`runtime`:** paridad de la CSP con `drop-assets.ea.com`; el redactor tapa un token de la forma del punto 4.
+- **Web:** `real.ts` envía EA a la API; la tarjeta de EA con el paso de login. Playwright con un puerto doble, pendiente como en las 72 a 81.
+
+#### 10. Prueba manual (la prepara el `tester` en `docs/manual-tests/ea.md`, sección «Account (ADR 82)»; la hace el usuario; pasos 1 a 3 revisados en el punto 14)
+
+El login y la biblioteca no necesitan la app de EA; Instalar y Jugar sí (hoy no está en el PC del usuario, 81).
+
+1. Conectar desde Ajustes: la ventana se abre con la página de EA; iniciar sesión (y el código, si lo pide); la ventana se cierra sola y sale «Conectado como <nombre>» (EAA1, EAA2, EAA4, EAA8). Anotar `blockedHosts` del registro.
+2. Cerrar la ventana sin iniciar sesión, y otra vez pulsar Cancelar en la web: mensaje en el mismo paso.
+3. Tras cada intento, `%LOCALAPPDATA%\Ludiary\tmp` sin carpetas `webview-*`.
+4. Biblioteca: los juegos poseídos salen con portada (EAA11) y velo. Anotar del registro `entitlements`, `offers`, `notGame`, `noType`, `untranslated`, `duplicateContent` e `invalidArt`. Si un juego instalado sale dos veces, anotar los dos ID (EAA10).
+5. Con la app de EA instalada: Instalar un juego no instalado abre su descarga en la app (EAA12, NV2); anotar si empieza a descargar sin preguntar.
+6. Sincronizar pasada una hora desde que se conectó: la tarjeta muestra «La sesión de EA ha caducado…», la biblioteca sigue con el velo e Instalar sigue funcionando. Anotar el tiempo aproximado (EAA6).
+7. Reconectar: se actualiza la lista.
+8. Desconectar: velo gris en los no instalados; los instalados siguen jugables.
+9. El registro exportado no contiene el token, el nombre, el correo, ID de oferta ni rutas.
+10. **Regresión de Ubisoft** (punto 3): repetir el paso 1 de la prueba de la 80.
+
+#### 11. Orden de implementación y trabajo en paralelo
+
+1. **Primero, en paralelo:**
+   - `empaquetador`: el punto 3 en el auxiliar (`document-json`, consulta exacta, armado por navegación) con sus pruebas de Go, y `source` en `embedded-login.ts`;
+   - `programador`: `source` en el contrato, la validación del paso en `wizards.ts`, el texto común `captureMissing` y `privacy.ts`;
+   - `auditor`: revisión del diseño **antes del código**: el segundo guion, la coincidencia exacta con consulta, el armado por navegación (que no permita leer una página a la que no navegó el auxiliar), los hosts y que no se lean cookies.
+2. **Después:** `conectores`: `auth.ts`, `wizard.ts`, `library.ts`, `install`, manifiesto y textos, contra el `testkit`. Luego web, `runtime` y CSP, y la revisión del `auditor` sobre el código.
+3. **Al final:** la prueba manual (punto 10) y el `documentalista`:
+   - guía de conexión de EA: la ventana, la contraseña escrita en la página oficial dentro de una ventana de Ludiary, y que **la sesión dura alrededor de una hora** y hay que reconectar para actualizar la lista;
+   - privacidad: qué va a EA y que la ventana es Microsoft Edge WebView2 (como en la 80, B6);
+   - aviso de vía no oficial;
+   - solución de problemas: «La sesión de EA ha caducado», `captureMissing` y `runtimeMissing`.
+
+#### 12. Lo que decide el usuario (solo producto)
+
+**Decidido por el usuario el 23-10-2026:** la vía de la ventana integrada, la misma que en Ubisoft (revisado el 24-10-2026 en el punto 14: navegador y pegar; la confirmación siguiente queda sin objeto para EA).
+
+**Confirmado expresamente por el usuario el 23-10-2026** («Sí, como Ubisoft»): acepta para EA lo mismo que para Ubisoft (80, punto 2), la contraseña se escribe en la página oficial de EA dentro de una ventana que controla Ludiary.
+
+**Decidido por el usuario el 23-10-2026:** 12.2 (a), «Reconectar al caducar» (lo diseñado). La (b), conservar el perfil de la ventana, queda descartada por ahora.
+
+**Aplicado por defecto, salvo que el usuario diga otra cosa:** 12.1 (a), 12.3 (a) y 12.4 (a).
+
+1. **Nombre de la cuenta:** (a) «Conectado como <nombre>» (recomendado, como en las demás tiendas); (b) solo «Conectado».
+2. **Cuando caduca la sesión (alrededor de una hora):** (a) la tienda pasa a `expired` y el usuario reconecta cuando quiera actualizar la lista (recomendado ahora: es lo mínimo y no guarda nada más que el token); (b) más adelante, renovar sin el usuario conservando el perfil de la ventana entre logins, cifrado, para repetir la URL de token sin pedir la contraseña. La (b) revisa la mitigación de la 80 de que el perfil se borra en cada login y guarda en disco la sesión de EA; iría en su propia decisión, con revisión del `auditor`.
+3. **Instalar:** (a) con `autoDownload=1`, como Lutris y Galaxy (recomendado: el usuario ya pulsó Instalar), aunque la app de EA pueda empezar la descarga sin preguntar (EAA12); (b) sin `autoDownload`, si la prueba muestra que así la app abre la ficha del juego.
+4. **Juegos de EA comprados en Steam o Epic:** (a) salen también por EA si la API los da como poseídos, como eligió para Ubisoft (recomendado por coherencia); (b) solo los comprados en EA, si la API permite distinguirlos.
+
+#### 13. Revisión del auditor sobre el diseño (23 de octubre de 2026)
+
+Sin críticos. Lo que sigue prevalece sobre los puntos 2 a 9 donde no coincida.
+
+- **M1 (medio). Armado ligado a su navegación** (punto 3 c):
+  - el armado guarda el `NavigationId` del `NavigationStarting` que armó; solo cuenta el `NavigationCompleted` con ese mismo id (otro `NavigationCompleted` no pasa a `done`);
+  - «si son la misma» compara `doneUrl` y `captureUrl` del pedido, no el URL al que se llegó;
+  - con `document-json`, el estado `capture` empieza solo con el `NavigationCompleted` de la navegación a `captureUrl` que lanzó el auxiliar tras `done`; cualquier `NavigationStarting` del documento principal durante `capture` da `capture-missing`;
+  - prueba de Go para cada regla.
+- **M2 (medio). `blockedHosts` sin URL.** Para un URL sin host (por ejemplo `nucleus:rest#access_token=…`), `blockedHosts` guarda solo el esquema con `:` (`nucleus:`) o nada; nunca el URL ni el fragmento. Pruebas: Go (navegación a `nucleus:rest#access_token=…` → en `blockedHosts` no aparece el token) y plataforma (una entrada sin forma de host se descarta).
+- **M3 (medio). Confirmación del usuario** sobre la contraseña en la ventana: ya dada (punto 12).
+- **Bajos:**
+  - remisiones en la 80 a este cambio: flujo del punto 5 (llegada a `doneUrl`), TS del punto 6 (`doneUrl`, `captureUrl` y `source?: "local-storage" | "document-json"`), validación del paso, `ExecuteScript` del punto 18 y `atDone` del punto 19;
+  - el núcleo rechaza (`internal`) un paso cuyo `url` y `doneUrl` tienen el mismo origen y ruta (armaría en la primera navegación);
+  - `captureUrl` se compara tras `url.Parse` por `Scheme`, `Host` en minúsculas, `Path` y `RawQuery` exactos;
+  - la constante `ORIGIN_JS_SDK` es un riesgo de condiciones de uso (identifica un cliente de EA), como el `Ubi-AppId` de la 80; se declara así en la guía y en «Riesgos principales»;
+  - supuesto EAA0 nuevo: EA no tiene API oficial para la biblioteca;
+  - `getOffers` solo acepta ofertas del lote pedido (las demás se ignoran y se cuentan); el `GET` de respaldo (EAA7) construye la consulta con `URLSearchParams` y nunca registra la URL; las peticiones van en serie y sin reintentos;
+  - el registro añade `invalidArtHosts`: como mucho 8, solo el host, para ajustar EAA11;
+  - «Riesgos principales» se actualiza: Ubisoft y EA tienen cuenta por ventana de login sobre API internas no oficiales; en EA la sesión dura alrededor de una hora.
+
+#### 14. Login con Google: navegador y pegar (decisión del usuario, 24-10-2026; revisa los puntos 1 a 3 y 8 a 12 para EA)
+
+**Hallazgo de la prueba manual (24-10-2026).** Con «Iniciar sesión con Google» en la ventana integrada no se abre nada:
+
+- la ventana deniega todas las ventanas emergentes (protección A1 de la 80) y Google abre una emergente con `accounts.google.com`;
+- además, Google bloquea el inicio de sesión en navegadores integrados (política de Google desde 2021, aviso «Este navegador o esta aplicación pueden no ser seguros»). Saltárselo exigiría imitar un navegador, contra las reglas fijas del punto 1;
+- el usuario entra siempre en EA con Google, así que la ventana integrada no le sirve.
+
+**Decisión del usuario (24-10-2026, comunicada por la sesión principal):** EA se conecta **solo** por el navegador del usuario y pegando el resultado, como en Epic (decisión 78). Vale para Google y para correo y contraseña. **La ventana integrada deja de usarse en EA**; queda solo para Ubisoft (80). No hay paso para elegir entre dos vías: el contrato de asistentes no lo permite sin ampliarlo, y con una sola vía no hace falta.
+
+**Paso único del asistente** (`connectors/ea/src/wizard.ts`; sustituye a la tabla del punto 2):
+
+| Id | Tipo | Qué hace |
+|---|---|---|
+| `login` | `open-external`, `awaits: 'input'`, con campo | `url`: la URL de token del punto 2, constante en `auth.ts`: `https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none`. Cuerpo: «Primero inicia sesión en ea.com en tu navegador (con Google si quieres). Luego abre el enlace. Verás un texto entre llaves: cópialo entero y pulsa Pegar». Campo `accessToken`: `secret: true`, `paste: true`, `extract: 'json-field:access_token'`, el `pattern` del punto 4 (`^[A-Za-z0-9+/=_.-]{64,8192}$`) y `maxLength` 8192. |
+
+- **Extracción:** la regla de `json-field` de la 78 (núcleo y web), sin cambios de tipos. La web envía **solo** el valor extraído, nunca el texto pegado (78, M2). El texto pegado puede traer otros campos (`token_type`, `expires_in`): no se leen.
+- **Error de la página:** si lo pegado es un objeto JSON sin el campo pedido pero con una propiedad propia `error` de tipo texto (por ejemplo `login_required`), la web no envía nada y muestra el texto común nuevo `wizard.paste.storeError`: «La página ha respondido con un error en vez del código. Inicia sesión primero en la web de la tienda en tu navegador y vuelve a abrir el enlace». El valor de `error` no se muestra ni se registra. Regla de la web para cualquier `json-field` (también Epic), en `validate.ts`, con su prueba; el núcleo sigue respondiendo `invalid-input` si le llega algo que no cumple `pattern`.
+- **A partir del token, todo igual que con la ventana** (punto 2, «Al recibir»), pero con la entrada `fields` en lugar de `embedded`: consulta de identidad, 401 o 403 → `auth.invalid` con `connectors.ea.error.login`, `secrets.set` de `accessToken` y `accessTokenExpiresAt` (50 minutos, punto 4) cifrados y `done` con «Conectado como <nombre>».
+- **Reconectar** (punto 4): el usuario repite el paso; si su sesión de ea.com sigue abierta en el navegador, basta con abrir el enlace y pegar, sin contraseña. Ludiary sigue sin guardar nada más que el token.
+- **Manifiesto** (revisa el punto 8): `authHosts: ['accounts.ea.com']`; `www.ea.com` y `signin.ea.com` solo hacían falta para la ventana y salen. `apiHosts` y `mediaHosts` no cambian. Textos: sale `connectors.ea.login.window`; cambia `connectors.ea.login.body`; entra `wizard.paste.storeError`. El simulador (`apps/web/src/data/mock.ts`) cambia el paso de EA a este.
+- **Seguridad:**
+  - la URL es constante y su host está en `authHosts`;
+  - nada del navegador del usuario llega a Ludiary salvo el texto que él pega (y de ese texto, solo el `access_token`);
+  - la fijación de cuenta (que alguien convenza al usuario de pegar el token de otra cuenta) es el riesgo ya aceptado en la 77 y la 78, mitigado por «Conectado como <nombre>»;
+  - Ludiary no ve la contraseña ni la sesión de Google o de EA: viven en el navegador del usuario.
+- **Revisión de la 43 para EA, retirada:** la contraseña ya no se escribe en una ventana que controla Ludiary, sino en el navegador del usuario. Para EA vuelve a valer la 43 tal cual (como Steam, GOG y Epic). La confirmación expresa del punto 12 y la mitigación M3 del punto 13 quedan sin objeto para EA.
+- **Auxiliar (punto 3):**
+  - el modo de captura `document-json`, su segundo guion y `captureUrl` con consulta **quedan sin uso por ahora**. Se conservan, con sus pruebas; si ninguna tienda los usa, son candidatos a retirarse en su propia decisión, con revisión del `auditor`;
+  - la llegada a `doneUrl` por navegación, con el armado ligado al `NavigationId` (punto 3 c y M1 del punto 13), **sigue aplicando a Ubisoft**, igual que M2 (`blockedHosts` sin URL).
+- **Pruebas** (revisa el punto 9 en lo del asistente): paso exacto (`url`, campo, `extract`, `pattern`, `maxLength`); con `fields`, consulta de identidad con la cabecera como `Secret`, `set` de los dos valores y nombre saneado; 401 → `auth.invalid`; web: `{"error":"login_required"}` → `wizard.paste.storeError` sin petición; JSON con `access_token`, `token_type` y `expires_in` → solo viaja el token. Las pruebas del auxiliar del punto 3 siguen.
+- **Prueba manual** (revisa los pasos 1 a 3 del punto 10): con la sesión de ea.com abierta en el navegador (con Google), abrir el enlace, copiar y pegar → «Conectado como <nombre>» (EAA13, EAA8); sin sesión, pegar el JSON de error → mensaje `storeError`. Los pasos 4 a 10 siguen; el 10 (regresión de Ubisoft) también, por el cambio del auxiliar ya hecho.
+- **Supuesto nuevo EAA13 (sin verificar con cuenta real):** con la sesión iniciada en ea.com en el navegador del usuario, esa URL muestra en la pestaña el JSON con `access_token`. Lutris usa la misma URL con las cookies de la sesión. EAA1 (recorrido de la ventana) y EAA3 y EAA4 (pintado en WebView2 y `login_check`) dejan de aplicar a EA.
+
+#### Supuestos de la cuenta de EA (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
+
+- **EAA0 (punto 13):** EA no ofrece API oficial para listar la biblioteca de un usuario; todo lo de esta decisión va sobre API internas.
+- **EAA1:** el recorrido `www.ea.com/login` → `accounts.ea.com/connect/auth` (`EADOTCOM-WEB-SERVER`, vuelta a `www.ea.com/login_check`) → `signin.ea.com/p/juno/login`. **Comprobado** el 23-10-2026 sin cuenta (303 y 302). Que tras el login no pase por otros hosts: sin verificar (`blockedHosts`, punto 10.1).
+- **EAA2:** `accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none` responde JSON: **comprobado** sin sesión (`login_required`). Que con la sesión de la ventana devuelva `access_token`: Lutris (`services/ea_app.py`) y la integración antigua de Origin para Galaxy; sin verificar en un equipo.
+- **EAA3 (sin verificar):** WebView2 pinta la respuesta JSON como un documento de texto con el JSON en un `pre` (o en `body`).
+- **EAA4 (sin verificar):** `www.ea.com/login_check` es una redirección o una página que termina de cargar; con el armado por navegación (punto 3) valen los dos casos.
+- **EAA5 (sin verificar):** el token es una cadena opaca de 64 a 8192 caracteres de `[A-Za-z0-9+/=_.-]`.
+- **EAA6 (sin verificar):** el token dura unos 60 minutos (`expires_in` 3599 en la integración antigua de Origin para Galaxy) y no hay token de renovación en este flujo.
+- **EAA7:** el GraphQL `https://service-aggregation-layer.juno.ea.com/graphql` acepta `Authorization: Bearer <token>`. Fuente: Lutris. Si acepta `POST` con JSON o solo `GET` con la consulta en la URL: sin verificar.
+- **EAA8 (sin verificar):** `me { player { displayName } }` da el nombre visible (Lutris).
+- **EAA9:** `getEntitlements` (paginada con `next`) da los ID de oferta y `getOffers` da `contentId`, título y `packArt`. Fuente: datos de la sesión principal del 23-10-2026 a partir de Lutris. Nombres exactos de los campos, el campo de tipo (juego o contenido adicional) y el tamaño máximo de lote: sin verificar.
+- **EAA10:** el `contentId` de `getOffers` casa con el `contentID` de `installerdata.xml` que guarda la 81 (EAD2). Fuente: la misma; con ediciones con varios `contentID`, sin verificar.
+- **EAA11 (sin verificar):** las URL de `packArt` están en `drop-assets.ea.com`, el host de las imágenes de la web de EA.
+- **EAA12:** `origin2://game/launch?offerIds=<contentId>&autoDownload=1` abre la app de EA en la descarga del juego. Fuentes: Lutris y la integración de Galaxy para la app de EA. Si empieza a descargar sin preguntar: sin verificar.
+- **NV2 (sin verificar):** el `&` de la URI llega intacto a la app de EA a través de `rundll32`.
+- **EAA13 (punto 14, sin verificar con cuenta real):** con la sesión de ea.com abierta en el navegador del usuario, la URL de token muestra el JSON con `access_token`. Fuente: Lutris, que la pide con las cookies de la sesión.
+
+Fuentes: los datos comprobados del 23-10-2026 (peticiones públicas sin cuenta, hechas por la sesión principal) y las ya citadas en la 81: [Lutris, `services/ea_app.py`](https://github.com/lutris/lutris/blob/master/lutris/services/ea_app.py) e [integración de GOG Galaxy para la app de EA, `plugin.py`](https://github.com/BellezaEmporium/galaxy-integration-ead/blob/galaxy-2.1/src/plugin.py); además, la [integración antigua de Origin para Galaxy](https://github.com/FriendsOfGalaxy/galaxy-integration-origin) (no consultada en esta sesión; fuente indicada por la sesión principal).
+
+**Motivo:** el usuario quiere los juegos de su cuenta de EA y eligió la misma vía que en Ubisoft. Se reutiliza casi todo lo de la 80 (paso `embedded-login`, puerto `EmbeddedLogin`, auxiliar con WebView2, época, velo gris, validación en tres capas) y el auxiliar solo gana un segundo guion fijo y dos reglas de navegación. La sesión de EA no sale nunca de la ventana: Ludiary no lee cookies; la propia ventana pide el token y solo ese valor cruza la tubería. No se usa el `client_secret` de la app de EA, ni huellas de hardware, ni se imita a su cliente. Se guarda lo mínimo (un token que caduca solo), a costa de reconectar para actualizar la lista. El `contentId` de la API es el ID de la 81, así que no hace falta caché ni traducción por fichero. Alternativas descartadas: leer las cookies de la ventana y guardarlas para renovar (regla fija; guarda la sesión completa), el flujo de la app de EA con su `client_secret` (imitar a su cliente), descifrar `IS` (huella de hardware, 81) y conservar el perfil de la ventana (queda como 12.2 b, en su propia decisión).
+
+**Consecuencias:**
+
+- EA pasa a `access: 'unofficial-api'` con cuenta: quinta tienda con asistente real, con su icono de fragilidad. Quedan revisadas la fila de EA de la tabla de la 40, su consecuencia sobre «las tiendas sin cuenta» (ya ninguna) y, de la 81, el alcance (cuenta y portadas), las portadas del punto 5, `access` y `actions`.
+- La 43 queda revisada también para EA, como para Ubisoft en la 80; Steam, GOG y Epic no cambian.
+- El contrato del paso `embedded-login` gana `source` en cada campo y `captureUrl` con consulta en `document-json`; el auxiliar, un segundo guion y la llegada a `doneUrl` por navegación, que sustituye a `atDone` de la 80 (punto 19). Todo aditivo: `contractVersion` sigue en 1. Ubisoft repite el paso 1 de su prueba manual.
+- Cambia el texto común `wizard.embedded.captureMissing`.
+- Un host nuevo en la CSP (`drop-assets.ea.com`), sin confirmar.
+- Con un token de una hora, la tienda estará casi siempre en `expired`: la lista no se actualiza sola. La guía lo explica; la alternativa es 12.2 (b).
+- Fragilidad: un cambio de la página de login, de la URL de token, del GraphQL o de sus campos rompe la cuenta. El fallo queda en la tarjeta de EA (invariante 2), y el escaneo, Jugar e Instalar siguen.
+- El `auditor` revisa el diseño antes del código y el código antes de cerrar; el `tester` amplía `docs/manual-tests/ea.md` (punto 10); el `documentalista`, las guías del punto 11.
+- **Por el punto 14:** EA se conecta en el navegador del usuario y pegando el JSON, sin ventana integrada; la 43 vuelve a valer tal cual para EA; `authHosts` se reduce a `accounts.ea.com`; nuevo texto común `wizard.paste.storeError`; `document-json` queda sin uso por ahora y el armado por `NavigationId` sigue para Ubisoft. La guía de conexión de EA (punto 11) explica iniciar sesión en ea.com, abrir el enlace, copiar y pegar, sin ventana de WebView2. El `auditor` revisa este cambio (`validate.ts` y el paso).
 
 ## Arquitectura resultante
 
@@ -5017,7 +5339,7 @@ Fuentes consultadas el 23 de octubre de 2026: [Lutris, `services/ea_app.py`](htt
 ## Riesgos principales
 
 - APIs no oficiales (Epic, GOG) que pueden romperse sin aviso.
-- Ubisoft y EA sin API: dependen del escaneo local.
+- Ubisoft y EA sin API oficial: instalados por escaneo local y cuenta sobre API internas no oficiales (Ubisoft por ventana de login integrada, decisión 80; EA en el navegador del usuario pegando el token, decisión 82, punto 14), con identificadores de cliente de la tienda (`Ubi-AppId`, `ORIGIN_JS_SDK`) expuestos a sus condiciones de uso. En EA la sesión dura alrededor de una hora y hay que reconectar para actualizar la lista.
 - Limitación del modo servidor: sin agente local no puede lanzar juegos ni escanear carpetas del PC.
 - Precios directos de tienda: mantenimiento continuo.
 - Credenciales de varias cuentas guardadas en el servidor: cifrado y alcance solo LAN.
@@ -5049,11 +5371,12 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces (y un juego de Ubisoft comprado en Steam o Epic, previsiblemente también; supuesto U11 de la 79).
 - Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código. Prueba manual del 23-10-2026 (punto 13): detección correcta, U4 y U7 confirmados; quedan U1 a U3, U5, U6 y U8 a U11.
 - Decisión 80 (Ubisoft, cuenta con ventana de login integrada): vía C elegida por el usuario el 23-10-2026 y comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto, que el usuario puede cambiar. Revisión del `auditor` sobre el diseño hecha el 23-10-2026 e incorporada (punto 18, todos los hallazgos aceptados); falta la del código, que incluye comprobar las licencias de `webviewloader` y de las definiciones COM de la copia parcheada (M5). La prueba manual (punto 14) cierra UB2 a UB9, UB13 y UB15. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
-- Decisión 81 (EA): punto 11.1 aplicado por defecto (mensaje si no está la app de EA); el usuario elige el juego de la prueba manual (11.2, recomendado The Sims 4) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos EAD1 a EAD14, la estabilidad del ID (M2; si falla, opción (b) en su propia decisión) y las comas a través de `rundll32` (NV1). Si la URI falla con varios ID (EAD8), se pasa a uno; si falla en general, el `exec` (opción B del punto 4) va en su propia decisión. Fuente de carpetas fuera de la de por defecto (EAD6), en una decisión aparte si la prueba la confirma.
+- Decisión 81 (EA): punto 11.1 aplicado por defecto (mensaje si no está la app de EA); el usuario elige el juego de la prueba manual (11.2, recomendado The Sims 4) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos EAD1 a EAD14, la estabilidad del ID (M2; si falla, opción (b) en su propia decisión) y las comas a través de `rundll32` (NV1). Si la URI falla con varios ID (EAD8), se pasa a uno; si falla en general, el `exec` (opción B del punto 4) va en su propia decisión. EAD6 cerrado el 23-10-2026 (punto 13, `downloadinplacedir`, ya implementado); EAD1 confirmado.
+- Decisión 82 (EA, cuenta): el 24-10-2026 el usuario cambió la vía a navegador y pegar (punto 14), porque Google no funciona en la ventana integrada; la ventana deja de usarse en EA y la confirmación de la contraseña en la ventana queda sin objeto. 12.2 (a) decidida por él («Reconectar al caducar»). Puntos 12.1, 12.3 y 12.4 aplicados por defecto, que el usuario puede cambiar. Falta: implementar el punto 14 (paso `open-external`, `authHosts`, `wizard.paste.storeError` en `validate.ts`), la revisión del `auditor` sobre ese cambio y sobre el código, y la prueba manual (puntos 10 y 14) para cerrar EAA2, EAA5 a EAA13 y NV2, con el host de `packArt` (EAA11) y la duración del token (EAA6). `document-json` del auxiliar, sin uso por ahora: decidir si se retira cuando quede claro que ninguna tienda lo necesita. Ubisoft repite el paso 1 de su prueba manual por el cambio del auxiliar (punto 3).
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
-- Verificar los supuestos marcados en las decisiones 39 a 81 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
+- Verificar los supuestos marcados en las decisiones 39 a 82 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

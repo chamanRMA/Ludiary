@@ -44,6 +44,9 @@
   "nav.local": "Locales",
   "nav.syncedAgo": "Sincronizado {when}.",
   "nav.neverSynced": "Aún sin sincronizar.",
+  "nav.syncWait": "{{store}} se podrá volver a sincronizar a las {{time}}.",
+  "nav.syncConfirm": "Ya se sincronizó hace poco. Sincronizar de nuevo tan seguido puede hacer que la tienda limite tus peticiones o incluso bloquee tu cuenta. ¿Sincronizar igualmente?",
+  "nav.syncAnyway": "Sincronizar igualmente",
   "nav.reconnectHint": "{store}: hay que volver a conectar la cuenta.",
   "nav.tagline": "Todos tus juegos, en un solo mapa",
   "wizard.paste": "Pegar",
@@ -260,11 +263,12 @@
   "connect.failedTitle": "No se ha podido terminar la conexión",
   "connect.startAgain": "Empezar de nuevo",
   "wizard.embedded.open": "Abrir la ventana de inicio de sesión",
-  "wizard.embedded.waiting": "Inicia sesión en la ventana de Ubisoft; se cerrará sola al terminar.",
+  "wizard.embedded.waiting": "Inicia sesión en la ventana de la tienda; se cerrará sola al terminar.",
   "wizard.embedded.cancelled": "No se ha completado el inicio de sesión. Puedes volver a intentarlo.",
   "wizard.embedded.failed": "No se ha podido completar el inicio de sesión. Vuelve a intentarlo.",
-  "wizard.embedded.captureMissing": "No se ha podido leer la sesión. Vuelve a intentarlo y marca \"Recordarme\".",
+  "wizard.embedded.captureMissing": "No se ha podido leer la sesión. Vuelve a intentarlo.",
   "wizard.embedded.busy": "Ya hay una ventana de inicio de sesión abierta. Ciérrala y vuelve a intentarlo.",
   "wizard.embedded.runtimeMissing": "Falta Microsoft Edge WebView2 en este equipo. Instálalo desde https://developer.microsoft.com/microsoft-edge/webview2/ y vuelve a intentarlo.",
-  "wizard.embedded.unavailable": "Este inicio de sesión necesita Ludiary en el escritorio de Windows."
+  "wizard.embedded.unavailable": "Este inicio de sesión necesita Ludiary en el escritorio de Windows.",
+  "wizard.paste.storeError": "La tienda ha respondido con un error en lugar del código: inicia sesión en su web en tu navegador y vuelve a abrir el enlace."
 }

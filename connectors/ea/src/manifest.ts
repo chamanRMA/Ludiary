@@ -13,6 +13,16 @@ export const EA_LOCATIONS: readonly LocationDeclaration[] = [
       { kind: "known-folder", folder: "ProgramFilesX86", relative: "Origin Games" },
     ],
   },
+  // Settings folders of the EA app (EAD6): read by discoverRoots for `downloadinplacedir`, never scanned themselves.
+  {
+    id: "ea-settings",
+    purpose: "scan",
+    os: ["windows"],
+    sources: [
+      { kind: "known-folder", folder: "LocalAppData", relative: "Electronic Arts\\EA Desktop" },
+      { kind: "known-folder", folder: "ProgramData", relative: "EA Desktop" },
+    ],
+  },
   {
     id: "ea-desktop",
     purpose: "launcher",

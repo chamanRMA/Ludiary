@@ -223,10 +223,11 @@ export function interpret(line: string, exitCode: number | null, req: Request): 
   }
   if (exitCode !== 0) return failed("failed");
   const blocked = obj["blockedHosts"];
-  if (!Array.isArray(blocked) || blocked.length > MAX_BLOCKED || !blocked.every((h) => typeof h === "string" && HOST.test(h))) {
+  if (!Array.isArray(blocked) || blocked.length > MAX_BLOCKED || !blocked.every((h) => typeof h === "string")) {
     return failed("failed");
   }
-  const blockedHosts = blocked as string[];
+  // An entry without the shape of a host (the helper sends "nucleus:" for a URL without host) is dropped (ADR 82, M2).
+  const blockedHosts = (blocked as string[]).filter((h) => HOST.test(h));
   if (obj["cancelled"] === true) return { kind: "cancelled", blockedHosts };
   const captured = obj["captured"];
   if (typeof captured !== "object" || captured === null || Array.isArray(captured)) return failed("failed");

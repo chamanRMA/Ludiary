@@ -109,6 +109,12 @@ func TestDerivedInterfaceSlotsMatchSDK_1_0_4314_35(t *testing.T) {
 			t.Errorf("%s = %d, want %d", name, c[0], c[1])
 		}
 	}
+	// Event args count from IUnknown: get_NavigationId is the 10th member of NavigationStartingEventArgs (after
+	// get_Uri, get_IsUserInitiated, get_IsRedirected, get_RequestHeaders, get_Cancel, put_Cancel) and the 6th of
+	// NavigationCompletedEventArgs (after get_IsSuccess, get_WebErrorStatus). Read from the same WebView2.h.
+	if slotNavStartGetNavID != 9 || slotNavDoneGetNavID != 5 || slotNavStartPutCancel != 8 || slotNavDoneIsSuccess != 3 {
+		t.Error("navigation event args slots moved")
+	}
 	if slotsMax <= 117 {
 		t.Error("slotsMax must cover the highest slot")
 	}

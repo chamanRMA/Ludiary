@@ -154,11 +154,13 @@ const noTools: ExternalToolRunner = {
 };
 
 export function syncContext(
-  opts: Common & { http?: HttpClient; secrets?: SecretVault | Readonly<Record<string, string>> } = {},
+  opts: Common & { http?: HttpClient; secrets?: SecretVault | Readonly<Record<string, string>>; now?: number | (() => number) } = {},
 ): SyncContext & Captured & { http: HttpClient; secrets: SecretVault } {
   const c = capture();
   const s = opts.secrets;
+  const now = opts.now ?? Date.parse("2026-10-22T12:00:00Z");
   return {
+    now: typeof now === "function" ? now : () => now,
     http: opts.http ?? fakeHttp(() => ({ status: 500 })),
     secrets: s && "get" in s && typeof s.get === "function" ? (s as SecretVault) : memoryVault(s as Record<string, string> | undefined),
     tools: noTools,
@@ -171,15 +173,13 @@ export function syncContext(
 }
 
 export function wizardContext(
-  opts: Parameters<typeof syncContext>[0] & { callbackUrl?: string; now?: number | (() => number); state?: Readonly<Record<string, string>> } = {},
+  opts: Parameters<typeof syncContext>[0] & { callbackUrl?: string; state?: Readonly<Record<string, string>> } = {},
 ): WizardContext & Captured & { http: HttpClient; secrets: MemoryVault; wizardState: MemoryVault } {
   const base = syncContext(opts);
-  const now = opts.now ?? Date.parse("2026-10-22T12:00:00Z");
   return {
     ...base,
     secrets: base.secrets as MemoryVault,
     callbackUrl: opts.callbackUrl ?? "http://ludiary.localhost:4780/connect/return?w=00000000-0000-4000-8000-000000000000",
     wizardState: memoryVault(opts.state),
-    now: typeof now === "function" ? now : () => now,
   };
 }

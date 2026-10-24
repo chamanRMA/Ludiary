@@ -2,5 +2,12 @@
   "connectors.ea.name": "EA",
   "connectors.ea.errors.invalidId": "Este juego de EA tiene un identificador no válido y no se puede abrir.",
   "connectors.ea.errors.launcherMissing": "No se encuentra la app de EA. Instálala desde ea.com y vuelve a intentarlo.",
-  "connectors.ea.errors.installerDataMissing": "Este juego de EA ya no está en su carpeta. Vuelve a escanear tus carpetas."
+  "connectors.ea.errors.installerDataMissing": "Este juego de EA ya no está en su carpeta. Vuelve a escanear tus carpetas.",
+  "connectors.ea.login.title": "Inicia sesión en EA",
+  "connectors.ea.login.body": "Primero inicia sesión en ea.com en tu navegador (con Google o con tu correo, como siempre). Después abre el enlace: verás un texto entre llaves. Cópialo entero y pulsa Pegar. Ludiary no guarda tu contraseña.",
+  "connectors.ea.error.login": "EA no ha aceptado el inicio de sesión. Vuelve a intentarlo.",
+  "connectors.ea.error.expired": "La sesión de EA ha caducado. Vuelve a conectar para actualizar tus juegos de EA.",
+  "connectors.ea.disconnect.hint": "Ludiary borra su sesión de EA de este equipo. Para cerrar todas las sesiones, cambia la contraseña en ea.com.",
+  "connectors.ea.login.field": "Texto copiado de la página",
+  "connectors.ea.error.token": "Ese no es el texto de EA. Si ves login_required, inicia sesión en ea.com en tu navegador antes y vuelve a abrir el enlace."
 }

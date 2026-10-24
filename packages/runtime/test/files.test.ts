@@ -37,6 +37,12 @@ describe("log redaction (ADR 35)", () => {
     expect(redact(`x&key=${key}&y`)).toBe("x&key=[redacted]&y");
   });
 
+  it("hides an EA access token of the ADR 82 form (point 4)", () => {
+    const token = "ea-test-access-token-".padEnd(64, "x") + "AbC123=_.-";
+    expect(redact(`library failed access_token=${token} again`)).toBe("library failed [redacted] again");
+    expect(redact(`Bearer ${token}`)).toBe("Bearer [redacted]");
+  });
+
   it("hides a long opaque token but not ordinary text (ADR 77)", () => {
     const token = "A1b2C3d4-".repeat(8) + "Zz"; // 74 chars
     expect(redact(`refresh failed token=${token} again`)).toBe("refresh failed [redacted] again");

@@ -3,7 +3,7 @@ import type { WizardFieldDto } from "@ludiary/api-contract";
 /** Format-only checks (ADR 68). The real check (a test call) belongs to the server. */
 export type FieldCheck =
   | { ok: true; value: string }
-  | { ok: false; reason: "empty" | "too-long" | "format" };
+  | { ok: false; reason: "empty" | "too-long" | "format" | "store-error" };
 
 /** Pulls the useful part out of a pasted JSON or URL (ADR 43). Falls back to the raw text. */
 export function extractValue(raw: string, extract: WizardFieldDto["extract"]): string | null {
@@ -60,6 +60,16 @@ export function valuesToSend(
 }
 
 /** Trim, length, extract, then pattern. Never logs the value. */
+/** The store answered with an error object instead of the code (e.g. {"error":"login_required"}): the user is not signed in there. */
+function storeError(text: string): boolean {
+  try {
+    const o: unknown = JSON.parse(text);
+    return typeof o === "object" && o !== null && !Array.isArray(o) && typeof (o as Record<string, unknown>)["error"] === "string";
+  } catch {
+    return false;
+  }
+}
+
 export function validateField(
   raw: string,
   field: Pick<WizardFieldDto, "pattern" | "maxLength" | "extract">,
@@ -68,7 +78,7 @@ export function validateField(
   if (trimmed === "") return { ok: false, reason: "empty" };
   if (trimmed.length > field.maxLength) return { ok: false, reason: "too-long" };
   const extracted = extractValue(trimmed, field.extract);
-  if (extracted === null) return { ok: false, reason: "format" };
+  if (extracted === null) return { ok: false, reason: storeError(trimmed) ? "store-error" : "format" };
   const value = extracted.trim();
   if (field.pattern !== undefined) {
     let matches = false;

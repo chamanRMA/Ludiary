@@ -112,8 +112,24 @@ describe("embedded-login step", () => {
     ["doneUrl with query", { doneUrl: "https://login.example.com/ready?a=1" }],
     ["5 capture fields", { capture: Array.from({ length: 5 }, (_, i) => ({ name: `f${i}`, storageKeys: ["a"], jsonField: "a", pattern: ".", maxLength: 5 })) }],
     ["pattern that does not compile", { capture: [{ name: "t", storageKeys: ["a"], jsonField: "a", pattern: "(", maxLength: 5 }] }],
+    ["unknown source", { capture: [{ name: "t", source: "cookies", storageKeys: [], jsonField: "a", pattern: ".", maxLength: 5 }] }],
+    ["document-json with storageKeys", { capture: [{ name: "t", source: "document-json", storageKeys: ["a"], jsonField: "a", pattern: ".", maxLength: 5 }] }],
+    ["query in captureUrl with local-storage", { captureUrl: "https://login.example.com/change/?a=1" }],
+    ["mixed sources", { capture: [{ name: "t", source: "document-json", storageKeys: [], jsonField: "a", pattern: ".", maxLength: 5 }, { name: "u", storageKeys: ["a"], jsonField: "a", pattern: ".", maxLength: 5 }] }],
+    ["fragment in captureUrl", { captureUrl: "https://login.example.com/change/#x", capture: [{ name: "t", source: "document-json", storageKeys: [], jsonField: "a", pattern: ".", maxLength: 5 }] }],
+    ["url and doneUrl on the same origin and path", { doneUrl: "https://login.example.com/login" }],
     ["maxLength too big", { capture: [{ name: "t", storageKeys: ["a"], jsonField: "a", pattern: ".", maxLength: 9000 }] }],
   ];
+  it("document-json: a query in captureUrl is accepted and source reaches the port", async () => {
+    let req: Parameters<EmbeddedLogin["run"]>[0] | undefined;
+    const over = { captureUrl: "https://login.example.com/auth?c=1", capture: [{ name: "ticket", source: "document-json", storageKeys: [], jsonField: "access_token", pattern: "[A-Za-z0-9-]{64,}", maxLength: 200 }] };
+    const { h } = await setup({ run: async (r) => ((req = r), captured()) }, over);
+    const { wizardId } = await h.core.startWizard("steam", BASE);
+    await h.core.submitWizard(wizardId, "login", { kind: "continue" });
+    expect(req?.captureUrl).toBe("https://login.example.com/auth?c=1");
+    expect(req?.capture[0]).toMatchObject({ source: "document-json", storageKeys: [] });
+  });
+
   it.each(bad)("a step with %s is internal", async (_n, over) => {
     const { h } = await setup({ run: async () => captured() }, over);
     await expect(h.core.startWizard("steam", BASE)).rejects.toMatchObject({ code: "internal" });

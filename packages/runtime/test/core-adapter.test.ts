@@ -113,7 +113,7 @@ describe("core to LudiaryCoreFacade adapter (ADR 72 point 4)", () => {
       connection: "not-applicable",
       mode: "installed-only",
       sync: [
-        { operation: "scan", state: "error", nextAllowedAt: 65, error: { code: "scan.root-unreadable", key: "connectors.common.errors.scan.root-unreadable" } },
+        { operation: "scan", state: "error", lastAttemptAt: 5, nextAllowedAt: 65, error: { code: "scan.root-unreadable", key: "connectors.common.errors.scan.root-unreadable" } },
         { operation: "library", state: "idle", lastSuccessAt: 9 },
       ],
     });

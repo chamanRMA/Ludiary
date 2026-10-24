@@ -56,6 +56,7 @@ export const SyncStatusSchema = Type.Object(
     operation: SyncOperationSchema,
     state: Type.Union([Type.Literal("idle"), Type.Literal("running"), Type.Literal("error")]),
     lastSuccessAt: Type.Optional(EpochSchema),
+    lastAttemptAt: Type.Optional(EpochSchema),
     nextAllowedAt: Type.Optional(EpochSchema),
     progress: Type.Optional(
       Type.Object({ done: Type.Integer({ minimum: 0 }), total: Type.Optional(Type.Integer({ minimum: 0 })) }, strict),

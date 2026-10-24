@@ -11,27 +11,14 @@ import { ID_BODY, ID_RE, MAX_IDS, parseInstallerData } from "./installerdata";
 import { INSTALLER_DATA, isHandled } from "./scan";
 
 const APPS = ["EADesktop.exe", "EALauncher.exe"];
+export const INSTALL_URI_RE = new RegExp(`^origin2://game/launch\\?offerIds=${ID_BODY}&autoDownload=1$`);
 export const URI_RE = new RegExp(`^origin2://game/launch\\?offerIds=${ID_BODY}(,${ID_BODY}){0,${MAX_IDS - 1}}$`);
 
 const fail = (code: "action.unsupported" | "launch.not-installed", key: string, msg: string): ConnectorError =>
   new ConnectorError(code, msg, { messageKey: `connectors.ea.errors.${key}` as I18nKey });
 
-/**
- * play -> origin2://game/launch?offerIds=<ids> (ADR 81, point 4; assumptions EAD8, EAD9). All ids of the file are read now,
- * the stored one first. The URI is built only from validated ids and asserted at the end.
- */
-export async function resolveEaAction(
-  property: StoredProperty,
-  action: GameAction,
-  ctx: LaunchContext,
-): Promise<LaunchSpec | null> {
-  if (action !== "play") return null;
-  const stored = property.storeGameId;
-  if (stored === null) return null;
-  if (!ID_RE.test(stored)) throw fail("action.unsupported", "invalidId", "Stored EA game id is not valid");
-  if (property.installPath === null) {
-    throw new ConnectorError("launch.not-installed", "The EA game has no install folder");
-  }
+/** The EA app must exist when we know where to look (ADR 81, point 4.3); also for install (ADR 82, point 7). */
+async function checkApp(ctx: LaunchContext): Promise<void> {
   if (ctx.launchersResolved) {
     let found = false;
     let failed = false;
@@ -52,6 +39,32 @@ export async function resolveEaAction(
       });
     }
   }
+}
+
+/**
+ * play -> origin2://game/launch?offerIds=<ids> (ADR 81, point 4; assumptions EAD8, EAD9). All ids of the file are read now,
+ * the stored one first. The URI is built only from validated ids and asserted at the end.
+ */
+export async function resolveEaAction(
+  property: StoredProperty,
+  action: GameAction,
+  ctx: LaunchContext,
+): Promise<LaunchSpec | null> {
+  if (action !== "play" && action !== "install") return null;
+  const stored = property.storeGameId;
+  if (stored === null) return null;
+  if (!ID_RE.test(stored)) throw fail("action.unsupported", "invalidId", "Stored EA game id is not valid");
+  if (action === "install") {
+    // The game is not installed: no installerdata.xml. One id, the stored one (ADR 82, point 7; assumption EAA12).
+    await checkApp(ctx);
+    const uri = `origin2://game/launch?offerIds=${stored}&autoDownload=1`;
+    if (!INSTALL_URI_RE.test(uri)) throw new ConnectorError("internal", "Built an invalid EA install URI");
+    return { kind: "uri", uri };
+  }
+  if (property.installPath === null) {
+    throw new ConnectorError("launch.not-installed", "The EA game has no install folder");
+  }
+  await checkApp(ctx);
   let ids: string[] = [stored];
   const file = ctx.fs.join(property.installPath, ...INSTALLER_DATA);
   let present: boolean; // if the check itself fails, the stored id alone is still a safe URI

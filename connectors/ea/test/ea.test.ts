@@ -1,4 +1,4 @@
-import { assertConnectorConformance, launchContext, scanContext } from "@ludiary/connector-testkit";
+import { assertConnectorConformance, discoveryContext, launchContext, scanContext } from "@ludiary/connector-testkit";
 import { checkConnectorManifest, ConnectorError, PathEscapesRootsError, type StoredProperty } from "@ludiary/contracts";
 import { describe, expect, it } from "vitest";
 import en from "../locales/en.json";
@@ -10,7 +10,7 @@ import { URI_RE } from "../src/launch";
 
 const c = createEaConnector();
 const R = "C:\\Program Files\\EA Games";
-const APP = `C:\\Program Files\\${(EA_LOCATIONS[1]!.sources[0] as { relative: string }).relative}`;
+const APP = `C:\\Program Files\\${(EA_LOCATIONS[2]!.sources[0] as { relative: string }).relative}`;
 const DATA = "__Installer\\installerdata.xml";
 
 // Invented ids and titles (no real data).
@@ -20,15 +20,17 @@ const current = (ids: string[], titles: [string, string][] = [["en_US", "Fake Ga
     .join("")}</gameTitles><contentIDs>${ids.map((i) => `<contentID>${i}</contentID>`).join("")}</contentIDs></DiPManifest>`;
 const legacy = `<game><contentIDs><contentID>FAKE.OFB.EAX.0001</contentID></contentIDs><localization><localeInfo locale="de_DE"><title>Falsches Spiel</title></localeInfo><localeInfo locale="en_GB"><title>Fake Legacy</title></localeInfo></localization></game>`;
 
-describe("manifest (ADR 81)", () => {
-  it("is valid, local-only, uri origin2, no network", () => {
+describe("manifest (ADR 81, ADR 82)", () => {
+  it("is valid, unofficial-api with an account, uri origin2", () => {
     expect(checkConnectorManifest(c)).toEqual([]);
-    expect(c.access).toBe("local-only");
-    expect(c.capabilities).toMatchObject({ library: false, scan: true, dlc: "none", actions: ["play"], launchKinds: ["uri"], uriSchemes: ["origin2"] });
-    expect([c.authHosts, c.apiHosts, c.mediaHosts]).toEqual([[], [], []]);
-    expect(c.discoverRoots).toBeUndefined();
-    expect(c.locations[1]!.sources).toEqual([{ kind: "known-folder", folder: "ProgramFiles", relative: "Electronic Arts\\EA Desktop\\EA Desktop" }]);
-    expect(c.locations.map((l) => [l.id, l.purpose, l.sources.length])).toEqual([["ea-libraries", "scan", 2], ["ea-desktop", "launcher", 1]]);
+    expect(c.access).toBe("unofficial-api");
+    expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "none", actions: ["play", "install"], launchKinds: ["uri"], uriSchemes: ["origin2"] });
+    expect([c.authHosts, c.apiHosts, c.mediaHosts]).toEqual([["accounts.ea.com"], ["service-aggregation-layer.juno.ea.com"], ["app-images.ea.com", "drop-assets.ea.com"]]);
+    expect(c.minSyncIntervalMs).toBe(1_800_000);
+    expect([c.connection, c.listLibrary]).not.toContain(undefined);
+    expect(c.discoverRoots).toBeDefined();
+    expect(c.locations[2]!.sources).toEqual([{ kind: "known-folder", folder: "ProgramFiles", relative: "Electronic Arts\\EA Desktop\\EA Desktop" }]);
+    expect(c.locations.map((l) => [l.id, l.purpose, l.sources.length])).toEqual([["ea-libraries", "scan", 2], ["ea-settings", "scan", 2], ["ea-desktop", "launcher", 1]]);
   });
   it("catalogs match", () => expect(Object.keys(es).sort()).toEqual(Object.keys(en).sort()));
   it("passes the shared conformance check", async () => {
@@ -179,7 +181,7 @@ describe("resolveAction (ADR 81)", () => {
     expect(await play(prop("2"))).toEqual({ kind: "uri", uri: "origin2://game/launch?offerIds=2,1,3" });
   });
   it("other actions and a null id give null", async () => {
-    expect(await c.resolveAction(prop("1"), "install", ctxOf(null))).toBeNull();
+    expect(await c.resolveAction(prop("1"), "open-store-page", ctxOf(null))).toBeNull();
     expect(await play(prop(null))).toBeNull();
   });
   it.each(["a b", "x&y", "1,2", "-1", "é", "", "a".repeat(65), "1\n"])("invalid stored id %j", async (id) => {
@@ -237,5 +239,66 @@ describe("resolveAction (ADR 81)", () => {
   it("ids from the file with unsafe characters never reach the uri", async () => {
     const uri = await play(prop("1"), ctxOf(current(["1", "x&autoDownload=1", "a/b", "2"])));
     expect(uri).toEqual({ kind: "uri", uri: "origin2://game/launch?offerIds=1,2" });
+  });
+});
+
+describe("discoverRoots (ADR 81, EAD6)", () => {
+  const U = "C:\\Users\\x\\AppData\\Local\\Electronic Arts\\EA Desktop";
+  const M = "C:\\ProgramData\\EA Desktop";
+  const locs = [
+    { declarationId: "ea-libraries", path: R },
+    { declarationId: "ea-settings", path: U },
+    { declarationId: "ea-settings", path: M },
+  ];
+  const run = async (tree: Record<string, string>) => {
+    const ctx = discoveryContext({ tree, locations: locs });
+    return { paths: (await c.discoverRoots!(ctx)).map((r) => r.path), ctx };
+  };
+  const ini = (v: string) => `user.language=en\r\nuser.downloadinplacedir=${v}\r\nuser.x=1\r\n`;
+  const scan = (tree: Record<string, string>, roots: string[]) => c.scanInstalled!(scanContext({ tree, roots }));
+
+  it("known folders plus the value of machine.ini and user_N.ini; settings folders never come out", async () => {
+    const { paths } = await run({
+      [`${M}\\machine.ini`]: "machine.downloadinplacedir=C:\\Program Files\\EA Games\\\n",
+      [`${U}\\user_123.ini`]: ini("F:\\"),
+      [`${U}\\user_456.ini`]: ini("D:\\Games\\EA\\"),
+      [`${U}\\other.ini`]: ini("E:\\"),
+      [`${U}\\user_x.ini`]: ini("E:\\"),
+    });
+    expect(paths).toEqual([R, "F:\\", "D:\\Games\\EA"]); // R repeated (trailing slash): once
+    expect(paths).not.toContain(U);
+    expect(paths).not.toContain(M);
+  });
+  it("without the key, invalid paths (UNC, .., relative, quotes) and absent files give nothing", async () => {
+    for (const v of ["\\\\srv\\share", "C:\\a\\..\\b", "games", "F:", "F:/x", '"F:\\"', ""]) {
+      const { paths, ctx } = await run({ [`${U}\\user_1.ini`]: ini(v) });
+      expect(paths).toEqual([R]);
+      expect(JSON.stringify(ctx.logs)).not.toContain("user_1");
+    }
+    expect((await run({ [`${U}\\user_1.ini`]: "user.language=en" })).paths).toEqual([R]);
+    expect((await run({ [`${U}\\`]: "", [`${M}\\`]: "" })).paths).toEqual([R]);
+  });
+  it("a file over 64 KiB is unreadable (the core keeps the saved roots); at most 16 files are read", async () => {
+    const tree: Record<string, string> = { [`${M}\\`]: "", [`${U}\\user_1.ini`]: ini("F:\\") + "x".repeat(65 * 1024) };
+    for (let i = 2; i <= 20; i++) tree[`${U}\\user_${i}.ini`] = ini(`G:\\L${i}`);
+    const ctx0 = discoveryContext({ tree, locations: locs });
+    await expect(c.discoverRoots!(ctx0)).rejects.toMatchObject({ code: "scan.root-unreadable" });
+    delete tree[`${U}\\user_1.ini`];
+    const { paths, ctx } = await run(tree);
+    expect(paths).not.toContain("F:\\");
+    expect(paths).toHaveLength(1 + 16); // R + the first 16 names in sort order (user_10…user_6), all valid; user_7… are not read
+    expect(JSON.stringify(ctx.logs)).not.toMatch(/user_\d/);
+  });
+  it("an unreadable settings folder fails with scan.root-unreadable; other errors propagate", async () => {
+    const ctx = discoveryContext({ tree: { [`${U}\\user_1.ini`]: ini("F:\\") }, locations: locs });
+    const bad = { ...ctx, fs: { ...ctx.fs, readDir: async () => { throw new ConnectorError("scan.root-unreadable", "denied"); } } };
+    await expect(c.discoverRoots!(bad)).rejects.toMatchObject({ code: "scan.root-unreadable" }); // the core keeps the saved roots
+    const boom = { ...ctx, fs: { ...ctx.fs, readDir: async () => { throw new Error("boom"); } } };
+    await expect(c.discoverRoots!(boom)).rejects.toThrow("boom");
+  });
+  it("scans F:\\SteamWorld Dig from the root F:\\", async () => {
+    const r = await scan({ [`F:\\SteamWorld Dig\\${DATA}`]: current(["1000"], [["en_US", "SteamWorld Dig"]]) }, ["F:\\"]);
+    expect(r.entries).toEqual([{ storeGameId: "1000", kind: "game", title: "SteamWorld Dig", installPath: "F:\\SteamWorld Dig" }]);
+    expect(r.unreadableRoots).toEqual([]);
   });
 });

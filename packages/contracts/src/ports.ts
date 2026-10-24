@@ -162,7 +162,7 @@ export interface EmbeddedLogin {
       doneUrl: string;
       captureUrl: string;
       allowedHosts: readonly string[];
-      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
     },
     signal: AbortSignal,
   ): Promise<
