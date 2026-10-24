@@ -44,6 +44,9 @@
   "nav.local": "Local",
   "nav.syncedAgo": "Synced {when}.",
   "nav.neverSynced": "Not synced yet.",
+  "nav.syncWait": "{{store}} can be force-synced again at {{time}}.",
+  "nav.syncConfirm": "Synced recently. Syncing again so often can make the store limit your requests or even block your account. Sync anyway?",
+  "nav.syncAnyway": "Sync anyway",
   "nav.reconnectHint": "{store}: the account needs to be reconnected.",
   "nav.tagline": "All your games on a single map",
   "wizard.paste": "Paste",
@@ -260,11 +263,12 @@
   "connect.failedTitle": "The connection could not be finished",
   "connect.startAgain": "Start again",
   "wizard.embedded.open": "Open the sign-in window",
-  "wizard.embedded.waiting": "Sign in in the Ubisoft window; it will close by itself when done.",
+  "wizard.embedded.waiting": "Sign in in the store window; it will close by itself when done.",
   "wizard.embedded.cancelled": "The sign-in was not completed. You can try again.",
   "wizard.embedded.failed": "The sign-in could not be completed. Try again.",
-  "wizard.embedded.captureMissing": "The session could not be read. Try again and tick \"Remember me\".",
+  "wizard.embedded.captureMissing": "The session could not be read. Try again.",
   "wizard.embedded.busy": "A sign-in window is already open. Close it and try again.",
   "wizard.embedded.runtimeMissing": "Microsoft Edge WebView2 is missing on this PC. Install it from https://developer.microsoft.com/microsoft-edge/webview2/ and try again.",
-  "wizard.embedded.unavailable": "This sign-in needs Ludiary on the Windows desktop."
+  "wizard.embedded.unavailable": "This sign-in needs Ludiary on the Windows desktop.",
+  "wizard.paste.storeError": "The store answered with an error instead of the code: sign in on its website in your browser and open the link again."
 }

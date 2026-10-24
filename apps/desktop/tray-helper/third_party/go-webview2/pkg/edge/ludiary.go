@@ -54,7 +54,9 @@ const (
 	slotNavStartGetUri      = 3 // get_Uri, get_IsUserInitiated, get_IsRedirected, get_RequestHeaders, get_Cancel, put_Cancel
 	slotNavStartGetRedirect = 5
 	slotNavStartPutCancel   = 8
-	slotNavDoneIsSuccess    = 3
+	slotNavStartGetNavID    = 9 // get_NavigationId (UINT64), after put_Cancel
+	slotNavDoneIsSuccess    = 3 // get_IsSuccess 3, get_WebErrorStatus 4, get_NavigationId 5
+	slotNavDoneGetNavID     = 5
 	slotNewWindowPutHandled = 6  // get_Uri 3, put_NewWindow 4, get_NewWindow 5, put_Handled 6
 	slotDownloadPutCancel   = 5  // get_DownloadOperation 3, get_Cancel 4, put_Cancel 5
 	slotPermissionPutState  = 7  // get_Uri 3, get_PermissionKind 4, get_IsUserInitiated 5, get_State 6, put_State 7
@@ -184,12 +186,13 @@ func denyHandler(putIndex int, value uintptr) uintptr {
 
 // Events are the decisions the caller takes. All run on the UI thread.
 type Events struct {
-	// MainNavigation decides every navigation of the main document, redirects included. false cancels it.
-	MainNavigation func(uri string, redirected bool) bool
+	// MainNavigation decides every navigation of the main document, redirects included. false cancels it. navID is the
+	// NavigationId of the navigation (ADR 82, M1).
+	MainNavigation func(uri string, redirected bool, navID uint64) bool
 	// FrameNavigation decides every navigation of an iframe. false cancels it.
 	FrameNavigation func(uri string) bool
-	// NavigationCompleted reports the end of a main-document load.
-	NavigationCompleted func(success bool)
+	// NavigationCompleted reports the end of a main-document load, with the NavigationId it belongs to.
+	NavigationCompleted func(success bool, navID uint64)
 	// BrowserProcessExited reports that the browser processes of this environment are gone.
 	BrowserProcessExited func()
 }
@@ -363,7 +366,7 @@ func (b *Browser) harden(ev Events) error {
 	}
 	defer release(wv18)
 
-	navStarting := func(decide func(uri string, redirected bool) bool) uintptr {
+	navStarting := func(decide func(uri string, redirected bool, navID uint64) bool) uintptr {
 		return newHandler(func(_, args uintptr) uintptr {
 			if args == 0 {
 				return eFail
@@ -371,7 +374,9 @@ func (b *Browser) harden(ev Events) error {
 			uri := getString(args, slotNavStartGetUri)
 			var redirected int32
 			slot(args, slotNavStartGetRedirect).Call(args, uintptr(unsafe.Pointer(&redirected)))
-			if decide == nil || !decide(uri, redirected != 0) {
+			var id uint64
+			slot(args, slotNavStartGetNavID).Call(args, uintptr(unsafe.Pointer(&id)))
+			if decide == nil || !decide(uri, redirected != 0, id) {
 				putBool(args, slotNavStartPutCancel, true)
 			}
 			return 0
@@ -386,20 +391,22 @@ func (b *Browser) harden(ev Events) error {
 		return nil
 	}
 	v := b.wv.vtbl
-	var frame func(string, bool) bool
+	var frame func(string, bool, uint64) bool
 	if ev.FrameNavigation != nil {
-		frame = func(uri string, _ bool) bool { return ev.FrameNavigation(uri) }
+		frame = func(uri string, _ bool, _ uint64) bool { return ev.FrameNavigation(uri) }
 	}
 	err = firstErr(
 		addEvent(wv, slotOf(unsafe.Pointer(v), &v.AddNavigationStarting), navStarting(ev.MainNavigation)),
 		addEvent(wv, slotOf(unsafe.Pointer(v), &v.AddFrameNavigationStarting), navStarting(frame)),
 		addEvent(wv, slotOf(unsafe.Pointer(v), &v.AddNavigationCompleted), newHandler(func(_, args uintptr) uintptr {
 			var ok int32
+			var id uint64
 			if args != 0 {
 				slot(args, slotNavDoneIsSuccess).Call(args, uintptr(unsafe.Pointer(&ok)))
+				slot(args, slotNavDoneGetNavID).Call(args, uintptr(unsafe.Pointer(&id)))
 			}
 			if ev.NavigationCompleted != nil {
-				ev.NavigationCompleted(ok != 0)
+				ev.NavigationCompleted(ok != 0, id)
 			}
 			return 0
 		})),

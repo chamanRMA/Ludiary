@@ -20,6 +20,11 @@ describe("validateField", () => {
     const epic = { pattern: "^[a-f0-9]{32}$", maxLength: 4096, extract: "json-field:authorizationCode" } as const;
     expect(validateField(JSON.stringify({ authorizationCode: hex32.toLowerCase() }), epic).ok).toBe(true);
   });
+  it("a pasted store error ({\"error\":\"login_required\"}) says so instead of a plain format error (ADR 82 point 14)", () => {
+    const field = { pattern: "^[A-Za-z0-9]{64,}$", maxLength: 4096, extract: "json-field:access_token" as const };
+    expect(validateField('{"error":"login_required","error_description":"x"}', field)).toEqual({ ok: false, reason: "store-error" });
+    expect(validateField('{"other":"x"}', field)).toEqual({ ok: false, reason: "format" });
+  });
   it("does not throw on an invalid pattern", () => {
     expect(validateField("x", { pattern: "(", maxLength: 5 })).toEqual({ ok: false, reason: "format" });
   });

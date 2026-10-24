@@ -105,8 +105,7 @@ export function TargetRow(props: Props) {
         <div className={styles.wizard} role="group" aria-label={t("stores.disconnect.confirm", { name })}>
           <p>{t("stores.disconnect.confirm", { name })}</p>
           {id === "steam" && <p className={ui.muted}>{t("connectors.steam.disconnect.revokeHint")}</p>}
-          {id === "gog" && <p className={ui.muted}>{t("connectors.gog.disconnect.hint")}</p>}
-          {id === "epic" && <p className={ui.muted}>{t("connectors.epic.disconnect.hint")}</p>}
+          {(id === "gog" || id === "epic" || id === "ubisoft" || id === "ea") && <p className={ui.muted}>{t(`connectors.${id}.disconnect.hint`)}</p>}
           {disconnectError && <p role="alert">{disconnectError}</p>}
           <div className={styles.buttons}>
             <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void mutate(api.disconnect(target)).then(() => setConfirming(false), (e: unknown) => setDisconnectError(errorText(t, e)))}>

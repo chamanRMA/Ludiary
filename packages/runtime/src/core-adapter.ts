@@ -97,6 +97,7 @@ function syncDto(s: SyncStateRecord): SyncStatusDto {
     operation: s.operation,
     state: s.status,
     ...(s.lastSuccessAt !== null ? { lastSuccessAt: s.lastSuccessAt } : {}),
+    ...(s.lastAttemptAt !== null ? { lastAttemptAt: s.lastAttemptAt } : {}),
     ...(s.nextAllowedAt !== null ? { nextAllowedAt: s.nextAllowedAt } : {}),
     ...(s.error ? { error: errorDto(s.error) } : {}),
   };

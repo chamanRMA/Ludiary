@@ -39,6 +39,8 @@ export interface SyncService {
   storeStatus(): Promise<readonly StoreStatus[]>;
 }
 
+/** Minimum time between two forced (manual) library syncs of one store. */
+export const MANUAL_SYNC_FLOOR_MS = 60_000;
 const STATUS_TIMEOUT_MS = 10_000;
 const LIBRARY_AUTH_CODES: readonly string[] = ["auth.invalid", "auth.expired", "auth.required"];
 
@@ -98,8 +100,9 @@ export function createSyncService(env: Env): SyncService {
   function libraryDue(c: StoreConnector, prev: SyncStateRecord | null, now: number, trigger: "open" | "manual"): boolean {
     if (!prev || prev.lastAttemptAt === null) return true;
     const floor = c.minSyncIntervalMs;
-    if (now < prev.lastAttemptAt + floor) return false; // the floor holds for the manual button too
-    if (trigger === "manual") return true;
+    // Decision 50 (revised 24-10-2026): the user may force a sync inside the connector's interval, never twice within a minute.
+    if (trigger === "manual") return now >= prev.lastAttemptAt + MANUAL_SYNC_FLOOR_MS;
+    if (now < prev.lastAttemptAt + floor) return false;
     if (prev.status === "error") return now >= prev.lastAttemptAt + Math.min(ERROR_BACKOFF_FACTOR * floor, MAX_BACKOFF_MS);
     if (prev.lastSuccessAt === null) return true;
     return now - prev.lastSuccessAt > (AUTO_SYNC_MS[c.id] ?? AUTO_SYNC_DEFAULT_MS);

@@ -181,15 +181,19 @@ describe("library operation: who, when and in which order", () => {
     expect(expired.s.calls.library).toBe(0);
   });
 
-  it("the manual button respects the floor of the connector", async () => {
+  it("the manual button can go inside the connector's interval but never twice within a minute; the automatic one keeps the interval", async () => {
     const { h, s } = await lib();
     await syncLibrary(h);
-    h.clock.time += 9 * MIN;
+    h.clock.time += 30_000;
     await syncLibrary(h);
-    expect(s.calls.library).toBe(1);
+    expect(s.calls.library).toBe(1); // 30 s: too soon even for a forced one
+    h.clock.time += 31_000;
+    await syncLibrary(h);
+    expect(s.calls.library).toBe(2); // 61 s: inside the 10 min interval, but forced
+    expect(libState(h)).toMatchObject({ nextAllowedAt: h.clock.time + 10 * MIN }); // the connector's interval, so the web knows it is recent
     h.clock.time += 2 * MIN;
-    await syncLibrary(h);
-    expect(s.calls.library).toBe(2);
+    await syncLibrary(h, "open");
+    expect(s.calls.library).toBe(2); // automatic respects the connector's floor
   });
 
   it("opening the web syncs only when the last good one is older than 6 hours", async () => {

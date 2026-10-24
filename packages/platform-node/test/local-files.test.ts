@@ -103,12 +103,27 @@ describe("scoped reader", () => {
     expect(await fs.readText(path.join(link, "b.txt"))).toBe("b");
   });
 
+  it("decodes UTF-16 LE/BE with BOM (ADR 81); odd trailing byte dropped; lone surrogate repaired; no BOM not detected", async () => {
+    const fs = files.scoped([root]);
+    const le = Buffer.from("﻿Ñandú 大神 <a>", "utf16le");
+    writeFileSync(path.join(root, "le.txt"), le);
+    writeFileSync(path.join(root, "be.txt"), Buffer.from(le).swap16());
+    writeFileSync(path.join(root, "odd.txt"), Buffer.concat([le, Buffer.from([0x41])]));
+    writeFileSync(path.join(root, "lone.txt"), Buffer.from("﻿a\uD800b", "utf16le"));
+    writeFileSync(path.join(root, "nobom.txt"), Buffer.from("ab", "utf16le"));
+    expect(await fs.readText(path.join(root, "le.txt"))).toBe("Ñandú 大神 <a>");
+    expect(await fs.readText(path.join(root, "be.txt"))).toBe("Ñandú 大神 <a>");
+    expect(await fs.readText(path.join(root, "odd.txt"))).toBe("Ñandú 大神 <a>");
+    expect(await fs.readText(path.join(root, "lone.txt"))).toBe("a�b");
+    expect(await fs.readText(path.join(root, "nobom.txt"))).toContain("\u0000");
+  });
+
   it("enforces the 1 MiB limit", async () => {
     const fs = files.scoped([root]);
     writeFileSync(path.join(root, "exact.txt"), "x".repeat(MAX_TEXT_BYTES));
     writeFileSync(path.join(root, "big.txt"), "x".repeat(MAX_TEXT_BYTES + 1));
     expect((await fs.readText(path.join(root, "exact.txt"))).length).toBe(MAX_TEXT_BYTES);
-    expect(await code(fs.readText(path.join(root, "big.txt")))).toBe("scan.root-unreadable");
+    expect(await code(fs.readText(path.join(root, "big.txt")))).toBe("store.unexpected-response");
   });
 
   it("readBytes returns raw bytes, enforces maxBytes and stays in the roots (ADR 80)", async () => {
@@ -138,7 +153,7 @@ describe("scoped reader", () => {
   it("a missing or non-file target is scan.root-unreadable, without paths in the message", async () => {
     const fs = files.scoped([root]);
     expect(await code(fs.readText(path.join(root, "missing.txt")))).toBe("scan.root-unreadable");
-    expect(await code(fs.readText(path.join(root, "sub")))).toBe("scan.root-unreadable");
+    expect(await code(fs.readText(path.join(root, "sub")))).toBe("store.unexpected-response");
     try {
       await fs.readText(path.join(root, "missing.txt"));
     } catch (err) {

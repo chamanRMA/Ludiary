@@ -6,7 +6,7 @@ package main
 // Protocol: ONE JSON line on stdin (64 KiB at most); stdin then stays open and its closing means "cancel".
 //
 //	{"title","startUrl","doneUrl","captureUrl","allowedHosts":[...],
-//	 "capture":[{"name","storageKeys":[...],"jsonField","maxLength"}],"dataDir"}
+//	 "capture":[{"name","source":"local-storage"|"document-json","storageKeys":[...],"jsonField","maxLength"}],"dataDir"}
 //
 // One JSON line on stdout:
 //
@@ -37,6 +37,8 @@ const (
 	maxAllowedHosts  = 4
 	maxCaptureFields = 4
 	maxStorageKeys   = 3
+	srcLocalStorage  = "local-storage"
+	srcDocumentJSON  = "document-json"
 	maxBlockedHosts  = 32
 	dataDirPrefix    = "webview-"
 )
@@ -45,12 +47,14 @@ var (
 	nameRe  = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]{0,31}$`)
 	keyRe   = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`)
 	hostRe  = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$`)
+	schemeRe = regexp.MustCompile(`^[a-z][a-z0-9+.-]{0,15}$`)
 	errBad  = errors.New("bad request")
 	errNone = errors.New("no request")
 )
 
 type captureField struct {
 	Name        string   `json:"name"`
+	Source      string   `json:"source"` // "" means local-storage (ADR 82, point 3 a)
 	StorageKeys []string `json:"storageKeys"`
 	JSONField   string   `json:"jsonField"`
 	MaxLength   int      `json:"maxLength"`
@@ -117,9 +121,19 @@ func parseLoginRequest(line []byte, tmpRoot string) (loginRequest, error) {
 		return req, errBad
 	}
 	seen := map[string]bool{}
-	for _, f := range req.Capture {
+	for i := range req.Capture {
+		f := &req.Capture[i]
+		if f.Source == "" {
+			f.Source = srcLocalStorage
+		}
+		keysOK := len(f.StorageKeys) >= 1 && len(f.StorageKeys) <= maxStorageKeys
+		if f.Source == srcDocumentJSON {
+			keysOK = len(f.StorageKeys) == 0
+		} else if f.Source != srcLocalStorage {
+			return req, errBad
+		}
 		if !nameRe.MatchString(f.Name) || seen[f.Name] || !keyRe.MatchString(f.JSONField) ||
-			f.MaxLength < 1 || f.MaxLength > 8192 || len(f.StorageKeys) < 1 || len(f.StorageKeys) > maxStorageKeys {
+			f.MaxLength < 1 || f.MaxLength > 8192 || !keysOK || f.Source != req.Capture[0].Source {
 			return req, errBad
 		}
 		seen[f.Name] = true
@@ -128,6 +142,13 @@ func parseLoginRequest(line []byte, tmpRoot string) (loginRequest, error) {
 				return req, errBad
 			}
 		}
+	}
+	// A query in captureUrl only with document-json (ADR 82, point 3 b); doneUrl and the others keep their rules.
+	if strings.Contains(req.DoneURL, "?") {
+		return req, errBad
+	}
+	if cu, err := url.Parse(req.CaptureURL); err != nil || (cu.RawQuery != "" || strings.Contains(req.CaptureURL, "?")) && req.Capture[0].Source != srcDocumentJSON {
+		return req, errBad
 	}
 	if !validDataDir(req.DataDir, tmpRoot) {
 		return req, errBad
@@ -207,7 +228,15 @@ func (b *blockedSet) add(raw string) {
 		return
 	}
 	h := strings.ToLower(u.Hostname())
-	if !hostRe.MatchString(h) || len(b.hosts) >= maxBlockedHosts {
+	if u.Host == "" { // nucleus:, data:, about:, javascript:, file:...: only the scheme (ADR 82, M2), never the rest
+		if !schemeRe.MatchString(u.Scheme) {
+			return
+		}
+		h = u.Scheme + ":"
+	} else if !hostRe.MatchString(h) {
+		return
+	}
+	if len(b.hosts) >= maxBlockedHosts {
 		return
 	}
 	for _, x := range b.hosts {
@@ -237,18 +266,35 @@ func sameOriginPath(a, b string) bool {
 	return ua.Scheme == ub.Scheme && strings.EqualFold(ua.Host, ub.Host) && ua.Path == ub.Path
 }
 
+// exactURL compares scheme, host (lower case), path and query after url.Parse (ADR 82, M1). If Chromium re-encodes
+// anything the comparison fails: it fails closed.
+func exactURL(a, b string) bool {
+	ua, ea := url.Parse(a)
+	ub, eb := url.Parse(b)
+	if ea != nil || eb != nil {
+		return false
+	}
+	return ua.Scheme == ub.Scheme && strings.ToLower(ua.Host) == strings.ToLower(ub.Host) && ua.Path == ub.Path && ua.RawQuery == ub.RawQuery
+}
+
 type captureState int
 
 const (
-	stateStart   captureState = iota // loading startUrl
-	stateDone                        // doneUrl finished loading; waiting for captureUrl
+	stateStart   captureState = iota // loading startUrl; waiting to arm on doneUrl
+	stateDone                        // the armed navigation to doneUrl completed; waiting for captureUrl
 	stateCapture                     // captureUrl loaded; the script may run
 )
 
-// captureMachine is start -> done -> capture; it never skips a state (ADR 80, M3).
+// captureMachine is start -> done -> capture; it never skips a state (ADR 80, M3; ADR 82, point 3 c and M1).
 type captureMachine struct {
 	state               captureState
 	doneURL, captureURL string
+	exact               bool // document-json: captureUrl must match exactly and nothing may navigate during capture
+	armed               bool
+	armedID             uint64 // NavigationId of the NavigationStarting that armed
+	expectCap           bool   // set when the helper navigates to captureUrl: only the next NavigationStarting is its own
+	hasCapID            bool
+	capID               uint64 // document-json: NavigationId of the navigation to captureUrl launched after done
 }
 
 type machineAction int
@@ -257,23 +303,67 @@ const (
 	actNone machineAction = iota
 	actNavigateToCapture
 	actCapture
+	actFail // capture-missing
 )
 
-// onLoaded reports that the main document finished loading (successfully) at `source`.
-func (m *captureMachine) onLoaded(source string) machineAction {
+func (m *captureMachine) matchCapture(source string) bool {
+	if m.exact {
+		return exactURL(source, m.captureURL)
+	}
+	return sameOriginPath(source, m.captureURL)
+}
+
+// onStarting is called for a main-document navigation (redirects included) the policy ALLOWED; a cancelled one never arms.
+func (m *captureMachine) onStarting(uri string, id uint64) machineAction {
 	switch m.state {
 	case stateStart:
-		if !sameOriginPath(source, m.doneURL) {
+		if sameOriginPath(uri, m.doneURL) {
+			m.armed, m.armedID = true, id
+		}
+	case stateDone:
+		if m.exact && m.expectCap {
+			m.expectCap = false // only the first NavigationStarting after Navigate counts
+			if exactURL(uri, m.captureURL) {
+				m.hasCapID, m.capID = true, id
+			}
+		}
+	case stateCapture:
+		if m.exact {
+			return actFail // the page being read must not navigate
+		}
+	}
+	return actNone
+}
+
+// onCompleted reports the end of a main-document load with the NavigationId it belongs to, at `source`.
+func (m *captureMachine) onCompleted(id uint64, success bool, source string) machineAction {
+	switch m.state {
+	case stateStart:
+		if !m.armed || id != m.armedID { // only the navigation that armed counts, with or without success
 			return actNone
 		}
-		m.state = stateDone
-		if sameOriginPath(m.doneURL, m.captureURL) {
+		m.armed = false
+		if sameOriginPath(m.doneURL, m.captureURL) { // same page: it must have loaded
+			if !success {
+				return actFail
+			}
 			m.state = stateCapture
 			return actCapture
 		}
+		m.state, m.expectCap = stateDone, true
 		return actNavigateToCapture
 	case stateDone:
-		if sameOriginPath(source, m.captureURL) {
+		if m.exact {
+			if !m.hasCapID || id != m.capID {
+				return actNone
+			}
+			if !success {
+				return actFail
+			}
+			m.state = stateCapture
+			return actCapture
+		}
+		if success && sameOriginPath(source, m.captureURL) {
 			m.state = stateCapture
 			return actCapture
 		}
@@ -281,19 +371,13 @@ func (m *captureMachine) onLoaded(source string) machineAction {
 	return actNone
 }
 
-// atDone: still waiting for doneUrl and the document is it (its load may have failed). Never true for captureUrl when
-// both differ, so a failed capture page is never scripted.
-func (m *captureMachine) atDone(source string) bool {
-	return m.state == stateStart && sameOriginPath(source, m.doneURL) && !sameOriginPath(m.doneURL, m.captureURL)
-}
-
 // mayExecute is the check made before EVERY ExecuteScript, retries included.
 func (m *captureMachine) mayExecute(source string) bool {
-	return m.state == stateCapture && sameOriginPath(source, m.captureURL)
+	return m.state == stateCapture && m.matchCapture(source)
 }
 
 // leftCapture: the page went elsewhere during the retries; wait for the next load of captureUrl.
-func (m *captureMachine) leftCapture() { m.state = stateDone }
+func (m *captureMachine) leftCapture() { m.state, m.hasCapID = stateDone, false }
 
 // captureScript is the fixed script (ADR 80, point 5). It reads only the named localStorage keys; no forms, cookies or
 // keystrokes. The parameters enter as a JSON literal, never concatenated.
@@ -315,10 +399,30 @@ spec.forEach(function(f){
 return out;
 })(`
 
+// documentScript is the second fixed script (ADR 82, point 3 a): it reads only the text of the first PRE child of body, else of body (64 KiB at
+// most), parses it as JSON and keeps the requested own text properties of an object. Same literal-parameter rule.
+const documentScript = `(function(spec){
+var out={};
+spec.forEach(function(f){out[f.name]=null;});
+try{
+  var b=document.body,p=null;
+  if(b)for(var i=0;i<b.children.length;i++)if(b.children[i].tagName==="PRE"){p=b.children[i];break;}
+  var t=p?p.textContent:(b?b.textContent:null);
+  if(typeof t!=="string"||t.length>65536)return out;
+  var o=JSON.parse(t);
+  if(!o||typeof o!=="object"||Array.isArray(o))return out;
+  spec.forEach(function(f){
+    if(Object.prototype.hasOwnProperty.call(o,f.field)&&typeof o[f.field]==="string")out[f.name]=o[f.field];
+  });
+}catch(e){}
+return out;
+})(`
+
+// buildCaptureScript picks the script by source (parseLoginRequest guarantees all fields share it).
 func buildCaptureScript(fields []captureField) (string, error) {
 	type spec struct {
 		Name  string   `json:"name"`
-		Keys  []string `json:"keys"`
+		Keys  []string `json:"keys,omitempty"`
 		Field string   `json:"field"`
 	}
 	specs := make([]spec, len(fields))
@@ -328,6 +432,9 @@ func buildCaptureScript(fields []captureField) (string, error) {
 	lit, err := json.Marshal(specs)
 	if err != nil {
 		return "", err
+	}
+	if len(fields) > 0 && fields[0].Source == srcDocumentJSON {
+		return documentScript + string(lit) + ")", nil
 	}
 	return captureScript + string(lit) + ")", nil
 }

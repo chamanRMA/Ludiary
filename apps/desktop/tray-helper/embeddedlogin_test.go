@@ -55,6 +55,7 @@ func TestRequestRejections(t *testing.T) {
 		"user in url":             func(m map[string]any) { m["startUrl"] = "https://u:p@connect.ubisoft.com/" },
 		"fragment":                func(m map[string]any) { m["doneUrl"] = "https://connect.ubisoft.com/ready#x" },
 		"empty fragment":          func(m map[string]any) { m["doneUrl"] = "https://connect.ubisoft.com/ready#" },
+		"query in doneUrl":        func(m map[string]any) { m["doneUrl"] = "https://connect.ubisoft.com/ready?x=1" },
 		"odd port":                func(m map[string]any) { m["captureUrl"] = "https://connect.ubisoft.com:8443/x" },
 		"title with control":      func(m map[string]any) { m["title"] = "a\u0007b" },
 		"title with newline":      func(m map[string]any) { m["title"] = "a\nb" },
@@ -205,7 +206,7 @@ func TestBlockedHostsHaveNoPathOrQuery(t *testing.T) {
 	b.add("data:text/html,x")
 	b.add("https://Other.example/")
 	got, _ := json.Marshal(b.list())
-	if string(got) != `["evil.example","other.example"]` {
+	if string(got) != `["evil.example","data:","other.example"]` {
 		t.Errorf("blocked = %s", got)
 	}
 	var many blockedSet
@@ -220,44 +221,128 @@ func TestBlockedHostsHaveNoPathOrQuery(t *testing.T) {
 	}
 }
 
-func TestAtDoneAcceptsOnlyTheDonePageBeforeCapture(t *testing.T) {
-	// The real flow (23-10-2026): /ready answers 404, the capture runs on /login, which loads.
-	const done, capture = "https://connect.ubisoft.com/ready", "https://connect.ubisoft.com/login"
-	m := captureMachine{doneURL: done, captureURL: capture}
-	if m.atDone(capture) || m.atDone("https://evil.example/ready") {
-		t.Fatal("only doneUrl may advance on a failed load")
+const (
+	ubiDone, ubiCapture = "https://connect.ubisoft.com/ready", "https://connect.ubisoft.com/login"
+	eaDone              = "https://www.ea.com/login_check"
+	eaCapture           = "https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none"
+)
+
+func TestUbisoftFlowStillCaptures(t *testing.T) {
+	// The real flow (23-10-2026): /ready answers 404 with no redirect, the capture runs on /login, which loads.
+	m := captureMachine{doneURL: ubiDone, captureURL: ubiCapture}
+	m.onStarting(ubiDone, 7)
+	if m.onCompleted(7, false, ubiDone) != actNavigateToCapture || m.state != stateDone {
+		t.Fatal("a failed load of the armed navigation must still reach done")
 	}
-	if !m.atDone(done) {
-		t.Fatal("a failed load of doneUrl must still count as reaching it")
+	m.onStarting(ubiCapture, 8)
+	if m.onCompleted(8, false, ubiCapture) != actNone {
+		t.Fatal("a failed load of the capture page must not be scripted")
 	}
-	m.onLoaded(done)
-	if m.atDone(done) {
-		t.Fatal("after doneUrl, a failed load never advances again")
+	if m.onCompleted(8, true, ubiCapture) != actCapture || !m.mayExecute(ubiCapture) {
+		t.Fatal("capture on /login")
 	}
-	if same := (captureMachine{doneURL: done, captureURL: done}); same.atDone(done) {
-		t.Fatal("when doneUrl is the capture page, its load must succeed")
+	if m.onStarting("https://connect.ubisoft.com/elsewhere", 9) != actNone {
+		t.Fatal("local-storage does not fail on a navigation during capture")
+	}
+}
+
+func TestArmingIsBoundToItsNavigationId(t *testing.T) {
+	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
+	if m.onCompleted(1, true, eaDone) != actNone {
+		t.Fatal("without arming no load counts")
+	}
+	m.onStarting("https://accounts.ea.com/connect/auth?other=1", 4) // not doneUrl: does not arm
+	if m.armed {
+		t.Fatal("a navigation to another page armed")
+	}
+	m.onStarting(eaDone, 5)
+	if m.onCompleted(6, true, eaDone) != actNone || m.state != stateStart {
+		t.Fatal("a NavigationCompleted with another id must not arm done")
+	}
+	if m.onCompleted(5, false, "https://www.ea.com/x") != actNavigateToCapture || m.state != stateDone {
+		t.Fatal("the same id, failed and at any URL, passes to done")
+	}
+	if m.onCompleted(5, true, eaDone) != actNone {
+		t.Fatal("the arming is consumed")
+	}
+}
+
+func TestRedirectArms(t *testing.T) {
+	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
+	m.onStarting("https://accounts.ea.com/connect/auth?x=1", 3)
+	m.onStarting(eaDone, 3) // the redirect to doneUrl (IsRedirected) goes through the same road
+	if m.onCompleted(3, true, "https://www.ea.com/") != actNavigateToCapture {
+		t.Fatal("a redirect to doneUrl must arm; the load that follows, at another URL, leads to captureUrl")
+	}
+}
+
+func TestSamePageCapturesAtDone(t *testing.T) {
+	m := captureMachine{doneURL: ubiCapture, captureURL: ubiCapture}
+	m.onStarting(ubiCapture, 1)
+	if m.onCompleted(1, true, ubiCapture) != actCapture {
+		t.Fatal("doneUrl equal to captureUrl must capture at once")
+	}
+}
+
+func TestDocumentJSONCaptureStartsOnItsOwnNavigation(t *testing.T) {
+	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
+	m.onStarting(eaCapture, 2) // the first visit to captureUrl, before done, is never read
+	if m.onCompleted(2, true, eaCapture) != actNone || m.mayExecute(eaCapture) {
+		t.Fatal("captureUrl before done must do nothing")
+	}
+	m.onStarting(eaDone, 3)
+	m.onCompleted(3, true, eaDone)
+	if m.onCompleted(2, true, eaCapture) != actNone {
+		t.Fatal("an old id must not start capture")
+	}
+	m.onStarting(eaCapture, 10) // the one the helper launched
+	if m.onCompleted(11, true, eaCapture) != actNone {
+		t.Fatal("another id must not start capture")
+	}
+	if m.onCompleted(10, true, eaCapture) != actCapture || !m.mayExecute(eaCapture) {
+		t.Fatal("the NavigationCompleted of the helper's own navigation starts capture")
+	}
+	if m.onStarting("https://accounts.ea.com/anything", 12) != actFail {
+		t.Fatal("any navigation during capture is capture-missing")
+	}
+}
+
+func TestDocumentJSONCaptureUrlMatchesExactly(t *testing.T) {
+	for uri, want := range map[string]bool{
+		eaCapture: true,
+		"HTTPS://ACCOUNTS.EA.COM/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none": true,
+		"https://accounts.ea.com/connect/auth?response_type=token&client_id=ORIGIN_JS_SDK&redirect_uri=nucleus:rest&prompt=none": false, // other order
+		"https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus%3Arest&prompt=none": false, // re-encoded
+		"https://accounts.ea.com/connect/auth?client_id=OTHER&response_type=token&redirect_uri=nucleus:rest&prompt=none":           false,
+		"https://accounts.ea.com/connect/auth":                                                                                      false,
+		"https://accounts.ea.com/connect/auth/?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none":   false,
+		"http://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none":     false,
+	} {
+		if got := exactURL(uri, eaCapture); got != want {
+			t.Errorf("%s: got %v want %v", uri, got, want)
+		}
+	}
+	m := captureMachine{state: stateCapture, doneURL: eaDone, captureURL: eaCapture, exact: true}
+	if m.mayExecute("https://accounts.ea.com/connect/auth?client_id=x") {
+		t.Fatal("the same path with another query must not execute")
 	}
 }
 
 func TestCaptureMachineNeverSkipsStates(t *testing.T) {
 	const done, capture = "https://connect.ubisoft.com/ready", "https://connect.ubisoft.com/change_domain/"
 	m := captureMachine{doneURL: done, captureURL: capture}
-	if m.onLoaded(capture) != actNone || m.mayExecute(capture) {
+	m.onStarting(capture, 1)
+	if m.onCompleted(1, true, capture) != actNone || m.mayExecute(capture) {
 		t.Fatal("captureUrl reached before doneUrl must do nothing")
-	}
-	if m.onLoaded("https://connect.ubisoft.com/login") != actNone {
-		t.Fatal("login page must do nothing")
 	}
 	if m.mayExecute(done) {
 		t.Fatal("may not execute in the start state")
 	}
-	if m.onLoaded(done+"?next=1") != actNavigateToCapture {
-		t.Fatal("doneUrl (query ignored) must navigate to captureUrl")
+	m.onStarting(done+"?next=1", 2)
+	if m.onCompleted(2, true, done) != actNavigateToCapture || m.mayExecute(capture) {
+		t.Fatal("doneUrl (query ignored) must navigate to captureUrl, not execute yet")
 	}
-	if m.mayExecute(capture) {
-		t.Fatal("may not execute before captureUrl has loaded")
-	}
-	if m.onLoaded(capture) != actCapture || !m.mayExecute(capture) {
+	if m.onCompleted(3, true, capture) != actCapture || !m.mayExecute(capture) {
 		t.Fatal("captureUrl loaded after doneUrl must capture")
 	}
 	if m.mayExecute("https://connect.ubisoft.com/other") || m.mayExecute("https://evil.example/change_domain/") {
@@ -267,9 +352,86 @@ func TestCaptureMachineNeverSkipsStates(t *testing.T) {
 	if m.mayExecute(capture) {
 		t.Fatal("after leaving captureUrl the script must wait for a new load")
 	}
-	same := captureMachine{doneURL: done, captureURL: done}
-	if same.onLoaded(done) != actCapture {
-		t.Fatal("doneUrl equal to captureUrl must capture at once")
+}
+
+func TestBlockedHostsOfURLWithoutHostKeepOnlyTheScheme(t *testing.T) {
+	var b blockedSet
+	b.add("nucleus:rest#access_token=" + strings.Repeat("A", 64))
+	b.add("data:text/html,secret")
+	b.add("about:blank#x")
+	b.add("javascript:alert(1)")
+	b.add("file:///C:/secret")
+	got, _ := json.Marshal(b.list())
+	if string(got) != `["nucleus:","data:","about:","javascript:","file:"]` || strings.Contains(string(got), "AAAA") {
+		t.Errorf("blocked = %s", got)
+	}
+}
+
+func docRequest(t *testing.T, mutate func(m map[string]any)) error {
+	m, root := goodRequest(t)
+	m["captureUrl"] = "https://connect.ubisoft.com/auth?client_id=x"
+	m["capture"] = []any{map[string]any{"name": "accessToken", "source": "document-json", "jsonField": "access_token", "maxLength": 8192}}
+	if mutate != nil {
+		mutate(m)
+	}
+	return parseMap(t, m, root)
+}
+
+func TestCaptureSourceValidation(t *testing.T) {
+	if err := docRequest(t, nil); err != nil {
+		t.Fatalf("valid document-json rejected: %v", err)
+	}
+	if err := docRequest(t, func(m map[string]any) { setCap(m, "storageKeys", []string{}) }); err != nil {
+		t.Fatalf("document-json with empty storageKeys rejected: %v", err)
+	}
+	for name, mutate := range map[string]func(m map[string]any){
+		"storageKeys with document-json": func(m map[string]any) { setCap(m, "storageKeys", []string{"a"}) },
+		"unknown source":                 func(m map[string]any) { setCap(m, "source", "cookies") },
+		"mixed sources": func(m map[string]any) {
+			m["capture"] = append(m["capture"].([]any), map[string]any{"name": "b", "source": "local-storage", "storageKeys": []string{"k"}, "jsonField": "b", "maxLength": 5})
+		},
+		"query in captureUrl with local-storage": func(m map[string]any) {
+			setCap(m, "source", "local-storage")
+			setCap(m, "storageKeys", []string{"k"})
+		},
+	} {
+		if docRequest(t, mutate) == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	// local-storage is the default and keeps its rules.
+	m, root := goodRequest(t)
+	req, err := parseLoginRequest(mustJSON(m), root)
+	if err != nil || req.Capture[0].Source != srcLocalStorage {
+		t.Errorf("default source: %v %q", err, req.Capture[0].Source)
+	}
+}
+
+func mustJSON(v any) []byte { b, _ := json.Marshal(v); return b }
+
+func TestDocumentScriptIsAConstantWithAJSONLiteral(t *testing.T) {
+	fields := []captureField{{Name: "tok", Source: srcDocumentJSON, JSONField: `a"});alert(1);//`, MaxLength: 10}}
+	s, err := buildCaptureScript(fields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(s, documentScript) || !strings.HasSuffix(s, ")") || strings.HasPrefix(s, captureScript) {
+		t.Fatal("script is not the document constant plus a literal")
+	}
+	lit := strings.TrimSuffix(strings.TrimPrefix(s, documentScript), ")")
+	var back []map[string]any
+	if json.Unmarshal([]byte(lit), &back) != nil || back[0]["field"] != `a"});alert(1);//` {
+		t.Errorf("literal does not round-trip: %s", lit)
+	}
+	for _, banned := range []string{"cookie", "localStorage", "sessionStorage", "querySelector", "addEventListener", "keydown", "password", "innerHTML", "fetch", "XMLHttpRequest"} {
+		if strings.Contains(documentScript, banned) {
+			t.Errorf("script mentions %q", banned)
+		}
+	}
+	for _, need := range []string{`tagName==="PRE"`, "document.body", "b.textContent", "65536", "Array.isArray", "hasOwnProperty", `typeof o[f.field]==="string"`, "try{"} {
+		if !strings.Contains(documentScript, need) {
+			t.Errorf("script lacks %q", need)
+		}
 	}
 }
 
@@ -346,5 +508,23 @@ func TestHandleEmbeddedLoginRejectsBadInputWithoutOpeningAnything(t *testing.T) 
 	out.Reset()
 	if code := handleEmbeddedLogin(strings.NewReader(""), &out); code != 2 {
 		t.Errorf("empty stdin: code=%d", code)
+	}
+}
+
+func TestOnlyTheFirstStartingAfterNavigateIsTheCaptureNavigation(t *testing.T) {
+	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
+	m.onStarting(eaDone, 1)
+	m.onCompleted(1, true, eaDone)
+	m.onStarting("https://accounts.ea.com/other", 2) // first one is not captureUrl: it is not ours, nothing is kept
+	m.onStarting(eaCapture, 3)
+	if m.hasCapID || m.onCompleted(3, true, eaCapture) != actNone {
+		t.Fatal("a later NavigationStarting to captureUrl must be ignored")
+	}
+}
+
+func TestFilteredNavigationToDoneUrlDoesNotArm(t *testing.T) {
+	r := &loginRun{req: loginRequest{AllowedHosts: []string{"other.example.com"}}, machine: captureMachine{doneURL: ubiDone, captureURL: ubiCapture}}
+	if r.onMainNavigation(ubiDone, false, 1) || r.machine.armed {
+		t.Fatal("a navigation cancelled by the filter armed the machine")
 	}
 }

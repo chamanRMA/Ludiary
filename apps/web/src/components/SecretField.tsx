@@ -72,6 +72,8 @@ export function SecretField({ field, value, onChange, formatErrorKey, onEnter }:
             ? t("wizard.formatOk")
             : check.reason === "format"
               ? t(formatErrorKey)
+              : check.reason === "store-error"
+                ? t("wizard.paste.storeError")
               : t(check.reason === "too-long" ? "wizard.tooLong" : "wizard.empty")}
       </p>
     </div>

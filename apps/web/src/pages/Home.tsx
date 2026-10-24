@@ -3,7 +3,7 @@ import { Link } from "../app/Link";
 import { api } from "../data/api";
 import { useQuery } from "../data/hooks";
 import { cx, Cover, PageTitle, relativeTime } from "../components/bits";
-import { GameGrid } from "../components/GameCard";
+import { GameAction, GameGrid } from "../components/GameCard";
 import ui from "../styles/ui.module.css";
 
 export function Home() {
@@ -34,7 +34,9 @@ export function Home() {
       {hero && (
         <section className={ui.pageHead} aria-labelledby="hero-title">
           <div style={{ width: 150 }}>
-            <Cover game={hero} height={200} />
+            <Link to={`/game/${hero.id}`} className={ui.coverLink} aria-label={t("library.openSheet", { title: hero.title })}>
+              <Cover game={hero} height={200} />
+            </Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
             <span className={ui.eyebrow}>{t("home.continue")}</span>
@@ -43,9 +45,7 @@ export function Home() {
               {t("home.lastPlayed", { when: relativeTime(hero.lastPlayedAt ?? 0, i18n.language), hours: Math.round(hero.playtimeMinutes / 60) })}
             </p>
             <div className={ui.chips}>
-              <Link to={`/game/${hero.id}`} className={cx(ui.btn, ui.primary)}>
-                {t("common.viewSheet")}
-              </Link>
+              <GameAction game={hero} />
             </div>
           </div>
         </section>

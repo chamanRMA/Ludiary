@@ -86,6 +86,8 @@ export interface SyncContext extends BaseContext {
   readonly secrets: SecretVault;
   readonly tools: ExternalToolRunner;
   readonly progress: ProgressReporter;
+  /** Current time in ms; connectors never read the clock themselves (ADR 38; in every context since ADR 82). */
+  now(): number;
   /** ADR 80. listLibrary only, with auto-detection only: read-only, confined to the resolved 'library' locations. */
   readonly fs?: ScopedFileReader;
   /** ADR 80. Same condition as `fs`: the resolved locations with purpose 'library' (empty when none exists on this PC). */
@@ -97,8 +99,6 @@ export interface WizardContext extends SyncContext {
   readonly callbackUrl: string;
   /** In-memory only (never on disk), short-lived state of this wizard session; wiped on done, cancel or expiry (ADR 74). */
   readonly wizardState: SecretVault;
-  /** ADR 74. Current time in ms; connectors never read the clock themselves (ADR 38). */
-  now(): number;
 }
 
 export interface ScanContext extends BaseContext {
@@ -189,9 +189,9 @@ export interface ExternalToolRunner {
 }
 
 /**
- * Read-only and confined to the roots it was created with (ADR 72): UTF-8 without BOM; readText at most
+ * Read-only and confined to the roots it was created with (ADR 72): UTF-8 (a leading BOM is removed) or UTF-16 LE/BE with BOM (ADR 81); readText at most
  * 1 MiB; readDir at most 10 000 entries. Every path is resolved with realpath and rejected if it ends
- * outside the roots. Read failures are ConnectorError 'scan.root-unreadable'; a path outside the roots
+ * outside the roots. Read failures are ConnectorError 'scan.root-unreadable'; a file over 1 MiB or not a regular file is 'store.unexpected-response' (ADR 81); a path outside the roots
  * is 'internal' (a connector bug). `join` follows the OS path semantics.
  */
 export interface ScopedFileReader {
@@ -276,9 +276,10 @@ export type WizardStep =
       url: string;
       /** https, host in authHosts, no query or fragment; matched on origin and path. */
       doneUrl: string;
+      /** https, host in authHosts, no fragment; a query only with source 'document-json' (ADR 82). */
       captureUrl: string;
       /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. */
-      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
     };
 
 export interface WizardField {

@@ -1,0 +1,13 @@
+{
+  "name": "@ludiary/connector-ea",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@ludiary/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@ludiary/connector-testkit": "workspace:*"
+  }
+}

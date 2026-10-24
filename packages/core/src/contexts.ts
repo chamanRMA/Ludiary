@@ -89,6 +89,7 @@ export async function syncContext(
       },
     },
     progress: { report: () => undefined },
+    now: () => env.deps.clock.now(),
     ...(opts.fs ? { fs: opts.fs } : {}),
     ...(opts.libraryLocations ? { libraryLocations: opts.libraryLocations } : {}),
   };

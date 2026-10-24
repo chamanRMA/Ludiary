@@ -1,0 +1,13 @@
+{
+  "connectors.ea.name": "EA",
+  "connectors.ea.errors.invalidId": "This EA game has an invalid identifier and cannot be launched.",
+  "connectors.ea.errors.launcherMissing": "The EA app was not found. Install it from ea.com and try again.",
+  "connectors.ea.errors.installerDataMissing": "This EA game is no longer in its folder. Scan your folders again.",
+  "connectors.ea.login.title": "Sign in to EA",
+  "connectors.ea.login.body": "First sign in at ea.com in your browser (with Google or with your email, as usual). Then open the link: you will see a text between curly braces. Copy all of it and press Paste. Ludiary does not store your password.",
+  "connectors.ea.error.login": "EA did not accept the sign-in. Try again.",
+  "connectors.ea.error.expired": "Your EA session has expired. Connect again to update your EA games.",
+  "connectors.ea.disconnect.hint": "Ludiary deletes its EA session from this computer. To sign out everywhere, change your password at ea.com.",
+  "connectors.ea.login.field": "Text copied from the page",
+  "connectors.ea.error.token": "That is not the EA text. If you see login_required, sign in at ea.com in your browser first, then open the link again."
+}
