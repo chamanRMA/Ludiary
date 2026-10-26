@@ -169,3 +169,55 @@ describe("tool exclusion and media", () => {
     for (const u of [m.coverUrl as string, m.heroUrl as string]) expect(STEAM_MEDIA_HOSTS).toContain(new URL(u).hostname);
   });
 });
+
+describe("scanInstalled, DLC (ADR 84)", () => {
+  const R = "D:\\Lib";
+  const acf = (id: string, depots: string) =>
+    `"AppState" { "appid" "${id}" "name" "G${id}" "installdir" "G${id}" "InstalledDepots" { ${depots} } }`;
+  const depot = (n: number, dlc?: string) => `"${n}" { "manifest" "1" ${dlc === undefined ? "" : `"dlcappid" "${dlc}"`} }`;
+  const tree = (manifests: Record<string, string>, folders = Object.keys(manifests)) => ({
+    ...Object.fromEntries(Object.entries(manifests).map(([id, t]) => [`${R}\\steamapps\\appmanifest_${id}.acf`, t])),
+    ...Object.fromEntries(folders.map((id) => [`${R}\\steamapps\\common\\G${id}\\a.txt`, ""])),
+  });
+  const scan = (manifests: Record<string, string>, folders?: string[]) => {
+    const ctx = scanContext({ tree: tree(manifests, folders), roots: [R] });
+    return c.scanInstalled!(ctx).then((r) => ({ r, ctx }));
+  };
+
+  it("emits DLC after the games, based on the manifest, without media, ids or launch data", async () => {
+    const { r, ctx } = await scan({
+      "10": acf("10", [depot(1), depot(2, "11"), depot(3, "abc"), depot(4, "10"), depot(5, "11"), depot(6, "228980")].join(" ")),
+      "20": acf("20", [depot(1, "12"), depot(2, "11")].join(" ")), // 11 listed by the first game too
+    });
+    expect(r.entries.map((e) => [e.storeGameId, e.kind, e.baseStoreGameId])).toEqual([
+      ["10", "game", undefined],
+      ["20", "game", undefined],
+      ["11", "dlc", "10"],
+      ["12", "dlc", "20"],
+    ]);
+    const d = r.entries[2]!;
+    expect(d.title).toBe("Steam 11");
+    expect(d.installPath).toBe(`${R}\\steamapps\\common\\G10`);
+    expect(d.media).toBeUndefined();
+    expect(d.externalIds).toBeUndefined();
+    expect(d.launchData).toBeUndefined();
+    expect(ctx.logs.find((l) => l.fields?.["dlc"] !== undefined)?.fields).toEqual({ dlc: 2, dlcDuplicate: 1, dlcCapped: 0 });
+    expect(JSON.stringify(ctx.logs)).not.toMatch(/"1[12]"/);
+  });
+
+  it("a DLC that is also an installed game stays a game; a game without folder gives no DLC", async () => {
+    const { r } = await scan({ "10": acf("10", depot(1, "20")), "20": acf("20", depot(1)), "30": acf("30", depot(1, "31")) }, ["10", "20"]);
+    expect(r.entries.map((e) => [e.storeGameId, e.kind])).toEqual([["10", "game"], ["20", "game"]]);
+  });
+
+  it("caps 1000 DLC per manifest and never passes 10 000 entries in total", async () => {
+    const many = (n: number, from: number) => Array.from({ length: n }, (_, i) => depot(i + 1, String(from + i))).join(" ");
+    const { r, ctx } = await scan({ "10": acf("10", many(1200, 5000)) });
+    expect(r.entries.filter((e) => e.kind === "dlc")).toHaveLength(1000);
+    expect(ctx.logs.find((l) => l.fields?.["dlc"] !== undefined)?.fields).toMatchObject({ dlc: 1000, dlcCapped: 200 });
+    const manifests: Record<string, string> = {};
+    for (let i = 0; i < 10; i++) manifests[String(100 + i)] = acf(String(100 + i), many(1000, 100000 + i * 1000));
+    const big = await scan(manifests);
+    expect(big.r.entries).toHaveLength(10_000);
+  });
+});

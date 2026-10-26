@@ -24,7 +24,7 @@ describe("Steam manifest (ADR 72, 74)", () => {
     expect(c.capabilities).toMatchObject({
       library: true,
       scan: true,
-      dlc: "none",
+      dlc: "scan",
       actions: ["play", "install"],
       launchKinds: ["uri"],
       uriSchemes: ["steam"],
@@ -44,6 +44,10 @@ describe("Steam manifest (ADR 72, 74)", () => {
     expect(checkConnectorManifest({ ...c, apiHosts: [] }).join()).toMatch(/resolveMedia requires apiHosts/);
     const { resolveMedia: _r, ...noMedia } = c;
     expect(checkConnectorManifest({ ...noMedia, apiHosts: [] }).join()).not.toMatch(/resolveMedia/);
+  });
+  it("declares resolveTitles and the manifest check requires apiHosts and dlc for it (ADR 84)", () => {
+    expect(c.resolveTitles).toBeDefined();
+    expect(checkConnectorManifest({ ...c, apiHosts: [] }).join()).toMatch(/resolveTitles requires apiHosts/);
   });
   it("the new manifest rules of ADR 74 apply", () => {
     expect(checkConnectorManifest({ ...c, authHosts: [] }).join()).toMatch(/connection wizard needs authHosts/);

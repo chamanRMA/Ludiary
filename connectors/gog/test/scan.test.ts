@@ -29,7 +29,7 @@ describe("scanInstalled (ADR 76)", () => {
       ["1000000002", "Ñandú ŌKAMI 大神"],
     ]);
   });
-  it("shows the game, not its DLC; missing name uses GOG <id>; rootGameId absent is a game", async () => {
+  it("an info with another rootGameId is a DLC entry with its base; missing name uses GOG <id>; rootGameId absent is a game", async () => {
     const r = await scan(
       {
         [`${F}\\A\\goggame-1000000001.info`]: gameInfo("1000000001"),
@@ -41,8 +41,11 @@ describe("scanInstalled (ADR 76)", () => {
     );
     expect(r.entries.map((e) => [e.storeGameId, e.title])).toEqual([
       ["1000000001", "Fake 1000000001"],
+      ["1000000003", "Fake 1000000003"],
+      ["1000000004", "Fake 1000000004"],
       ["1000000005", "GOG 1000000005"],
     ]);
+    expect(r.entries.map((e) => [e.kind, e.baseStoreGameId])).toEqual([["game", undefined], ["dlc", "1000000001"], ["dlc", "1000000001"], ["game", undefined]]);
   });
   it("skips broken JSON, no gameId and id different from the file name, logging no path", async () => {
     const ctx = scanContext({

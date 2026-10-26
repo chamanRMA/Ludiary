@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fakeHttp, mediaContext } from "@ludiary/connector-testkit";
 import { ConnectorError } from "@ludiary/contracts";
 import { describe, expect, it } from "vitest";
-import { createSteamConnector, resolveSteamMedia } from "../src";
+import { createSteamConnector, resolveSteamMedia, resolveSteamTitles } from "../src";
 import { FIXTURES } from "./helpers";
 
 const recorded = JSON.parse(readFileSync(join(FIXTURES, "getitems", "getitems-english.json"), "utf8")) as {
@@ -118,5 +118,60 @@ describe("resolveSteamMedia (ADR 73)", () => {
     const c = createSteamConnector();
     expect(c.apiHosts).toEqual(["api.steampowered.com", "steamcommunity.com"]);
     expect(c.resolveMedia).toBe(resolveSteamMedia);
+  });
+});
+
+describe("resolveSteamTitles (ADR 84)", () => {
+  const dlcBody = JSON.parse(readFileSync(join(FIXTURES, "getitems", "getitems-dlc.json"), "utf8")) as unknown;
+  const titles = (http: ReturnType<typeof fakeHttp>, ids = ["401920", "1426300"]) =>
+    resolveSteamTitles(ids, mediaContext({ http }));
+
+  it("reads names from a recorded public answer and sends the same request as the covers", async () => {
+    const http = ok(dlcBody);
+    const m = await titles(http);
+    expect([...m]).toEqual([
+      ["401920", "The Binding of Isaac: Afterbirth"],
+      ["1426300", "The Binding of Isaac: Repentance"],
+    ]);
+    expect(JSON.parse(String(http.requests[0]!.query?.["input_json"]))).toEqual({
+      ids: [{ appid: 401920 }, { appid: 1426300 }],
+      context: { language: "english", country_code: "US" },
+      data_request: { include_assets: true },
+    });
+  });
+
+  it("accepts any type, skips no name, failures, unrequested ids and repeats (first wins)", async () => {
+    const ctx = mediaContext({
+      http: ok(
+        wrap(
+          { success: 1, appid: 1, type: 0, name: "Base" },
+          { success: 1, appid: 2, type: 4 },
+          { success: 1, appid: 3, type: 4, name: "  " },
+          { success: 15, appid: 4, type: 4, name: "x" },
+          { success: 1, appid: 5, type: 4, name: "not requested" },
+          { success: 1, appid: 1, type: 4, name: "Second" },
+          { success: 1, appid: "6", type: 4, name: "string id" },
+          "junk",
+        ),
+      ),
+    });
+    const m = await resolveSteamTitles(["1", "2", "3", "4", "6", "x"], ctx);
+    expect([...m]).toEqual([["1", "Base"]]);
+    expect(JSON.stringify(ctx.logs)).not.toMatch(/Base|Second/);
+    expect(JSON.stringify(ctx.logs)).toMatch(/"noName":2/); // apart from skipped, for the manual test (ADR 84, 9.1)
+  });
+
+  it("does not call the network without valid ids", async () => {
+    const http = ok(dlcBody);
+    expect((await titles(http, ["", "../x"])).size).toBe(0);
+    expect(http.requests).toHaveLength(0);
+  });
+
+  it("429 and other statuses behave as in the covers", async () => {
+    const e = await titles(fakeHttp(() => ({ status: 429, headers: { "Retry-After": "60" } }))).catch((x: unknown) => x);
+    expect((e as ConnectorError).code).toBe("store.rate-limited");
+    expect((e as ConnectorError).details.retryAfterMs).toBe(60_000);
+    const f = await titles(fakeHttp(() => ({ status: 500 }))).catch((x: unknown) => x);
+    expect((f as ConnectorError).code).toBe("store.unexpected-response");
   });
 });

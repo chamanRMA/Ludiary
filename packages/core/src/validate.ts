@@ -1,8 +1,7 @@
 // Validation of everything a connector returns (ADR 40 rule 4, ADR 72). Pure except for LocalFiles lookups.
 import type { EntryMedia, ExternalIds, InstalledEntry, LocalFiles, ResolvedLocation, StoreConnector, StoreEntry } from "@ludiary/contracts";
-import { ConnectorError } from "@ludiary/contracts";
+import { ConnectorError, normalizeTitle } from "@ludiary/contracts";
 import type { CoreLogger, LibraryEntry, ScannedEntry } from "./model";
-import { normalizeTitle } from "./normalize";
 
 export const MAX_ENTRIES = 10_000;
 export const MAX_DISCOVERED_ROOTS = 64;
@@ -12,6 +11,13 @@ const MAX_URL = 2048;
 
 export const isNonEmptyText = (s: unknown, max: number): s is string =>
   typeof s === "string" && s.trim().length > 0 && s.length <= max && !CONTROL.test(s);
+
+/** ADR 84: a title given by resolveTitles. Control characters become spaces, then trimmed; empty or over 300: undefined. */
+export function cleanTitle(t: unknown): string | undefined {
+  if (typeof t !== "string") return undefined;
+  const v = t.replace(/\p{Cc}/gu, " ").trim();
+  return v.length > 0 && v.length <= 300 ? v : undefined;
+}
 
 export function validateMedia(media: unknown, hosts: readonly string[]): EntryMedia | undefined {
   if (!media || typeof media !== "object") return undefined;
@@ -54,11 +60,27 @@ function validateLaunchData(d: unknown): Record<string, string> | null | "invali
   return out;
 }
 
+const validId = (id: unknown): id is string =>
+  typeof id === "string" && id.length >= 1 && id.length <= 160 && id.trim() !== "" && !ID_FORBIDDEN.test(id);
+
+/** ADR 83 point 13: an invalid base id is treated as absent (orphan) and counted; it never makes the snapshot lossy. */
+function cleanBase(base: unknown, id: string, c: { dlcNoBase: number; dlcBadBase: number }): string | null {
+  if (base === undefined || base === null || base === id) {
+    c.dlcNoBase++;
+    return null;
+  }
+  if (!validId(base)) {
+    c.dlcBadBase++;
+    return null;
+  }
+  return base;
+}
+
 export interface ValidateEntriesArgs {
   entries: unknown;
   /** Paths of the roots of the scan context. */
   roots: readonly string[];
-  connector: Pick<StoreConnector, "id" | "mediaHosts">;
+  connector: Pick<StoreConnector, "id" | "mediaHosts" | "capabilities">;
   files: LocalFiles;
   log: CoreLogger;
 }
@@ -70,7 +92,7 @@ export async function insideAny(files: LocalFiles, path: string, roots: readonly
 
 /**
  * Keeps the valid entries; an invalid one is dropped and logged (no title or path in the log). A repeated id keeps the first.
- * DLC entries and entries without a store id are not stored in this cut (ADR 52 and 72): dropped and counted.
+ * Entries without a store id are dropped and counted. A DLC entry is kept only if the connector declares `dlc` for scans (ADR 83).
  */
 export async function validateEntries(a: ValidateEntriesArgs): Promise<ScannedEntry[]> {
   if (!Array.isArray(a.entries)) {
@@ -83,6 +105,8 @@ export async function validateEntries(a: ValidateEntriesArgs): Promise<ScannedEn
   let invalid = 0;
   let unsupported = 0;
   let duplicates = 0;
+  const dlcCounts = { dlc: 0, dlcUnsupported: 0, dlcNoBase: 0, dlcBadBase: 0 };
+  const dlcOk = a.connector.capabilities.dlc === "scan" || a.connector.capabilities.dlc === "library-and-scan";
   for (const e of list.slice(0, MAX_ENTRIES)) {
     if (!e || typeof e !== "object") {
       invalid++;
@@ -109,13 +133,14 @@ export async function validateEntries(a: ValidateEntriesArgs): Promise<ScannedEn
       invalid++;
       continue;
     }
-    const launchData = validateLaunchData(e.launchData);
-    if (launchData === "invalid") {
-      invalid++;
+    if (e.kind === "dlc" && !dlcOk) {
+      dlcCounts.dlcUnsupported++;
       continue;
     }
-    if (e.kind === "dlc") {
-      unsupported++;
+    // A DLC keeps no launch data (ADR 83): ignored, not validated.
+    const launchData = e.kind === "dlc" ? null : validateLaunchData(e.launchData);
+    if (launchData === "invalid") {
+      invalid++;
       continue;
     }
     if (seen.has(id)) {
@@ -124,6 +149,19 @@ export async function validateEntries(a: ValidateEntriesArgs): Promise<ScannedEn
     }
     seen.add(id);
     const title = e.title.trim();
+    if (e.kind === "dlc") {
+      dlcCounts.dlc++;
+      out.push({
+        storeGameId: id,
+        kind: "dlc",
+        baseStoreGameId: cleanBase(e.baseStoreGameId, id, dlcCounts),
+        title,
+        normalizedTitle: normalizeTitle(title),
+        installPath: a.files.normalize(e.installPath),
+        launchData: null,
+      });
+      continue;
+    }
     const media = validateMedia(e.media, a.connector.mediaHosts);
     const externalIds = validateExternalIds(e.externalIds);
     out.push({
@@ -137,9 +175,9 @@ export async function validateEntries(a: ValidateEntriesArgs): Promise<ScannedEn
       ...(media ? { media } : {}),
     });
   }
-  if (invalid + unsupported + duplicates > 0) {
-    a.log.warn("Some scan entries were not stored", { connector: a.connector.id, invalid, unsupported, duplicates });
-  }
+  if (invalid + unsupported + duplicates + dlcCounts.dlcUnsupported + dlcCounts.dlcBadBase > 0) {
+    a.log.warn("Some scan entries were not stored", { connector: a.connector.id, invalid, unsupported, duplicates, ...dlcCounts });
+  } else if (dlcCounts.dlc > 0) a.log.info("Scan DLC entries", { connector: a.connector.id, ...dlcCounts });
   return out;
 }
 
@@ -213,11 +251,12 @@ export interface LibraryValidation {
 
 /**
  * Library snapshot entries (ADR 74 point 7): the same rules as scan entries, plus playtime and last played.
- * An invalid entry is dropped and logged (no title in the log); a repeated id keeps the first. DLC entries are dropped. Dropping makes the snapshot `lossy`, so the core never disowns on it.
+ * An invalid entry is dropped and logged (no title in the log); a repeated id keeps the first. A DLC entry is kept only if the
+ * connector declares `dlc` for the library (ADR 83), without media, ids or playtime. Dropping an invalid entry makes the snapshot `lossy`, so the core never disowns on it.
  */
 export function validateLibraryEntries(a: {
   entries: unknown;
-  connector: Pick<StoreConnector, "id" | "mediaHosts">;
+  connector: Pick<StoreConnector, "id" | "mediaHosts" | "capabilities">;
   log: CoreLogger;
 }): LibraryValidation {
   if (!Array.isArray(a.entries)) throw new ConnectorError("store.unexpected-response", "listLibrary returned entries that are not a list");
@@ -225,8 +264,9 @@ export function validateLibraryEntries(a: {
   const out: LibraryEntry[] = [];
   const seen = new Set<string>();
   let invalid = 0;
-  let dlc = 0;
   let duplicates = 0;
+  const dlcCounts = { dlc: 0, dlcUnsupported: 0, dlcNoBase: 0, dlcBadBase: 0 };
+  const dlcOk = a.connector.capabilities.dlc === "library" || a.connector.capabilities.dlc === "library-and-scan";
   for (const e of list.slice(0, MAX_LIBRARY_ENTRIES)) {
     if (!e || typeof e !== "object") {
       invalid++;
@@ -254,8 +294,8 @@ export function validateLibraryEntries(a: {
         continue;
       }
     }
-    if (e.kind === "dlc") {
-      dlc++; // DLC properties are not stored in this cut (ADR 52, 74); not a loss
+    if (e.kind === "dlc" && !dlcOk) {
+      dlcCounts.dlcUnsupported++; // not a loss: the store does not declare DLC
       continue;
     }
     if (seen.has(id)) {
@@ -264,10 +304,25 @@ export function validateLibraryEntries(a: {
     }
     seen.add(id);
     const title = e.title.trim();
+    if (e.kind === "dlc") {
+      dlcCounts.dlc++;
+      out.push({
+        storeGameId: id,
+        kind: "dlc",
+        baseStoreGameId: cleanBase(e.baseStoreGameId, id, dlcCounts),
+        ...(e.storeMetadata?.dlcInferred === true ? { dlcInferred: true as const } : {}),
+        title,
+        normalizedTitle: normalizeTitle(title),
+        storePlaytimeMinutes: null,
+        storeLastPlayedAt: null,
+      });
+      continue;
+    }
     const media = validateMedia(e.media, a.connector.mediaHosts);
     const externalIds = validateExternalIds(e.externalIds);
     out.push({
       storeGameId: id,
+      kind: "game",
       title,
       normalizedTitle: normalizeTitle(title),
       ...(externalIds ? { externalIds } : {}),
@@ -277,8 +332,8 @@ export function validateLibraryEntries(a: {
     });
   }
   const cut = list.length > MAX_LIBRARY_ENTRIES;
-  if (invalid + dlc + duplicates > 0 || cut) {
-    a.log.warn("Some library entries were not stored", { connector: a.connector.id, invalid, dlc, duplicates, cut });
-  }
+  if (invalid + duplicates + dlcCounts.dlcUnsupported + dlcCounts.dlcBadBase > 0 || cut) {
+    a.log.warn("Some library entries were not stored", { connector: a.connector.id, invalid, duplicates, cut, ...dlcCounts });
+  } else if (dlcCounts.dlc > 0) a.log.info("Library DLC entries", { connector: a.connector.id, ...dlcCounts });
   return { entries: out, lossy: invalid > 0 || cut };
 }

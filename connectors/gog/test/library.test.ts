@@ -32,13 +32,14 @@ const numbered = (n: number) => Array.from({ length: n }, (_, i) => 2_000_000_00
 const productsFor = (ids: string[]): Answer => ({ status: 200, body: ids.map((id) => ({ id: Number(id), title: `Game ${id}`, game_type: "game" })) });
 
 describe("listLibrary (ADR 77, point 6)", () => {
-  it("maps the recorded catalog: games only, DLC skipped, repeats removed, bad ids make it partial", async () => {
+  it("maps the recorded catalog: games and the owned DLC with their base, repeats removed, bad ids make it partial", async () => {
     const { ctx, result } = run(gog());
     expect(await result).toEqual({
       complete: false, // "not-a-number" was skipped
       entries: [
         { storeGameId: "1207658695", kind: "game", title: "Beneath a Steel Sky (1994)" },
         { storeGameId: "1512372112", kind: "game", title: "Cold Waters" },
+        { storeGameId: "1120912052", kind: "dlc", baseStoreGameId: "1512372112", title: "Cold Waters - OST" },
       ],
     });
     expect(ctx.logs.length).toBeGreaterThan(0); // 1000000001 is not in the catalog and the DLC: counted in the log
@@ -114,7 +115,66 @@ describe("listLibrary (ADR 77, point 6)", () => {
     expect(snap.entries).toHaveLength(120);
   });
 
-  it("game_type dlc, pack and missing are skipped; an id outside the batch is ignored; the title falls back", async () => {
+  it("asks for expand=dlcs in every batch", async () => {
+    const http = gog();
+    await run(http).result;
+    for (const r of http.requests.filter((x) => x.url.startsWith("https://api.gog.com"))) expect(sentQuery(r)["expand"]).toBe("dlcs");
+  });
+
+  it("dlcs: [] , an object, odd shapes; base owned or not; two games listing one DLC (lowest numeric id wins); a listed id that is a game", async () => {
+    const dlcs = (...ids: unknown[]) => ({ products: ids.map((id) => ({ id })) });
+    const products = {
+      status: 200,
+      body: [
+        { id: 900, title: "B", game_type: "game", dlcs: dlcs(50, 60, 61, "bad", 900, 2) },
+        { id: 1000, title: "A", game_type: "game", dlcs: dlcs(50) },
+        { id: 20, title: "C", game_type: "game", dlcs: [] },
+        { id: 21, title: "D", game_type: "game", dlcs: "odd" },
+        { id: 22, title: "E", game_type: "game", dlcs: { products: "odd" } },
+        { id: 50, title: "Shared", game_type: "dlc" },
+        { id: 60, title: "Mine", game_type: "dlc" },
+        { id: 70, title: "Nobody lists it", game_type: "dlc" },
+        { id: 2, title: "Listed but a game", game_type: "game" },
+      ],
+    };
+    const owned = { status: 200, body: { owned: [900, 1000, 20, 21, 22, 50, 60, 70, 2] } };
+    const { ctx, result } = run(gog({ owned, products }));
+    const snap = await result;
+    expect(snap.entries.filter((e) => e.kind === "dlc").map((e) => [e.storeGameId, e.baseStoreGameId])).toEqual([
+      ["50", "900"],
+      ["60", "900"],
+      ["70", undefined],
+    ]);
+    expect(snap.entries.find((e) => e.storeGameId === "2")?.kind).toBe("game");
+    expect(JSON.stringify(ctx.logs)).not.toMatch(/Shared|Mine/); // counters only
+    expect(JSON.stringify(ctx.logs)).toContain('"dlcNoBase":1');
+  });
+
+  it("a DLC listed by a game that is not owned has no base (only owned games count)", async () => {
+    const products = { status: 200, body: [{ id: 50, title: "Add", game_type: "dlc" }] };
+    const snap = await run(gog({ owned: { status: 200, body: { owned: [50] } }, products })).result;
+    expect(snap.entries).toEqual([{ storeGameId: "50", kind: "dlc", title: "Add" }]);
+  });
+
+  it("a made-up product with 1500 listed DLC: only the first 1000 are read; entries and log stay small", async () => {
+    const listed = { products: Array.from({ length: 1500 }, (_, i) => ({ id: 5_000_000 + i })) };
+    const body = [
+      { id: 1, title: "Huge", game_type: "game", dlcs: listed },
+      ...Array.from({ length: 1500 }, (_, i) => ({ id: 5_000_000 + i, title: `Add ${i}`, game_type: "dlc" })),
+    ];
+    const owned = { status: 200, body: { owned: [1, ...Array.from({ length: 1500 }, (_, i) => 5_000_000 + i)] } };
+    const http = gog({ owned, products: (ids) => ({ status: 200, body: body.filter((p) => ids.includes(String(p.id))) }) });
+    const { ctx, result } = run(http);
+    const snap = await result;
+    const dlc = snap.entries.filter((e) => e.kind === "dlc");
+    expect(dlc).toHaveLength(1500);
+    expect(dlc.filter((e) => e.baseStoreGameId === "1")).toHaveLength(1000);
+    expect(JSON.stringify(snap).length).toBeLessThan(400_000);
+    expect(JSON.stringify(ctx.logs).length).toBeLessThan(1000);
+    expect(JSON.stringify(ctx.logs)).toContain('"dlcCapped":1');
+  });
+
+  it("game_type pack and missing are skipped, dlc without base is kept; an id outside the batch is ignored; the title falls back", async () => {
     const products = {
       status: 200,
       body: [
@@ -131,7 +191,7 @@ describe("listLibrary (ADR 77, point 6)", () => {
     };
     const owned = { status: 200, body: { owned: [1, 2, 3, 4, "5", 6] } };
     const snap = await run(gog({ owned, products })).result;
-    expect(snap.entries.map((e) => [e.storeGameId, e.title.length > 20 ? e.title.length : e.title])).toEqual([["1", "Ba se"], ["5", "GOG 5"], ["6", 300]]); // control chars and length within the core limits
+    expect(snap.entries.map((e) => [e.storeGameId, e.title.length > 20 ? e.title.length : e.title])).toEqual([["1", "Ba se"], ["5", "GOG 5"], ["6", 300], ["2", "Add-on"]]); // control chars and length within the core limits
     expect(snap.complete).toBe(true);
   });
 

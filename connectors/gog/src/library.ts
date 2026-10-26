@@ -8,6 +8,7 @@ const BATCH = 50;
 const MAX_OWNED = 50_000;
 const MAX_TITLE = 300; // the core drops longer titles (validate.ts), which would leave complete false forever
 const ID_RE = /^\d{1,20}$/;
+const MAX_DLC_PER_GAME = 1000; // ADR 83, point 8: safety cap on the untrusted `dlcs` list of one product
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -30,6 +31,9 @@ export async function listGogLibrary(ctx: SyncContext): Promise<LibrarySnapshot>
   }
 
   const entries: StoreEntry[] = [];
+  const dlcEntries: { id: string; title: string }[] = [];
+  const baseOf = new Map<string, string>(); // dlc id -> lowest numeric id among the games that list it (ADR 83, point 13)
+  let dlcCapped = 0;
   const notGames: Record<string, number> = {};
   let missing = 0;
   const all = [...ids];
@@ -37,7 +41,7 @@ export async function listGogLibrary(ctx: SyncContext): Promise<LibrarySnapshot>
     const batch = all.slice(i, i + BATCH);
     const asked = new Set(batch);
     // No token and no own headers: the catalog is public (ADR 77, point 6).
-    const r = await ctx.http.request({ method: "GET", url: PRODUCTS_URL, query: { ids: batch.join(",") } });
+    const r = await ctx.http.request({ method: "GET", url: PRODUCTS_URL, query: { ids: batch.join(","), expand: "dlcs" } });
     if (r.status !== 200) throwForStatus(r, "GOG products");
     const list = await r.json();
     if (!Array.isArray(list)) throw new ConnectorError("store.unexpected-response", "GOG products answer is not a list");
@@ -46,18 +50,44 @@ export async function listGogLibrary(ctx: SyncContext): Promise<LibrarySnapshot>
       if (!isObject(p) || !asked.delete(id)) continue; // outside the batch, or repeated
       // Remote value used as a log field name below: keep it to a short known set.
       const type = p["game_type"] === "game" || p["game_type"] === "dlc" || p["game_type"] === "pack" ? p["game_type"] : "other";
-      if (type !== "game") {
+      if (type !== "game" && type !== "dlc") {
         notGames[type] = (notGames[type] ?? 0) + 1;
         continue;
       }
       const title = typeof p["title"] === "string" ? p["title"].replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_TITLE) : "";
+      if (type === "dlc") {
+        dlcEntries.push({ id, title: title || `GOG ${id}` });
+        continue;
+      }
       entries.push({ storeGameId: id, kind: "game", title: title || `GOG ${id}` });
+      // `dlcs` is [] without DLC and an object with them; any other shape means no DLC.
+      const dlcs = p["dlcs"];
+      const listed = isObject(dlcs) && Array.isArray(dlcs["products"]) ? dlcs["products"] : [];
+      if (listed.length > MAX_DLC_PER_GAME) dlcCapped++;
+      for (const d of listed.slice(0, MAX_DLC_PER_GAME)) {
+        const raw = isObject(d) ? d["id"] : undefined;
+        const did = typeof raw === "number" && Number.isSafeInteger(raw) && raw > 0 ? String(raw) : typeof raw === "string" && ID_RE.test(raw) ? raw : "";
+        if (did === "" || did === id) continue;
+        const prev = baseOf.get(did);
+        if (prev === undefined || BigInt(id) < BigInt(prev)) baseOf.set(did, id);
+      }
     }
     // Withdrawn from the catalog (or a movie): owned but not shown. Does not make the snapshot partial (GA6).
     missing += asked.size; // whatever was not deleted above did not come back
   }
-  if (skipped > 0 || missing > 0 || Object.keys(notGames).length > 0) {
-    ctx.log.info("Some owned GOG products were not listed", { skipped, missing, ...Object.fromEntries(Object.entries(notGames).map(([t, n]) => [`type_${t}`, n])) });
+  // Owned DLC are resolved after all batches, only against products that ended as games; an id that is also a game stays a game.
+  const gameIds = new Set(entries.map((e) => e.storeGameId));
+  let dlcNoBase = 0;
+  for (const d of dlcEntries) {
+    const base = baseOf.get(d.id);
+    if (base !== undefined && gameIds.has(base)) entries.push({ storeGameId: d.id, kind: "dlc", baseStoreGameId: base, title: d.title });
+    else {
+      dlcNoBase++;
+      entries.push({ storeGameId: d.id, kind: "dlc", title: d.title });
+    }
+  }
+  if (skipped > 0 || missing > 0 || dlcEntries.length > 0 || dlcCapped > 0 || Object.keys(notGames).length > 0) {
+    ctx.log.info("Some owned GOG products were not listed", { skipped, missing, dlc: dlcEntries.length, dlcNoBase, dlcCapped, ...Object.fromEntries(Object.entries(notGames).map(([t, n]) => [`type_${t}`, n])) });
   }
   return { complete: skipped === 0, entries };
 }

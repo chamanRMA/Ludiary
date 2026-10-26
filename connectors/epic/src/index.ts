@@ -21,7 +21,7 @@ export function createEpicConnector(): StoreConnector {
     capabilities: {
       library: true,
       scan: true,
-      dlc: "none",
+      dlc: "library",
       actions: ["play", "install"],
       launchKinds: ["uri"],
       uriSchemes: ["com.epicgames.launcher"],

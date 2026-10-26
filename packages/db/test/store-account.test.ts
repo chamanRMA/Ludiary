@@ -39,6 +39,7 @@ const idle = (at: number, op: "library" | "scan" = "library"): SyncStateRecord =
   nextAllowedAt: at + 1,
 });
 const lib = (id: string, title: string, extra: Partial<LibraryEntry> = {}): LibraryEntry => ({
+  kind: "game",
   storeGameId: id,
   title,
   normalizedTitle: title.toLowerCase(),
@@ -46,7 +47,7 @@ const lib = (id: string, title: string, extra: Partial<LibraryEntry> = {}): Libr
   storeLastPlayedAt: null,
   ...extra,
 });
-const plan = (at: number, p: Partial<LibraryPlan> = {}): LibraryPlan => ({ store: "steam", at, create: [], update: [], disown: [], retire: [], sync: idle(at), ...p });
+const plan = (at: number, p: Partial<LibraryPlan> = {}): LibraryPlan => ({ store: "steam", at, create: [], update: [], disown: [], retire: [], kindChanges: [], dlcLinks: [], sync: idle(at), ...p });
 const scanPlan = (at: number, p: Partial<ScanPlan>): ScanPlan => ({
   store: "steam",
   at,
@@ -55,6 +56,8 @@ const scanPlan = (at: number, p: Partial<ScanPlan>): ScanPlan => ({
   removeInstallations: [],
   retireProperties: [],
   reviveProperties: [],
+  kindChanges: [],
+  dlcLinks: [],
   upsertDiscoveredRoots: [],
   deleteRoots: [],
   sync: idle(at, "scan"),
@@ -71,7 +74,7 @@ describe("migration 0002_store_account", () => {
     sqlite.exec("INSERT INTO canonical_games (id, user_id, title, normalized_title, created_at, updated_at) VALUES ('c1', 'u', 'Portal 2', 'portal 2', 1, 1)");
     sqlite.exec("INSERT INTO game_properties (id, user_id, canonical_game_id, store, store_game_id, kind, title, normalized_title) VALUES ('p1', 'u', 'c1', 'steam', '620', 'game', 'Portal 2', 'portal 2')");
     const res = await migrate(sqlite, { backupDir: join(dir, "backups") });
-    expect(res.applied).toEqual(["0002_store_account", "0003_recheck_steam_media"]);
+    expect(res.applied).toEqual(["0002_store_account", "0003_recheck_steam_media", "0004_dlc"]);
     expect(res.backupFile && existsSync(res.backupFile)).toBe(true);
     const cols = (sqlite.prepare("PRAGMA table_info(game_properties)").all() as { name: string }[]).map((c) => c.name);
     expect(cols).toEqual(expect.arrayContaining(["store_playtime_minutes", "store_last_played_at"]));

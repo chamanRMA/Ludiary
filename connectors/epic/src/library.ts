@@ -18,6 +18,16 @@ const unexpected = (msg: string): ConnectorError => new ConnectorError("store.un
 const hasPath = (item: Record<string, unknown>, name: string): boolean =>
   Array.isArray(item["categories"]) && item["categories"].some((c) => isObject(c) && typeof c["path"] === "string" && new RegExp(`^${name}(/|$)`, "i").test(c["path"]));
 
+/** "<namespace>:<catalogItemId>" of the base game a DLC points to, in the same form as idsByKey. null if there is none. */
+function baseKeyOf(item: Record<string, unknown>, batchNamespace: string): string | null {
+  const list = Array.isArray(item["mainGameItemList"]) ? item["mainGameItemList"] : [];
+  const main = [item["mainGameItem"], ...list].find((m) => isObject(m) && typeof m["id"] === "string");
+  if (!isObject(main)) return null;
+  const ns = typeof main["namespace"] === "string" ? main["namespace"] : batchNamespace;
+  const probe = buildStoreId(ns, main["id"], "x"); // validates both segments and normalizes case
+  return probe === null ? null : probe.slice(0, probe.lastIndexOf(":"));
+}
+
 export async function listEpicLibrary(ctx: SyncContext): Promise<LibrarySnapshot> {
   const access = await refreshSession(ctx);
   const auth = { authorization: bearer(access) };
@@ -79,6 +89,7 @@ export async function listEpicLibrary(ctx: SyncContext): Promise<LibrarySnapshot
   const skipped: Record<string, number> = {};
   const count = (what: string): void => void (skipped[what] = (skipped[what] ?? 0) + 1);
   const foreign = new Set<string>();
+  const pendingDlc: { storeId: string; title: string; baseKey: string | null }[] = [];
 
   await runPool(jobs, CATALOG_CONCURRENCY, ctx.signal, async (job) => {
     const res = await withTimeout(
@@ -100,8 +111,11 @@ export async function listEpicLibrary(ctx: SyncContext): Promise<LibrarySnapshot
       const main = item["mainGameItem"];
       const isDlc = hasPath(item, "addons") || (main !== undefined && main !== null) || (Array.isArray(item["mainGameItemList"]) && item["mainGameItemList"].length > 0);
       for (const storeId of storeIds) {
-        if (isDlc) count("dlc");
-        else if (!hasPath(item, "games")) count(hasPath(item, "applications") ? "application" : "other");
+        if (isDlc) {
+          const appName = storeId.slice(storeId.lastIndexOf(":") + 1);
+          const title = typeof item["title"] === "string" ? cleanText(item["title"], MAX_TITLE) : "";
+          pendingDlc.push({ storeId, title: title || `Epic ${appName}`, baseKey: baseKeyOf(item, job.namespace) });
+        } else if (!hasPath(item, "games")) count(hasPath(item, "applications") ? "application" : "other");
         else {
           const appName = storeId.slice(storeId.lastIndexOf(":") + 1);
           const title = typeof item["title"] === "string" ? cleanText(item["title"], MAX_TITLE) : "";
@@ -112,10 +126,27 @@ export async function listEpicLibrary(ctx: SyncContext): Promise<LibrarySnapshot
     }
   });
 
-  if (unrealContent > 0 || malformed > 0 || Object.keys(skipped).length > 0 || foreign.size > 0) {
+  // The base is resolved once every batch is in, and only among the keys that ended as games; mainGameItem just
+  // locates the key. Several store ids for one key: the lowest (ADR 83, point 13).
+  const gameByKey = new Map<string, string>();
+  for (const e of entries.values()) {
+    const key = e.storeGameId.slice(0, e.storeGameId.lastIndexOf(":"));
+    const prev = gameByKey.get(key);
+    if (prev === undefined || e.storeGameId < prev) gameByKey.set(key, e.storeGameId);
+  }
+  let dlcNoBase = 0;
+  for (const d of pendingDlc) {
+    const base = d.baseKey === null ? undefined : gameByKey.get(d.baseKey);
+    if (base === undefined) dlcNoBase++;
+    entries.set(d.storeId, { storeGameId: d.storeId, kind: "dlc", ...(base === undefined ? {} : { baseStoreGameId: base }), title: d.title });
+  }
+
+  if (unrealContent > 0 || malformed > 0 || pendingDlc.length > 0 || Object.keys(skipped).length > 0 || foreign.size > 0) {
     ctx.log.info("Some owned Epic products were not listed", {
       malformed,
       unrealContent,
+      dlc: pendingDlc.length,
+      dlcNoBase,
       foreignImageHosts: [...foreign].slice(0, 5).join(","),
       ...Object.fromEntries(Object.entries(skipped).map(([t, n]) => [`type_${t}`, n])),
     });

@@ -72,7 +72,11 @@ export async function scanGogInstalled(ctx: ScanContext): Promise<ScanResult> {
           continue;
         }
         if (info.rootGameId !== undefined && info.rootGameId !== info.gameId) {
+          // Same id as in the library: an owned and installed DLC is one property (ADR 83, point 8).
           dlcs++;
+          if (seen.has(info.gameId)) continue;
+          seen.add(info.gameId);
+          entries.push({ storeGameId: info.gameId, kind: "dlc", baseStoreGameId: info.rootGameId, title: info.name ?? `GOG ${info.gameId}`, installPath: dir });
           continue;
         }
         if (seen.has(info.gameId)) {
@@ -121,6 +125,6 @@ export async function scanGogInstalled(ctx: ScanContext): Promise<ScanResult> {
     }
   }
   unreadableRoots.push(...partial.values());
-  if (dlcs > 0) ctx.log.info("GOG DLC entries skipped", { dlcs });
+  if (dlcs > 0) ctx.log.info("GOG DLC entries found", { dlcs });
   return { entries, unreadableRoots };
 }

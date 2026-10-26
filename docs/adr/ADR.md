@@ -64,7 +64,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 49 | Traducción e idiomas de la documentación | Vigente (confirmada por el usuario) |
 | 50 | Intervalos mínimos de sincronización | Vigente (confirmada por el usuario); espera de 60 s extendida a todos los escaneos en la 72 |
 | 51 | Normalización de nombres y ediciones dudosas | Vigente (confirmada por el usuario) |
-| 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario) |
+| 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario); sección de Ajustes aplazada en la 83 |
 | 53 | Puerto: dónde se guarda y rango permitido | Vigente (confirmada por el usuario) |
 | 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63; segundo factor y cookie de la dirección alternativa en la 67 |
 | 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
@@ -94,7 +94,9 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); prueba manual del 23-10-2026: detección correcta, U4 y U7 confirmados (punto 13); portadas, Instalar, cuenta y biblioteca revisados en la 80) |
 | 80 | Ubisoft: cuenta con ventana de login integrada, juegos poseídos y portadas con la caché local | Propuesta (vía C elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 42, 45, 74 y 79; revisa para Ubisoft la 43 y, de la 79, los puntos 1 y 5, el descarte de `configurations` y `access`; paso `embedded-login` y puerto `EmbeddedLogin` (subcomando del auxiliar de Go con WebView2), propósito `library`, `SyncContext.fs` y `readBytes`, aditivos, `contractVersion` 1; comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto; revisión del auditor sobre el diseño incorporada el 23-10-2026 en el punto 18, que prevalece: filtrado completo de la ventana, sin `WEBVIEW2_*`, perfil vaciado antes de cerrar, ejecutor propio, carreras del motor, topes de `configurations`, copia parcheada en `third_party/go-webview2`); captura del texto JSON, `captureUrl` con consulta y llegada a `doneUrl` por navegación (sustituye a `atDone`) añadidas en la 82 |
 | 81 | Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` | Vigente (recomendada; encargada por el usuario el 23-10-2026; amplía las 40, 42 y 72; sin tipos nuevos; `discoverRoots` con `downloadinplacedir` de los ajustes de la app de EA tras cerrar EAD6 (punto 13); carpetas manuales admitidas; `readText` con UTF-16 con BOM; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: analizador sin expresiones de coste no acotado, `exists` antes de `readText` al lanzar, ID estable aceptado con comprobación manual, fichero de más de 1 MiB o no normal como `store.unexpected-response` en todas las tiendas); pendiente de la revisión del código y de la prueba manual). La 80 (Ubisoft) se escribe en otra copia de trabajo; cuenta, portadas, Instalar y `access` revisados en la 82 |
-| 82 | Cuenta de EA con la ventana de login integrada | Propuesta (vía elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 74, 80 y 81; revisa para EA la 43 y, de la 81, cuenta, portadas, Instalar y `access`; reutiliza el paso `embedded-login` de la 80 con `source: 'document-json'`, `captureUrl` con consulta exacta y llegada a `doneUrl` por navegación; solo el `access_token` cifrado con su caducidad, sin renovación; GraphQL `getEntitlements` y `getOffers` con el `contentId` de la 81; portadas en `drop-assets.ea.com`, sin confirmar; Instalar con `autoDownload=1`; contraseña en la ventana confirmada expresamente por el usuario el 23-10-2026 y 12.2 (a) decidida por él; 12.1, 12.3 y 12.4 aplicados por defecto; revisión del `auditor` sobre el diseño incorporada (punto 13); falta la del código y la prueba manual). **Revisada en su punto 14 (24-10-2026, decisión del usuario):** Google no funciona en la ventana integrada; EA conecta solo en el navegador del usuario con un paso `open-external` a la URL de token y pegando el JSON (`extract: 'json-field:access_token'`, como Epic), `authHosts` solo `accounts.ea.com`, la 43 vuelve a valer tal cual para EA, `document-json` sin uso por ahora y el armado por `NavigationId` sigue para Ubisoft; supuesto EAA13 |
+| 82 | Cuenta de EA con la ventana de login integrada | Propuesta (vía elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 74, 80 y 81; revisa para EA la 43 y, de la 81, cuenta, portadas, Instalar y `access`; reutiliza el paso `embedded-login` de la 80 con `source: 'document-json'`, `captureUrl` con consulta exacta y llegada a `doneUrl` por navegación; solo el `access_token` cifrado con su caducidad, sin renovación; GraphQL `getEntitlements` y `getOffers` con el `contentId` de la 81; portadas en `drop-assets.ea.com`, sin confirmar; Instalar con `autoDownload=1`; contraseña en la ventana confirmada expresamente por el usuario el 23-10-2026 y 12.2 (a) decidida por él; 12.1, 12.3 y 12.4 aplicados por defecto; revisión del `auditor` sobre el diseño incorporada (punto 13); falta la del código y la prueba manual). **Revisada en su punto 14 (24-10-2026, decisión del usuario):** Google no funciona en la ventana integrada; EA conecta solo en el navegador del usuario con un paso `open-external` a la URL de token y pegando el JSON (`extract: 'json-field:access_token'`, como Epic), `authHosts` solo `accounts.ea.com`, la 43 vuelve a valer tal cual para EA, `document-json` sin uso por ahora y el armado por `NavigationId` sigue para Ubisoft; supuesto EAA13. DLC revisados en la 83 |
+| 83 | DLC dentro de la ficha de su juego base | Propuesta (encargada por el usuario el 24-10-2026; concreta las 21, 47 y 52; revisa los DLC de las 76, 77, 78 y 82 y el filtro de EA de la 50; GOG biblioteca y escaneo, Epic y EA biblioteca, Steam y Ubisoft fuera; migración 0003 con `base_store_game_id`; `contractVersion` 1; punto 10 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 13, que prevalece: precedencia del escaneo en `kind` y base, guardián de biblioteca vacía solo con juegos, `kindChanges`, borrado de canónicos vacíos, EA con `normalizeTitle` movida a `contracts`; falta la del código y la prueba manual); Steam y Ubisoft revisados en la 84 |
+| 84 | DLC de Steam y Ubisoft en la ficha | Propuesta (encargada el 24-10-2026; amplía la 83 y revisa su punto 9 para Steam; Steam `dlc: 'scan'` por `InstalledDepots.dlcappid` y títulos con `resolveTitles` sobre `GetItems`, aditivo, `contractVersion` 1, sin migración; Ubisoft sigue `'none'`; punto 8 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 10, sin críticos ni altos; falta la del código y la prueba manual) |
 
 ## Decisiones
 
@@ -1120,7 +1122,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 **Motivo:** son valores muy por debajo de cualquier límite conocido. Por ejemplo, el límite citado habitualmente para la API web de Steam es de 100 000 llamadas al día por clave; supuesto, porque no aparece en el texto oficial consultado. Las APIs no oficiales reciben menos tráfico para no llamar la atención. Alternativa descartada: un único valor para todas (penaliza a Steam o arriesga a Epic y GOG).
 
 **Revisión del 24-10-2026 (decisión del usuario, en la prueba de EA):** el botón manual ya no respeta el intervalo del conector: el usuario puede **forzar** la sincronización. Dos frenos: entre dos sincronizaciones forzadas de una misma tienda hay como mínimo **1 minuto** (constante del núcleo `MANUAL_SYNC_FLOOR_MS`), y si pulsa Sincronizar cuando una tienda conectada aún está dentro de su intervalo, la web le pide confirmación con un aviso de no abusar (las tiendas pueden limitar las peticiones o bloquear la cuenta). La sincronización automática sigue con los intervalos de arriba. Motivo: tras conectar o cambiar algo en la tienda, esperar 30 minutos sin poder hacer nada resultaba confuso, y el botón no decía por qué no hacía nada.
-- **EA, el mismo día:** la biblioteca se filtra como Lutris: solo cuenta como juego un derecho cuyo producto dice `BASE_GAME`; los que vienen sin producto o sin tipo (39 de 54 en la cuenta real, entre ellos DLC como *Battlefield 4 China Rising* y entradas sin título) quedan fuera y se cuentan. Revisa el «sin tipo, juego» de la 82.
+- **EA, el mismo día:** la biblioteca se filtra como Lutris: solo cuenta como juego un derecho cuyo producto dice `BASE_GAME`; los que vienen sin producto o sin tipo (39 de 54 en la cuenta real, entre ellos DLC como *Battlefield 4 China Rising* y entradas sin título) quedan fuera y se cuentan. Revisa el «sin tipo, juego» de la 82. (Revisado en la decisión 83: los de contenido adicional, y los sin tipo cuyo título empieza por el de un juego base, pasan a DLC de ese juego.)
 
 ### 51. Normalización de nombres y ediciones dudosas
 
@@ -1142,7 +1144,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** prioriza que una fusión errónea no oculte juegos (decisión 20). Alternativa descartada: similitud aproximada de texto (por ejemplo, Levenshtein), que provoca fusiones erróneas entre secuelas.
 
-### 52. DLC cuyo juego base no está en la biblioteca
+### 52. DLC cuyo juego base no está en la biblioteca (sección de Ajustes aplazada en la decisión 83)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** se guarda como propiedad `dlc` con `canonical_game_id` nulo y `base_store_game_id` relleno. No aparece en la biblioteca. Se enlaza solo en cuanto aparece su juego base en una sincronización o un escaneo. Mientras tanto se lista en una sección secundaria, «Contenido adicional sin juego base», dentro de Ajustes > Biblioteca.
 
@@ -3029,7 +3031,7 @@ export interface CoverFiles {
   - privacidad: el servidor descarga cada portada una vez;
   - solución de problemas: dónde están las portadas, que se pueden borrar sin perder nada y que una que falta aparece tras el siguiente escaneo con conexión.
 
-### 76. Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos (amplía las decisiones 40, 42, 72 y 73; revisa el orden de cortes de la 72 y la fila de GOG de la tabla de la 40; vía de la cuenta, orden del emparejamiento y el `..` del punto 4 revisados en la decisión 77)
+### 76. Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos (amplía las decisiones 40, 42, 72 y 73; revisa el orden de cortes de la 72 y la fila de GOG de la tabla de la 40; vía de la cuenta, orden del emparejamiento y el `..` del punto 4 revisados en la decisión 77; DLC del escaneo revisados en la decisión 83)
 
 **Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario encarga «empieza con el conector de GOG». Eso resuelve el punto (C) de la decisión 72: **GOG va antes que el corte 2b** (tiempo de juego), que pasa a ir después. Este corte es el equivalente de la 72 para GOG: lo justo para ver los juegos de GOG instalados y jugarlos, y sobre todo para validar el lanzamiento por línea de comandos (`exec`), el caso más distinto del contrato.
 
@@ -3323,7 +3325,7 @@ Fuentes consultadas el 22 de octubre de 2026: [GameFinder, GOG Galaxy](https://g
 - La afirmación de la 72 de que el emparejamiento llega «con la segunda tienda» queda revisada: llega en su propio corte (punto 1).
 - Los agentes `conectores`, `programador` y `empaquetador` tienen aquí su especificación; el `tester` prepara la prueba manual del punto 9; el `documentalista` actualiza las guías del punto 10.
 
-### 77. Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados (amplía las decisiones 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40 y, de la 76, la vía de la cuenta y el orden del emparejamiento)
+### 77. Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados (amplía las decisiones 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40 y, de la 76, la vía de la cuenta y el orden del emparejamiento; DLC de la biblioteca revisados en la decisión 83)
 
 **Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario pide ver los juegos de su cuenta de GOG y decide hacer este corte **ahora, antes del corte 2b** (tiempo de juego). Eso responde al punto 11.2 de la decisión 76 con la opción (b), **pero sin el emparejamiento entre tiendas**. Es el equivalente de la 74 para GOG y reutiliza todo lo que la 74 dejó hecho: motor de asistentes, `SecretCipher`, tabla `secrets`, `store_connections`, paso con campo y Pegar, `HttpClient` con lista de hosts y `maxBytes`, operación `library` del núcleo, `install`, desconectar y velo gris.
 
@@ -3648,7 +3650,7 @@ Fuentes consultadas el 22 de octubre de 2026: [gogapidocs, autenticación](https
 - Los juegos poseídos en Steam y en GOG salen duplicados hasta el corte del emparejamiento. La guía lo dice.
 - El `documentalista` actualiza las guías del punto 11; el `tester` amplía `docs/manual-tests/gog.md` (punto 10).
 
-### 78. Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta con código pegado, juegos no instalados e Instalar (corte 2) (amplía las decisiones 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de Epic de la tabla de la 40, y la parte de Epic de la 43)
+### 78. Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta con código pegado, juegos no instalados e Instalar (corte 2) (amplía las decisiones 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de Epic de la tabla de la 40, y la parte de Epic de la 43; DLC de la biblioteca revisados en la decisión 83)
 
 **Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario encarga «ponte con el conector de Epic». Se hace en **dos cortes dentro de esta decisión**, con la misma forma que GOG: el corte 1 equivale a la 76 (instalados, Jugar y portadas, sin cuenta) y el corte 2 a la 77 (login, sesión cifrada, juegos no instalados e Instalar). Reutiliza todo lo de Steam y GOG: ubicaciones, `discoverRoots`, escaneo con `ctx.fs` confinado, `resolveAction` con `uri`, `resolveMedia` con `HttpClient` y `apiHosts`, CSP derivada de `mediaHosts`, asistente con paso `open-external` con campo y Pegar, solo el refresh token cifrado, época por tienda, velo gris e `install`. El corte 2 empieza cuando el corte 1 pasa la prueba manual.
 
@@ -5023,7 +5025,7 @@ Fuentes consultadas el 23 de octubre de 2026: [Lutris, `services/ea_app.py`](htt
 - El `auditor` revisa antes de cerrar: el analizador de XML (entidades, DTD, comentarios, `\b`), los ID en la URI y la aserción, la lectura al lanzar confinada a `installPath`, UTF-16 en `readText`, y que ni el registro ni los errores lleven rutas o títulos.
 - Los agentes `programador` y `conectores` tienen aquí su especificación; el `tester` escribe `docs/manual-tests/ea.md` (punto 9); el `documentalista` actualiza las guías del punto 10.
 
-### 82. Cuenta de EA con la ventana de login integrada (amplía las decisiones 40, 74, 80 y 81; revisa para EA la decisión 43 por elección del usuario; revisa de la 81 la cuenta, las portadas, Instalar y `access: 'local-only'`; amplía el auxiliar de la 80 con la captura del texto JSON de la página y la llegada a `doneUrl` por navegación; vía de conexión revisada en su punto 14: navegador y pegar, sin ventana integrada y sin revisar la 43)
+### 82. Cuenta de EA con la ventana de login integrada (amplía las decisiones 40, 74, 80 y 81; revisa para EA la decisión 43 por elección del usuario; revisa de la 81 la cuenta, las portadas, Instalar y `access: 'local-only'`; amplía el auxiliar de la 80 con la captura del texto JSON de la página y la llegada a `doneUrl` por navegación; vía de conexión revisada en su punto 14: navegador y pegar, sin ventana integrada y sin revisar la 43; DLC de la biblioteca revisados en la decisión 83)
 
 **Decisión (vía elegida por el usuario el 23 de octubre de 2026; diseño recomendado por el arquitecto):** tras el corte de instalados de la 81, el usuario quiere para EA lo mismo que para Ubisoft: los juegos no instalados de su cuenta, con portadas, e Instalar. **Eligió la misma vía que en Ubisoft:** la ventana de login integrada de la 80 (WebView2 desde el auxiliar de Go) con la página oficial de EA. La diferencia con Ubisoft es lo que se captura: no hay nada útil en el `localStorage`. La ventana, con su propia sesión, navega al final a una URL de EA que responde con un JSON que lleva un token de acceso, y la captura lee **solo** ese `access_token` del texto de la página. Con él, el GraphQL de EA da los juegos poseídos con el mismo `contentId` que `installerdata.xml` (81), sin caché local ni traducción por fichero.
 
@@ -5326,6 +5328,295 @@ Fuentes: los datos comprobados del 23-10-2026 (peticiones públicas sin cuenta, 
 - El `auditor` revisa el diseño antes del código y el código antes de cerrar; el `tester` amplía `docs/manual-tests/ea.md` (punto 10); el `documentalista`, las guías del punto 11.
 - **Por el punto 14:** EA se conecta en el navegador del usuario y pegando el JSON, sin ventana integrada; la 43 vuelve a valer tal cual para EA; `authHosts` se reduce a `accounts.ea.com`; nuevo texto común `wizard.paste.storeError`; `document-json` queda sin uso por ahora y el armado por `NavigationId` sigue para Ubisoft. La guía de conexión de EA (punto 11) explica iniciar sesión en ea.com, abrir el enlace, copiar y pegar, sin ventana de WebView2. El `auditor` revisa este cambio (`validate.ts` y el paso).
 
+### 83. DLC dentro de la ficha de su juego base (concreta las decisiones 21, 47 y 52; revisa el tratamiento de los DLC de las 76, 77, 78 y 82 y el filtro de EA de la revisión de la 50; sección de Ajustes de la 52 aplazada; punto 9 y valor `dlc` de Steam revisados en la decisión 84)
+
+Encargo del usuario (24-10-2026, rama `feature/dlc-en-juegos`): «los DLC deberían aparecer dentro de los juegos; revisa EA y también los demás».
+
+#### 1. Lo que ya está decidido
+
+- **21:** los DLC no son entradas de la biblioteca; salen en la ficha de su juego base, sin Jugar. Los que la tienda no exponga no aparecen.
+- **52 (confirmada por el usuario):** un DLC sin juego base se guarda como propiedad `dlc` con `canonical_game_id` nulo y `base_store_game_id` relleno, se enlaza solo cuando aparece el juego base y se lista en «Contenido adicional sin juego base» de Ajustes > Biblioteca.
+- **40:** `StoreEntry` e `InstalledEntry` ya traen `kind: 'game' | 'dlc'` y `baseStoreGameId?`; `capabilities.dlc` ya admite `'none' | 'library' | 'scan' | 'library-and-scan'`; regla 3: el tratamiento de los DLC es del núcleo y el conector solo dice `kind` y `baseStoreGameId`. `checkConnectorManifest` exige `library` o `scan` según el valor; la conformidad del `testkit` rechaza una entrada `dlc` de escaneo sin la capacidad.
+- **47:** `game_properties` lleva `kind` y `base_store_game_id`; un DLC apunta con `canonical_game_id` al canónico del juego base. Sin tabla `dlc` aparte.
+
+#### 2. Qué hace hoy el código (leído el 24-10-2026)
+
+- **Núcleo:** `validateEntries` (escaneo) y `validateLibraryEntries` (biblioteca) descartan toda entrada `dlc` y la cuentan (`unsupported`, `dlc`), sin hacer `lossy` la instantánea. `computeLibraryPlan` y `computeScanPlan` indexan solo las propiedades `kind = 'game'`; el desposeer de la biblioteca también salta las `dlc`. `launch.ts` ya rechaza un DLC (`action-unavailable`) y `pickTarget` solo elige propiedades `game`.
+- **Datos:** la columna `kind` existe con su `CHECK`; **`base_store_game_id` no existe** (migraciones 0000 a 0002). `PropertyRecord` no lo lleva. `listLibrary`, `countOwned`, `listMediaPending` y `setResolvedMedia` filtran `kind = 'game'`. `getGame` ya devuelve `dlc: [{ id, title, store }]` con las propiedades `dlc` del canónico, que hoy nunca existen.
+- **Fallo latente:** en `applyPlan` y `applyLibrary`, el canónico sigue el título y la portada de la tienda solo si tiene **una** propiedad (`count(*) … = 1`), contando también las `dlc`. Con DLC enlazados, el juego dejaría de seguir a su tienda; y una actualización de un DLC renombraría el canónico de su juego base con el título del DLC.
+- **API y web:** `GameDetailSchema.dlc` es `{ id, title, store }`. `Game.tsx` pinta una lista solo con el título (`game.dlc`, «Contenido adicional»). Inicio, Biblioteca y Tiendas usan `getLibrary`, que solo trae juegos.
+
+#### 3. Tienda por tienda
+
+| Tienda | Biblioteca hoy | Escaneo hoy | ¿Da el juego base? |
+|---|---|---|---|
+| Steam | `GetOwnedGames` no trae DLC y no tiene parámetro para ello (lista de parámetros de `IPlayerService/GetOwnedGames` en steamapi.xpaw.me, 24-10-2026). No hay otra vía con la API key para saber qué DLC posee el usuario. | Los DLC no tienen `appmanifest` propio; se saltan. | `IStoreBrowseService/GetItems` (público, el de la 73) da `type: 4` y `related_items.parent_appid` (comprobado con 2778580 → 1245620). Falta saber **qué** DLC se poseen. |
+| GOG | `user/data/games` incluye DLC; el catálogo dice `game_type: "dlc"`; se saltan y se cuentan (`type_dlc`). | El `.info` con `rootGameId` distinto de `gameId` es un DLC; se salta y se cuenta. | **Sí, sin peticiones nuevas:** `api.gog.com/products?ids=…&expand=dlcs` devuelve en cada juego `dlcs.products[].id` (comprobado: 1512372112, Cold Waters, lista 1120912052, su OST). El producto DLC no trae el padre en v1; en v2 (`/v2/games/<id>`, `_links.requiresGames`) sí, pero con una petición por DLC. Sin DLC, `dlcs` es `[]` en lugar de un objeto. En el escaneo, `rootGameId`. |
+| Epic | El catálogo marca DLC por `addons`, `mainGameItem` o `mainGameItemList`; se saltan (27 en la prueba real). | `.item` con `MainGameAppName` distinto o `addons`; se salta. | En la biblioteca, `mainGameItem.id` (ID de catálogo del juego base, con su `namespace` o el del lote). El `storeGameId` de Epic es `namespace:catalogItemId:appName`, así que solo se puede construir si el juego base también está poseído (se busca en los registros de la biblioteca). En el escaneo, `MainGameAppName` da el `appName` del base, no su ID completo. |
+| Ubisoft | El GraphQL de juegos poseídos solo se cruza con la caché; los registros `is_ulc` de `configurations` se saltan. | Sin subclave propia (U10). | No consta ningún campo que lleve al juego base. |
+| EA | Solo cuenta `BASE_GAME` (revisión del 24-10-2026 en la 50); de 54 derechos, 39 sin `product` o sin tipo, entre ellos *Battlefield 4 China Rising*, quedan fuera. | Sin `__Installer` propio (EAD10). | **No hay campo fiable.** Las consultas de Lutris (`ownedGameProducts`, `legacyOffers`, `gameProducts`, revisadas el 24-10-2026) solo piden `originOfferId`, `contentId`, `id`, `product.baseItem.gameType`, `title` e imágenes; ninguna relaciona un DLC con su juego. No hay esquema público del GraphQL para buscar un `parent` o un `mainGame`; sin cuenta no se puede comprobar. |
+
+#### 4. Decisión: corte mínimo
+
+**Los DLC poseídos de GOG, Epic y EA, y los instalados de GOG, se guardan como propiedades `dlc` y salen en la ficha de su juego base, con título, tienda y si están instalados. Nunca en Biblioteca, Inicio ni Tiendas.** Steam y Ubisoft siguen con `dlc: 'none'` (punto 9).
+
+Capacidades: GOG `dlc: 'library-and-scan'`; Epic y EA `dlc: 'library'`; Steam y Ubisoft `'none'`. **`contractVersion` sigue en 1:** los campos ya existen y solo cambian valores.
+
+#### 5. Núcleo
+
+- **Validación** (`validate.ts`, las dos funciones):
+  - una entrada `dlc` se acepta si el conector declara la capacidad para esa operación (`library` o `scan`); sin ella, se descarta y se cuenta como hoy, sin `lossy`;
+  - mismas reglas de ID y de título que un juego; `baseStoreGameId`, si viene, con las reglas del ID; ~~si no las cumple, la entrada es inválida (y la instantánea, `lossy`)~~ si no las cumple, se trata como ausente y se cuenta `dlcBadBase`, sin `lossy` (punto 13); si es igual al propio ID, se trata como ausente;
+  - de un DLC no se guardan `media`, `externalIds`, tiempo ni última partida (se ignoran, no invalidan);
+  - un mismo ID no puede ser juego y DLC en la misma respuesta: gana el primero y el otro cuenta como repetido.
+  - Registro: solo contadores (`dlc`, `dlcNoBase`, `dlcUnsupported`). Nunca títulos ni ID.
+- **Planes** (`library-plan.ts`, `scan-plan.ts`):
+  - el índice por `storeGameId` usa **todas** las propiedades de la tienda, sin filtrar por `kind`;
+  - entrada `dlc` nueva → propiedad `dlc` nueva, **sin crear canónico**, con `base_store_game_id`;
+  - fila existente con otro `kind` (los DLC de EA que la 82 guardó como juegos sueltos): se actualiza la misma fila y cambia su `kind`. De juego a DLC, ~~el canónico viejo se queda sin propiedades y deja de verse; `shortcut:` no se borra~~ el canónico que queda vacío se borra (punto 13, M1). De DLC a juego, canónico nuevo. Precedencia entre escaneo y biblioteca y `kindChanges`: punto 13, A1 y A3;
+  - **enlace** (función pura compartida, `linkDlc`): tras calcular el plan, para cada propiedad `dlc` de la tienda, el canónico deseado es el de la propiedad `game` de la **misma tienda** con `storeGameId = base_store_game_id` y sin `removed_at` al final del plan (incluidos los juegos creados en ese mismo plan); si no la hay, nulo (huérfano, 52). El plan lleva `dlcLinks: { propertyId, canonicalId | null }[]` solo con los que cambian. Así se cumple «se enlaza en cuanto aparece su juego base en una sincronización o un escaneo», y un DLC cuyo base se retira vuelve a huérfano;
+  - desposeer y retirar (instantánea completa) valen también para los DLC; el retiro de propiedades solo de escaneo, igual;
+  - el `byStoreId` de un DLC no se cruza nunca con otra tienda: el emparejamiento sigue sin corte (20).
+- **Lectura:** `listLibrary`, `countOwned`, `unsynced`, `mainAction`, tiempo y portadas siguen contando solo `game`. Lanzar no cambia.
+
+#### 6. Datos
+
+- **Migración `0003_dlc`:** `ALTER TABLE game_properties ADD COLUMN base_store_game_id text` (nula), con su instantánea de Drizzle. Sin índice: los planes ya cargan las propiedades de la tienda. Copia previa automática a la migración (57).
+- `PropertyRecord` gana `baseStoreGameId: string | null`; `ScannedEntry` y `LibraryEntry`, `kind` y `baseStoreGameId`.
+- **`applyPlan` y `applyLibrary`:**
+  - insertan los DLC con `canonical_game_id` del enlace o nulo y sin fila en `canonical_games`;
+  - al actualizar una propiedad `dlc` **no tocan** el canónico (es el del juego base);
+  - el `count(*) = 1` que decide si el canónico sigue a su tienda pasa a contar solo `kind = 'game'` (corrige el fallo del punto 2);
+  - aplican `dlcLinks` y el cambio de `kind`, en la misma transacción (orden y filtros: punto 13, A3 y bajos; borrado de canónicos vacíos: M1).
+- **`getGame`:** `dlc` con las propiedades `dlc` del canónico sin `removed_at`, de tienda (no `manual`), ordenadas por título normalizado e ID, **como mucho 1000** (tope de seguridad; si se corta, aviso en el registro con el número). Cada una con `installed` (fila de `installations` en este dispositivo).
+
+#### 7. API y web
+
+- `GameDetailSchema.dlc`: `{ id, title, store, installed: boolean }` (`installed` nuevo y obligatorio; `api-contract` es interno y sin versión). `core-adapter.ts` lo pasa.
+- `Game.tsx`, sección existente «Contenido adicional»: una fila por DLC con el título, la tienda (`STORE_BRAND`) y la ficha «Instalado» (`common.installed`) **solo si está instalado**; sin botones. Sin textos nuevos. El simulador (`mock.ts`) añade `installed` y un DLC de GOG.
+- Huérfanos: **la sección de Ajustes > Biblioteca de la 52 se aplaza** a su propio corte (punto 10.1). Los datos se guardan y se enlazan solos; no se pierde nada.
+
+#### 8. Conectores
+
+- **GOG, biblioteca** (`connectors/gog/src/library.ts`): la petición del catálogo añade `expand: 'dlcs'` (mismos lotes de 50, sin peticiones nuevas). De cada producto `game` se leen, como mucho 1000, los `dlcs.products[].id` que cumplan `ID_RE` (`dlcs` puede ser `[]` u objeto; cualquier otra forma: sin DLC, sin error). Tras todos los lotes, cada producto `dlc` poseído es `{ storeGameId, kind: 'dlc', baseStoreGameId?, title }`, con el primer juego **poseído** (orden de ID) que lo lista; si ninguno, sin `baseStoreGameId`. `pack` y otros tipos, como hoy.
+- **GOG, escaneo** (`scan.ts`): el `.info` con `rootGameId` distinto pasa a `{ storeGameId: gameId, kind: 'dlc', baseStoreGameId: rootGameId, title: name ?? 'GOG <id>', installPath: dir }` (`rootGameId` con `ID_RE`; si no, se salta como hoy). Mismo ID que en la biblioteca, así que un DLC poseído e instalado es una sola propiedad.
+- **Epic, biblioteca** (`library.ts`): un elemento DLC del catálogo pasa a `{ storeGameId, kind: 'dlc', baseStoreGameId?, title }`. Base: `mainGameItem.id` (o el primero de `mainGameItemList` con `id`), con `mainGameItem.namespace` si es texto o el `namespace` del lote, buscado en `idsByKey` (registros poseídos); si hay varios `storeGameId` para esa clave, el menor. Si no está poseído, sin base. Sin portada. Escaneo de Epic, sin cambios (los DLC con `.item` propio se siguen saltando: solo daría el `appName` del base).
+- **EA, biblioteca** (`library.ts`), con la inferencia por título como única vía (punto 3), dentro de la tienda (exclusión de instalados, `dlcInferred`, numerales, índice por palabras y normalización compartida: punto 13, M2):
+  - **candidatos a DLC:** derechos con tipo de contenido adicional (`ADDON_TYPES`) y derechos sin `product` o sin tipo **con título**; los de `_interestOnly` y los de `contentId` inválido, como hoy;
+  - **base:** entre las entradas `BASE_GAME` de la misma respuesta, la de título normalizado más largo `B` tal que el del candidato `D` empieza por `B` seguido de un espacio y el resto **no** es solo un número arábigo o romano (secuelas, regla de la 51: *Battlefield 1* no es DLC de *Battlefield*). Empate: la de `storeGameId` menor. Normalización local mínima (NFKC, minúsculas, sin ™®©, lo que no sea letra o número a espacio, espacios colapsados);
+  - con base: `{ storeGameId: contentId, kind: 'dlc', baseStoreGameId, title }`. Sin base: un tipo de contenido adicional es DLC huérfano sin base; uno sin tipo queda fuera y se cuenta, como hoy (no se sabe si es DLC);
+  - mismo `contentId` que un juego base: se salta y se cuenta;
+  - contadores nuevos: `dlc`, `dlcByTitle`, `dlcNoBase`. Sin títulos.
+  - Esto no es emparejar juegos (regla 10 de la 40): es interpretar los datos de una sola tienda; el emparejamiento entre tiendas sigue en el núcleo.
+- **Manifiestos:** los valores de `dlc` del punto 4. Las pruebas de conformidad de cada conector se ajustan.
+
+#### 9. Lo que queda fuera
+
+- **Steam:** sin forma de saber los DLC poseídos con la API key. Opciones para su propio corte: (a) los instalados que traen contenido, por `InstalledDepots[].dlcappid` del `appmanifest` (el base es seguro, el del manifiesto) con el título desde `GetItems` (ampliar `resolveMedia` o una operación nueva); (b) probar `GetOwnedGames` con `appids_filter` de los DLC del juego (`appdetails` → `dlc`), sin verificar y costoso. Supuesto S12.
+- **Ubisoft:** sin campo de juego base conocido. La prueba manual puede contar los registros `is_ulc` y anotar, sin copiar datos, si alguno tiene un campo que apunte al juego.
+- **Escaneo de Epic y de EA**, personalización, portadas de DLC, Jugar o Instalar un DLC (21).
+
+#### 10. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
+
+1. **DLC sin juego base:** (a) se guardan y se enlazan solos, sin pantalla por ahora (por defecto); (b) la sección «Contenido adicional sin juego base» de Ajustes en este corte (52).
+2. **EA por el título:** (a) sí, como en el punto 8 (por defecto: hoy esos DLC no se ven en ningún sitio); (b) no, los DLC de EA siguen ocultos.
+3. **Instalado:** (a) solo la ficha «Instalado» cuando se detecta (por defecto: en Epic y EA no se puede saber y «No instalado» sería falso); (b) «Instalado» y «No instalado» en GOG.
+4. **Steam y Ubisoft:** (a) fuera de este corte (por defecto); (b) un corte de investigación para Steam (punto 9 a).
+
+#### 11. Pruebas
+
+- **Núcleo:** validación (DLC con y sin capacidad; base inválida → `lossy`; base igual al ID; mismo ID juego y DLC); planes (base creado en el mismo plan; base existente; base ausente → nulo con `base_store_game_id`; fila `game` que pasa a `dlc` y al revés; huérfano enlazado cuando llega su base por biblioteca y por escaneo; base retirado → huérfano; desposeer y retirar DLC; un DLC nunca crea canónico).
+- **`db`:** migración 0003 sobre una base con datos de 0002; DLC insertado sin canónico; el canónico de un juego con DLC sigue a su tienda; actualizar un DLC no renombra su base; `getGame` con `installed`, orden y tope; `listLibrary`, `countOwned` y Tiendas sin DLC.
+- **Conectores** (fixtures inventadas o públicas de catálogo, sin datos personales):
+  - GOG: `expand=dlcs` en la consulta; `dlcs` `[]`, objeto y forma rara; DLC con base poseído, sin base poseído y listado por dos juegos (gana el menor); tope de 1000; `.info` de DLC → entrada `dlc` con base; `rootGameId` inválido. La respuesta pública grabada de la 77 se vuelve a grabar con `expand=dlcs` (1512372112 y 1120912052);
+  - Epic: `mainGameItem` poseído, no poseído, con y sin `namespace`; `mainGameItemList`;
+  - EA: *Test Game 4* + *Test Game 4 Expansion* sin tipo → DLC por título; *Test Game* + *Test Game 2* → no; base más larga; empate; tipo de contenido adicional sin base → huérfano; sin tipo y sin base → fuera; mismo `contentId`;
+  - conformidad con los valores nuevos de `dlc`; el `testkit` añade a la biblioteca la misma comprobación que tiene el escaneo (entrada `dlc` sin capacidad `library`).
+- **Web:** `Game.tsx` con DLC instalado y no instalado (sin ficha), sin DLC (sin sección).
+- Más las pruebas del punto 13.
+
+#### 12. Prueba manual (la prepara el `tester`; la hace el usuario)
+
+1. **GOG** (cuenta y Galaxy): Cold Waters muestra «Cold Waters - OST» en su ficha y no en la biblioteca; si está instalado, con «Instalado». Anotar `dlc` y `dlcNoBase` del registro.
+2. **Epic:** un juego con DLC poseído los muestra en su ficha; anotar `dlc` y `dlcNoBase` (antes, `type_dlc=27`).
+3. **EA:** *Battlefield 4 China Rising* sale en la ficha de *Battlefield 4* y ya no como juego suelto ni oculto; anotar `dlcByTitle`, `dlcNoBase` y `noType`. Si un DLC cae en un juego que no es el suyo, anotar los dos títulos.
+4. **Actualización:** con la base de datos actual (que ya tiene DLC de EA guardados como juegos sueltos o retirados), la primera sincronización los mueve a su ficha y desaparecen de la biblioteca.
+5. **Steam y Ubisoft:** nada cambia. Ubisoft: anotar el número de registros `is_ulc` si el registro lo da.
+6. El registro exportado no contiene títulos ni ID de DLC.
+
+#### 13. Revisión del auditor sobre el diseño (24 de octubre de 2026)
+
+Sin críticos. **Lo que sigue prevalece sobre los puntos 5 a 11 donde no coincida.**
+
+- **A1 (alto). Precedencia de `kind` y de la base** (revisa el punto 5, «fila existente con otro `kind`»):
+  - una propiedad que el escaneo ve instalada como `game` no pasa a `dlc` por la biblioteca: se queda `game` y se cuenta `kindConflict`;
+  - el escaneo no cambia el `kind` de una fila poseída (`owned = 1`);
+  - para `base_store_game_id`, gana el `rootGameId` del escaneo mientras haya instalación; una entrada de biblioteca sin base no borra una base conocida.
+  - Prueba: biblioteca → escaneo → biblioteca, sin canónicos nuevos.
+- **A2 (alto). Guardián de biblioteca vacía** (74, S5; `sync.ts`, `countOwned`): compara solo las entradas validadas con `kind = 'game'`. Prueba: una instantánea completa con solo DLC, y juegos poseídos guardados, no desposee nada.
+- **A3 (alto). Cambios de `kind` en el plan** (revisa los puntos 5 y 6):
+  - el plan lleva `kindChanges: { propertyId, kind, canonicalId | null }[]`, con canónico nuevo en el paso de DLC a juego;
+  - `applyPlan` y `applyLibrary` aplican primero `kind` y `canonical_game_id` y después el seguimiento del canónico (título y portada), sobre el canónico ya actualizado; nunca hacen ese seguimiento si la fila es o era `dlc`.
+  - Prueba en `db`: un DLC que pasa a juego no cambia el título ni la portada del juego base.
+- **M1 (medio). Canónicos vacíos** (revisa el `shortcut` del punto 5 y la consecuencia correspondiente, que quedan retirados): un canónico que se queda sin ninguna propiedad, ni siquiera retirada, se borra en la misma transacción. Hoy no hay datos de usuario por canónico; cuando los haya, esta regla se revisa.
+- **M2 (medio). EA por el título** (revisa el punto 8):
+  - se excluye de la deducción todo `contentId` instalado como juego (sigue siendo juego);
+  - el DLC deducido guarda `storeMetadata.dlcInferred: true`;
+  - el numeral romano del resto se acota a `^(?:[ivx]{1,5})$` y además se valida que sea un numeral bien formado;
+  - los títulos normalizados de los `BASE_GAME` van en un `Map` y se prueban los prefijos del candidato palabra a palabra (O(n · palabras)), sin comparar todos con todos;
+  - la normalización es **exactamente** `normalizeTitle` de `packages/core/src/normalize.ts`. Como un conector no puede depender del núcleo (38), la función, que es pura, pasa a `@ludiary/contracts` y el núcleo la importa de ahí (sin copia local).
+  - Pruebas: «Test Game» + «Test Game Subtitle» sin tipo e instalado → juego; numerales válidos e inválidos; rendimiento con 50 000 entradas.
+- **Bajos:**
+  - **Epic:** la base se resuelve al terminar todos los lotes, solo entre las claves que acabaron con `kind: 'game'`; `mainGameItem` solo sirve para buscar en ese mapa.
+  - **GOG:** «el menor» es por orden numérico y entre los productos que acaban como `game`; prueba con 1000 DLC inventados.
+  - **`baseStoreGameId` inválido:** se trata como ausente (huérfano), se cuenta `dlcBadBase` y **no** hace `lossy` la instantánea (revisa el punto 5).
+  - De un DLC no se guarda `launchData`.
+  - `dlcLinks` se aplica con `WHERE kind = 'dlc' AND store = ? AND user_id = ?`.
+  - `GameDetailSchema.dlc` lleva `maxItems: 1000`.
+  - El `count(*)` del seguimiento del canónico filtra `user_id`, `kind = 'game'` y `removed_at IS NULL`.
+  - Toda operación futura que cambie el canónico de una propiedad `game` (fusionar, separar, emparejar) vuelve a ejecutar `linkDlc`.
+  - La rama nueva de DLC del escaneo de GOG registra solo contadores.
+
+#### 14. Revisión del auditor sobre el código (24 de octubre de 2026)
+
+Sin críticos. **Lo que sigue prevalece sobre el punto 13 donde no coincida.**
+
+- **Alto. Lo deducido por título pesa menos que una instalación** (revisa A1 de 13): el escaneo sí cambia a `game` una fila poseída que es `dlc` con `storeMetadata.dlcInferred` (canónico nuevo, sin tocar el título ni la portada de la base) y le quita `dlcInferred`; una biblioteca posterior no la devuelve a `dlc`. Sin esto, un juego de EA instalado que la deducción marcaba como DLC desaparecía si la biblioteca llegaba antes que el escaneo. Un DLC que la tienda declara (GOG, Epic, EA con `gameType`) sigue sin cambiar por el escaneo. Pruebas en los dos órdenes.
+- **Medio. Instalación en un conflicto de `kind`:** si el `kind` de la entrada del escaneo no coincide con el `kind` final de la fila, no se escribe la instalación ni se pisa su `launchData`. Prueba en `db`.
+- **Bajos:**
+  - la conformidad del `connector-testkit` comprueba también en `listLibrary` que no salgan DLC sin la capacidad `dlc`;
+  - pruebas de que el `rootGameId` del escaneo gana a otra base de la biblioteca y de que una entrada sin base conserva la conocida;
+  - **EA:** los candidatos con `contentId` repetido se descartan y se cuentan en `duplicateContent`; un resto que empieza por un número no es DLC («Test Game 2 Deluxe»); más margen en la prueba de rendimiento.
+
+#### Supuestos
+
+- **GD1 (comprobado 24-10-2026, sin cuenta):** `api.gog.com/products?ids=1512372112&expand=dlcs` da `dlcs.products[].id` con 1120912052; sin DLC, `dlcs: []`. Sin verificar: que un DLC poseído aparezca siempre en el `dlcs` de su juego (DLC compartidos por varias ediciones).
+- **GD2 (sin verificar):** cada DLC de GOG instalado deja su `.info` con `rootGameId` del juego (G5).
+- **ED1 (sin verificar con la cuenta):** `mainGameItem` trae `id` (y quizá `namespace`) del juego base, como en `legendary` con `includeMainGameDetails`.
+- **AD1:** EA no expone la relación DLC → juego base en las consultas conocidas (Lutris); inferirla por el título puede fallar con nombres que no empiezan por el del juego.
+- **S12 (comprobado 24-10-2026):** `IStoreBrowseService/GetItems` sin clave da `type: 4` y `related_items.parent_appid` para un DLC; `GetOwnedGames` no tiene parámetro de DLC.
+
+**Motivo:** el contrato y el modelo ya preveían los DLC; faltaban la columna, que el núcleo dejara de descartarlos y que cada conector dijera el juego base donde la tienda lo da. GOG lo da sin peticiones nuevas, Epic con los datos que ya lee, y EA solo por el título, que es mejor que ocultarlos porque hoy no se ven en ningún sitio. El enlace como función pura sobre las propiedades de la tienda resuelve a la vez los huérfanos de la 52 y los cambios de tipo. Alternativas descartadas: una petición v2 de GOG por DLC (coste); emparejar DLC entre tiendas (es el emparejamiento de la 20, sin corte); crear un juego base fantasma (la 52 ya lo descartó); en Steam, el `dynamicstore` de la tienda (exige la cookie de sesión).
+
+**Consecuencias:**
+
+- Migración 0003 y copia previa automática. El fallo latente de `count(*) = 1` queda corregido.
+- Los DLC de EA que antes salían como juegos sueltos pasan a su ficha en la primera sincronización; ~~sus canónicos viejos quedan vacíos e invisibles~~ sus canónicos viejos, ya vacíos, se borran (punto 13, M1).
+- `normalizeTitle` pasa de `packages/core` a `@ludiary/contracts` (punto 13, M2).
+- Revisiones del `auditor` sobre el diseño (punto 13) y sobre el código (punto 14) incorporadas; prevalece la más reciente.
+- La sección de huérfanos de la 52 queda aplazada (punto 10.1).
+- Steam y Ubisoft siguen sin DLC (21: «los que no se detecten no aparecen»).
+- El `auditor` revisa el código (entrada no confiable de `dlcs`, `mainGameItem` y títulos de EA; registros sin títulos); el `tester` prepara la prueba del punto 12; el `documentalista` añade a la guía de usuario que los DLC salen en la ficha del juego, qué tiendas los muestran y que Steam y Ubisoft aún no.
+
+### 84. DLC de Steam y Ubisoft en la ficha (amplía la decisión 83; revisa su punto 9 para Steam y el valor `dlc` de Steam del punto 4; amplía la 73 con títulos por `GetItems`)
+
+Encargo (24-10-2026, rama `feature/dlc-en-juegos`): mostrar en la ficha los DLC de Steam y de Ubisoft sobre lo que ya fija la 83.
+
+#### 1. Lo que se reutiliza de la 83, sin cambios
+
+Todo: contrato (`kind: 'dlc'`, `baseStoreGameId`, capacidad `dlc`), validación, planes, `linkDlc`, `kindChanges`, precedencia del escaneo (13, A1; 14), migración 0003, `getGame` con `installed` y tope de 1000, `Game.tsx` con la ficha «Instalado» solo si lo está, registros solo con contadores. Esta decisión solo añade fuentes y un paso para los títulos.
+
+#### 2. Qué da cada fuente (leído y comprobado el 24-10-2026)
+
+| Tienda | ¿Qué DLC posee? | ¿De qué juego? |
+|---|---|---|
+| Steam, `GetOwnedGames` | No lista DLC (S12), ni siquiera con `appids_filter` de DLC poseídos (SD5, comprobado). | — |
+| Steam, `appmanifest_<juego>.acf` | Solo los **instalados que tienen depósito propio**: `InstalledDepots.<depot>.dlcappid` (SD1). Los DLC que solo desbloquean contenido del depósito del juego no dejan rastro (SD3). | **Seguro:** el `appid` del propio manifiesto. |
+| Steam, `IStoreBrowseService/GetItems` (público, el de la 73) | No (catálogo). | `type: 4` y `related_items.parent_appid`; trae `name` (SD4). |
+| Ubisoft, GraphQL `games(isOwned)` | Desconocido: no hay esquema público; los registros de DLC no tienen `space_id`, así que aunque vinieran no se podrían cruzar con la caché (UD3). | No. |
+| Ubisoft, `configurations` | No (catálogo de lo que el launcher conoce). | Los juegos llevan `root.addons[]` con `id`, `name` y `thumb_image`; los registros `is_ulc` solo `name` y `thumb_image`, sin padre (UD1). Que `addons[].id` sea el ID del registro del DLC: UD2. |
+| Ubisoft, registro | Sin subclave propia por DLC (U10). | No. |
+
+#### 3. Decisión
+
+- **Steam: `dlc: 'scan'`.** Los DLC instalados con depósito propio salen en la ficha del juego, todos con «Instalado». Los poseídos no instalados y los que no tienen depósito no salen (21: «los que la tienda no exponga no aparecen»).
+- **Ubisoft: sigue `dlc: 'none'`.** No hay fuente fiable de qué DLC posee el usuario; mostrar los `addons` del catálogo sería enseñar contenido que quizá no tiene. Opción de investigación en el punto 8.
+
+#### 4. Conector de Steam
+
+- **`appmanifest.ts`:** `AppManifest` gana `dlcAppIds: readonly string[]`: los `dlcappid` de `InstalledDepots` que cumplan `APPID_RE`, distintos del `appid`, sin repetir, en orden de aparición, como mucho 1000 (el resto se ignora). Sigue sin leerse `LastOwner` ni nada más.
+- **`scan.ts`:** solo para un juego que ya se emite (carpeta existente), cada `dlcappid` es `{ storeGameId: dlc, kind: 'dlc', baseStoreGameId: appId, title: 'Steam <dlc>', installPath }` (la carpeta del juego, como en GOG). Los DLC se emiten **después** de todos los juegos; se saltan los que ya salieron como juego o como DLC de otro juego (gana el primero, regla de la 83) y los de `EXCLUDED_APP_IDS`. Sin `media` ni `externalIds`. Registro: contador `dlc`.
+- **`resolveTitles` (nuevo, punto 5):** la misma petición `GetItems` de la 73 (mismo `data_request`, idioma y `country_code`, lotes del núcleo), mismas respuestas a 429 y a otros estados. Se acepta un elemento con `success: 1`, `appid` pedido, `type: 4` y `name` de texto; el resto se salta y se cuenta (`notDlc`, `noName`). No se compara `parent_appid` con la base: manda el manifiesto.
+- **Manifiesto:** `dlc: 'scan'` y `resolveTitles`. Hosts sin cambios.
+
+#### 5. Títulos de los DLC (contrato, núcleo y datos)
+
+El escaneo de Steam es local y sin red, y el `appmanifest` no trae el nombre del DLC. Se resuelve como las portadas de la 73:
+
+- **Contrato (aditivo, `contractVersion` sigue en 1, como en la 80):** `resolveTitles?(storeGameIds, ctx: MediaContext): Promise<ReadonlyMap<string, string>>`. `checkConnectorManifest`: `resolveTitles` exige `apiHosts` y `dlc` distinto de `'none'`.
+- **Núcleo (`media.ts`):** el paso de portadas, tras ellas y con el mismo plazo, la misma espera tras un fallo y los mismos topes (`MEDIA_BATCH`, `MEDIA_MAX_BATCHES`, `MEDIA_MAX_AGE_MS`), pide los títulos pendientes. Cada título se valida con las reglas de título de `validate.ts` (control a espacio, recorte, máximo 300; vacío, descartado). Nunca hace fallar el escaneo.
+- **Datos, sin migración:** `listTitlePending(store, olderThan, limit)`: propiedades `dlc` de esa tienda sin `removed_at` cuyo `storeMetadata.titleResolvedAt` falta o es anterior; `setResolvedTitles(store, titles, requested, at)`: escribe `storeMetadata.resolvedTitle` (o lo quita si la tienda no lo dio) y `titleResolvedAt` en todas las pedidas, con `WHERE kind = 'dlc' AND store = ? AND user_id = ?`. El escaneo sigue escribiendo su título (`Steam <id>`) sin pisar `resolvedTitle`, igual que con `resolvedMedia`.
+- **`getGame`:** el título de cada DLC es `resolvedTitle` si existe y si no `title`; el orden de la 83 usa ese título.
+- `shortcut:` el título queda en el idioma de la primera resolución hasta 30 días; si hace falta seguir el cambio de idioma, se vuelve a pedir al cambiarlo.
+
+#### 6. Coste
+
+- Escaneo: ninguna petición nueva; solo se leen campos más del manifiesto que ya se lee.
+- Títulos: una petición `GetItems` por cada 50 DLC sin título, la primera vez y cada 30 días; con pocos DLC, una. Mismo servicio público y sin clave que las portadas (límites no publicados; 429 con `Retry-After`, como en la 73).
+- Ubisoft: nada.
+
+#### 7. Pruebas
+
+- **Steam:** manifiesto con `InstalledDepots` con y sin `dlcappid`, `dlcappid` inválido, igual al `appid`, repetido y más de 1000; juego sin carpeta (sin DLC); DLC listado por dos juegos (gana el primero); DLC que también es juego instalado (sale como juego); `EXCLUDED_APP_IDS`; registro sin ID. `resolveTitles` con una respuesta pública grabada de `GetItems` para 401920 y 1426300 (sin datos personales), `type` distinto de 4, sin `name`, 429.
+- **Núcleo y `db`:** títulos pendientes solo de DLC, de esa tienda y no retirados; validación del título; el escaneo no pisa `resolvedTitle`; `getGame` usa `resolvedTitle` y ordena por él; fallo del paso sin fallar el escaneo; conformidad de Steam con `dlc: 'scan'`; `checkConnectorManifest` con `resolveTitles` sin `apiHosts` o con `dlc: 'none'`.
+
+#### 8. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
+
+1. **Steam parcial:** (a) mostrar solo los DLC instalados con depósito propio (por defecto; es lo único fiable, y hoy no sale ninguno); (b) no mostrar DLC de Steam hasta tener los poseídos.
+2. **Ubisoft:** (a) nada en este corte (por defecto); (b) un corte de investigación, con la cuenta del usuario en su equipo y sin copiar datos: ver si la respuesta del GraphQL que ya usamos trae DLC y con qué ID, y comprobar UD2; si las dos cosas salen, los DLC se enlazarían por `addons[].id` sin peticiones nuevas; (c) mostrar los `addons` del catálogo como «disponible» (no recomendado: no dice si se posee y contradice el sentido de la 21).
+3. **Steam, poseídos no instalados (SD5):** (a) no investigarlo ahora (por defecto); (b) que el `tester` prepare una comprobación manual de `GetOwnedGames` con `appids_filter` de un DLC poseído; si los devuelve, una decisión aparte (cuesta conocer los DLC de cada juego, una petición por juego).
+
+#### 9. Prueba manual (la prepara el `tester`; la hace el usuario)
+
+1. **Steam:** un juego instalado con DLC descargados (en el equipo de pruebas hay tres manifiestos con `dlcappid`) los muestra en su ficha con su nombre y «Instalado», y no en la biblioteca. Anotar el contador `dlc` y, del paso de títulos, `notDlc` y `noName`.
+2. Desactivar un DLC en las propiedades de Steam (o desinstalarlo) y volver a escanear: desaparece de la ficha (SD2).
+3. Sin red: el DLC sale como «Steam <id>» y toma su nombre en el siguiente paso con red.
+4. Ubisoft: nada cambia.
+5. El registro exportado no contiene títulos ni ID de DLC.
+
+#### 10. Revisión del auditor sobre el diseño (24 de octubre de 2026)
+
+Sin críticos ni altos. **Lo que sigue prevalece sobre los puntos 4 a 9 donde no coincida.**
+
+- **M1 (medio). Espera compartida** (revisa el punto 5): portadas y títulos comparten un único `waitUntil` por tienda; un 429 de cualquiera de los dos para a ambos (`Retry-After` con el tope de un día de la 73). Cada paso tiene su propia señal de `MEDIA_TIMEOUT_MS`. El de títulos no corre si el de portadas acaba de fallar en esa pasada. Prueba: 429 en portadas → no se piden títulos.
+- **M2 (medio). Conservar los títulos resueltos** (revisa el punto 5, datos): `applyPlan` y `applyLibrary` conservan `resolvedTitle` y `titleResolvedAt` en `storeMetadata`, como ya hacen con `resolvedMedia`, `mediaResolvedAt` y `dlcInferred` (hoy la lista blanca solo copia esas tres). Prueba en `db`: resolver, volver a escanear y `listTitlePending` vacío.
+- **M3 (medio). Tope total** (revisa el punto 4, `scan.ts`): el conector limita los DLC para que juegos más DLC no pasen de `MAX_ENTRIES` (10 000, `validate.ts`); a partir de ahí no se emiten y se cuenta `dlcCapped`.
+- **M4 (medio). Respuesta de `resolveTitles` no confiable** (revisa el punto 5, núcleo): el núcleo la filtra como las portadas en `media.ts`: debe ser un `Map`, con claves de texto y pedidas y valores de texto. En el conector, `appid` entero que cumpla `APPID_RE`; si un `appid` se repite, gana el primero.
+- **Bajos:**
+  - **`type`** (revisa el punto 4): se acepta `name` con `success: 1` y `appid` pedido sea cual sea el `type`; `notDlc` queda solo como contador. `parent_appid` no se guarda; si no coincide con la base solo se cuenta `parentMismatch`, sin ID.
+  - **Sobrescritura:** solo se sobrescribe `resolvedTitle` con un título válido; si no, se conserva el anterior y se sella `titleResolvedAt` igualmente (revisa «o lo quita si la tienda no lo dio» del punto 5).
+  - **Escaneo:** la rama de DLC registra solo contadores (`dlc`, `dlcDuplicate`); se mantiene el orden de emisión (juegos primero) y el descarte de duplicados entre juego y DLC se deja al núcleo (regla de la 83). `EXCLUDED_APP_IDS` se mantiene.
+  - **Préstamo familiar:** un DLC del prestador instalado sale como «Instalado» sin que el usuario lo posea (SD2); la guía de usuario lo dice.
+
+#### 11. Decisión del usuario y revisión del código (26 de octubre de 2026)
+
+- **Punto 8, elegido por el usuario:** 8.1 (a), 8.2 (a) y 8.3 (a). 8.3 queda cerrado además por SD5 (comprobado: `appids_filter` no devuelve DLC poseídos).
+- **Cambios del equipo sobre el punto 10:**
+  - sin `parentMismatch`: `resolveTitles` solo recibe ID de DLC y no conoce la base, y la base sale siempre del manifiesto, así que no aporta nada; `parent_appid` ni se lee;
+  - el conector de Steam descarta los DLC repetidos (contra un juego emitido o contra otro DLC) y los cuenta en `dlcDuplicate`; el resultado es el mismo que la regla del núcleo (gana el primero).
+- **Revisión del `auditor` sobre el código:** sin críticos, altos ni medios. Corregidos: la lista intermedia de DLC del escaneo se corta en `MAX_ENTRIES` (cuenta `dlcCapped`) y `noName` se registra aparte de `skipped`. Quedan anotados sin cambiar: un `appid` con ceros a la izquierda se trata como distinto (vale también para juegos; Steam no los usa) y el tope de 10 000 está copiado en el conector porque no puede importar del núcleo (38).
+
+#### Supuestos
+
+- **SD1 (comprobado 24-10-2026, equipo de pruebas, sin cuenta):** tres `appmanifest` traen `InstalledDepots.<depot>.dlcappid` (doce depósitos); los de 250900 son 401920, 570660 y 1426300.
+- **SD2 (sin verificar):** Steam solo descarga el depósito de un DLC con licencia (propia o prestada) y si el usuario no lo ha desactivado, y lo quita de `InstalledDepots` al desactivarlo o desinstalarlo. Con préstamo familiar, un DLC del prestador puede salir como «Instalado» sin que el usuario lo posea (punto 10).
+- **SD3 (sin verificar cuántos):** los DLC sin depósito propio no aparecen nunca.
+- **SD4 (comprobado 24-10-2026, sin clave):** `GetItems` con el `data_request` de la 73 da para 401920 y 1426300 `type: 4`, `name` y `related_items.parent_appid: 250900`, y para 250900 `type: 0` sin `related_items`.
+- **SD5 (comprobado 26-10-2026 con la cuenta del usuario, refutado):** `GetOwnedGames` con `appids_filter: [250900, 401920, 570660, 1426300]` y `skip_unvetted_apps: false` devuelve solo el juego base 250900 (`game_count: 1`), aunque los tres DLC están poseídos e instalados. La API key no permite saber los DLC poseídos; el punto 8.3 queda cerrado en (a).
+- **UD1 (comprobado 24-10-2026, caché `configurations` del equipo de pruebas, sin cuenta):** los registros `is_ulc: yes` solo traen `name`, `thumb_image` y a veces `description`; sin `space_id` ni campo de padre. Los juegos traen `root.addons[]` con `id`, `is_visible`, `name` (a veces una clave de `localizations`) y `thumb_image`.
+- **UD2 (sin verificar):** `addons[].id` coincide con el ID (campo 1 del protobuf) del registro `is_ulc`.
+- **UD3 (sin verificar):** que el GraphQL de juegos poseídos incluya DLC; no hay esquema público y sin cuenta no se puede comprobar.
+
+**Motivo:** en Steam el `appmanifest` del juego ya dice qué DLC están instalados y de qué juego son, sin red y con la base segura; solo falta el nombre, que da el mismo servicio público de las portadas. Es poco, pero es cierto. En Ubisoft el catálogo local sabe qué DLC tiene cada juego, pero ninguna fuente conocida dice cuáles posee el usuario. Alternativas descartadas: `dynamicstore` de Steam (cookie de sesión, ya en la 83); leer `appinfo.vdf` o `localconfig.vdf` de Steam (binario sin documentar, o datos de la cuenta); pedir `appdetails` por juego para listar sus DLC (una petición por juego y aun así no dice cuáles se poseen); título por `resolveMedia` (mezcla portadas y títulos en un tipo que la 83 no guarda para DLC); leer la caché de propiedad por cuenta del launcher de Ubisoft (fichero binario por cuenta, sin documentar).
+
+**Consecuencias:**
+
+- Steam muestra solo una parte de sus DLC; la guía de usuario debe decir cuáles y que con préstamo familiar un DLC puede salir como «Instalado» sin poseerlo (punto 10).
+- Operación de contrato opcional `resolveTitles`, dos métodos nuevos del repositorio de la biblioteca y una lectura más en `getGame`; sin migración. `applyPlan` y `applyLibrary` amplían su lista blanca de `storeMetadata` (punto 10, M2).
+- Ubisoft sigue sin DLC.
+- Revisión del `auditor` sobre el diseño incorporada (punto 10, sin críticos ni altos); prevalece sobre los puntos 4 a 9.
+- El `auditor` revisa el código (entrada no confiable del manifiesto y de `GetItems`, títulos sin registrar); el `tester` prepara la prueba del punto 9; el `documentalista` actualiza la guía de DLC por tienda.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -5373,6 +5664,8 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 80 (Ubisoft, cuenta con ventana de login integrada): vía C elegida por el usuario el 23-10-2026 y comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto, que el usuario puede cambiar. Revisión del `auditor` sobre el diseño hecha el 23-10-2026 e incorporada (punto 18, todos los hallazgos aceptados); falta la del código, que incluye comprobar las licencias de `webviewloader` y de las definiciones COM de la copia parcheada (M5). La prueba manual (punto 14) cierra UB2 a UB9, UB13 y UB15. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
 - Decisión 81 (EA): punto 11.1 aplicado por defecto (mensaje si no está la app de EA); el usuario elige el juego de la prueba manual (11.2, recomendado The Sims 4) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos EAD1 a EAD14, la estabilidad del ID (M2; si falla, opción (b) en su propia decisión) y las comas a través de `rundll32` (NV1). Si la URI falla con varios ID (EAD8), se pasa a uno; si falla en general, el `exec` (opción B del punto 4) va en su propia decisión. EAD6 cerrado el 23-10-2026 (punto 13, `downloadinplacedir`, ya implementado); EAD1 confirmado.
 - Decisión 82 (EA, cuenta): el 24-10-2026 el usuario cambió la vía a navegador y pegar (punto 14), porque Google no funciona en la ventana integrada; la ventana deja de usarse en EA y la confirmación de la contraseña en la ventana queda sin objeto. 12.2 (a) decidida por él («Reconectar al caducar»). Puntos 12.1, 12.3 y 12.4 aplicados por defecto, que el usuario puede cambiar. Falta: implementar el punto 14 (paso `open-external`, `authHosts`, `wizard.paste.storeError` en `validate.ts`), la revisión del `auditor` sobre ese cambio y sobre el código, y la prueba manual (puntos 10 y 14) para cerrar EAA2, EAA5 a EAA13 y NV2, con el host de `packArt` (EAA11) y la duración del token (EAA6). `document-json` del auxiliar, sin uso por ahora: decidir si se retira cuando quede claro que ninguna tienda lo necesita. Ubisoft repite el paso 1 de su prueba manual por el cambio del auxiliar (punto 3).
+- Decisión 83 (DLC en la ficha): punto 10 aplicado por defecto con (a) en todo (huérfanos sin pantalla, EA por el título, solo «Instalado», Steam y Ubisoft fuera); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 13, sin críticos, tres altos). Falta la del código y la prueba manual (punto 12) para cerrar GD1, GD2, ED1 y AD1. La sección de huérfanos de la 52 queda para su propio corte; los DLC de Steam y Ubisoft (punto 9), en la 84.
+- Decisión 84 (DLC de Steam y Ubisoft): punto 8 elegido por el usuario, (a) en todo (punto 11). Revisiones del `auditor` sobre el diseño (punto 10) y el código (punto 11) incorporadas. Falta la prueba manual (punto 9) para cerrar SD2 y SD3. UD2 y UD3 siguen abiertos (Ubisoft sin DLC).
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.

@@ -4,8 +4,9 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type Database from "better-sqlite3";
-import type { EntryMedia, I18nKey, StoreId } from "@ludiary/contracts";
+import { normalizeTitle, type EntryMedia, type I18nKey, type StoreId } from "@ludiary/contracts";
 import type {
+  CoreLogger,
   GameDetail,
   GameSummary,
   ConnectionRepository,
@@ -32,6 +33,8 @@ type Db = BetterSQLite3Database<typeof schema>;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 const STORE_ORDER: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
 const CHUNK = 500;
+/** ADR 83: safety cap on the DLC shown in a game. */
+const MAX_DLC = 1000;
 
 export interface Repositories {
   identity: IdentityRepository;
@@ -48,6 +51,8 @@ interface Scope {
   deviceId: string;
 }
 
+const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
 function chunks<T>(items: readonly T[]): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += CHUNK) out.push(items.slice(i, i + CHUNK));
@@ -58,7 +63,7 @@ function chunks<T>(items: readonly T[]): T[][] {
  * All repositories share one scope (the only user and the local device). `identity.ensure` sets it; using any
  * other repository before that is a programming error.
  */
-export function createRepositories(sqlite: Database.Database): Repositories {
+export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLogger, "warn">): Repositories {
   const db: Db = drizzle(sqlite, { schema });
   let scope: Scope | null = null;
   const need = (): Scope => {
@@ -97,6 +102,8 @@ export function createRepositories(sqlite: Database.Database): Repositories {
     store: r.store as PropertyRecord["store"],
     storeGameId: r.storeGameId,
     kind: r.kind as "game" | "dlc",
+    baseStoreGameId: r.baseStoreGameId,
+    dlcInferred: r.storeMetadata?.dlcInferred === true,
     storePlaytimeMinutes: r.storePlaytimeMinutes,
     storeLastPlayedAt: r.storeLastPlayedAt,
     title: r.title,
@@ -219,6 +226,14 @@ export function createRepositories(sqlite: Database.Database): Repositories {
       const games = all.filter((p) => p.kind === "game");
       if (games.length === 0) return null;
       const inst = installsOfDevice(s);
+      // ADR 84: a title resolved by the store wins over the scan's placeholder, and the order follows it.
+      const shown = (p: (typeof all)[number]) => p.storeMetadata?.resolvedTitle ?? p.title;
+      const sortKey = (p: (typeof all)[number]) => (p.storeMetadata?.resolvedTitle ? normalizeTitle(p.storeMetadata.resolvedTitle) : p.normalizedTitle);
+      const allDlc = all
+        .filter((p) => p.kind === "dlc" && p.store !== "manual")
+        .sort((a, b) => cmp(sortKey(a), sortKey(b)) || cmp(a.id, b.id));
+      if (allDlc.length > MAX_DLC) log?.warn("A game has more DLC than can be shown; the list was cut", { dlc: allDlc.length, shown: MAX_DLC });
+      const dlc = allDlc.slice(0, MAX_DLC);
       const detail: GameDetail = {
         ...summary(g, games, new Set(inst.keys()), connectedStores(s)),
         // The core fills `actions` from the connector capabilities; the repository does not know them.
@@ -233,9 +248,7 @@ export function createRepositories(sqlite: Database.Database): Repositories {
             actions: [],
           };
         }),
-        dlc: all
-          .filter((p) => p.kind === "dlc" && p.store !== "manual")
-          .map((p) => ({ id: p.id, title: p.title, store: p.store as StoreId })),
+        dlc: dlc.map((p) => ({ id: p.id, title: shown(p), store: p.store as StoreId, installed: inst.has(p.id) })),
         collections: [],
       };
       return detail;
@@ -327,6 +340,56 @@ export function createRepositories(sqlite: Database.Database): Repositories {
             tx.update(gameProperties)
               .set({ storeMetadata: { ...(r.storeMetadata ?? {}), resolvedMedia: m ? { ...m } : {}, mediaResolvedAt: at } })
               .where(and(eq(gameProperties.id, r.id), eq(gameProperties.userId, s.userId)))
+              .run();
+          }
+        }
+      });
+    },
+
+    async listTitlePending(store, olderThan, limit) {
+      const s = need();
+      const resolvedAt = sql`json_extract(${gameProperties.storeMetadata}, '$.titleResolvedAt')`;
+      return db
+        .select({ id: gameProperties.storeGameId })
+        .from(gameProperties)
+        .where(
+          and(
+            eq(gameProperties.userId, s.userId),
+            eq(gameProperties.store, store),
+            eq(gameProperties.kind, "dlc"),
+            isNull(gameProperties.removedAt),
+            sql`${gameProperties.storeGameId} IS NOT NULL`,
+            sql`(${resolvedAt} IS NULL OR ${resolvedAt} < ${olderThan})`,
+          ),
+        )
+        .orderBy(sql`coalesce(${resolvedAt}, 0)`, asc(gameProperties.storeGameId))
+        .limit(limit)
+        .all()
+        .map((r) => r.id as string);
+    },
+
+    async setResolvedTitles(store, titles, requested, at) {
+      const s = need();
+      db.transaction((tx) => {
+        for (const part of chunks(requested)) {
+          const rows = tx
+            .select()
+            .from(gameProperties)
+            .where(
+              and(
+                eq(gameProperties.userId, s.userId),
+                eq(gameProperties.store, store),
+                eq(gameProperties.kind, "dlc"),
+                inArray(gameProperties.storeGameId, part),
+              ),
+            )
+            .all();
+          for (const r of rows) {
+            const t = titles.get(r.storeGameId as string);
+            // Only a valid title replaces the previous one; the stamp is written either way (ADR 84 point 10).
+            tx.update(gameProperties)
+              .set({ storeMetadata: { ...(r.storeMetadata ?? {}), titleResolvedAt: at, ...(t ? { resolvedTitle: t } : {}) } })
+              .where(and(eq(gameProperties.id, r.id), eq(gameProperties.userId, s.userId), eq(gameProperties.kind, "dlc"), eq(gameProperties.store, store)))
               .run();
           }
         }
@@ -596,6 +659,72 @@ function putSync(db: Db | Tx, s: Scope, st: SyncStateRecord): void {
     .run();
 }
 
+const isFollowing = (canonicalId: string, userId: string) =>
+  // ADR 83: only a canonical game with exactly one live `game` property follows its store title and artwork.
+  sql`(SELECT count(*) FROM game_properties WHERE canonical_game_id = ${canonicalId} AND user_id = ${userId} AND removed_at IS NULL AND kind = 'game') = 1`;
+
+/**
+ * ADR 83 (A3, M1): kind changes first (with the new canonical game of a DLC that becomes a game), then the DLC links,
+ * then the canonical games left without any property are deleted. Runs before the canonical follows the store title.
+ */
+function applyKindsAndLinks(
+  tx: Tx,
+  s: Scope,
+  plan: { store: StoreId; at: number; kindChanges: ScanPlan["kindChanges"]; dlcLinks: ScanPlan["dlcLinks"] },
+  entryOf: ReadonlyMap<string, { media?: EntryMedia | undefined }>,
+): void {
+  const emptied = new Set<string>();
+  for (const k of plan.kindChanges) {
+    const prop = tx
+      .select()
+      .from(gameProperties)
+      .where(and(eq(gameProperties.id, k.propertyId), eq(gameProperties.userId, s.userId)))
+      .get();
+    if (!prop) throw new Error(`Plan changes the kind of an unknown property ${k.propertyId}`);
+    if (prop.canonicalGameId && prop.canonicalGameId !== k.canonicalId) emptied.add(prop.canonicalGameId);
+    if (k.kind === "game" && k.canonicalId) {
+      const media = entryOf.get(k.propertyId)?.media;
+      tx.insert(canonicalGames)
+        .values({
+          id: k.canonicalId,
+          userId: s.userId,
+          title: prop.title,
+          normalizedTitle: prop.normalizedTitle,
+          media: media ? { ...media } : null,
+          metadataSource: plan.store,
+          createdAt: plan.at,
+          updatedAt: plan.at,
+        })
+        .run();
+    }
+    tx.update(gameProperties)
+      .set({ kind: k.kind, canonicalGameId: k.canonicalId, ...(k.kind === "game" ? { baseStoreGameId: null } : {}) })
+      .where(and(eq(gameProperties.id, k.propertyId), eq(gameProperties.userId, s.userId)))
+      .run();
+  }
+  const byTarget = new Map<string | null, string[]>();
+  for (const l of plan.dlcLinks) byTarget.set(l.canonicalId, [...(byTarget.get(l.canonicalId) ?? []), l.propertyId]);
+  for (const [canonicalId, ids] of byTarget) {
+    for (const part of chunks(ids)) {
+      tx.update(gameProperties)
+        .set({ canonicalGameId: canonicalId })
+        .where(and(eq(gameProperties.kind, "dlc"), eq(gameProperties.store, plan.store), eq(gameProperties.userId, s.userId), inArray(gameProperties.id, part)))
+        .run();
+    }
+  }
+  for (const part of chunks([...emptied])) {
+    tx.delete(canonicalGames)
+      .where(
+        and(
+          eq(canonicalGames.userId, s.userId),
+          inArray(canonicalGames.id, part),
+          sql`NOT EXISTS (SELECT 1 FROM game_properties WHERE canonical_game_id = ${canonicalGames.id})`,
+        ),
+      )
+      .run();
+  }
+}
+
 /** ADR 72: the whole plan or nothing. Runs inside db.transaction, so any throw rolls everything back. */
 function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
   const at = plan.at;
@@ -619,18 +748,21 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
 
   for (const c of plan.create) {
     const e = c.entry;
-    tx.insert(canonicalGames)
-      .values({
-        id: c.canonicalId,
-        userId: s.userId,
-        title: e.title,
-        normalizedTitle: e.normalizedTitle,
-        media: e.media ? { ...e.media } : null,
-        metadataSource: plan.store,
-        createdAt: at,
-        updatedAt: at,
-      })
-      .run();
+    // A DLC never creates a canonical game: `canonicalId` is the one of its base game, or null (ADR 83).
+    if (e.kind === "game" && c.canonicalId) {
+      tx.insert(canonicalGames)
+        .values({
+          id: c.canonicalId,
+          userId: s.userId,
+          title: e.title,
+          normalizedTitle: e.normalizedTitle,
+          media: e.media ? { ...e.media } : null,
+          metadataSource: plan.store,
+          createdAt: at,
+          updatedAt: at,
+        })
+        .run();
+    }
     tx.insert(gameProperties)
       .values({
         id: c.propertyId,
@@ -638,7 +770,8 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
         canonicalGameId: c.canonicalId,
         store: plan.store,
         storeGameId: e.storeGameId,
-        kind: "game",
+        kind: e.kind,
+        baseStoreGameId: e.kind === "dlc" ? (e.baseStoreGameId ?? null) : null,
         title: e.title,
         normalizedTitle: e.normalizedTitle,
         owned: 0,
@@ -649,6 +782,8 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
     upsertInstallation(c.installationId, c.propertyId, e);
   }
 
+  const kindOf = new Map(plan.kindChanges.map((k) => [k.propertyId, k.kind]));
+  const tracked: { canonicalId: string; entry: Entry; owned: boolean }[] = [];
   for (const u of plan.update) {
     const e = u.entry;
     const prop = tx
@@ -657,36 +792,42 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
       .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
       .get();
     if (!prop) throw new Error(`Scan plan updates an unknown property ${u.propertyId}`);
-    tx.update(gameProperties)
-      // ADR 73: the scan rewrites media and externalIds but keeps what resolveMedia stored.
-      .set({
-        // ADR 74: the API title of an owned property is better than the manifest name.
-        ...(prop.owned === 1 ? {} : { title: e.title, normalizedTitle: e.normalizedTitle }),
-        storeMetadata: {
-          ...metadata(e),
-          ...(prop.storeMetadata?.resolvedMedia ? { resolvedMedia: prop.storeMetadata.resolvedMedia } : {}),
-          ...(prop.storeMetadata?.mediaResolvedAt !== undefined ? { mediaResolvedAt: prop.storeMetadata.mediaResolvedAt } : {}),
-        },
-      })
-      .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
-      .run();
-    if (prop.canonicalGameId) {
-      // Only a canonical game with this single property follows the store title and artwork.
-      tx.update(canonicalGames)
+    const finalKind = kindOf.get(u.propertyId) ?? (prop.kind as "game" | "dlc");
+    // ADR 83 A1: an entry of another kind than the row (kept as is) changes nothing.
+    if (e.kind === finalKind) {
+      tx.update(gameProperties)
+        // ADR 73: the scan rewrites media and externalIds but keeps what resolveMedia stored.
         .set({
+          // ADR 74: the API title of an owned property is better than the manifest name.
           ...(prop.owned === 1 ? {} : { title: e.title, normalizedTitle: e.normalizedTitle }),
-          media: e.media ? { ...e.media } : null,
-          updatedAt: at,
+          ...(finalKind === "dlc" ? { baseStoreGameId: e.baseStoreGameId ?? null } : {}),
+          storeMetadata: {
+            ...metadata(e),
+            ...(prop.storeMetadata?.resolvedMedia ? { resolvedMedia: prop.storeMetadata.resolvedMedia } : {}),
+            ...(prop.storeMetadata?.mediaResolvedAt !== undefined ? { mediaResolvedAt: prop.storeMetadata.mediaResolvedAt } : {}),
+            ...(prop.storeMetadata?.resolvedTitle ? { resolvedTitle: prop.storeMetadata.resolvedTitle } : {}),
+            ...(prop.storeMetadata?.titleResolvedAt !== undefined ? { titleResolvedAt: prop.storeMetadata.titleResolvedAt } : {}),
+            ...(finalKind === "dlc" && prop.storeMetadata?.dlcInferred ? { dlcInferred: true as const } : {}),
+          },
         })
-        .where(
-          and(
-            eq(canonicalGames.id, prop.canonicalGameId),
-            sql`(SELECT count(*) FROM game_properties WHERE canonical_game_id = ${prop.canonicalGameId}) = 1`,
-          ),
-        )
+        .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
         .run();
+      if (prop.kind === "game" && finalKind === "game" && prop.canonicalGameId) tracked.push({ canonicalId: prop.canonicalGameId, entry: e, owned: prop.owned === 1 });
+      upsertInstallation(u.installationId, u.propertyId, e); // not on a conflict: it would overwrite launch data with a DLC's
     }
-    upsertInstallation(u.installationId, u.propertyId, e);
+  }
+
+  applyKindsAndLinks(tx, s, plan, new Map(plan.update.map((u) => [u.propertyId, u.entry])));
+  for (const t of tracked) {
+    // Only a canonical game with this single property follows the store title and artwork.
+    tx.update(canonicalGames)
+      .set({
+        ...(t.owned ? {} : { title: t.entry.title, normalizedTitle: t.entry.normalizedTitle }),
+        media: t.entry.media ? { ...t.entry.media } : null,
+        updatedAt: at,
+      })
+      .where(and(eq(canonicalGames.id, t.canonicalId), eq(canonicalGames.userId, s.userId), isFollowing(t.canonicalId, s.userId)))
+      .run();
   }
 
   for (const part of chunks(plan.removeInstallations)) {
@@ -746,22 +887,26 @@ function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan): void {
   const metadata = (e: Entry) => ({
     ...(e.media ? { media: { ...e.media } } : {}),
     ...(e.externalIds ? { externalIds: { ...e.externalIds } } : {}),
+    ...(e.kind === "dlc" && e.dlcInferred ? { dlcInferred: true as const } : {}),
   });
 
   for (const c of plan.create) {
     const e = c.entry;
-    tx.insert(canonicalGames)
-      .values({
-        id: c.canonicalId,
-        userId: s.userId,
-        title: e.title,
-        normalizedTitle: e.normalizedTitle,
-        media: e.media ? { ...e.media } : null,
-        metadataSource: plan.store,
-        createdAt: at,
-        updatedAt: at,
-      })
-      .run();
+    // A DLC never creates a canonical game: `canonicalId` is the one of its base game, or null (ADR 83).
+    if (e.kind === "game" && c.canonicalId) {
+      tx.insert(canonicalGames)
+        .values({
+          id: c.canonicalId,
+          userId: s.userId,
+          title: e.title,
+          normalizedTitle: e.normalizedTitle,
+          media: e.media ? { ...e.media } : null,
+          metadataSource: plan.store,
+          createdAt: at,
+          updatedAt: at,
+        })
+        .run();
+    }
     tx.insert(gameProperties)
       .values({
         id: c.propertyId,
@@ -769,7 +914,8 @@ function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan): void {
         canonicalGameId: c.canonicalId,
         store: plan.store,
         storeGameId: e.storeGameId,
-        kind: "game",
+        kind: e.kind,
+        baseStoreGameId: e.kind === "dlc" ? (e.baseStoreGameId ?? null) : null,
         title: e.title,
         normalizedTitle: e.normalizedTitle,
         owned: 1,
@@ -781,6 +927,8 @@ function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan): void {
       .run();
   }
 
+  const kindOf = new Map(plan.kindChanges.map((k) => [k.propertyId, k.kind]));
+  const tracked: { canonicalId: string; entry: Entry }[] = [];
   for (const u of plan.update) {
     const e = u.entry;
     const prop = tx
@@ -789,35 +937,42 @@ function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan): void {
       .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
       .get();
     if (!prop) throw new Error(`Library plan updates an unknown property ${u.propertyId}`);
+    const finalKind = kindOf.get(u.propertyId) ?? (prop.kind as "game" | "dlc");
+    // ADR 83 A1: an entry of another kind than the row (kept as is) only confirms the ownership.
+    const same = e.kind === finalKind;
     tx.update(gameProperties)
       .set({
-        title: e.title,
-        normalizedTitle: e.normalizedTitle,
         owned: 1,
         removedAt: null,
-        storePlaytimeMinutes: e.storePlaytimeMinutes,
-        storeLastPlayedAt: e.storeLastPlayedAt,
-        // ADR 73: keeps what resolveMedia stored.
-        storeMetadata: {
-          ...metadata(e),
-          ...(prop.storeMetadata?.resolvedMedia ? { resolvedMedia: prop.storeMetadata.resolvedMedia } : {}),
-          ...(prop.storeMetadata?.mediaResolvedAt !== undefined ? { mediaResolvedAt: prop.storeMetadata.mediaResolvedAt } : {}),
-        },
+        ...(same
+          ? {
+              title: e.title,
+              normalizedTitle: e.normalizedTitle,
+              storePlaytimeMinutes: e.storePlaytimeMinutes,
+              storeLastPlayedAt: e.storeLastPlayedAt,
+              ...(finalKind === "dlc" ? { baseStoreGameId: e.baseStoreGameId ?? null } : {}),
+              // ADR 73: keeps what resolveMedia stored.
+              storeMetadata: {
+                ...metadata(e),
+                ...(prop.storeMetadata?.resolvedMedia ? { resolvedMedia: prop.storeMetadata.resolvedMedia } : {}),
+                ...(prop.storeMetadata?.mediaResolvedAt !== undefined ? { mediaResolvedAt: prop.storeMetadata.mediaResolvedAt } : {}),
+                ...(prop.storeMetadata?.resolvedTitle ? { resolvedTitle: prop.storeMetadata.resolvedTitle } : {}),
+                ...(prop.storeMetadata?.titleResolvedAt !== undefined ? { titleResolvedAt: prop.storeMetadata.titleResolvedAt } : {}),
+              },
+            }
+          : {}),
       })
       .where(and(eq(gameProperties.id, u.propertyId), eq(gameProperties.userId, s.userId)))
       .run();
-    if (prop.canonicalGameId) {
-      tx.update(canonicalGames)
-        .set({ title: e.title, normalizedTitle: e.normalizedTitle, media: e.media ? { ...e.media } : null, updatedAt: at })
-        .where(
-          and(
-            eq(canonicalGames.id, prop.canonicalGameId),
-            eq(canonicalGames.userId, s.userId),
-            sql`(SELECT count(*) FROM game_properties WHERE canonical_game_id = ${prop.canonicalGameId}) = 1`,
-          ),
-        )
-        .run();
-    }
+    if (same && prop.kind === "game" && finalKind === "game" && prop.canonicalGameId) tracked.push({ canonicalId: prop.canonicalGameId, entry: e });
+  }
+
+  applyKindsAndLinks(tx, s, plan, new Map(plan.update.map((u) => [u.propertyId, u.entry])));
+  for (const t of tracked) {
+    tx.update(canonicalGames)
+      .set({ title: t.entry.title, normalizedTitle: t.entry.normalizedTitle, media: t.entry.media ? { ...t.entry.media } : null, updatedAt: at })
+      .where(and(eq(canonicalGames.id, t.canonicalId), eq(canonicalGames.userId, s.userId), isFollowing(t.canonicalId, s.userId)))
+      .run();
   }
 
   for (const part of chunks(plan.disown)) {

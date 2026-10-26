@@ -224,7 +224,7 @@ export const GameDetailSchema = Type.Object(
   {
     ...GameSummarySchema.properties,
     properties: Type.Array(GamePropertySchema),
-    dlc: Type.Array(Type.Object({ id: Id, title: Type.String(), store: StoreIdSchema }, strict)),
+    dlc: Type.Array(Type.Object({ id: Id, title: Type.String(), store: StoreIdSchema, installed: Type.Boolean() }, strict), { maxItems: 1000 }),
     collections: Type.Array(Type.Object({ id: Id, name: Type.String() }, strict)),
   },
   strict,

@@ -83,7 +83,8 @@ export interface GamePropertyDetail {
 
 export interface GameDetail extends GameSummary {
   properties: readonly GamePropertyDetail[];
-  dlc: readonly { id: string; title: string; store: StoreId }[];
+  /** ADR 83. `installed`: a row in `installations` on this device. */
+  dlc: readonly { id: string; title: string; store: StoreId; installed: boolean }[];
   collections: readonly { id: string; name: string }[];
 }
 
@@ -103,6 +104,10 @@ export interface PropertyRecord {
   store: StoreId | "manual";
   storeGameId: string | null;
   kind: "game" | "dlc";
+  /** ADR 83. Store id of the base game of a `dlc` property; null if unknown. */
+  baseStoreGameId: string | null;
+  /** ADR 83 M2. The DLC link was deduced from the title; an installation seen as a game outweighs it. */
+  dlcInferred?: boolean;
   title: string;
   normalizedTitle: string;
   owned: boolean;
@@ -124,6 +129,8 @@ export interface InstallationRecord {
 export interface ScannedEntry {
   storeGameId: string;
   kind: "game" | "dlc";
+  /** ADR 83. Only for `dlc`. */
+  baseStoreGameId?: string | null;
   title: string;
   normalizedTitle: string;
   installPath: string;
@@ -139,8 +146,11 @@ export interface ScannedEntry {
 export interface ScanPlan {
   store: StoreId;
   at: number;
-  /** New property + new canonical game (same-store properties never merge in this cut). */
-  create: readonly { canonicalId: string; propertyId: string; installationId: string; entry: ScannedEntry }[];
+  /**
+   * New property. `canonicalId`: for a game, the new canonical game to create; for a DLC (ADR 83), the existing canonical
+   * of its base game or null. A DLC never creates a canonical game.
+   */
+  create: readonly { canonicalId: string | null; propertyId: string; installationId: string; entry: ScannedEntry }[];
   /** Existing property: update title and media, and upsert the installation of this device. */
   update: readonly { propertyId: string; installationId: string; entry: ScannedEntry }[];
   /** Installation rows to delete. */
@@ -149,6 +159,12 @@ export interface ScanPlan {
   retireProperties: readonly string[];
   /** Properties found again: removed_at back to null. */
   reviveProperties: readonly string[];
+  /** ADR 83 (A3). Applied before the canonical follows the store title. `canonicalId`: new canonical for a game, link for a DLC. */
+  kindChanges: readonly KindChange[];
+  /** ADR 83. DLC whose canonical game changes (only the ones that change). */
+  dlcLinks: readonly DlcLink[];
+  /** Informational (logged, not applied): rows whose kind was kept because of ADR 83 A1. */
+  kindConflicts?: number;
   /** Discovered roots: upsert (new ones enabled) ... */
   upsertDiscoveredRoots: readonly ScanRootRecord[];
   /** ... and delete those the connector stopped returning. */
@@ -156,9 +172,24 @@ export interface ScanPlan {
   sync: SyncStateRecord;
 }
 
+export interface KindChange {
+  propertyId: string;
+  kind: "game" | "dlc";
+  canonicalId: string | null;
+}
+export interface DlcLink {
+  propertyId: string;
+  canonicalId: string | null;
+}
+
 /** One validated entry of a library snapshot, ready to be planned (ADR 74). */
 export interface LibraryEntry {
   storeGameId: string;
+  kind: "game" | "dlc";
+  /** ADR 83. Only for `dlc`. */
+  baseStoreGameId?: string | null;
+  /** ADR 83 M2. The base was deduced from the title. */
+  dlcInferred?: true;
   title: string;
   normalizedTitle: string;
   externalIds?: ExternalIds;
@@ -174,14 +205,19 @@ export interface LibraryEntry {
 export interface LibraryPlan {
   store: StoreId;
   at: number;
-  /** New property + new canonical game. */
-  create: readonly { canonicalId: string; propertyId: string; entry: LibraryEntry }[];
+  /** New property. `canonicalId` as in `ScanPlan.create` (ADR 83). */
+  create: readonly { canonicalId: string | null; propertyId: string; entry: LibraryEntry }[];
   /** Existing property: owned = 1, removed_at = null, update title, playtime, last played and media (keeps resolvedMedia, ADR 73). */
   update: readonly { propertyId: string; entry: LibraryEntry }[];
   /** owned = 0 for these (complete snapshots only). */
   disown: readonly string[];
   /** Subset of the disowned ones without installation: set removed_at. */
   retire: readonly string[];
+  /** ADR 83 (A3) and links, as in `ScanPlan`. */
+  kindChanges: readonly KindChange[];
+  dlcLinks: readonly DlcLink[];
+  /** Informational (logged, not applied): entries whose kind was kept because of ADR 83 A1. */
+  kindConflicts?: number;
   sync: SyncStateRecord;
 }
 

@@ -87,7 +87,7 @@ export function detailDto(g: GameDetail): GameDetailDto {
       ...(p.installPath !== undefined ? { installPath: p.installPath } : {}),
       actions: [...p.actions],
     })),
-    dlc: g.dlc.map((d) => ({ id: d.id, title: d.title, store: d.store })),
+    dlc: g.dlc.map((d) => ({ id: d.id, title: d.title, store: d.store, installed: d.installed })),
     collections: g.collections.map((c) => ({ id: c.id, name: c.name })),
   };
 }

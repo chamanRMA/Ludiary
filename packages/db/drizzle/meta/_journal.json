@@ -22,6 +22,13 @@
       "when": 1792678421667,
       "tag": "0002_recheck_steam_media",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792846177866,
+      "tag": "0003_dlc",
+      "breakpoints": true
     }
   ]
 }

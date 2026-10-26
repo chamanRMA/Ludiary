@@ -8,6 +8,7 @@ import {
   type LaunchContext,
   type LaunchSpec,
   type ScanContext,
+  type SyncContext,
   type StoreConnector,
   type StoredProperty,
 } from "@ludiary/contracts";
@@ -16,6 +17,8 @@ import { winKey } from "./memory-files";
 export interface ConformanceOptions {
   /** Fresh contexts per call. */
   scan?: () => ScanContext;
+  /** ADR 83: checks the DLC entries of listLibrary against the declared capability. */
+  library?: () => SyncContext;
   discovery?: () => DiscoveryContext;
   launch?: {
     ctx: () => LaunchContext;
@@ -127,6 +130,18 @@ export async function checkConnectorConformance(c: StoreConnector, opts: Conform
       for (const u of r.unreadableRoots) if (!ctx.roots.some((root) => root.path === u.root.path)) out.push("scan: unreadableRoots has a root not in the context");
     } catch (e) {
       note(e, "scanInstalled");
+    }
+  }
+
+  if (opts.library && c.listLibrary) {
+    try {
+      const r = await c.listLibrary(opts.library());
+      r.entries.forEach((e, i) => {
+        if (e.kind === "dlc" && c.capabilities.dlc !== "library" && c.capabilities.dlc !== "library-and-scan") out.push(`library entry ${i}: dlc entry but dlc capability is '${c.capabilities.dlc}'`);
+        if (e.baseStoreGameId !== undefined && e.baseStoreGameId.length > MAX_ID) out.push(`library entry ${i}: bad baseStoreGameId`);
+      });
+    } catch (e) {
+      note(e, "listLibrary");
     }
   }
 

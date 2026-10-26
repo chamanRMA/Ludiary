@@ -74,7 +74,7 @@ export async function composeCore(
 ): Promise<ComposedCore> {
   const connectors = deps.connectors ?? createConnectors();
   const files = createNodeLocalFiles();
-  const repos = createRepositories(sqlite);
+  const repos = createRepositories(sqlite, coreLogger(log));
   const locale = localeOf(deps);
   const locations = deps.createLocationResolver?.(files);
   const launcher = deps.createProcessLauncher?.(unionUriSchemes(connectors));

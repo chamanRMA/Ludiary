@@ -13,6 +13,7 @@ function seed(h: Harness, store: StoreId, id: string, path = GAME, canonical = "
     store,
     storeGameId: id,
     kind: "game",
+    baseStoreGameId: null,
     title: "Portal",
     normalizedTitle: "portal",
     owned: false,

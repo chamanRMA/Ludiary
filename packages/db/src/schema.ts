@@ -1,4 +1,4 @@
-// Drizzle schema of migrations 0001_library_scan and 0002_store_account (ADR 47, 72, 74).
+// Drizzle schema of migrations 0001_library_scan, 0002_store_account and 0003_dlc (ADR 47, 72, 74).
 import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
@@ -14,6 +14,12 @@ export interface StoreMetadataJson {
   resolvedMedia?: MediaJson;
   /** ADR 73: epoch ms of the last resolveMedia answer. */
   mediaResolvedAt?: number;
+  /** ADR 84: DLC title from the connector's resolveTitles. Wins over `title` when shown. */
+  resolvedTitle?: string;
+  /** ADR 84: epoch ms of the last resolveTitles attempt (stamped even when no title came). */
+  titleResolvedAt?: number;
+  /** ADR 83 M2: the DLC link was deduced from the title. */
+  dlcInferred?: true;
 }
 
 export const users = sqliteTable("users", {
@@ -56,6 +62,8 @@ export const gameProperties = sqliteTable(
     store: text("store").notNull(),
     storeGameId: text("store_game_id"),
     kind: text("kind").notNull(),
+    /** ADR 83. Store id of the base game of a `dlc` property (same store); null if unknown. Not an index: plans load the store's properties. */
+    baseStoreGameId: text("base_store_game_id"),
     title: text("title").notNull(),
     normalizedTitle: text("normalized_title").notNull(),
     owned: integer("owned").notNull().default(0),

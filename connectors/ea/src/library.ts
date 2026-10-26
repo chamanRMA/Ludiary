@@ -1,6 +1,7 @@
 // Owned games: getEntitlements (paged) then getOffers (batches); offer -> contentId (ADR 82, points 5 and 6, and 13).
 import { ConnectorError, type EntryMedia, type LibrarySnapshot, type StoreEntry, type SyncContext } from "@ludiary/contracts";
 import { EaGraphql, expiredError, isObject, k, readSession } from "./auth";
+import { inferBaseGame, indexBaseTitles } from "./dlc";
 import { ID_RE } from "./installerdata";
 
 // shortcut: storefronts is [EA] only; EA games bought on Steam or Epic do not come through EA until STEAM/EPIC are confirmed as valid values in the manual test.
@@ -20,7 +21,7 @@ const MAX_TITLE = 300;
 const MAX_ART = 1024;
 const MAX_ART_HOSTS = 8;
 export const MEDIA_HOSTS = ["app-images.ea.com", "drop-assets.ea.com"]; // seen in the real test 24-10-2026 (app-images); must equal manifest mediaHosts
-// Known add-on values (Lutris uses EXTRA_CONTENT); any other type is kept as a game and counted.
+// Known add-on values (Lutris uses EXTRA_CONTENT); any other type is left out and counted.
 const ADDON_TYPES = new Set(["EXTRA_CONTENT", "EXPANSION", "ADDON", "DLC"]);
 const GAME_TYPES = new Set(["BASE_GAME"]);
 
@@ -148,7 +149,7 @@ export async function listEaLibrary(ctx: SyncContext): Promise<LibrarySnapshot> 
   if (ctx.now() >= session.expiresAt) throw new ConnectorError("auth.expired", "The EA session has expired", { messageKey: k("error.expired") });
 
   const api = new EaGraphql(ctx.http, session.token, () => expiredError("EA graphql"), ctx.log);
-  const n: Record<string, number> = { pages: 0, entitlements: 0, badIds: 0, missingOffers: 0, foreign: 0, notGame: 0, noType: 0, unknownType: 0, untranslated: 0, interestOnly: 0, byOfferId: 0, noTitle: 0, duplicateContent: 0, invalidArt: 0 };
+  const n: Record<string, number> = { pages: 0, entitlements: 0, badIds: 0, missingOffers: 0, foreign: 0, notGame: 0, noType: 0, unknownType: 0, untranslated: 0, interestOnly: 0, byOfferId: 0, noTitle: 0, duplicateContent: 0, invalidArt: 0, dlcBadId: 0 };
   const owned = await entitlementIds(api, n);
   const ids = [...owned.keys()];
   n["offers"] = 0;
@@ -158,31 +159,50 @@ export async function listEaLibrary(ctx: SyncContext): Promise<LibrarySnapshot> 
 
   const entries = new Map<string, StoreEntry>();
   const artHosts = new Set<string>();
-  for (const o of [...offers].sort((a, b) => (a.offerId < b.offerId ? -1 : a.offerId > b.offerId ? 1 : 0))) {
-    // As Lutris (ea_app.py, 24-10-2026): only an entitlement whose product says BASE_GAME is a game. The user's real account
-    // listed DLC (e.g. Battlefield 4 China Rising) and titleless items without any type (39 of 54), so no type is out too.
-    if (typeof o.type !== "string") {
-      n["noType"]!++;
-      continue;
-    }
-    if (!GAME_TYPES.has(o.type.toUpperCase())) {
-      n[ADDON_TYPES.has(o.type.toUpperCase()) ? "notGame" : "unknownType"]!++;
-      continue;
-    }
+  // eslint-disable-next-line no-control-regex
+  const clean = (v: unknown): string => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_TITLE) : "");
+  const sorted = [...offers].sort((a, b) => (a.offerId < b.offerId ? -1 : a.offerId > b.offerId ? 1 : 0));
+  /** contentId of an offer, or null when it is not an owned item (interest list, malformed). `strict`: a malformed one makes the snapshot partial. */
+  const contentOf = (o: Offer, strict: boolean): string | null => {
     const raw = o.contentId;
     if (typeof raw === "string" && raw.endsWith("_interestOnly")) {
       n["interestOnly"]!++; // interest / wish list, not owned
-      continue;
+      return null;
     }
-    let cid: string;
     if (raw === undefined || raw === null || raw === "") {
       // shortcut: without a contentId the offer id is the key, so an installed game of this kind can show twice (its installerdata.xml gives the contentId); upgrade when EA gives the contentId or matching exists.
-      cid = o.offerId;
       n["byOfferId"]!++;
-    } else if (typeof raw !== "string" || !ID_RE.test(raw)) {
-      n["untranslated"]!++; // malformed, a real anomaly: skipped and partial
+      return o.offerId;
+    }
+    if (typeof raw !== "string" || !ID_RE.test(raw)) {
+      n[strict ? "untranslated" : "dlcBadId"]!++; // for a game a real anomaly: skipped and partial; an add-on is just left out
+      return null;
+    }
+    return raw;
+  };
+  const candidates: { cid: string; title: string; typed: boolean }[] = [];
+  for (const o of sorted) {
+    // As Lutris (ea_app.py, 24-10-2026): only an entitlement whose product says BASE_GAME is a game. Add-on types, and items
+    // with no type but with a title, are DLC candidates (ADR 83); no type and no title stays out as before.
+    const type = typeof o.type === "string" ? o.type.toUpperCase() : null;
+    if (type !== null && !GAME_TYPES.has(type)) {
+      if (!ADDON_TYPES.has(type)) {
+        n["unknownType"]!++;
+        continue;
+      }
+    }
+    if (type === null || type !== "BASE_GAME") {
+      const title = clean(o.title) || clean(o.name);
+      if (type === null && title === "") {
+        n["noType"]!++;
+        continue;
+      }
+      const cid = contentOf(o, false);
+      if (cid !== null) candidates.push({ cid, title: title || `EA ${cid}`, typed: type !== null });
       continue;
-    } else cid = raw;
+    }
+    const cid = contentOf(o, true);
+    if (cid === null) continue;
     if (entries.has(cid)) {
       n["duplicateContent"]!++; // the smaller offer id came first
       continue;
@@ -194,11 +214,34 @@ export async function listEaLibrary(ctx: SyncContext): Promise<LibrarySnapshot> 
       const h = hostOf(o.art);
       if (h !== null && artHosts.size < MAX_ART_HOSTS) artHosts.add(h);
     }
-    // eslint-disable-next-line no-control-regex
-    const clean = (v: unknown): string => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, MAX_TITLE) : "");
     const title = clean(o.title) || clean(o.name);
     if (title === "") n["noTitle"]!++;
     entries.set(cid, { storeGameId: cid, kind: "game", title: title || `EA ${cid}`, ...(media ? { media } : {}) });
+  }
+  // Add-ons: base by title among the base games of this answer. An installed game never gets here as DLC: if the
+  // library cannot know it, the core keeps it a game (precedence of the scan, ADR 83 A1).
+  const index = indexBaseTitles([...entries.values()].filter((e) => e.title !== `EA ${e.storeGameId}`).map((e) => ({ id: e.storeGameId, title: e.title })));
+  n["dlc"] = 0;
+  n["dlcByTitle"] = 0;
+  n["dlcNoBase"] = 0;
+  const seenCandidates = new Set<string>();
+  for (const d of candidates) {
+    // Same contentId as a base game (it stays a game) or as an earlier candidate (the first wins).
+    if (entries.has(d.cid) || seenCandidates.has(d.cid)) {
+      n["duplicateContent"]!++;
+      continue;
+    }
+    seenCandidates.add(d.cid);
+    const base = inferBaseGame(d.title, index);
+    if (base === undefined) {
+      if (!d.typed) {
+        n["noType"]!++; // not known to be an add-on: out, as before
+        continue;
+      }
+      n["dlcNoBase"]!++;
+    } else n["dlcByTitle"]!++;
+    n["dlc"]!++;
+    entries.set(d.cid, { storeGameId: d.cid, kind: "dlc", ...(base === undefined ? {} : { baseStoreGameId: base, storeMetadata: { dlcInferred: true as const } }), title: d.title });
   }
   ctx.log.info("EA library read", { ...n, invalidArtHosts: [...artHosts].join(",") });
   const complete = n["missingOffers"] === 0 && n["badIds"] === 0 && n["untranslated"] === 0;

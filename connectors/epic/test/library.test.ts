@@ -34,7 +34,7 @@ const failure = async (p: Promise<unknown>): Promise<ConnectorError> => {
 const rec = (n: number, ns = NS) => ({ namespace: ns, catalogItemId: (0xa0000000 + n).toString(16).padStart(32, "0"), appName: `G${n}` });
 
 describe("listLibrary (ADR 78, point 8)", () => {
-  it("maps the fixtures: games only, DLC/applications/stubs skipped, ue skipped, repeats removed, a malformed record makes it partial", async () => {
+  it("maps the fixtures: games and DLC with their base, applications/stubs skipped, ue skipped, repeats removed, a malformed record makes it partial", async () => {
     const { ctx, result } = run(epic());
     const snap = await result;
     expect(snap.complete).toBe(false); // NOT-HEX
@@ -48,6 +48,7 @@ describe("listLibrary (ADR 78, point 8)", () => {
           heroUrl: "https://cdn2.unrealengine.com/test-hero_2560x1440-0000",
         },
       },
+      { storeGameId: `${NS}:${"0".repeat(31)}2:TestDlc01`, kind: "dlc", baseStoreGameId: ID, title: "Test DLC" },
     ]);
     expect(ctx.logs.length).toBeGreaterThan(0);
   });
@@ -183,5 +184,44 @@ describe("listLibrary (ADR 78, point 8)", () => {
     await result;
     const log = JSON.stringify(ctx.logs);
     for (const s of [ACCESS, REFRESH, REFRESH_2, CAT, NS, "Test Game One"]) expect(log).not.toContain(s);
+  });
+
+  describe("DLC base (ADR 83, points 8 and 13)", () => {
+    const cat = (n: number) => (0xb0000000 + n).toString(16).padStart(32, "0");
+    const OTHER = "0000000000000000000000000000b2b2";
+    const run2 = async (records: unknown[], items: Record<string, unknown>) => {
+      const { ctx, result } = run(epic({ library: () => ({ status: 200, body: { records, responseMetadata: {} } }), catalog: () => ({ status: 200, body: items }) }));
+      return { ctx, snap: await result };
+    };
+    const game = (n: number) => ({ id: cat(n), title: `G${n}`, categories: [{ path: "games" }] });
+    const r = (n: number, app = `A${n}`, ns = NS) => ({ namespace: ns, catalogItemId: cat(n), appName: app });
+    const key = (n: number, app = `A${n}`, ns = NS) => `${ns}:${cat(n)}:${app}`;
+
+    it("base owned (batch namespace, own namespace, list); not owned; self; DLC never base of a DLC", async () => {
+      const { snap, ctx } = await run2([r(1), r(2), r(3), r(4), r(5), r(6), r(7, "A7", OTHER)], {
+        [cat(1)]: game(1),
+        [cat(2)]: { id: cat(2), title: "D2", categories: [{ path: "addons" }], mainGameItem: { id: cat(1) } },
+        [cat(3)]: { id: cat(3), title: "D3", categories: [{ path: "addons" }], mainGameItem: { id: cat(7), namespace: OTHER } },
+        [cat(4)]: { id: cat(4), title: "D4", mainGameItemList: [{ nope: 1 }, { id: cat(1) }] },
+        [cat(5)]: { id: cat(5), title: "D5", categories: [{ path: "addons" }], mainGameItem: { id: cat(99) } },
+        [cat(6)]: { id: cat(6), title: "D6", categories: [{ path: "addons" }], mainGameItem: { id: cat(2) } }, // base is a DLC
+        [cat(7)]: game(7),
+      });
+      const by = Object.fromEntries(snap.entries.map((e) => [e.storeGameId, e]));
+      expect(by[key(2)]).toMatchObject({ kind: "dlc", baseStoreGameId: key(1) });
+      expect(by[key(3)]).toMatchObject({ kind: "dlc", baseStoreGameId: key(7, "A7", OTHER) });
+      expect(by[key(4)]).toMatchObject({ kind: "dlc", baseStoreGameId: key(1) });
+      expect(by[key(5)]).toEqual({ storeGameId: key(5), kind: "dlc", title: "D5" });
+      expect(by[key(6)]!.baseStoreGameId).toBeUndefined();
+      expect(JSON.stringify(ctx.logs)).not.toMatch(/D2|D5/);
+    });
+
+    it("the base is found even when its batch comes after the DLC (two namespaces) and with several app names the lowest wins", async () => {
+      const { snap } = await run2([r(1, "Zed"), r(1, "Alpha"), r(2, "D", OTHER)], {
+        [cat(1)]: game(1),
+        [cat(2)]: { id: cat(2), title: "D", categories: [{ path: "addons" }], mainGameItem: { id: cat(1), namespace: NS } },
+      });
+      expect(snap.entries.find((e) => e.kind === "dlc")?.baseStoreGameId).toBe(key(1, "Alpha"));
+    });
   });
 });

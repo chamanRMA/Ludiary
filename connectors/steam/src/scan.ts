@@ -20,6 +20,7 @@ export const EXCLUDED_APP_IDS: ReadonlySet<string> = new Set([
 
 const MANIFEST_RE = /^appmanifest_(\d{1,10})\.acf$/i;
 const MAX_MANIFESTS = 5000;
+const MAX_ENTRIES = 10_000; // the core's limit (validate.ts): games + DLC must not exceed it (ADR 84, M3)
 
 /**
  * Errors caused by what is on the user's disk, which never stop the scan (ADR 72). A link that leaves the roots is
@@ -68,6 +69,9 @@ export async function scanSteamInstalled(ctx: ScanContext): Promise<ScanResult> 
   const entries: InstalledEntry[] = [];
   const unreadableRoots: { root: ScanRoot; code: ConnectorErrorCode }[] = [];
   const seenApps = new Set<string>();
+  // ADR 84: DLC are emitted after all games; the base always comes from the manifest.
+  const dlcs: { id: string; base: string; installPath: string }[] = [];
+  let dlcCapped = 0;
   let done = 0;
   // Roots where some appmanifest could not be read right now (locked, I/O error): reported as unreadable so the core
   // keeps what it knew installed there (scan-plan) instead of retiring those games for a passing failure.
@@ -110,6 +114,12 @@ export async function scanSteamInstalled(ctx: ScanContext): Promise<ScanResult> 
           const installPath = ctx.fs.join(steamapps, "common", m.installDir);
           if (!(await ctx.fs.exists(installPath))) continue;
           seenApps.add(m.appId);
+          // Never hold more DLC than could be emitted: forged manifests would otherwise fill memory.
+          for (const id of m.dlcAppIds) {
+            if (dlcs.length < MAX_ENTRIES) dlcs.push({ id, base: m.appId, installPath });
+            else dlcCapped++;
+          }
+          dlcCapped += m.dlcDropped;
           entries.push({
             storeGameId: m.appId,
             kind: "game",
@@ -134,5 +144,23 @@ export async function scanSteamInstalled(ctx: ScanContext): Promise<ScanResult> 
     }
   }
   unreadableRoots.push(...partial.values());
+  let dlc = 0;
+  let dlcDuplicate = 0;
+  const seenDlc = new Set<string>();
+  for (const d of dlcs) {
+    if (EXCLUDED_APP_IDS.has(d.id)) continue;
+    if (seenApps.has(d.id) || seenDlc.has(d.id)) {
+      dlcDuplicate++;
+      continue;
+    }
+    if (entries.length >= MAX_ENTRIES) {
+      dlcCapped++;
+      continue;
+    }
+    seenDlc.add(d.id);
+    entries.push({ storeGameId: d.id, kind: "dlc", baseStoreGameId: d.base, title: `Steam ${d.id}`, installPath: d.installPath });
+    dlc++;
+  }
+  if (dlc + dlcDuplicate + dlcCapped > 0) ctx.log.info("Steam DLC found in appmanifests", { dlc, dlcDuplicate, dlcCapped });
   return { entries, unreadableRoots };
 }

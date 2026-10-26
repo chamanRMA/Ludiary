@@ -192,7 +192,8 @@ export function createSyncService(env: Env): SyncService {
       entries = valid.entries;
       complete = snapshot.complete === true && !valid.lossy;
       // Steam sometimes answers an empty list for a public profile (ADR 74, S5): never let that empty the library.
-      if (complete && entries.length === 0 && (await deps.library.countOwned(c.id)) > 0) {
+      // ADR 83 A2: only games count; a snapshot with just DLC is as empty as none.
+      if (complete && !entries.some((e) => e.kind === "game") && (await deps.library.countOwned(c.id)) > 0) {
         complete = false;
         deps.log.warn("The store returned an empty library; kept what was owned", { connector: c.id });
       }
@@ -238,6 +239,7 @@ export function createSyncService(env: Env): SyncService {
       installations: await deps.library.listInstallations(c.id),
       sync,
     });
+    if (plan.kindConflicts) deps.log.info("Library DLC kind kept", { connector: c.id, kindConflict: plan.kindConflicts });
     if (!media.canRun(c)) {
       await deps.library.applyLibraryPlan(plan);
       return;
@@ -385,6 +387,7 @@ export function createSyncService(env: Env): SyncService {
       discovered,
       sync,
     });
+    if (plan.kindConflicts) deps.log.info("Scan DLC kind kept", { connector: c.id, kindConflict: plan.kindConflicts });
     if (!media.canRun(c)) {
       await deps.library.applyScanPlan(plan);
       return;

@@ -36,6 +36,10 @@ export interface LibraryRepository {
   listMediaPending(store: StoreId, olderThan: number, limit: number): Promise<readonly string[]>;
   /** ADR 73. Marks every id of `requested` as resolved at `at`; those missing from `media` get empty media. */
   setResolvedMedia(store: StoreId, media: ReadonlyMap<string, EntryMedia>, requested: readonly string[], at: number): Promise<void>;
+  /** ADR 84. storeGameId of non-retired DLC of the store without a resolved title, or resolved before `olderThan`. */
+  listTitlePending(store: StoreId, olderThan: number, limit: number): Promise<readonly string[]>;
+  /** ADR 84. Marks every id of `requested` as resolved at `at`; a title in `titles` replaces the stored one, a missing one keeps the previous. */
+  setResolvedTitles(store: StoreId, titles: ReadonlyMap<string, string>, requested: readonly string[], at: number): Promise<void>;
   /** Applies the whole plan in one transaction; rolls everything back if it fails midway. */
   applyScanPlan(plan: ScanPlan): Promise<void>;
   /** ADR 74. Applies a library snapshot plan in ONE transaction (owned, playtime, last played, media, retirements). */

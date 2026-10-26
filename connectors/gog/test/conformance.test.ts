@@ -16,7 +16,7 @@ describe("GOG manifest (ADR 76)", () => {
   it("is valid with the agreed capabilities", () => {
     expect(checkConnectorManifest(c)).toEqual([]);
     expect(c.access).toBe("unofficial-api");
-    expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "none", actions: ["play", "install"], launchKinds: ["exec", "uri"], uriSchemes: ["goggalaxy"] });
+    expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "library-and-scan", actions: ["play", "install"], launchKinds: ["exec", "uri"], uriSchemes: ["goggalaxy"] });
     expect(c.minSyncIntervalMs).toBe(1_800_000);
     expect(c.apiHosts).toEqual(["auth.gog.com", "embed.gog.com", "api.gog.com", "gamesdb.gog.com"]);
     expect(c.mediaHosts).toEqual(["images.gog.com"]);
