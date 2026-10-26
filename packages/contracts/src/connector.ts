@@ -47,6 +47,11 @@ export interface StoreConnector {
    */
   resolveMedia?(storeGameIds: readonly string[], ctx: MediaContext): Promise<ReadonlyMap<string, EntryMedia>>;
   /**
+   * ADR 84. Optional. Titles of stored DLC properties, at most 50 ids per call. Ids missing from the result:
+   * nothing known. Requires apiHosts and capabilities.dlc other than 'none'.
+   */
+  resolveTitles?(storeGameIds: readonly string[], ctx: MediaContext): Promise<ReadonlyMap<string, string>>;
+  /**
    * Describes how to perform an action on a property already stored in the database.
    * Returns null if the action is not available for it. The core validates and executes
    * the result; a LaunchSpec is never returned by the API as a command.
@@ -334,6 +339,8 @@ export interface StoreEntry {
   readonly storePlaytimeMinutes?: number;
   /** ISO 8601. */
   readonly storeLastPlayedAt?: string;
+  /** ADR 83 M2. `dlcInferred`: the DLC link was deduced from the title, not given by the store. */
+  readonly storeMetadata?: { readonly dlcInferred?: true };
 }
 
 export interface ScanResult {
@@ -456,6 +463,8 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[] {
   for (const h of c.mediaHosts) if (!HOST_RE.test(h)) problems.push(`mediaHosts: '${h}' is not a bare lower-case host name`);
   for (const h of c.apiHosts) if (!HOST_RE.test(h)) problems.push(`apiHosts: '${h}' is not a bare lower-case host name`);
   if (c.resolveMedia && c.apiHosts.length === 0) problems.push("resolveMedia requires apiHosts");
+  if (c.resolveTitles && c.apiHosts.length === 0) problems.push("resolveTitles requires apiHosts");
+  if (c.resolveTitles && cap.dlc === "none") problems.push("resolveTitles requires capabilities.dlc other than 'none'");
   for (const h of c.authHosts) if (!HOST_RE.test(h)) problems.push(`authHosts: '${h}' is not a bare lower-case host name`);
   for (const s of cap.uriSchemes) if (!SCHEME_RE.test(s)) problems.push(`uriSchemes: '${s}' is not a lower-case scheme`);
 

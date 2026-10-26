@@ -322,24 +322,94 @@ describe("listLibrary (ADR 82, points 4 to 6, and 13)", () => {
     expect(logged(r.ctx, "missingOffers")).toBe(1);
   });
 
-  it("add-on content and items without a type are out (as Lutris: only BASE_GAME)", async () => {
+  it("add-on content is an orphan DLC; an untyped item with a title and no base is out; only BASE_GAME is a game", async () => {
     const r = run({
       pages: [[item(1, "EXTRA_CONTENT"), item(2, null), item(3)]],
       offers: () => ({ legacyOffers: [legacy(1), legacy(2), legacy(3)], gameProducts: { items: [product(1), product(2), product(3)] } }),
     });
     const snap = await r.result;
-    expect(snap.entries.map((e) => e.storeGameId)).toEqual([cid(3)]);
+    expect(snap.entries.map((e) => [e.storeGameId, e.kind, e.baseStoreGameId])).toEqual([[cid(3), "game", undefined], [cid(1), "dlc", undefined]]);
     expect(snap.complete).toBe(true);
-    expect([logged(r.ctx, "notGame"), logged(r.ctx, "noType")]).toEqual([1, 1]);
+    expect([logged(r.ctx, "dlcNoBase"), logged(r.ctx, "noType")]).toEqual([1, 1]);
   });
 
-  it("an unknown type and known add-on types are out, each counted", async () => {
+  it("an unknown type is out; known add-on types (any case) are orphan DLC", async () => {
     const r = run({
       pages: [[item(1, "NEW_KIND"), item(2, "dlc"), item(3, "EXPANSION")]],
       offers: () => ({ legacyOffers: [legacy(1), legacy(2), legacy(3)], gameProducts: { items: [product(1), product(2), product(3)] } }),
     });
-    expect((await r.result).entries.map((e) => e.storeGameId)).toEqual([]);
-    expect([logged(r.ctx, "unknownType"), logged(r.ctx, "notGame")]).toEqual([1, 2]);
+    expect((await r.result).entries.map((e) => [e.storeGameId, e.kind])).toEqual([[cid(2), "dlc"], [cid(3), "dlc"]]);
+    expect([logged(r.ctx, "unknownType"), logged(r.ctx, "dlc")]).toEqual([1, 2]);
+  });
+
+  describe("DLC by title (ADR 83, points 8, 11 and 13)", () => {
+    const titled = (n: number, title: string, type: unknown = "BASE_GAME") => ({ ...item(n, type), product: { name: title, baseItem: type === null ? {} : { gameType: type } } });
+    const dlcRun = async (items: unknown[], titles: Record<number, string>, extra: Record<number, Record<string, unknown>> = {}) => {
+      const nums = items.map((i) => Number((i as { originOfferId: string }).originOfferId.slice(-7)));
+      const r = run({
+        pages: [items],
+        offers: () => ({ legacyOffers: nums.map((k) => legacy(k, extra[k])), gameProducts: { items: nums.map((k) => product(k, {}, { title: titles[k] })) } }),
+      });
+      const snap = await r.result;
+      return { r, snap, by: (n: number) => snap.entries.find((e) => e.storeGameId === cid(n)) };
+    };
+
+    it("Battlefield 4 China Rising (no type) goes under Battlefield 4; Battlefield 1 is a game of its own and not DLC of Battlefield", async () => {
+      const { snap, by, r } = await dlcRun(
+        [item(1), item(2), item(3), item(4, null), item(5, "EXPANSION"), item(6, "BASE_GAME")],
+        { 1: "Battlefield™ 4", 2: "Battlefield", 3: "Battlefield 1", 4: "Battlefield 4 China Rising", 5: "Battlefield: Hardline Extra", 6: "Battlefield 4 Deluxe" },
+      );
+      expect(by(4)).toMatchObject({ kind: "dlc", baseStoreGameId: cid(1), storeMetadata: { dlcInferred: true } });
+      expect(by(3)).toMatchObject({ kind: "game" });
+      expect(by(5)).toMatchObject({ kind: "dlc", baseStoreGameId: cid(2) }); // typed, title starts with "battlefield"
+      expect(by(6)).toMatchObject({ kind: "game" }); // BASE_GAME is never reclassified
+      expect(snap.complete).toBe(true);
+      expect([logged(r.ctx, "dlcByTitle"), logged(r.ctx, "dlcNoBase")]).toEqual([2, 0]);
+      expect(JSON.stringify(r.ctx.logs)).not.toMatch(/Battlefield|China/);
+    });
+
+    it("Test Game 4 + its Expansion; Test Game + Test Game 2 or Subtitle-less sequels are not DLC; roman numerals", async () => {
+      const { by } = await dlcRun(
+        [item(1), item(2), item(3, null), item(4, null), item(5, null), item(6, null), item(7, null), item(8, "EXTRA_CONTENT"), item(9, null)],
+        { 1: "Test Game 4", 2: "Test Game", 3: "Test Game 4 Expansion", 4: "Test Game 2", 5: "Test Game IV", 6: "Test Game IIII", 7: "Test Game Subtitle", 8: "Test Game 9", 9: "Test Game xyz" },
+      );
+      expect(by(3)).toMatchObject({ kind: "dlc", baseStoreGameId: cid(1) }); // longest base wins
+      expect(by(4)).toBeUndefined(); // sequel, no type: out
+      expect(by(5)).toBeUndefined();
+      expect(by(6)).toMatchObject({ kind: "dlc", baseStoreGameId: cid(2) }); // IIII is not a well-formed numeral
+      expect(by(7)).toMatchObject({ kind: "dlc", baseStoreGameId: cid(2) });
+      expect(by(8)).toMatchObject({ kind: "dlc" }); // typed sequel-looking: orphan
+      expect(by(8)!.baseStoreGameId).toBeUndefined();
+      expect(by(9)).toMatchObject({ kind: "dlc", baseStoreGameId: cid(2) });
+    });
+
+    it("tie between two bases with the same title: the lowest id; no base and no type: out; contentId of a game stays a game", async () => {
+      const { by, r } = await dlcRun(
+        [item(5), item(2), item(7, null), item(8, null), item(9, "DLC")],
+        { 5: "Twin", 2: "Twin", 7: "Twin Pack", 8: "Alone Pack", 9: "Mystery" },
+        { 9: { contentId: cid(5) } },
+      );
+      expect(by(7)).toMatchObject({ kind: "dlc", baseStoreGameId: cid(2) });
+      expect(by(8)).toBeUndefined();
+      expect(by(5)).toMatchObject({ kind: "game" });
+      expect(logged(r.ctx, "duplicateContent")).toBe(1);
+    });
+  });
+
+  it("DLC by title: a rest that starts with a number is a sequel; two candidates with one contentId keep the first", async () => {
+    const items = [item(1), item(2, null), item(3, null), item(4, null)];
+    const titles: Record<number, string> = { 1: "Test Game", 2: "Test Game 2 Deluxe", 3: "Test Game Pack", 4: "Test Game Other" };
+    const r = run({
+      pages: [items],
+      offers: () => ({
+        legacyOffers: [1, 2, 3, 4].map((k) => legacy(k, k === 4 ? { contentId: cid(3) } : undefined)),
+        gameProducts: { items: [1, 2, 3, 4].map((k) => product(k, {}, { title: titles[k] })) },
+      }),
+    });
+    const snap = await r.result;
+    expect(snap.entries.find((e) => e.storeGameId === cid(2))).toBeUndefined();
+    expect(snap.entries.find((e) => e.storeGameId === cid(3))).toMatchObject({ kind: "dlc", title: "Test Game Pack" });
+    expect(logged(r.ctx, "duplicateContent")).toBe(1);
   });
 
   it("a malformed contentId is untranslated and makes it partial", async () => {

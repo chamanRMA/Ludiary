@@ -7,7 +7,13 @@ export interface AppManifest {
   readonly name: string | null;
   /** Single folder name, relative to steamapps\common. null when absent or unsafe. */
   readonly installDir: string | null;
+  /** ADR 84: valid, distinct-from-appid, unique `InstalledDepots.*.dlcappid`, in order, at most MAX_DLC. */
+  readonly dlcAppIds: readonly string[];
+  /** DLC ids beyond MAX_DLC that were ignored. */
+  readonly dlcDropped: number;
 }
+
+export const MAX_DLC = 1000;
 
 export const APPID_RE = /^\d{1,10}$/;
 // eslint-disable-next-line no-control-regex
@@ -32,5 +38,13 @@ export function parseAppManifest(text: string): AppManifest {
     });
   }
   const name = vdfString(state, "name")?.replace(CONTROL, " ").trim().slice(0, MAX_NAME);
-  return { appId, name: name ? name : null, installDir: safeInstallDir(vdfString(state, "installdir")) };
+  const dlc = new Set<string>();
+  let dlcDropped = 0;
+  for (const depot of vdfObject(state, "InstalledDepots")?.values() ?? []) {
+    const id = typeof depot === "string" ? undefined : vdfString(depot, "dlcappid")?.trim();
+    if (id === undefined || !APPID_RE.test(id) || id === appId || dlc.has(id)) continue;
+    if (dlc.size >= MAX_DLC) dlcDropped++;
+    else dlc.add(id);
+  }
+  return { appId, name: name ? name : null, installDir: safeInstallDir(vdfString(state, "installdir")), dlcAppIds: [...dlc], dlcDropped };
 }

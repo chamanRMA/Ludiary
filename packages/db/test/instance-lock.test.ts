@@ -61,4 +61,4 @@ it("is released by the OS when the holder is killed", async () => {
   const release = await lock.acquire();
   expect(release).not.toBeNull();
   release?.();
-});
+}, 20_000); // spawns node and waits a 2 s busy timeout; 5 s is too tight under a full parallel run

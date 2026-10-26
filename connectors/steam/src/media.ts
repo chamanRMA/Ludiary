@@ -38,14 +38,8 @@ const formatOk = (appid: string, format: string): boolean =>
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-export async function resolveSteamMedia(
-  storeGameIds: readonly string[],
-  ctx: MediaContext,
-): Promise<ReadonlyMap<string, EntryMedia>> {
-  const out = new Map<string, EntryMedia>();
-  const requested = new Set(storeGameIds.filter((id) => APPID_RE.test(id)));
-  if (requested.size === 0) return out;
-
+/** One GetItems request shared by covers and titles (ADR 73, 84): same data_request, language and country. */
+async function getItems(requested: ReadonlySet<string>, ctx: MediaContext): Promise<unknown[]> {
   const inputJson = JSON.stringify({
     ids: [...requested].map((id) => ({ appid: Number(id) })),
     context: { language: ctx.locale.toLowerCase().startsWith("es") ? "spanish" : "english", country_code: "US" },
@@ -61,6 +55,18 @@ export async function resolveSteamMedia(
   const body = await res.json();
   const items = isObject(body) && isObject(body["response"]) ? body["response"]["store_items"] : undefined;
   if (!Array.isArray(items)) throw new ConnectorError("store.unexpected-response", "GetItems answer has no store_items");
+
+  return items;
+}
+
+export async function resolveSteamMedia(
+  storeGameIds: readonly string[],
+  ctx: MediaContext,
+): Promise<ReadonlyMap<string, EntryMedia>> {
+  const out = new Map<string, EntryMedia>();
+  const requested = new Set(storeGameIds.filter((id) => APPID_RE.test(id)));
+  if (requested.size === 0) return out;
+  const items = await getItems(requested, ctx);
 
   let skipped = 0;
   for (const item of items) {
@@ -82,5 +88,36 @@ export async function resolveSteamMedia(
     out.set(appid, { ...(coverUrl ? { coverUrl } : {}), ...(heroUrl ? { heroUrl } : {}) });
   }
   if (skipped > 0) ctx.log.info("Some GetItems elements were skipped", { skipped });
+  return out;
+}
+
+/** ADR 84: DLC names. Any `type` is accepted; parent_appid is neither stored nor read (ADR 84). */
+export async function resolveSteamTitles(
+  storeGameIds: readonly string[],
+  ctx: MediaContext,
+): Promise<ReadonlyMap<string, string>> {
+  const out = new Map<string, string>();
+  const requested = new Set(storeGameIds.filter((id) => APPID_RE.test(id)));
+  if (requested.size === 0) return out;
+
+  let skipped = 0;
+  let noName = 0;
+  let notDlc = 0;
+  for (const item of await getItems(requested, ctx)) {
+    const appid =
+      isObject(item) && item["success"] === 1 && Number.isInteger(item["appid"]) ? String(item["appid"]) : "";
+    const name = isObject(item) ? item["name"] : undefined;
+    if (!requested.has(appid) || out.has(appid)) {
+      skipped++;
+      continue;
+    }
+    if (typeof name !== "string" || name.trim() === "") {
+      noName++;
+      continue;
+    }
+    out.set(appid, name);
+    if ((item as Record<string, unknown>)["type"] !== 4) notDlc++; // info only; the base comes from the manifest
+  }
+  if (skipped + noName + notDlc > 0) ctx.log.info("Some GetItems titles were skipped or unusual", { skipped, noName, notDlc });
   return out;
 }

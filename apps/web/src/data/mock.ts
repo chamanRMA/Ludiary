@@ -374,7 +374,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
           ...(game.installed ? { installPath: store === "steam" ? "C:\\Program Files (x86)\\Steam\\steamapps\\common" : "D:\\Juegos" } : {}),
           actions: game.installed ? (["play"] as const) : (["open-store-page", "install"] as const),
         })),
-        dlc: id === "elden-ring" ? [{ id: "elden-sote", title: "Shadow of the Erdtree", store: "steam" }] : [],
+        dlc: id === "elden-ring" ? [{ id: "elden-sote", title: "Shadow of the Erdtree", store: "steam", installed: true }] : id === "bg3" ? [{ id: "bg3-dlc", title: "Digital Deluxe Edition Soundtrack", store: "gog", installed: false }] : [],
         collections: COLLECTIONS.filter((c) => c.gameIds.includes(id)).map(({ id: cid, name }) => ({ id: cid, name })),
       };
     },

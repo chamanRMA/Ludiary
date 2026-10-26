@@ -1,0 +1,1 @@
+ALTER TABLE `game_properties` ADD `base_store_game_id` text;

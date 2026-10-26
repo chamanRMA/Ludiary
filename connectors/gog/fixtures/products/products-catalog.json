@@ -3,18 +3,28 @@
     "id": 1207658695,
     "title": "Beneath a Steel Sky (1994)",
     "slug": "beneath_a_steel_sky",
-    "game_type": "game"
+    "game_type": "game",
+    "dlcs": []
   },
   {
     "id": 1512372112,
     "title": "Cold Waters",
     "slug": "cold_waters",
-    "game_type": "game"
+    "game_type": "game",
+    "dlcs": {
+      "products": [
+        {
+          "id": 1120912052
+        }
+      ],
+      "all_products_url": "https://api.gog.com/products/1512372112?expand=dlcs"
+    }
   },
   {
     "id": 1120912052,
     "title": "Cold Waters - OST",
     "slug": "cold_waters_ost",
-    "game_type": "dlc"
+    "game_type": "dlc",
+    "dlcs": []
   }
 ]

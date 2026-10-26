@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { compareTitles, hasEditionMark, matchProperties, normalizeTitle, stripEditionMarks } from "../src";
+import { normalizeTitle } from "@ludiary/contracts";
+import { compareTitles, hasEditionMark, matchProperties, stripEditionMarks } from "../src";
 
 describe("normalizeTitle (ADR 51)", () => {
   it.each([

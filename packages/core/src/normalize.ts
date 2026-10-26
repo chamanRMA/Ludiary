@@ -1,23 +1,5 @@
 // Title normalization and the conservative matching rules of ADR 20 and 51.
-import type { ExternalIds } from "@ludiary/contracts";
-
-/**
- * ADR 51 steps, in order: NFKC, lower case, drop trade marks, drop diacritics, '&' -> 'and', non letter/number -> space,
- * collapse spaces. One deliberate reorder: NFKC turns U+2122 into the letters "TM", so the trade marks are dropped
- * before it (otherwise "Game(TM)" would become "gametm").
- */
-export function normalizeTitle(title: string): string {
-  return title
-    .replace(/[™®©]/g, "")
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[™®©]/g, "")
-    .normalize("NFD")
-    .replace(/\p{M}+/gu, "")
-    .replace(/&/g, " and ")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
-}
+import { normalizeTitle, type ExternalIds } from "@ludiary/contracts";
 
 /** Edition marks (ADR 51), already normalized ("director's cut" -> "director s cut"). Whole words only. */
 export const EDITION_MARKS: readonly string[] = [

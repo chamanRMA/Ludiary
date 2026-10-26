@@ -16,7 +16,7 @@ export function createGogConnector(): StoreConnector {
     capabilities: {
       library: true,
       scan: true,
-      dlc: "none",
+      dlc: "library-and-scan",
       actions: ["play", "install"],
       launchKinds: ["exec", "uri"],
       uriSchemes: ["goggalaxy"],

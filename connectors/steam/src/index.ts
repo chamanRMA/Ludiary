@@ -2,7 +2,7 @@ import type { StoreConnector } from "@ludiary/contracts";
 import { resolveSteamAction } from "./launch";
 import { listSteamLibrary } from "./library";
 import { STEAM_LOCATIONS, STEAM_NAME_KEY } from "./manifest";
-import { resolveSteamMedia, STEAM_API_HOSTS, STEAM_MEDIA_HOSTS } from "./media";
+import { resolveSteamMedia, resolveSteamTitles, STEAM_API_HOSTS, STEAM_MEDIA_HOSTS } from "./media";
 import { discoverSteamRoots, scanSteamInstalled } from "./scan";
 import { steamConnection } from "./wizard";
 
@@ -16,7 +16,7 @@ export function createSteamConnector(): StoreConnector {
     capabilities: {
       library: true,
       scan: true,
-      dlc: "none",
+      dlc: "scan",
       actions: ["play", "install"],
       launchKinds: ["uri"],
       uriSchemes: ["steam"],
@@ -34,6 +34,7 @@ export function createSteamConnector(): StoreConnector {
     scanInstalled: scanSteamInstalled,
     discoverRoots: discoverSteamRoots,
     resolveMedia: resolveSteamMedia,
+    resolveTitles: resolveSteamTitles,
     resolveAction: resolveSteamAction,
   };
 }
@@ -44,7 +45,7 @@ export { parseLibraryFolders } from "./libraryfolders";
 export { parseAppManifest, APPID_RE } from "./appmanifest";
 export type { AppManifest } from "./appmanifest";
 export { EXCLUDED_APP_IDS } from "./scan";
-export { steamMedia, resolveSteamMedia, STEAM_MEDIA_HOSTS, STEAM_API_HOSTS } from "./media";
+export { steamMedia, resolveSteamMedia, resolveSteamTitles, STEAM_MEDIA_HOSTS, STEAM_API_HOSTS } from "./media";
 export { buildLoginUrl, verifyAssertion, OPENID_ENDPOINT } from "./openid";
 export { steamConnection } from "./wizard";
 export { listSteamLibrary, fetchOwnedGames } from "./library";

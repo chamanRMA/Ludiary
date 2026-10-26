@@ -24,7 +24,7 @@ describe("manifest (ADR 81, ADR 82)", () => {
   it("is valid, unofficial-api with an account, uri origin2", () => {
     expect(checkConnectorManifest(c)).toEqual([]);
     expect(c.access).toBe("unofficial-api");
-    expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "none", actions: ["play", "install"], launchKinds: ["uri"], uriSchemes: ["origin2"] });
+    expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "library", actions: ["play", "install"], launchKinds: ["uri"], uriSchemes: ["origin2"] });
     expect([c.authHosts, c.apiHosts, c.mediaHosts]).toEqual([["accounts.ea.com"], ["service-aggregation-layer.juno.ea.com"], ["app-images.ea.com", "drop-assets.ea.com"]]);
     expect(c.minSyncIntervalMs).toBe(1_800_000);
     expect([c.connection, c.listLibrary]).not.toContain(undefined);

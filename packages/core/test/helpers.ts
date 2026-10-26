@@ -124,13 +124,15 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
   async applyLibraryPlan(plan: LibraryPlan): Promise<void> {
     this.libraryPlans.push(plan);
     for (const c of plan.create) {
-      this.canonical.set(c.canonicalId, { id: c.canonicalId, title: c.entry.title });
+      if (c.entry.kind === "game" && c.canonicalId) this.canonical.set(c.canonicalId, { id: c.canonicalId, title: c.entry.title });
       this.properties.set(c.propertyId, {
         id: c.propertyId,
         canonicalGameId: c.canonicalId,
         store: plan.store,
         storeGameId: c.entry.storeGameId,
-        kind: "game",
+        kind: c.entry.kind,
+        baseStoreGameId: c.entry.kind === "dlc" ? (c.entry.baseStoreGameId ?? null) : null,
+        dlcInferred: c.entry.kind === "dlc" && c.entry.dlcInferred === true,
         title: c.entry.title,
         normalizedTitle: c.entry.normalizedTitle,
         owned: true,
@@ -141,23 +143,53 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
     }
     for (const u of plan.update) {
       const p = this.properties.get(u.propertyId)!;
+      const same = u.entry.kind === (plan.kindChanges.find((k) => k.propertyId === p.id)?.kind ?? p.kind);
       this.properties.set(p.id, {
         ...p,
-        title: u.entry.title,
-        normalizedTitle: u.entry.normalizedTitle,
         owned: true,
         removedAt: null,
-        storePlaytimeMinutes: u.entry.storePlaytimeMinutes,
-        storeLastPlayedAt: u.entry.storeLastPlayedAt,
+        ...(same
+          ? {
+              title: u.entry.title,
+              normalizedTitle: u.entry.normalizedTitle,
+              storePlaytimeMinutes: u.entry.storePlaytimeMinutes,
+              storeLastPlayedAt: u.entry.storeLastPlayedAt,
+              ...(u.entry.kind === "dlc" ? { baseStoreGameId: u.entry.baseStoreGameId ?? null, dlcInferred: u.entry.dlcInferred === true } : {}),
+            }
+          : {}),
       });
-      if (p.canonicalGameId) this.canonical.set(p.canonicalGameId, { id: p.canonicalGameId, title: u.entry.title });
+    }
+    this.applyKinds(plan);
+    for (const u of plan.update) {
+      const p = this.properties.get(u.propertyId)!;
+      if (u.entry.kind === "game" && p.kind === "game" && p.canonicalGameId && this.followsStore(p.canonicalGameId)) {
+        this.canonical.set(p.canonicalGameId, { id: p.canonicalGameId, title: u.entry.title });
+      }
     }
     plan.disown.forEach((id) => this.properties.set(id, { ...this.properties.get(id)!, owned: false }));
     plan.retire.forEach((id) => this.properties.set(id, { ...this.properties.get(id)!, removedAt: plan.at }));
     this.sync.set(`${plan.sync.store}:${plan.sync.operation}`, plan.sync);
   }
+  private followsStore(canonicalId: string): boolean {
+    return [...this.properties.values()].filter((p) => p.canonicalGameId === canonicalId && p.removedAt === null && p.kind === "game").length === 1;
+  }
+  /** ADR 83: kind changes, DLC links, then canonical games left without properties are deleted. */
+  private applyKinds(plan: { store: StoreId; kindChanges: LibraryPlan["kindChanges"]; dlcLinks: LibraryPlan["dlcLinks"] }) {
+    const emptied = new Set<string>();
+    for (const k of plan.kindChanges) {
+      const p = this.properties.get(k.propertyId)!;
+      if (p.canonicalGameId && p.canonicalGameId !== k.canonicalId) emptied.add(p.canonicalGameId);
+      if (k.kind === "game" && k.canonicalId) this.canonical.set(k.canonicalId, { id: k.canonicalId, title: p.title });
+      this.properties.set(p.id, { ...p, kind: k.kind, canonicalGameId: k.canonicalId, ...(k.kind === "game" ? { baseStoreGameId: null, dlcInferred: false } : {}) });
+    }
+    for (const l of plan.dlcLinks) {
+      const p = this.properties.get(l.propertyId)!;
+      if (p.kind === "dlc" && p.store === plan.store) this.properties.set(p.id, { ...p, canonicalGameId: l.canonicalId });
+    }
+    for (const id of emptied) if (![...this.properties.values()].some((p) => p.canonicalGameId === id)) this.canonical.delete(id);
+  }
   async countOwned(store: StoreId): Promise<number> {
-    return [...this.properties.values()].filter((p) => p.store === store && p.owned && p.removedAt === null).length;
+    return [...this.properties.values()].filter((p) => p.store === store && p.kind === "game" && p.owned && p.removedAt === null).length;
   }
   secretRows = new Map<string, SecretRecord>();
   connectionRows = new Map<StoreId, StoreConnectionRecord>();
@@ -194,7 +226,9 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
         const i = [...this.installs.values()].find((x) => x.propertyId === p.id);
         return { id: p.id, store: p.store, installed: !!i, owned: p.owned, ...(i ? { installPath: i.installPath } : {}), actions: [] };
       }),
-      dlc: [],
+      dlc: [...this.properties.values()]
+        .filter((p) => p.canonicalGameId === id && p.kind === "dlc" && p.removedAt === null)
+        .map((p) => ({ id: p.id, title: p.title, store: p.store as StoreId, installed: [...this.installs.values()].some((i) => i.propertyId === p.id) })),
       collections: [],
     };
   }
@@ -224,6 +258,24 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
   async setResolvedMedia(_store: StoreId, media: ReadonlyMap<string, EntryMedia>, requested: readonly string[], at: number) {
     for (const id of requested) this.resolved.set(id, { media: media.get(id) ?? {}, at });
   }
+  /** ADR 84: resolved DLC titles per storeGameId; `title` stays when the answer had none. */
+  titles = new Map<string, { title?: string; at: number }>();
+  async listTitlePending(store: StoreId, olderThan: number, limit: number) {
+    return [...this.properties.values()]
+      .filter((p) => p.store === store && p.kind === "dlc" && p.removedAt === null && p.storeGameId !== null)
+      .map((p) => p.storeGameId as string)
+      .filter((id) => {
+        const r = this.titles.get(id);
+        return !r || r.at < olderThan;
+      })
+      .slice(0, limit);
+  }
+  async setResolvedTitles(_store: StoreId, titles: ReadonlyMap<string, string>, requested: readonly string[], at: number) {
+    for (const id of requested) {
+      const title = titles.get(id) ?? this.titles.get(id)?.title;
+      this.titles.set(id, { ...(title ? { title } : {}), at });
+    }
+  }
   async applyScanPlan(plan: ScanPlan) {
     this.applied.push(plan);
     const inst = (id: string, propertyId: string, e: { installPath: string; launchData: Readonly<Record<string, string>> | null }) => {
@@ -232,13 +284,14 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
       this.installs.set(rec.id, rec);
     };
     for (const c of plan.create) {
-      this.canonical.set(c.canonicalId, { id: c.canonicalId, title: c.entry.title });
+      if (c.entry.kind === "game" && c.canonicalId) this.canonical.set(c.canonicalId, { id: c.canonicalId, title: c.entry.title });
       this.properties.set(c.propertyId, {
         id: c.propertyId,
         canonicalGameId: c.canonicalId,
         store: plan.store,
         storeGameId: c.entry.storeGameId,
-        kind: "game",
+        kind: c.entry.kind,
+        baseStoreGameId: c.entry.kind === "dlc" ? (c.entry.baseStoreGameId ?? null) : null,
         title: c.entry.title,
         normalizedTitle: c.entry.normalizedTitle,
         owned: false,
@@ -250,11 +303,23 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
     }
     for (const u of plan.update) {
       const p = this.properties.get(u.propertyId)!;
-      // ADR 74: the title of an owned property (from the API) is not overwritten by the manifest name.
-      const title = p.owned ? p.title : u.entry.title;
-      this.properties.set(p.id, { ...p, title, normalizedTitle: p.owned ? p.normalizedTitle : u.entry.normalizedTitle });
-      if (p.canonicalGameId) this.canonical.set(p.canonicalGameId, { id: p.canonicalGameId, title });
+      const kind = plan.kindChanges.find((k) => k.propertyId === p.id)?.kind ?? p.kind;
+      if (u.entry.kind === kind) {
+        // ADR 74: the title of an owned property (from the API) is not overwritten by the manifest name.
+        this.properties.set(p.id, {
+          ...p,
+          ...(p.owned ? {} : { title: u.entry.title, normalizedTitle: u.entry.normalizedTitle }),
+          ...(kind === "dlc" ? { baseStoreGameId: u.entry.baseStoreGameId ?? null } : {}),
+        });
+      }
       inst(u.installationId, u.propertyId, u.entry);
+    }
+    this.applyKinds(plan);
+    for (const u of plan.update) {
+      const p = this.properties.get(u.propertyId)!;
+      if (u.entry.kind === "game" && p.kind === "game" && p.canonicalGameId && this.followsStore(p.canonicalGameId)) {
+        this.canonical.set(p.canonicalGameId, { id: p.canonicalGameId, title: p.title });
+      }
     }
     plan.removeInstallations.forEach((id) => this.installs.delete(id));
     plan.retireProperties.forEach((id) => this.properties.set(id, { ...this.properties.get(id)!, removedAt: plan.at }));
@@ -367,6 +432,7 @@ export interface ConnectorOptions {
   resolveAction?: StoreConnector["resolveAction"];
   locations?: StoreConnector["locations"];
   resolveMedia?: StoreConnector["resolveMedia"];
+  resolveTitles?: StoreConnector["resolveTitles"];
   apiHosts?: string[];
   authHosts?: string[];
   library?: (ctx: SyncContext) => Promise<LibrarySnapshot>;
@@ -384,7 +450,7 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     minSyncIntervalMs: o.minSyncIntervalMs ?? 600_000,
     authHosts: o.authHosts ?? (o.connection ? ["login.example.com"] : []),
     mediaHosts: ["shared.akamai.steamstatic.com"],
-    apiHosts: o.apiHosts ?? (o.resolveMedia || o.library ? ["api.example.com"] : []),
+    apiHosts: o.apiHosts ?? (o.resolveMedia || o.resolveTitles || o.library ? ["api.example.com"] : []),
     locations: o.locations ?? [
       { id: "steam-root", purpose: "scan" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam" }] },
       { id: "steam-client", purpose: "launcher" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam\\steam.exe" }] },
@@ -394,6 +460,7 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     resolveAction: o.resolveAction ?? (async (p) => ({ kind: "uri", uri: `steam://rungameid/${p.storeGameId}` })),
     ...(o.discover ? { discoverRoots: o.discover } : {}),
     ...(o.resolveMedia ? { resolveMedia: o.resolveMedia } : {}),
+    ...(o.resolveTitles ? { resolveTitles: o.resolveTitles } : {}),
     ...(o.library ? { listLibrary: o.library } : {}),
     ...(o.connection ? { connection: o.connection } : {}),
   };

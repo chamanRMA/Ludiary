@@ -18,7 +18,7 @@ describe("Epic manifest (ADR 78)", () => {
     expect(checkConnectorManifest(c)).toEqual([]);
     expect(c.access).toBe("unofficial-api");
     expect(c.externalTools).toEqual([]);
-    expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "none", actions: ["play", "install"], launchKinds: ["uri"], uriSchemes: ["com.epicgames.launcher"], storePlaytime: false });
+    expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "library", actions: ["play", "install"], launchKinds: ["uri"], uriSchemes: ["com.epicgames.launcher"], storePlaytime: false });
     expect(c.minSyncIntervalMs).toBe(1_800_000);
     expect(c.authHosts).toEqual(["www.epicgames.com"]);
     expect(c.apiHosts).toEqual([

@@ -110,7 +110,7 @@ describe("scan plan", () => {
     // Seed two installations by hand, one under each root.
     for (const [id, path] of [["a", `${LIB}\\A`], ["b", "E:\\More\\B"]] as const) {
       h.store.canonical.set(`c-${id}`, { id: `c-${id}`, title: id });
-      h.store.properties.set(`p-${id}`, { id: `p-${id}`, canonicalGameId: `c-${id}`, store: "steam", storeGameId: id, kind: "game", title: id, normalizedTitle: id, owned: false, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null });
+      h.store.properties.set(`p-${id}`, { id: `p-${id}`, canonicalGameId: `c-${id}`, store: "steam", storeGameId: id, kind: "game", baseStoreGameId: null, title: id, normalizedTitle: id, owned: false, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null });
       h.store.installs.set(`i-${id}`, { id: `i-${id}`, propertyId: `p-${id}`, deviceId: "dev", installPath: path, launchData: null });
     }
     await scanNow(h);
@@ -122,7 +122,7 @@ describe("scan plan", () => {
   it("never retires an owned property, even without installations", async () => {
     const { h } = await withGames(() => []);
     h.store.canonical.set("c", { id: "c", title: "Owned" });
-    h.store.properties.set("p", { id: "p", canonicalGameId: "c", store: "steam", storeGameId: "1", kind: "game", title: "Owned", normalizedTitle: "owned", owned: true, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null });
+    h.store.properties.set("p", { id: "p", canonicalGameId: "c", store: "steam", storeGameId: "1", kind: "game", baseStoreGameId: null, title: "Owned", normalizedTitle: "owned", owned: true, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null });
     await scanNow(h);
     expect(h.store.properties.get("p")!.removedAt).toBeNull();
   });
@@ -251,7 +251,7 @@ describe("detection modes (ADR 42, 72)", () => {
   it("'later': no roots, the connector is not called, detected installations are withdrawn", async () => {
     const { h, seen, resolve } = await modeHarness("later");
     h.store.canonical.set("c", { id: "c", title: "X" });
-    h.store.properties.set("p", { id: "p", canonicalGameId: "c", store: "steam", storeGameId: "1", kind: "game", title: "X", normalizedTitle: "x", owned: false, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null });
+    h.store.properties.set("p", { id: "p", canonicalGameId: "c", store: "steam", storeGameId: "1", kind: "game", baseStoreGameId: null, title: "X", normalizedTitle: "x", owned: false, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null });
     h.store.installs.set("i", { id: "i", propertyId: "p", deviceId: "dev", installPath: `${LIB}\\X`, launchData: null });
     await scanNow(h);
     expect(seen).toEqual([]);

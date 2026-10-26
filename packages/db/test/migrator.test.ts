@@ -38,13 +38,14 @@ describe("embedded migrations", () => {
 describe("migrate", () => {
   it("builds the schema from an empty database without a safety copy", async () => {
     const res = await migrate(db, { backupDir: backupDir() });
-    expect(res).toEqual({ applied: ["0001_library_scan", "0002_store_account", "0003_recheck_steam_media"], backupFile: null });
+    expect(res).toEqual({ applied: ["0001_library_scan", "0002_store_account", "0003_recheck_steam_media", "0004_dlc"], backupFile: null });
     expect(existsSync(backupDir())).toBe(false);
     expect(tables()).toEqual(["canonical_games", "devices", "game_properties", "installations", "scan_roots", "schema_migrations", "secrets", "settings", "store_connections", "sync_state", "users"]);
     expect(db.prepare("SELECT id, hash FROM schema_migrations").all()).toEqual([
       { id: "0001_library_scan", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0002_store_account", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0003_recheck_steam_media", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      { id: "0004_dlc", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
     ]);
   });
 

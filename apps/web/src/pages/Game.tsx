@@ -92,7 +92,10 @@ export function Game({ id }: { id: string }) {
           <h2 id="g-dlc">{t("game.dlc")}</h2>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {game.dlc.map((d) => (
-              <li key={d.id}>{d.title}</li>
+              <li key={d.id}>
+                {d.title} <span className={ui.chip}>{STORE_BRAND[d.store].name}</span>
+                {d.installed && <span className={cx(ui.chip, ui.ok)}>{t("common.installed")}</span>}
+              </li>
             ))}
           </ul>
         </section>
