@@ -1,13 +1,16 @@
 import type {
+  CollectionDto,
   DetectionMode,
   Epoch,
   GameDetailDto,
+  GamePatchDto,
   GameSummaryDto,
   LaunchResponseDto,
   OnboardingDto,
   ScanRootDto,
   ServiceStatusDto,
   SettingsDto,
+  SettingsPatchDto,
   StoreId,
   StoreStatusDto,
   WizardInputDto,
@@ -31,18 +34,19 @@ export interface GeneralSettings extends Omit<SettingsDto, "backups" | "autoUpda
 }
 
 /** Settings that can be changed through `updateSettings`. Scan roots have their own methods. */
-export type SettingsUpdate = Partial<Pick<GeneralSettings, "locale" | "backups" | "autoUpdate" | "autostart" | "syncOnStart">> & { detection?: DetectionMode };
+export type SettingsUpdate = Partial<Pick<GeneralSettings, "locale" | "backups" | "autoUpdate" | "autostart" | "syncOnStart">> & {
+  detection?: DetectionMode;
+  /** ADR 88. Per store with collections: the mirror switch and the unverified-favorites switch. */
+  storeCollections?: SettingsPatchDto["storeCollections"];
+};
 
 export type SyncTrigger = "open" | "manual";
 
 export type LaunchActionDto = "play" | "install";
 
-/** Not in the draft contract either: collections, and the state behind backup/scan/log buttons. */
-export interface CollectionDto {
-  id: string;
-  name: string;
-  gameIds: readonly string[];
-}
+export type { CollectionDto };
+
+/** Not in the draft contract: the state behind backup/scan/log buttons. */
 export interface MaintenanceDto {
   lastBackupAt: Epoch | null;
   lastScanAt: Epoch | null;
@@ -71,7 +75,12 @@ export interface LudiaryApi {
   removeScanRoot(id: string): Promise<void>;
   getLibrary(): Promise<readonly GameSummaryDto[]>;
   getGame(id: string): Promise<GameDetailDto | null>;
+  /** ADR 85. Replaces favorite, tags and/or collections of a game and returns the game. Errors carry translatable keys (ApiError). */
+  updateGame(id: string, patch: GamePatchDto): Promise<GameDetailDto>;
   getCollections(): Promise<readonly CollectionDto[]>;
+  createCollection(name: string): Promise<CollectionDto>;
+  renameCollection(id: string, name: string): Promise<CollectionDto>;
+  deleteCollection(id: string): Promise<void>;
   getMaintenance(): Promise<MaintenanceDto>;
   /** Asks for a synchronization of everything; it runs in the background (poll `getStores`). */
   syncAll(trigger?: SyncTrigger): Promise<void>;

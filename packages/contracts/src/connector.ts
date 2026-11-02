@@ -52,6 +52,14 @@ export interface StoreConnector {
    */
   resolveTitles?(storeGameIds: readonly string[], ctx: MediaContext): Promise<ReadonlyMap<string, string>>;
   /**
+   * ADR 87. Optional, on demand only (never in a sync). Reads the user's collections from the store's local
+   * files under ctx.fs (confined to importCollectionsRoot inside each 'scan' location). Requires
+   * capabilities.scan, a 'scan' location and importCollectionsRoot. Parse errors: fixed message, no cause (ADR 87 point 13).
+   */
+  importCollections?(ctx: CollectionImportContext): Promise<CollectionImportSnapshot>;
+  /** ADR 87. Relative sub-folder of each resolved 'scan' location the import reader is confined to. No '..', not absolute. */
+  readonly importCollectionsRoot?: string;
+  /**
    * Describes how to perform an action on a property already stored in the database.
    * Returns null if the action is not available for it. The core validates and executes
    * the result; a LaunchSpec is never returned by the API as a command.
@@ -124,6 +132,26 @@ export interface DiscoveryContext extends BaseContext {
   readonly locations: readonly ResolvedLocation[];
   /** Read-only, confined to those locations. */
   readonly fs: ScopedFileReader;
+}
+
+/** ADR 87 (point 13). `secrets` is a read-only view built by the core: no set, no delete. */
+export interface CollectionImportContext extends DiscoveryContext {
+  readonly secrets: Pick<SecretVault, "get">;
+}
+
+/** ADR 87. Untrusted input: the core validates and caps everything. */
+export interface CollectionImportSnapshot {
+  /**
+   * Plain collections in store order. Names are raw store data; the core normalizes them.
+   * ADR 88: sourceId = the store's own collection id (1-64 printable ASCII), stable across renames.
+   */
+  readonly collections: readonly { readonly sourceId: string; readonly name: string; readonly storeGameIds: readonly string[] }[];
+  /** Store "favourites" (Steam: collection id 'favorite'). */
+  readonly favorites: readonly string[];
+  /** 'connected': the folder came from the connected account; 'single-folder': the only folder found, not verified. */
+  readonly accountSource: "connected" | "single-folder";
+  /** Counters only (no names, no ids): dynamic, deleted, hidden, invalid... Unknown keys are ignored by the core. */
+  readonly skipped: Readonly<Record<string, number>>;
 }
 
 export interface LaunchContext extends BaseContext {
@@ -473,6 +501,18 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[] {
   if (cap.scan && !c.scanInstalled) problems.push("capabilities.scan is true but scanInstalled is missing");
   if (!cap.scan && c.scanInstalled) problems.push("scanInstalled is present but capabilities.scan is false");
   if (c.discoverRoots && !cap.scan) problems.push("discoverRoots requires capabilities.scan");
+  if (c.importCollections) {
+    if (!cap.scan) problems.push("importCollections requires capabilities.scan");
+    if (!c.locations.some((l) => l.purpose === "scan")) problems.push("importCollections requires a 'scan' location");
+    if (!c.importCollectionsRoot) problems.push("importCollections requires importCollectionsRoot");
+  }
+  if (c.importCollectionsRoot !== undefined) {
+    const r = c.importCollectionsRoot;
+    if (!c.importCollections) problems.push("importCollectionsRoot requires importCollections");
+    if (r === "" || /^([a-zA-Z]:|[\\/])/.test(r) || r.split(/[\\/]/).some((x) => x === ".." || x === "")) {
+      problems.push("importCollectionsRoot must be a relative path without '..' or empty parts");
+    }
+  }
   if (cap.price !== (c.prices !== undefined)) problems.push("capabilities.price and prices disagree");
   if ((cap.dlc === "scan" || cap.dlc === "library-and-scan") && !cap.scan) problems.push("dlc 'scan' requires capabilities.scan");
   if ((cap.dlc === "library" || cap.dlc === "library-and-scan") && !cap.library) {

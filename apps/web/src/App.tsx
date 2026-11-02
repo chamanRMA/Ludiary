@@ -10,6 +10,7 @@ import { useQueryState } from "./data/hooks";
 import { ConnectReturn } from "./pages/ConnectReturn";
 import { Game } from "./pages/Game";
 import { Home } from "./pages/Home";
+import { Collection } from "./pages/Collection";
 import { Library } from "./pages/Library";
 import { NotFound } from "./pages/NotFound";
 import { Settings } from "./pages/Settings";
@@ -23,6 +24,7 @@ const ROUTES: readonly [pattern: string, render: (p: Params) => ReactNode][] = [
   ["/library", () => <Library />],
   ["/game/:id", (p) => <Game id={p["id"] ?? ""} />],
   ["/collections", () => <Collections />],
+  ["/collections/:id", (p) => <Collection id={p["id"] ?? ""} />],
   ["/store/:id", (p) => <Store id={p["id"] ?? ""} />],
   ["/local", () => <Local />],
   ["/prices", () => <Prices />],

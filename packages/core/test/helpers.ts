@@ -21,7 +21,7 @@ import type {
   StoreId,
   FolderPicker,
 } from "@ludiary/contracts";
-import { createCore, type CoreDeps, type LudiaryCore } from "../src";
+import { collectionsKey, createCore, emptyMirrorCounts, planCollectionMirror, type CoreDeps, type LudiaryCore } from "../src";
 import type {
   GameDetail,
   GameSummary,
@@ -50,6 +50,8 @@ export const key = (s: string) => s as I18nKey;
 export class FakeFiles implements LocalFiles {
   dirs = new Set<string>();
   files = new Set<string>();
+  /** Roots of every `scoped()` call, in order. */
+  scopedCalls: string[][] = [];
   constructor(dirs: string[] = [], files: string[] = []) {
     dirs.forEach((d) => this.dirs.add(this.compareKey(d)));
     files.forEach((f) => this.files.add(this.compareKey(f)));
@@ -82,6 +84,7 @@ export class FakeFiles implements LocalFiles {
     return this.isDirectory(p);
   }
   scoped(roots: readonly string[]) {
+    this.scopedCalls.push([...roots]);
     return {
       readText: async () => "",
       readBytes: async () => new Uint8Array(),
@@ -121,6 +124,24 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
   kv = new Map<string, unknown>();
   applied: ScanPlan[] = [];
   libraryPlans: LibraryPlan[] = [];
+  /** ADR 88: the store's mirrors (own collections are not modelled here) and the favorites as the pass sees them. */
+  mirrors: { id: string; sourceId: string; nameKey: string; name: string; members: string[] }[] = [];
+  favorites = new Set<string>();
+  /** ADR 87: shown canonical games (a non-retired `game` property). */
+  shown(): Set<string> {
+    return new Set([...this.properties.values()].filter((p) => p.kind === "game" && p.removedAt === null && p.canonicalGameId).map((p) => p.canonicalGameId as string));
+  }
+  async findVisibleCanonicals(store: StoreId) {
+    const shown = this.shown();
+    const games = new Map<string, string>();
+    const dlc = new Set<string>();
+    for (const p of this.properties.values()) {
+      if (p.store !== store || p.storeGameId === null) continue;
+      if (p.kind === "game" && p.canonicalGameId && shown.has(p.canonicalGameId)) games.set(p.storeGameId, p.canonicalGameId);
+      if (p.kind === "dlc" && p.removedAt === null) dlc.add(p.storeGameId);
+    }
+    return { games, dlc };
+  }
   async applyLibraryPlan(plan: LibraryPlan): Promise<void> {
     this.libraryPlans.push(plan);
     for (const c of plan.create) {
@@ -433,6 +454,7 @@ export interface ConnectorOptions {
   locations?: StoreConnector["locations"];
   resolveMedia?: StoreConnector["resolveMedia"];
   resolveTitles?: StoreConnector["resolveTitles"];
+  importCollections?: StoreConnector["importCollections"];
   apiHosts?: string[];
   authHosts?: string[];
   library?: (ctx: SyncContext) => Promise<LibrarySnapshot>;
@@ -461,6 +483,7 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     ...(o.discover ? { discoverRoots: o.discover } : {}),
     ...(o.resolveMedia ? { resolveMedia: o.resolveMedia } : {}),
     ...(o.resolveTitles ? { resolveTitles: o.resolveTitles } : {}),
+    ...(o.importCollections ? { importCollections: o.importCollections, importCollectionsRoot: "userdata" } : {}),
     ...(o.library ? { listLibrary: o.library } : {}),
     ...(o.connection ? { connection: o.connection } : {}),
   };
@@ -508,6 +531,8 @@ export interface Harness {
   execs: unknown[];
   deps: CoreDeps;
   ids: () => string;
+  /** Calls the core made to UserDataRepository (ADR 85): [method, ...args]. */
+  userDataCalls: unknown[][];
 }
 
 export async function harness(
@@ -545,9 +570,52 @@ export async function harness(
     store.kv.set("onboarding.completedAt", 1);
     if (opts.mode !== null) store.kv.set("detection.mode", opts.mode ?? "manual-only");
   }
+  const userDataCalls: unknown[][] = [];
+  const rec = (name: string, value: unknown) => async (...args: unknown[]) => {
+    userDataCalls.push([name, ...args]);
+    return value as never;
+  };
   const deps: CoreDeps = {
     connectors: opts.connectors ?? [makeConnector()],
     ...v,
+    userData: {
+      updateGame: rec("updateGame", undefined),
+      listCollections: rec("listCollections", []),
+      createCollection: rec("createCollection", { id: "c1", name: "x", source: null, gameIds: [] }),
+      renameCollection: rec("renameCollection", { id: "c1", name: "x", source: null, gameIds: [] }),
+      deleteCollection: rec("deleteCollection", undefined),
+      mergeUserData: rec("mergeUserData", undefined),
+      async applyCollectionMirror(storeId, input) {
+        userDataCalls.push(["applyCollectionMirror", input]);
+        if (store.kv.get(collectionsKey(storeId, "enabled")) === false) return { ...emptyMirrorCounts(), off: true };
+        const seen = store.kv.get(collectionsKey(storeId, "favoritesSeen"));
+        const plan = planCollectionMirror(input, {
+          mirrors: store.mirrors,
+          shown: store.shown(),
+          favorites: store.favorites,
+          favoritesSeen: new Set(Array.isArray(seen) ? (seen as string[]) : []),
+        });
+        for (const c of plan.create) store.mirrors.push({ id: ids(), sourceId: c.sourceId, name: c.name, nameKey: c.key, members: [...c.gameIds] });
+        for (const u of plan.update) {
+          const m = store.mirrors.find((x) => x.id === u.id);
+          if (!m) continue;
+          if (u.rename) Object.assign(m, { name: u.rename.name, nameKey: u.rename.key });
+          if (u.gameIds) m.members = [...u.gameIds];
+        }
+        store.mirrors = store.mirrors.filter((m) => !plan.remove.includes(m.id));
+        for (const f of plan.favorites) store.favorites.add(f);
+        if (plan.favoritesSeen) store.kv.set(collectionsKey(storeId, "favoritesSeen"), plan.favoritesSeen);
+        if (store.kv.get(collectionsKey(storeId, "mirrorAccountSource")) !== input.accountSource) store.kv.set(collectionsKey(storeId, "mirrorAccountSource"), input.accountSource);
+        return plan.counts;
+      },
+      async deleteCollectionMirrors(storeId) {
+        userDataCalls.push(["deleteCollectionMirrors", storeId]);
+        const n = store.mirrors.length;
+        store.mirrors = [];
+        store.kv.delete(collectionsKey(storeId, "mirrorAccountSource"));
+        return n;
+      },
+    },
     files,
     ...(opts.locations === null || opts.locations === undefined ? {} : { locations: opts.locations }),
     ...(launcher ? { launcher } : {}),
@@ -560,7 +628,7 @@ export async function harness(
     t: (k) => k,
   };
   const core = await createCore(deps);
-  return { core, store, files, clock, logs, opened, execs, deps, ids };
+  return { core, store, files, clock, logs, opened, execs, deps, ids, userDataCalls };
 }
 
 export const resolver = (map: Record<string, ResolvedLocation[]>): LocationResolver => ({

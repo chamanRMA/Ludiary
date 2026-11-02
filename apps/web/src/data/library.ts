@@ -4,17 +4,25 @@ export interface LibraryFilter {
   store?: StoreId | "local";
   installed?: boolean;
   favorite?: boolean;
+  /** Only games whose id is in the set (a collection's members). */
+  ids?: ReadonlySet<string>;
+  /** ADR 85. Compared like the server's name key (NFKC, lower case), so a typed ?tag=rpg finds "RPG". */
+  tag?: string;
   query?: string;
 }
 
 /** Library filters by store and install state (CLAUDE.md), plus free-text search. "local" = games with no store property. */
 export function filterGames(games: readonly GameSummaryDto[], f: LibraryFilter): GameSummaryDto[] {
   const q = f.query?.trim().toLowerCase();
+  const key = (s: string) => s.normalize("NFKC").toLowerCase();
+  const tag = f.tag === undefined ? undefined : key(f.tag);
   return games.filter(
     (g) =>
       (f.store === undefined || (f.store === "local" ? g.stores.length === 0 : g.stores.includes(f.store))) &&
       (f.installed === undefined || g.installed === f.installed) &&
       (!f.favorite || g.favorite) &&
+      (f.ids === undefined || f.ids.has(g.id)) &&
+      (tag === undefined || g.tags.some((t) => key(t) === tag)) &&
       (!q || g.title.toLowerCase().includes(q) || g.tags.some((tag) => tag.toLowerCase().includes(q))),
   );
 }

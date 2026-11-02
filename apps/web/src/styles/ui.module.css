@@ -50,6 +50,14 @@
   background: var(--hi);
   color: var(--tx);
 }
+/* Navigable chip: a pill, never an underlined link. Focus ring comes from global :focus-visible. */
+.chipLink {
+  composes: chip;
+  text-decoration: none;
+}
+.chipLink:hover {
+  background: var(--ln);
+}
 .ok {
   color: var(--ac);
   font-weight: 600;
@@ -308,4 +316,27 @@
 .error {
   color: var(--err);
   font-weight: 500;
+}
+.field {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  border: 1px solid var(--ln);
+  background: var(--sf);
+  color: var(--tx);
+  font: 14px var(--font-ui);
+  min-width: 220px;
+}
+.chipBtn {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 0 0 6px;
+  font: inherit;
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }

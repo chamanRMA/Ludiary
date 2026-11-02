@@ -5,6 +5,7 @@ export {
   hashMigration,
   DatabaseTooNewError,
   MigrationMismatchError,
+  ForeignKeyViolationError,
   BACKUP_PREFIX,
   type MigrateOptions,
   type MigrateResult,

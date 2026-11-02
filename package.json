@@ -11,7 +11,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude '.claude/**' --exclude '**/node_modules/**'",
     "build:desktop": "pnpm --filter @ludiary/desktop run build",
     "build:installer": "pnpm --filter @ludiary/desktop run build:installer"
   },

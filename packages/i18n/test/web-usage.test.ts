@@ -12,7 +12,8 @@ function sources(dir: string): string[] {
 }
 
 it("every literal t(\"…\") / key string used by the web exists in the catalog (invariant 6)", () => {
-  const keys = new Set(Object.keys(webCatalogs.es));
+  // i18next plurals: `key_one` / `key_other` are looked up as `key` with { count }.
+  const keys = new Set(Object.keys(webCatalogs.es).map((k) => k.replace(/_(zero|one|two|few|many|other)$/, "")));
   const missing: string[] = [];
   for (const file of sources(join(import.meta.dirname, "../../../apps/web/src"))) {
     const text = readFileSync(file, "utf8");

@@ -33,6 +33,7 @@ const status: StoreStatus = {
   access: "official-api",
   connection: "not-applicable",
   mode: "installed-only",
+  collections: { status: "error", lastSuccessAt: null, accountVerified: null, favoritesPending: 0, error: { code: "scan.root-unreadable", key: "connectors.steam.collections.ambiguous" as never } },
   sync: [
     {
       store: "steam",
@@ -64,8 +65,8 @@ function fakeCore(over: Partial<LudiaryCore> = {}): LudiaryCore & { calls: unkno
     requestSync: rec("requestSync", undefined),
     whenIdle: rec("whenIdle", undefined),
     storeStatus: rec("storeStatus", [status]),
-    getSettings: rec("getSettings", { locale: "es" as const, detection: "manual-only" as const }),
-    updateSettings: rec("updateSettings", { locale: "en" as const, detection: null }),
+    getSettings: rec("getSettings", { locale: "es" as const, detection: "manual-only" as const, storeCollections: { steam: { enabled: true, unverifiedFavorites: false } } }),
+    updateSettings: rec("updateSettings", { locale: "en" as const, detection: null, storeCollections: {} }),
     getOnboarding: rec("getOnboarding", { completedAt: 7, detection: "later" as const }),
     completeOnboarding: rec("completeOnboarding", undefined),
     resetOnboarding: rec("resetOnboarding", undefined),
@@ -112,6 +113,7 @@ describe("core to LudiaryCoreFacade adapter (ADR 72 point 4)", () => {
       access: "official-api",
       connection: "not-applicable",
       mode: "installed-only",
+      collections: { status: "error", lastSuccessAt: null, accountVerified: null, favoritesPending: 0, error: { code: "scan.root-unreadable", key: "connectors.steam.collections.ambiguous" as never } },
       sync: [
         { operation: "scan", state: "error", lastAttemptAt: 5, nextAllowedAt: 65, error: { code: "scan.root-unreadable", key: "connectors.common.errors.scan.root-unreadable" } },
         { operation: "library", state: "idle", lastSuccessAt: 9 },
@@ -125,10 +127,11 @@ describe("core to LudiaryCoreFacade adapter (ADR 72 point 4)", () => {
     expect(await facade.getSettings()).toEqual({
       locale: "es",
       detection: "manual-only",
+      storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
       scanRoots: [{ id: "r1", origin: "discovered", path: "D:\\SteamLibrary", store: "steam", enabled: true, declarationId: "steam-root", tag: "library" }],
     });
-    await facade.updateSettings({ locale: "en" });
-    expect(core.calls.find((c) => c[0] === "updateSettings")).toEqual(["updateSettings", { locale: "en" }]);
+    await facade.updateSettings({ locale: "en", storeCollections: { steam: { enabled: false } } });
+    expect(core.calls.find((c) => c[0] === "updateSettings")).toEqual(["updateSettings", { locale: "en", storeCollections: { steam: { enabled: false } } }]);
     const picked = await facade.pickScanRoot();
     expect(picked).not.toHaveProperty("pathKey");
     expect(await facade.getOnboarding()).toEqual({ completedAt: 7, detection: "later" });

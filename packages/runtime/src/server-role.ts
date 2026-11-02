@@ -140,7 +140,8 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         core: facade,
         webAssets,
         mediaHosts,
-        onInternalError: (err) => log("error", `internal error in a route: ${(err as Error).stack ?? String(err)}`),
+        // Name and stack frames only: the message of an unknown exception may quote store data (ADR 87 point 13).
+        onInternalError: (err) => log("error", `internal error in a route: ${internalErrorSummary(err)}`),
       });
 
     const saved = readRuntimeInfo(platform.dataDir)?.port ?? null;
@@ -210,4 +211,16 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     release?.();
     return e instanceof FatalError ? e.exitCode : EXIT.error;
   }
+}
+
+
+/** `Name` plus the `at ...` stack lines; never the message. */
+export function internalErrorSummary(err: unknown): string {
+  const e = err as { name?: unknown; stack?: unknown };
+  // The header `Name: message` can span several lines and even contain "at ..." lines: cut it off first.
+  const header = err instanceof Error ? String(err) : "";
+  const full = typeof e?.stack === "string" ? e.stack : "";
+  const stack = full.startsWith(header) ? full.slice(header.length) : full;
+  const frames = stack.split("\n").filter((l) => l.trimStart().startsWith("at "));
+  return [typeof e?.name === "string" ? e.name : "unknown", ...frames].join("\n");
 }

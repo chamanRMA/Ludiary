@@ -5,6 +5,8 @@ import type {
   CoreLogger,
   DetectionMode,
   GameDetail,
+  CollectionRecord,
+  GameDataPatch,
   GameSummary,
   Onboarding,
   ScanRootRecord,
@@ -21,6 +23,7 @@ import type {
   SecretRepository,
   SettingsRepository,
   SyncStateRepository,
+  UserDataRepository,
 } from "./ports";
 
 export const SCAN_WAIT_MS = 60_000;
@@ -54,6 +57,7 @@ export const LAUNCH_ORDER: readonly StoreId[] = ["steam", "gog", "epic", "ubisof
 export interface CoreDeps {
   connectors: readonly StoreConnector[];
   library: LibraryRepository;
+  userData: UserDataRepository;
   scanRoots: ScanRootRepository;
   syncState: SyncStateRepository;
   settings: SettingsRepository;
@@ -100,6 +104,12 @@ export interface LudiaryCore {
   readonly capabilities: CoreCapabilities;
   listLibrary(): Promise<readonly GameSummary[]>;
   getGame(canonicalId: string): Promise<GameDetail | null>;
+  /** ADR 85. Replaces favorite, tags and/or collections of a shown game and returns it. `tags` are raw names: the core normalizes them. */
+  updateGame(canonicalId: string, patch: { favorite?: boolean; tags?: readonly string[]; collectionIds?: readonly string[] }): Promise<GameDetail>;
+  listCollections(): Promise<readonly CollectionRecord[]>;
+  createCollection(name: string): Promise<CollectionRecord>;
+  renameCollection(id: string, name: string): Promise<CollectionRecord>;
+  deleteCollection(id: string): Promise<void>;
   /** Never returns the launch specification (ADR 40 rule 5). */
   launch(
     canonicalId: string,

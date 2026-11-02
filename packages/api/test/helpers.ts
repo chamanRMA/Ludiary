@@ -41,12 +41,14 @@ export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCor
     locale: "system" as const,
     detection: "manual-only" as const,
     scanRoots: [{ id: "r1", origin: "user" as const, path: "D:\\Games", enabled: true }],
+    storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
   };
   const store = {
     store: "steam" as const,
     access: "official-api" as const,
     connection: "disconnected" as const,
     mode: "installed-only" as const,
+    collections: { status: "idle" as const, lastSuccessAt: 1000, accountVerified: true, favoritesPending: 0 },
     sync: [{ operation: "scan" as const, state: "idle" as const }],
   };
   const game = {
@@ -67,8 +69,13 @@ export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCor
     listLibrary: rec("listLibrary", [game]),
     getGame: async (id) => {
       calls.push(["getGame", id]);
-      return id === "g1" ? { ...game, properties: [{ id: "p1", store: "steam", installed: true, actions: ["play"] }], dlc: [], collections: [] } : null;
+      return id === "g1" ? { ...game, properties: [{ id: "p1", store: "steam", installed: true, actions: ["play"] }], dlc: [], collections: [{ id: "col1", name: "Pending", source: null }, { id: "col2", name: "Co-op", source: "steam" as const }] } : null;
     },
+    updateGame: rec("updateGame", { ...game, properties: [], dlc: [], collections: [] }),
+    listCollections: rec("listCollections", [{ id: "col1", name: "Pending", source: null, gameIds: ["g1"] }, { id: "col2", name: "Co-op", source: "steam" as const, gameIds: ["g1"] }]),
+    createCollection: rec("createCollection", { id: "col1", name: "Pending", source: null, gameIds: [] }),
+    renameCollection: rec("renameCollection", { id: "col1", name: "Renamed", source: null, gameIds: [] }),
+    deleteCollection: rec("deleteCollection", undefined),
     launch: rec("launch", { status: "started" as const }),
     requestSync: rec("requestSync", undefined),
     storeStatus: rec("storeStatus", [store]),

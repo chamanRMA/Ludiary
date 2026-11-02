@@ -1,12 +1,16 @@
 // Repositories that implement the persistence ports of @ludiary/core (ADR 38, 72) over Drizzle + better-sqlite3.
 // Methods are async in the signature although the driver is synchronous, so the core is not tied to it.
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type Database from "better-sqlite3";
 import { normalizeTitle, type EntryMedia, type I18nKey, type StoreId } from "@ludiary/contracts";
+import { collectionManaged, collectionsKey, CoreError, emptyMirrorCounts, limitReached, LIMITS, nameTaken, planCollectionMirror } from "@ludiary/core";
 import type {
+  CollectionRecord,
   CoreLogger,
+  Label,
+  UserDataRepository,
   GameDetail,
   GameSummary,
   ConnectionRepository,
@@ -27,7 +31,23 @@ import type {
   SyncStateRepository,
 } from "@ludiary/core";
 import * as schema from "./schema";
-import { canonicalGames, devices, gameProperties, installations, scanRoots, secrets as secretsTable, settings, storeConnections, syncState, users } from "./schema";
+import {
+  canonicalGames,
+  collectionGames,
+  collections,
+  devices,
+  gameProperties,
+  gameTags,
+  installations,
+  scanRoots,
+  secrets as secretsTable,
+  settings,
+  storeConnections,
+  syncState,
+  tags,
+  userGameData,
+  users,
+} from "./schema";
 
 type Db = BetterSQLite3Database<typeof schema>;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -39,6 +59,7 @@ const MAX_DLC = 1000;
 export interface Repositories {
   identity: IdentityRepository;
   library: LibraryRepository;
+  userData: UserDataRepository;
   scanRoots: ScanRootRepository;
   syncState: SyncStateRepository;
   settings: SettingsRepository;
@@ -140,11 +161,34 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
         .map((r) => r.store),
     );
 
+  /** ADR 85: favorites and tags of the user in two queries, for the whole library or for one game. */
+  function userDataOf(s: Scope, canonicalId?: string): UserData {
+    const favorites = new Set(
+      db
+        .select({ id: userGameData.canonicalGameId })
+        .from(userGameData)
+        .where(and(eq(userGameData.userId, s.userId), eq(userGameData.favorite, 1), canonicalId === undefined ? undefined : eq(userGameData.canonicalGameId, canonicalId)))
+        .all()
+        .map((r) => r.id),
+    );
+    const byGame = new Map<string, string[]>();
+    const rows = db
+      .select({ game: gameTags.canonicalGameId, name: tags.name })
+      .from(gameTags)
+      .innerJoin(tags, eq(tags.id, gameTags.tagId))
+      .where(and(eq(gameTags.userId, s.userId), canonicalId === undefined ? undefined : eq(gameTags.canonicalGameId, canonicalId)))
+      .orderBy(asc(tags.nameKey))
+      .all();
+    for (const r of rows) byGame.set(r.game, [...(byGame.get(r.game) ?? []), r.name]);
+    return { favorites, tags: byGame };
+  }
+
   function summary(
     g: typeof canonicalGames.$inferSelect,
     ps: (typeof gameProperties.$inferSelect)[],
     installed: ReadonlySet<string>,
     connected: ReadonlySet<string>,
+    data: UserData,
   ): GameSummary {
     const stores = STORE_ORDER.filter((st) => ps.some((p) => p.store === st));
     // ADR 71: when a Steam property exists its artwork wins; otherwise the first store, in STORE_ORDER, that has some (ADR 76).
@@ -168,10 +212,10 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
       ...(media.heroUrl ? { coverFallbackUrl: media.heroUrl } : {}),
       stores,
       installed: isInstalled,
-      favorite: false,
+      favorite: data.favorites.has(g.id),
       playtimeMinutes,
       ...(lastPlayedAt !== null ? { lastPlayedAt } : {}),
-      tags: [],
+      tags: data.tags.get(g.id) ?? [],
       // The core narrows mainAction by connector capabilities and mode (it knows them; the repository does not).
       mainAction: isInstalled ? "play" : ps.some((p) => p.owned === 1) ? "install" : null,
       // ADR 74 point 12: computed on read. An installed game never has the veil.
@@ -202,10 +246,11 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
         .where(eq(canonicalGames.userId, s.userId))
         .orderBy(asc(canonicalGames.normalizedTitle), asc(canonicalGames.title), asc(canonicalGames.id))
         .all();
+      const data = userDataOf(s);
       const out: GameSummary[] = [];
       for (const g of games) {
         const ps = byCanonical.get(g.id);
-        if (ps && ps.length > 0) out.push(summary(g, ps, installed, connected));
+        if (ps && ps.length > 0) out.push(summary(g, ps, installed, connected, data));
       }
       return out;
     },
@@ -235,7 +280,7 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
       if (allDlc.length > MAX_DLC) log?.warn("A game has more DLC than can be shown; the list was cut", { dlc: allDlc.length, shown: MAX_DLC });
       const dlc = allDlc.slice(0, MAX_DLC);
       const detail: GameDetail = {
-        ...summary(g, games, new Set(inst.keys()), connectedStores(s)),
+        ...summary(g, games, new Set(inst.keys()), connectedStores(s), userDataOf(s, canonicalId)),
         // The core fills `actions` from the connector capabilities; the repository does not know them.
         properties: games.map((p) => {
           const i = inst.get(p.id);
@@ -249,7 +294,13 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
           };
         }),
         dlc: dlc.map((p) => ({ id: p.id, title: shown(p), store: p.store as StoreId, installed: inst.has(p.id) })),
-        collections: [],
+        collections: db
+          .select({ id: collections.id, name: collections.name, source: sql<StoreId | null>`${collections.sourceStore}` })
+          .from(collectionGames)
+          .innerJoin(collections, eq(collections.id, collectionGames.collectionId))
+          .where(and(eq(collectionGames.canonicalGameId, canonicalId), eq(collectionGames.userId, s.userId)))
+          .orderBy(asc(collections.position), asc(collections.id))
+          .all(),
       };
       return detail;
     },
@@ -398,7 +449,7 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
 
     async applyLibraryPlan(plan) {
       const s = need();
-      db.transaction((tx) => applyLibrary(tx, s, plan));
+      db.transaction((tx) => applyLibrary(tx, s, plan, log));
     },
     async countOwned(store) {
       const s = need();
@@ -417,9 +468,151 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
         .get()!.n;
     },
 
+    async findVisibleCanonicals(store) {
+      const s = need();
+      const rows = db
+        .select({ storeGameId: gameProperties.storeGameId, canonicalId: gameProperties.canonicalGameId, kind: gameProperties.kind, removedAt: gameProperties.removedAt })
+        .from(gameProperties)
+        .where(and(eq(gameProperties.userId, s.userId), eq(gameProperties.store, store)))
+        .all();
+      const shown = shownCanonicals(db, s);
+      const games = new Map<string, string>();
+      const dlc = new Set<string>();
+      for (const r of rows) {
+        if (r.storeGameId === null) continue;
+        if (r.kind === "game" && r.canonicalId !== null && shown.has(r.canonicalId)) games.set(r.storeGameId, r.canonicalId);
+        else if (r.kind === "dlc" && r.removedAt === null) dlc.add(r.storeGameId);
+      }
+      return { games, dlc };
+    },
+
     async applyScanPlan(plan) {
       const s = need();
-      db.transaction((tx) => applyPlan(tx, s, plan));
+      db.transaction((tx) => applyPlan(tx, s, plan, log));
+    },
+  };
+
+  const userData: UserDataRepository = {
+    async updateGame(canonicalId, patch, at) {
+      const s = need();
+      db.transaction((tx) => {
+        // Checked again inside the transaction: the game or a collection may have gone since the core looked (ADR 85 point 12).
+        if (!isShown(tx, s, canonicalId)) throw new CoreError("not-found", "The game is not shown");
+        if (patch.favorite === true) {
+          tx.insert(userGameData)
+            .values({ canonicalGameId: canonicalId, userId: s.userId, favorite: 1, updatedAt: at })
+            .onConflictDoUpdate({ target: userGameData.canonicalGameId, set: { favorite: 1, updatedAt: at } })
+            .run();
+        } else if (patch.favorite === false) {
+          tx.delete(userGameData).where(and(eq(userGameData.canonicalGameId, canonicalId), eq(userGameData.userId, s.userId))).run();
+        }
+        if (patch.tags) setTags(tx, s, canonicalId, patch.tags, at);
+        if (patch.collectionIds) setCollections(tx, s, canonicalId, patch.collectionIds, at);
+      });
+    },
+    async listCollections() {
+      return readCollections(db, need());
+    },
+    async createCollection(label, at) {
+      const s = need();
+      return db.transaction((tx) => {
+        // ADR 88 point 15: the limit and the name are about the user's own collections; mirrors have their own cap.
+        if (countOwn(tx, s) >= LIMITS.collections) throw limitReached(LIMITS.collections, "collections");
+        if (tx.select().from(collections).where(and(eq(collections.userId, s.userId), isNull(collections.sourceStore), eq(collections.nameKey, label.key))).get()) throw nameTaken();
+        const last = tx.select({ m: sql<number>`coalesce(max(${collections.position}), 0)` }).from(collections).where(eq(collections.userId, s.userId)).get()!.m;
+        const id = randomUUID();
+        tx.insert(collections).values({ id, userId: s.userId, name: label.name, nameKey: label.key, position: last + 1, createdAt: at, updatedAt: at }).run();
+        return { id, name: label.name, source: null, gameIds: [] };
+      });
+    },
+    async renameCollection(id, label, at) {
+      const s = need();
+      return db.transaction((tx) => {
+        const row = tx.select().from(collections).where(and(eq(collections.id, id), eq(collections.userId, s.userId))).get();
+        if (!row) throw new CoreError("not-found", "The collection does not exist");
+        if (row.sourceStore !== null) throw collectionManaged(row.sourceStore as StoreId);
+        const clash = tx.select({ id: collections.id }).from(collections).where(and(eq(collections.userId, s.userId), isNull(collections.sourceStore), eq(collections.nameKey, label.key))).get();
+        if (clash && clash.id !== id) throw nameTaken();
+        tx.update(collections).set({ name: label.name, nameKey: label.key, updatedAt: at }).where(and(eq(collections.id, id), isNull(collections.sourceStore))).run();
+        return readCollections(tx, s, id)[0] as CollectionRecord;
+      });
+    },
+    async deleteCollection(id) {
+      const s = need();
+      db.transaction((tx) => {
+        const row = tx.select({ sourceStore: collections.sourceStore }).from(collections).where(and(eq(collections.id, id), eq(collections.userId, s.userId))).get();
+        if (row && row.sourceStore !== null) throw collectionManaged(row.sourceStore as StoreId);
+        tx.delete(collections).where(and(eq(collections.id, id), eq(collections.userId, s.userId), isNull(collections.sourceStore))).run();
+      });
+    },
+    async applyCollectionMirror(store, input, at) {
+      const s = need();
+      return db.transaction((tx) => {
+        type Name = Parameters<typeof collectionsKey>[1];
+        const setting = (name: Name): unknown => tx.select().from(settings).where(and(eq(settings.userId, s.userId), eq(settings.key, collectionsKey(store, name)))).get()?.value;
+        const put = (name: Name, value: unknown) =>
+          tx.insert(settings).values({ userId: s.userId, key: collectionsKey(store, name), value }).onConflictDoUpdate({ target: [settings.userId, settings.key], set: { value } }).run();
+        // The setting is read again here: a switch-off during the pass must leave nothing behind (ADR 88 point 15).
+        if (setting("enabled") === false) return { ...emptyMirrorCounts(), off: true };
+        const rows = tx.select().from(collections).where(and(eq(collections.userId, s.userId), eq(collections.sourceStore, store))).orderBy(asc(collections.position), asc(collections.id)).all();
+        const members = new Map<string, string[]>(rows.map((r) => [r.id, []]));
+        if (rows.length > 0) {
+          const links = tx.select().from(collectionGames).where(and(eq(collectionGames.userId, s.userId), inArray(collectionGames.collectionId, rows.map((r) => r.id)))).orderBy(asc(collectionGames.position), asc(collectionGames.canonicalGameId)).all();
+          for (const l of links) members.get(l.collectionId)?.push(l.canonicalGameId);
+        }
+        const seenRaw = setting("favoritesSeen");
+        const plan = planCollectionMirror(input, {
+          mirrors: rows.map((r) => ({ id: r.id, sourceId: r.sourceId as string, name: r.name, nameKey: r.nameKey, members: members.get(r.id) ?? [] })),
+          shown: shownCanonicals(tx, s),
+          favorites: new Set(tx.select({ id: userGameData.canonicalGameId }).from(userGameData).where(and(eq(userGameData.userId, s.userId), eq(userGameData.favorite, 1))).all().map((r) => r.id)),
+          favoritesSeen: new Set(Array.isArray(seenRaw) ? seenRaw.filter((x): x is string => typeof x === "string") : []),
+        });
+        // Links of a mirror = the wanted list, in order: missing ones inserted, extra ones deleted, positions rewritten only where they differ.
+        const syncLinks = (collectionId: string, wanted: readonly string[]) => {
+          const current = new Map(tx.select().from(collectionGames).where(eq(collectionGames.collectionId, collectionId)).all().map((l) => [l.canonicalGameId, l]));
+          const keep = new Set(wanted);
+          for (const id of current.keys()) {
+            if (!keep.has(id)) tx.delete(collectionGames).where(and(eq(collectionGames.collectionId, collectionId), eq(collectionGames.canonicalGameId, id))).run();
+          }
+          wanted.forEach((canonicalGameId, i) => {
+            const have = current.get(canonicalGameId);
+            if (!have) tx.insert(collectionGames).values({ collectionId, canonicalGameId, userId: s.userId, position: i + 1, addedAt: at }).run();
+            else if (have.position !== i + 1) tx.update(collectionGames).set({ position: i + 1 }).where(and(eq(collectionGames.collectionId, collectionId), eq(collectionGames.canonicalGameId, canonicalGameId))).run();
+          });
+        };
+        let position = tx.select({ m: sql<number>`coalesce(max(${collections.position}), 0)` }).from(collections).where(eq(collections.userId, s.userId)).get()!.m;
+        for (const c of plan.create) {
+          const id = randomUUID();
+          tx.insert(collections).values({ id, userId: s.userId, name: c.name, nameKey: c.key, position: ++position, createdAt: at, updatedAt: at, sourceStore: store, sourceId: c.sourceId }).run();
+          syncLinks(id, c.gameIds);
+        }
+        for (const u of plan.update) {
+          if (u.gameIds) syncLinks(u.id, u.gameIds);
+          tx.update(collections).set({ ...(u.rename ? { name: u.rename.name, nameKey: u.rename.key } : {}), updatedAt: at }).where(and(eq(collections.id, u.id), eq(collections.sourceStore, store))).run();
+        }
+        if (plan.remove.length > 0) tx.delete(collections).where(and(eq(collections.userId, s.userId), eq(collections.sourceStore, store), inArray(collections.id, plan.remove))).run();
+        for (const canonicalGameId of plan.favorites) {
+          tx.insert(userGameData)
+            .values({ canonicalGameId, userId: s.userId, favorite: 1, updatedAt: at })
+            .onConflictDoUpdate({ target: userGameData.canonicalGameId, set: { favorite: 1, updatedAt: at } })
+            .run();
+        }
+        if (plan.favoritesSeen) put("favoritesSeen", plan.favoritesSeen);
+        if (setting("mirrorAccountSource") !== input.accountSource) put("mirrorAccountSource", input.accountSource);
+        return plan.counts;
+      });
+    },
+    async deleteCollectionMirrors(store) {
+      const s = need();
+      return db.transaction((tx) => {
+        const n = tx.delete(collections).where(and(eq(collections.userId, s.userId), eq(collections.sourceStore, store))).run().changes;
+        tx.delete(settings).where(and(eq(settings.userId, s.userId), eq(settings.key, collectionsKey(store, "mirrorAccountSource")))).run();
+        return n;
+      });
+    },
+    async mergeUserData(from, to, at) {
+      const s = need();
+      db.transaction((tx) => mergeInTx(tx, s, from, to, at));
     },
   };
 
@@ -606,7 +799,7 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
     },
   };
 
-  return { identity, library, scanRoots: roots, syncState: sync, settings: settingsRepo, secrets, connections };
+  return { identity, library, userData, scanRoots: roots, syncState: sync, settings: settingsRepo, secrets, connections };
 }
 
 function toRoot(r: typeof scanRoots.$inferSelect): ScanRootRecord {
@@ -672,8 +865,11 @@ function applyKindsAndLinks(
   s: Scope,
   plan: { store: StoreId; at: number; kindChanges: ScanPlan["kindChanges"]; dlcLinks: ScanPlan["dlcLinks"] },
   entryOf: ReadonlyMap<string, { media?: EntryMedia | undefined }>,
+  log?: Pick<CoreLogger, "warn">,
 ): void {
   const emptied = new Set<string>();
+  /** Properties that left each emptied canonical game (ADR 85 point 6.2). */
+  const left = new Map<string, string[]>();
   for (const k of plan.kindChanges) {
     const prop = tx
       .select()
@@ -681,7 +877,10 @@ function applyKindsAndLinks(
       .where(and(eq(gameProperties.id, k.propertyId), eq(gameProperties.userId, s.userId)))
       .get();
     if (!prop) throw new Error(`Plan changes the kind of an unknown property ${k.propertyId}`);
-    if (prop.canonicalGameId && prop.canonicalGameId !== k.canonicalId) emptied.add(prop.canonicalGameId);
+    if (prop.canonicalGameId && prop.canonicalGameId !== k.canonicalId) {
+      emptied.add(prop.canonicalGameId);
+      left.set(prop.canonicalGameId, [...(left.get(prop.canonicalGameId) ?? []), k.propertyId]);
+    }
     if (k.kind === "game" && k.canonicalId) {
       const media = entryOf.get(k.propertyId)?.media;
       tx.insert(canonicalGames)
@@ -712,8 +911,11 @@ function applyKindsAndLinks(
         .run();
     }
   }
+  const doomed = new Set<string>();
   for (const part of chunks([...emptied])) {
-    tx.delete(canonicalGames)
+    const rows = tx
+      .select({ id: canonicalGames.id })
+      .from(canonicalGames)
       .where(
         and(
           eq(canonicalGames.userId, s.userId),
@@ -721,12 +923,199 @@ function applyKindsAndLinks(
           sql`NOT EXISTS (SELECT 1 FROM game_properties WHERE canonical_game_id = ${canonicalGames.id})`,
         ),
       )
+      .all();
+    for (const r of rows) doomed.add(r.id);
+  }
+  // ADR 85 point 6.2, 12: user data moves to the one canonical game the properties went to, if that one survives; else it goes with the game.
+  let dropped = 0;
+  for (const id of doomed) {
+    if (!hasUserData(tx, id)) continue;
+    const targets = new Set<string | null>();
+    for (const part of chunks(left.get(id) ?? [])) {
+      for (const r of tx.select({ c: gameProperties.canonicalGameId }).from(gameProperties).where(inArray(gameProperties.id, part)).all()) targets.add(r.c);
+    }
+    const target = targets.size === 1 ? [...targets][0] : null;
+    if (target) mergeInTx(tx, s, id, target, plan.at);
+    else dropped++;
+  }
+  for (const part of chunks([...doomed])) {
+    tx.delete(canonicalGames).where(and(eq(canonicalGames.userId, s.userId), inArray(canonicalGames.id, part))).run();
+  }
+  if (dropped > 0) {
+    deleteOrphanTags(tx, s);
+    log?.warn("User data was deleted with games that became DLC without a base game", { userDataDropped: dropped });
+  }
+}
+
+interface UserData {
+  favorites: ReadonlySet<string>;
+  tags: ReadonlyMap<string, readonly string[]>;
+}
+
+const hasUserData = (tx: Db | Tx, canonicalId: string): boolean =>
+  tx.get<{ n: number }>(
+    sql`SELECT (EXISTS (SELECT 1 FROM user_game_data WHERE canonical_game_id = ${canonicalId})
+      OR EXISTS (SELECT 1 FROM game_tags WHERE canonical_game_id = ${canonicalId})
+      OR EXISTS (SELECT 1 FROM collection_games WHERE canonical_game_id = ${canonicalId})) AS n`,
+  ).n === 1;
+
+/** A tag with no game left is deleted in the same transaction that took its last game (ADR 85 point 4). */
+const deleteOrphanTags = (tx: Db | Tx, s: Scope): void => {
+  tx.run(sql`DELETE FROM tags WHERE user_id = ${s.userId} AND NOT EXISTS (SELECT 1 FROM game_tags WHERE tag_id = tags.id)`);
+};
+
+/** ADR 85 point 6.3: favorite if either was, union of tags, union of collections keeping the lower position. `from` is not touched. */
+function mergeInTx(tx: Db | Tx, s: Scope, from: string, to: string, at: number): void {
+  const fav = tx.select().from(userGameData).where(and(eq(userGameData.canonicalGameId, from), eq(userGameData.userId, s.userId))).get();
+  if (fav?.favorite === 1) {
+    tx.insert(userGameData)
+      .values({ canonicalGameId: to, userId: s.userId, favorite: 1, updatedAt: at })
+      .onConflictDoUpdate({ target: userGameData.canonicalGameId, set: { favorite: 1, updatedAt: at } })
       .run();
+  }
+  tx.run(sql`INSERT OR IGNORE INTO game_tags (canonical_game_id, tag_id, user_id)
+    SELECT ${to}, tag_id, user_id FROM game_tags WHERE canonical_game_id = ${from} AND user_id = ${s.userId}`);
+  tx.run(sql`UPDATE collection_games SET position = MIN(position, (SELECT f.position FROM collection_games f
+      WHERE f.collection_id = collection_games.collection_id AND f.canonical_game_id = ${from}))
+    WHERE canonical_game_id = ${to} AND user_id = ${s.userId}
+      AND collection_id IN (SELECT collection_id FROM collection_games WHERE canonical_game_id = ${from})`);
+  tx.run(sql`INSERT OR IGNORE INTO collection_games (collection_id, canonical_game_id, user_id, position, added_at)
+    SELECT collection_id, ${to}, user_id, position, added_at FROM collection_games WHERE canonical_game_id = ${from} AND user_id = ${s.userId}`);
+}
+
+/** The game is shown (ADR 85): the same condition as `getGame`. */
+const isShown = (tx: Db | Tx, s: Scope, canonicalId: string): boolean =>
+  tx
+    .select({ n: sql<number>`count(*)` })
+    .from(gameProperties)
+    .where(
+      and(
+        eq(gameProperties.canonicalGameId, canonicalId),
+        eq(gameProperties.userId, s.userId),
+        isNull(gameProperties.removedAt),
+        eq(gameProperties.kind, "game"),
+      ),
+    )
+    .get()!.n > 0;
+
+/** Canonical ids that are shown: at least one non-retired `game` property. */
+const shownCanonicals = (tx: Db | Tx, s: Scope): Set<string> =>
+  new Set(
+    tx
+      .select({ id: gameProperties.canonicalGameId })
+      .from(gameProperties)
+      .where(and(eq(gameProperties.userId, s.userId), isNull(gameProperties.removedAt), eq(gameProperties.kind, "game")))
+      .all()
+      .map((r) => r.id as string),
+  );
+
+function readCollections(tx: Db | Tx, s: Scope, onlyId?: string): CollectionRecord[] {
+  const rows = tx
+    .select()
+    .from(collections)
+    .where(and(eq(collections.userId, s.userId), onlyId === undefined ? undefined : eq(collections.id, onlyId)))
+    .orderBy(asc(collections.position), asc(collections.id))
+    .all();
+  const shown = new Set(
+    tx
+      .select({ id: gameProperties.canonicalGameId })
+      .from(gameProperties)
+      .where(and(eq(gameProperties.userId, s.userId), isNull(gameProperties.removedAt), eq(gameProperties.kind, "game")))
+      .all()
+      .map((r) => r.id),
+  );
+  const games = new Map<string, string[]>();
+  const links = tx
+    .select()
+    .from(collectionGames)
+    .where(and(eq(collectionGames.userId, s.userId), onlyId === undefined ? undefined : eq(collectionGames.collectionId, onlyId)))
+    .orderBy(asc(collectionGames.position), asc(collectionGames.canonicalGameId))
+    .all();
+  for (const l of links) if (shown.has(l.canonicalGameId)) games.set(l.collectionId, [...(games.get(l.collectionId) ?? []), l.canonicalGameId]);
+  return rows.map((c) => ({ id: c.id, name: c.name, source: (c.sourceStore as StoreId | null) ?? null, gameIds: games.get(c.id) ?? [] }));
+}
+
+const countOf = (tx: Db | Tx, table: typeof tags | typeof collections, userId: string): number =>
+  tx.select({ n: sql<number>`count(*)` }).from(table).where(eq(table.userId, userId)).get()!.n;
+
+/** The user's own collections (ADR 88: mirrors are not counted against the limit). */
+const countOwn = (tx: Db | Tx, s: Scope): number =>
+  tx.select({ n: sql<number>`count(*)` }).from(collections).where(and(eq(collections.userId, s.userId), isNull(collections.sourceStore))).get()!.n;
+
+function setTags(tx: Db | Tx, s: Scope, canonicalId: string, wanted: readonly Label[], at: number): void {
+  const labels = [...new Map(wanted.map((l) => [l.key, l])).values()];
+  // ADR 85 point 5, 12: a merge may leave a game above 20; a new set may exceed 20 only if it does not grow.
+  if (labels.length > LIMITS.tagsPerGame) {
+    const current = tx.select({ n: sql<number>`count(*)` }).from(gameTags).where(eq(gameTags.canonicalGameId, canonicalId)).get()!.n;
+    if (labels.length > current) throw limitReached(LIMITS.tagsPerGame, "tagsPerGame");
+  }
+  const existing = new Map<string, string>(
+    labels.length === 0
+      ? []
+      : tx
+          .select()
+          .from(tags)
+          .where(and(eq(tags.userId, s.userId), inArray(tags.nameKey, labels.map((l) => l.key))))
+          .all()
+          .map((t) => [t.nameKey, t.id]),
+  );
+  const fresh = labels.filter((l) => !existing.has(l.key));
+  if (fresh.length > 0 && countOf(tx, tags, s.userId) + fresh.length > LIMITS.tags) throw limitReached(LIMITS.tags, "tags");
+  for (const l of fresh) {
+    const id = randomUUID();
+    tx.insert(tags).values({ id, userId: s.userId, name: l.name, nameKey: l.key, createdAt: at }).run();
+    existing.set(l.key, id);
+  }
+  const ids = labels.map((l) => existing.get(l.key) as string);
+  tx.delete(gameTags)
+    .where(and(eq(gameTags.canonicalGameId, canonicalId), ids.length === 0 ? undefined : notInArray(gameTags.tagId, ids)))
+    .run();
+  for (const tagId of ids) tx.insert(gameTags).values({ canonicalGameId: canonicalId, tagId, userId: s.userId }).onConflictDoNothing().run();
+  deleteOrphanTags(tx, s);
+}
+
+function setCollections(tx: Db | Tx, s: Scope, canonicalId: string, wanted: readonly string[], at: number): void {
+  const requested = [...new Set(wanted)];
+  // ADR 88 point 15: ids of mirrors leave the wanted set BEFORE the existence check (no false 404), and their links stay as they are.
+  const mirrorIds = new Set(
+    requested.length === 0 ? [] : tx.select({ id: collections.id }).from(collections).where(and(eq(collections.userId, s.userId), inArray(collections.id, requested), isNotNull(collections.sourceStore))).all().map((r) => r.id),
+  );
+  const ids = requested.filter((id) => !mirrorIds.has(id));
+  if (ids.length > 0) {
+    const found = tx.select({ id: collections.id }).from(collections).where(and(eq(collections.userId, s.userId), isNull(collections.sourceStore), inArray(collections.id, ids))).all();
+    if (found.length !== ids.length) throw new CoreError("not-found", "A collection does not exist");
+  }
+  const current = new Set(
+    tx
+      .select({ id: collectionGames.collectionId })
+      .from(collectionGames)
+      .where(and(eq(collectionGames.canonicalGameId, canonicalId), eq(collectionGames.userId, s.userId)))
+      .all()
+      .map((r) => r.id),
+  );
+  tx.delete(collectionGames)
+    .where(
+      and(
+        eq(collectionGames.canonicalGameId, canonicalId),
+        eq(collectionGames.userId, s.userId),
+        inArray(collectionGames.collectionId, tx.select({ id: collections.id }).from(collections).where(and(eq(collections.userId, s.userId), isNull(collections.sourceStore)))),
+        ids.length === 0 ? undefined : notInArray(collectionGames.collectionId, ids),
+      ),
+    )
+    .run();
+  for (const collectionId of ids.filter((id) => !current.has(id))) {
+    const { n, last } = tx
+      .select({ n: sql<number>`count(*)`, last: sql<number>`coalesce(max(${collectionGames.position}), 0)` })
+      .from(collectionGames)
+      .where(eq(collectionGames.collectionId, collectionId))
+      .get()!;
+    if (n >= LIMITS.gamesPerCollection) throw limitReached(LIMITS.gamesPerCollection, "gamesPerCollection");
+    tx.insert(collectionGames).values({ collectionId, canonicalGameId: canonicalId, userId: s.userId, position: last + 1, addedAt: at }).run();
   }
 }
 
 /** ADR 72: the whole plan or nothing. Runs inside db.transaction, so any throw rolls everything back. */
-function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
+function applyPlan(tx: Tx, s: Scope, plan: ScanPlan, log?: Pick<CoreLogger, "warn">): void {
   const at = plan.at;
   type Entry = ScanPlan["update"][number]["entry"];
   const upsertInstallation = (id: string, propertyId: string, e: Entry) => {
@@ -817,7 +1206,7 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
     }
   }
 
-  applyKindsAndLinks(tx, s, plan, new Map(plan.update.map((u) => [u.propertyId, u.entry])));
+  applyKindsAndLinks(tx, s, plan, new Map(plan.update.map((u) => [u.propertyId, u.entry])), log);
   for (const t of tracked) {
     // Only a canonical game with this single property follows the store title and artwork.
     tx.update(canonicalGames)
@@ -881,7 +1270,7 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan): void {
 }
 
 /** ADR 74: a library snapshot. Same storeGameId = same property (unique index). The whole plan or nothing. */
-function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan): void {
+function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan, log?: Pick<CoreLogger, "warn">): void {
   const at = plan.at;
   type Entry = LibraryPlan["update"][number]["entry"];
   const metadata = (e: Entry) => ({
@@ -967,7 +1356,7 @@ function applyLibrary(tx: Tx, s: Scope, plan: LibraryPlan): void {
     if (same && prop.kind === "game" && finalKind === "game" && prop.canonicalGameId) tracked.push({ canonicalId: prop.canonicalGameId, entry: e });
   }
 
-  applyKindsAndLinks(tx, s, plan, new Map(plan.update.map((u) => [u.propertyId, u.entry])));
+  applyKindsAndLinks(tx, s, plan, new Map(plan.update.map((u) => [u.propertyId, u.entry])), log);
   for (const t of tracked) {
     tx.update(canonicalGames)
       .set({ title: t.entry.title, normalizedTitle: t.entry.normalizedTitle, media: t.entry.media ? { ...t.entry.media } : null, updatedAt: at })

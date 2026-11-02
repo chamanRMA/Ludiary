@@ -1,4 +1,4 @@
-// Drizzle schema of migrations 0001_library_scan, 0002_store_account and 0003_dlc (ADR 47, 72, 74).
+// Drizzle schema of migrations 0001_library_scan to 0005_user_data (ADR 47, 72, 74, 85).
 import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
@@ -180,4 +180,71 @@ export const storeConnections = sqliteTable(
     primaryKey({ columns: [t.userId, t.store] }),
     check("store_connections_status_check", sql`${t.status} IN ('connected', 'expired')`),
   ],
+);
+
+// ---- ADR 85. User data hangs from the canonical game; every key to it cascades so the canonical deletes of ADR 83 cannot fail.
+/** One row only when something differs from the default: removing the favorite deletes the row. */
+export const userGameData = sqliteTable(
+  "user_game_data",
+  {
+    canonicalGameId: text("canonical_game_id").primaryKey().references(() => canonicalGames.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id),
+    favorite: integer("favorite").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [check("user_game_data_favorite_check", sql`${t.favorite} IN (0, 1)`)],
+);
+
+export const tags = sqliteTable(
+  "tags",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    name: text("name").notNull(),
+    nameKey: text("name_key").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("tags_user_key_uq").on(t.userId, t.nameKey)],
+);
+
+export const gameTags = sqliteTable(
+  "game_tags",
+  {
+    canonicalGameId: text("canonical_game_id").notNull().references(() => canonicalGames.id, { onDelete: "cascade" }),
+    tagId: text("tag_id").notNull().references(() => tags.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id),
+  },
+  (t) => [primaryKey({ columns: [t.canonicalGameId, t.tagId] }), index("game_tags_tag_idx").on(t.tagId)],
+);
+
+export const collections = sqliteTable(
+  "collections",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    name: text("name").notNull(),
+    nameKey: text("name_key").notNull(),
+    position: integer("position").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    // ADR 88: NULL = the user's own collection; 'steam' = read-only mirror. Both null or both set (checked by the repository).
+    sourceStore: text("source_store"),
+    sourceId: text("source_id"),
+  },
+  (t) => [
+    uniqueIndex("collections_user_key_uq").on(t.userId, t.nameKey).where(sql`${t.sourceStore} IS NULL`),
+    uniqueIndex("collections_source_uq").on(t.userId, t.sourceStore, t.sourceId).where(sql`${t.sourceStore} IS NOT NULL`),
+  ],
+);
+
+export const collectionGames = sqliteTable(
+  "collection_games",
+  {
+    collectionId: text("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+    canonicalGameId: text("canonical_game_id").notNull().references(() => canonicalGames.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id),
+    position: integer("position").notNull(),
+    addedAt: integer("added_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.collectionId, t.canonicalGameId] }), index("collection_games_game_idx").on(t.canonicalGameId)],
 );

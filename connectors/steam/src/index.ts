@@ -1,4 +1,5 @@
 import type { StoreConnector } from "@ludiary/contracts";
+import { COLLECTIONS_ROOT, importSteamCollections } from "./collections";
 import { resolveSteamAction } from "./launch";
 import { listSteamLibrary } from "./library";
 import { STEAM_LOCATIONS, STEAM_NAME_KEY } from "./manifest";
@@ -36,6 +37,8 @@ export function createSteamConnector(): StoreConnector {
     resolveMedia: resolveSteamMedia,
     resolveTitles: resolveSteamTitles,
     resolveAction: resolveSteamAction,
+    importCollections: importSteamCollections,
+    importCollectionsRoot: COLLECTIONS_ROOT,
   };
 }
 

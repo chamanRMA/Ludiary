@@ -19,6 +19,7 @@ import type { CoreErrorInfo, LibraryEntry, ScanRootRecord, ScannedEntry, StoreSt
 import { computeScanPlan, planDiscoveredRoots } from "./scan-plan";
 import { effectiveLocale, readOnboarding, readSettings } from "./settings";
 import { createMediaStep } from "./media";
+import type { CollectionMirrorService } from "./collection-mirror";
 import { withTimeout } from "./timeout";
 import { validateDiscoveredRoots, validateEntries, validateLibraryEntries, type ValidatedRoot } from "./validate";
 
@@ -44,7 +45,7 @@ export const MANUAL_SYNC_FLOOR_MS = 60_000;
 const STATUS_TIMEOUT_MS = 10_000;
 const LIBRARY_AUTH_CODES: readonly string[] = ["auth.invalid", "auth.expired", "auth.required"];
 
-export function createSyncService(env: Env): SyncService {
+export function createSyncService(env: Env, mirror: CollectionMirrorService): SyncService {
   const { deps } = env;
   const media = createMediaStep(env);
   const inFlight = new Map<StoreId, Promise<void>>();
@@ -92,6 +93,9 @@ export function createSyncService(env: Env): SyncService {
       if (ops.has("library")) await runLibrary(c, force || !firstRun, trigger, accepted);
       if (ops.has("scan")) await runScan(c, force || !firstRun, accepted);
       firstRun = false;
+      // ADR 88: the last step of every pass, whatever started it. It never throws and never touches sync_state.
+      accepted();
+      await mirror.afterPass(c);
       ops = queued.get(c.id) ?? new Set();
     } while (ops.size > 0);
     accepted();
@@ -452,8 +456,10 @@ export function createSyncService(env: Env): SyncService {
           const sync = states.filter((st) => st.store === c.id);
           const wizard = c.connection;
           const row = byStore.get(c.id);
-          if (!wizard) return { store: c.id, access: c.access, connection: "not-applicable", mode: "installed-only", sync };
-          if (!row) return { store: c.id, access: c.access, connection: "disconnected", mode: "installed-only", sync };
+          const collections = await mirror.status(c);
+          const extra = collections ? { collections } : {};
+          if (!wizard) return { store: c.id, access: c.access, connection: "not-applicable", mode: "installed-only", ...extra, sync };
+          if (!row) return { store: c.id, access: c.access, connection: "disconnected", mode: "installed-only", ...extra, sync };
           // ADR 74 point 6: the row says one thing, the connector another (it reads its secrets, no network). Any 'expired' wins.
           let state: "connected" | "expired" = row.status;
           let label = row.accountLabel;
@@ -471,6 +477,7 @@ export function createSyncService(env: Env): SyncService {
             connection: state,
             mode: state === "connected" ? "library" : "installed-only",
             ...(label ? { accountLabel: label } : {}),
+            ...extra,
             sync,
           };
         }),

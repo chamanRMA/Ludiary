@@ -15,7 +15,12 @@ import type {
   ScanRootRecord,
   SyncOperation,
   SyncStateRecord,
+  CollectionRecord,
+  GameDataPatch,
+  CollectionMirrorCounts,
+  CollectionMirrorInput,
 } from "./model";
+import type { Label } from "./labels";
 
 export interface IdentityRepository {
   /** Creates the only user and the 'local' device if missing (ADR 47). Idempotent. */
@@ -40,6 +45,11 @@ export interface LibraryRepository {
   listTitlePending(store: StoreId, olderThan: number, limit: number): Promise<readonly string[]>;
   /** ADR 84. Marks every id of `requested` as resolved at `at`; a title in `titles` replaces the stored one, a missing one keeps the previous. */
   setResolvedTitles(store: StoreId, titles: ReadonlyMap<string, string>, requested: readonly string[], at: number): Promise<void>;
+  /**
+   * ADR 87. One read: storeGameId -> canonical id for the store's `game` properties whose canonical game is shown, and the
+   * storeGameIds of its non-retired `dlc` properties.
+   */
+  findVisibleCanonicals(store: StoreId): Promise<{ games: ReadonlyMap<string, string>; dlc: ReadonlySet<string> }>;
   /** Applies the whole plan in one transaction; rolls everything back if it fails midway. */
   applyScanPlan(plan: ScanPlan): Promise<void>;
   /** ADR 74. Applies a library snapshot plan in ONE transaction (owned, playtime, last played, media, retirements). */
@@ -93,4 +103,29 @@ export interface SettingsRepository {
   get(key: string): Promise<unknown>;
   set(key: string, value: unknown): Promise<void>;
   delete(key: string): Promise<void>;
+}
+
+/**
+ * ADR 85. Favorites, tags and collections of the only user. Every write is one transaction that checks again what the
+ * core checked (limits, the game being shown, the collections existing) and throws `not-found`, `name-taken` or `limit-reached`.
+ */
+export interface UserDataRepository {
+  /** Replaces the given fields. `not-found` if the game is not shown or a collection does not exist. */
+  updateGame(canonicalId: string, patch: GameDataPatch, at: number): Promise<void>;
+  /** In order of creation, with the games that are shown. */
+  listCollections(): Promise<readonly CollectionRecord[]>;
+  createCollection(label: Label, at: number): Promise<CollectionRecord>;
+  /** `not-found`; `collection-managed` on a mirror; `name-taken` if another OWN collection has the key. */
+  renameCollection(id: string, label: Label, at: number): Promise<CollectionRecord>;
+  /** Also when it does not exist. Deletes the collection and its rows only, never games or tags. `collection-managed` on a mirror. */
+  deleteCollection(id: string): Promise<void>;
+  /**
+   * ADR 88. In ONE transaction: re-reads `collections.<store>.enabled` (off: writes nothing), reads the store's mirrors, decides with
+   * `planCollectionMirror` and writes it, plus `favoritesSeen` and `mirrorAccountSource`. Writes nothing when nothing changes.
+   */
+  applyCollectionMirror(store: StoreId, input: CollectionMirrorInput, at: number): Promise<CollectionMirrorCounts>;
+  /** ADR 88. Deletes every mirror of the store (and `mirrorAccountSource`) in one transaction. Returns how many. Own collections are never touched. */
+  deleteCollectionMirrors(store: StoreId): Promise<number>;
+  /** Copies the user data of `from` onto `to` (favorite, tags, collections; lower position wins). `from` is left for the caller to delete. */
+  mergeUserData(from: string, to: string, at: number): Promise<void>;
 }

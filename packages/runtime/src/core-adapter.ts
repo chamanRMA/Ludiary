@@ -1,9 +1,11 @@
 import type { LudiaryCoreFacade } from "@ludiary/api";
 import type {
+  CollectionDto,
   GameDetailDto,
   GameSummaryDto,
   ScanRootDto,
   SettingsDto,
+  StoreCollectionsStatusDto,
   StoreStatusDto,
   SyncStatusDto,
   TranslatedErrorDto,
@@ -13,12 +15,14 @@ import { ConnectorError } from "@ludiary/contracts";
 import {
   CoreError,
   toErrorInfo,
+  type CollectionRecord,
   type CoreErrorInfo,
   type GameDetail,
   type GameSummary,
   type LudiaryCore,
   type WizardResponse,
   type ScanRootRecord,
+  type StoreCollectionsStatus,
   type StoreStatus,
   type SyncStateRecord,
 } from "@ludiary/core";
@@ -88,9 +92,19 @@ export function detailDto(g: GameDetail): GameDetailDto {
       actions: [...p.actions],
     })),
     dlc: g.dlc.map((d) => ({ id: d.id, title: d.title, store: d.store, installed: d.installed })),
-    collections: g.collections.map((c) => ({ id: c.id, name: c.name })),
+    collections: g.collections.map((c) => ({ id: c.id, name: c.name, source: c.source })),
   };
 }
+
+const collectionDto = (c: CollectionRecord): CollectionDto => ({ id: c.id, name: c.name, source: c.source, gameIds: [...c.gameIds] });
+
+const collectionsStatusDto = (c: StoreCollectionsStatus): StoreCollectionsStatusDto => ({
+  status: c.status,
+  lastSuccessAt: c.lastSuccessAt,
+  accountVerified: c.accountVerified,
+  favoritesPending: c.favoritesPending,
+  ...(c.error ? { error: errorDto(c.error) } : {}),
+});
 
 function syncDto(s: SyncStateRecord): SyncStatusDto {
   return {
@@ -109,6 +123,7 @@ export function storeStatusDto(s: StoreStatus): StoreStatusDto {
     access: s.access,
     connection: s.connection,
     mode: s.mode,
+    ...(s.collections ? { collections: collectionsStatusDto(s.collections) } : {}),
     ...(s.accountLabel !== undefined ? { accountLabel: s.accountLabel } : {}),
     sync: s.sync.map(syncDto),
   };
@@ -137,7 +152,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
   };
   const settingsDto = async (): Promise<SettingsDto> => {
     const [settings, roots] = await Promise.all([core.getSettings(), core.listScanRoots()]);
-    return { locale: settings.locale, detection: settings.detection, scanRoots: roots.map(scanRootDto) };
+    return { locale: settings.locale, detection: settings.detection, scanRoots: roots.map(scanRootDto), storeCollections: structuredClone(settings.storeCollections) };
   };
 
   return {
@@ -147,6 +162,20 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
         const g = await core.getGame(id);
         return g ? detailDto(g) : null;
       }),
+    updateGame: (id, patch) =>
+      guard(async () =>
+        detailDto(
+          await core.updateGame(id, {
+            ...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}),
+            ...(patch.tags !== undefined ? { tags: patch.tags } : {}),
+            ...(patch.collectionIds !== undefined ? { collectionIds: patch.collectionIds } : {}),
+          }),
+        ),
+      ),
+    listCollections: () => guard(async () => (await core.listCollections()).map(collectionDto)),
+    createCollection: (name) => guard(async () => collectionDto(await core.createCollection(name))),
+    renameCollection: (id, name) => guard(async () => collectionDto(await core.renameCollection(id, name))),
+    deleteCollection: (id) => guard(() => core.deleteCollection(id)),
     launch: (id, propertyId, action) => guard(() => core.launch(id, propertyId, action)),
     requestSync: (req) =>
       guard(() => core.requestSync({ trigger: req.trigger, ...(req.operations ? { operations: req.operations } : {}) })),
@@ -157,6 +186,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
         await core.updateSettings({
           ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
           ...(patch.detection !== undefined ? { detection: patch.detection } : {}),
+          ...(patch.storeCollections !== undefined ? { storeCollections: patch.storeCollections } : {}),
         });
         return settingsDto();
       }),

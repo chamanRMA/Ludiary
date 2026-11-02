@@ -7,6 +7,7 @@ import { SESSION_ABSOLUTE_MS, type SessionStore } from "./sessions";
 import { isCoreError, statusForCoreError, type LudiaryCoreFacade } from "./core";
 import { OPEN_CSP, openScript, spaCsp, type WebAssets } from "./web";
 import {
+  CollectionCreateSchema, CollectionPatchSchema, CollectionSchema, GamePatchSchema, type CollectionCreateDto, type CollectionPatchDto, type GamePatchDto,
   EmptyObjectSchema, GameDetailSchema, GameSummarySchema, IdParamsSchema, LaunchRequestSchema,
   LaunchResponseSchema, OnboardingCompleteSchema, OnboardingSchema, PickCancelledSchema, ScanRootPatchSchema,
   ScanRootSchema, SettingsPatchSchema, SettingsSchema, StoreParamsSchema, StoreStatusSchema, SyncRequestSchema,
@@ -259,6 +260,34 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     { schema: { params: IdParamsSchema, querystring: noQuery, response: { 200: GameDetailSchema } } },
     async (req, reply) => (await core.getGame(req.params.id)) ?? gone(reply),
   );
+
+  // ADR 85. Session + key like every route that changes data (ADR 67).
+  app.patch<{ Params: IdParams; Body: GamePatchDto }>(
+    "/api/games/:id",
+    { schema: { params: IdParamsSchema, querystring: noQuery, body: GamePatchSchema, response: { 200: GameDetailSchema } } },
+    async (req) => core.updateGame(req.params.id, req.body),
+  );
+
+  app.get("/api/collections", { schema: { querystring: noQuery, response: { 200: list(CollectionSchema) } } }, async () =>
+    core.listCollections(),
+  );
+
+  app.post<{ Body: CollectionCreateDto }>(
+    "/api/collections",
+    { schema: { querystring: noQuery, body: CollectionCreateSchema, response: { 201: CollectionSchema } } },
+    async (req, reply) => reply.code(201).send(await core.createCollection(req.body.name)),
+  );
+
+  app.patch<{ Params: IdParams; Body: CollectionPatchDto }>(
+    "/api/collections/:id",
+    { schema: { params: IdParamsSchema, querystring: noQuery, body: CollectionPatchSchema, response: { 200: CollectionSchema } } },
+    async (req) => core.renameCollection(req.params.id, req.body.name),
+  );
+
+  app.delete<{ Params: IdParams }>("/api/collections/:id", { schema: { params: IdParamsSchema, querystring: noQuery } }, async (req, reply) => {
+    await core.deleteCollection(req.params.id);
+    return reply.code(204).send();
+  });
 
   app.post<{ Params: IdParams; Body: LaunchRequestDto }>(
     "/api/games/:id/launch",

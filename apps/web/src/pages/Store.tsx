@@ -13,11 +13,13 @@ import { Icon } from "../components/Icon";
 import ui from "../styles/ui.module.css";
 import { NotFound } from "./NotFound";
 
-type View = "all" | "installed" | "notInstalled" | "favorites";
+// "col:<id>" = a collection chip.
+type View = "all" | "installed" | "notInstalled" | "favorites" | `col:${string}`;
 
 export function Store({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
   const { data: library, error: libraryError } = useQueryState(() => api.getLibrary());
+  const { data: collections } = useQueryState(() => api.getCollections());
   const { data: stores, error: storesError } = useQueryState(() => api.getStores());
   const [view, setView] = useState<View>("all");
   const [reconnecting, setReconnecting] = useState(false);
@@ -28,7 +30,10 @@ export function Store({ id }: { id: string }) {
 
   const name = STORE_BRAND[id].name;
   const all = filterGames(library, { store: id });
-  const shown = filterGames(all, { ...(view === "installed" ? { installed: true } : view === "notInstalled" ? { installed: false } : {}), favorite: view === "favorites" });
+  const inStore = new Set(all.map((g) => g.id));
+  const storeCollections = (collections ?? []).filter((c) => c.gameIds.some((gid) => inStore.has(gid)));
+  const picked = view.startsWith("col:") ? storeCollections.find((c) => `col:${c.id}` === view) : undefined;
+  const shown = filterGames(all, { ...(view === "installed" ? { installed: true } : view === "notInstalled" ? { installed: false } : {}), favorite: view === "favorites", ...(picked ? { ids: new Set(picked.gameIds) } : {}) });
   const expired = status.connection === "expired";
   const last = status.sync[0]?.lastSuccessAt;
   const hours = Math.round(all.reduce((s, g) => s + g.playtimeMinutes, 0) / 60);
@@ -90,6 +95,10 @@ export function Store({ id }: { id: string }) {
         <FilterChip active={view === "installed"} onClick={() => setView("installed")}>{t("common.installedPlural")}</FilterChip>
         <FilterChip active={view === "notInstalled"} onClick={() => setView("notInstalled")}>{t("common.notInstalledPlural")}</FilterChip>
         <FilterChip active={view === "favorites"} onClick={() => setView("favorites")}>{t("library.favorites")}</FilterChip>
+        {storeCollections.map((c) => {
+          const v: View = `col:${c.id}`;
+          return <FilterChip key={c.id} active={view === v} onClick={() => setView(view === v ? "all" : v)}>{c.name}</FilterChip>;
+        })}
       </div>
       {expired && <p className={ui.muted}>{t("store.staleList")}</p>}
       <GameGrid games={shown} />

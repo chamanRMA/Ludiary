@@ -127,9 +127,9 @@ export function relativeTime(epoch: number, lang: string): string {
   return rtf.format(0, "minute");
 }
 
-export function FilterChip({ active, onClick, children }: { active: boolean; onClick(): void; children: string }) {
+export function FilterChip({ active, onClick, children, label }: { active: boolean; onClick(): void; children: string; label?: string }) {
   return (
-    <button type="button" className={cx(ui.btn, ui.small, active && ui.pressed)} aria-pressed={active} onClick={onClick}>
+    <button type="button" className={cx(ui.btn, ui.small, active && ui.pressed)} aria-pressed={active} {...(label ? { "aria-label": label } : {})} onClick={onClick}>
       {children}
     </button>
   );
