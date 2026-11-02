@@ -1,7 +1,10 @@
 export * from "./model";
 export * from "./ports";
 export * from "./env";
-export { CoreError, toErrorInfo } from "./errors";
+export { CoreError, toErrorInfo, limitReached, nameTaken, collectionManaged, type LimitName } from "./errors";
 export { createCore, ConnectorRegistrationError } from "./core";
 export { stripEditionMarks, hasEditionMark, compareTitles, matchProperties, EDITION_MARKS } from "./normalize";
 export type { MatchCandidate, MatchVerdict, TitleVerdict } from "./normalize";
+export { planCollectionMirror, emptyMirrorCounts, type MirrorState, type CollectionMirrorPlan } from "./collection-mirror";
+export { collectionsKey } from "./settings";
+export { normalizeLabel, TAG_MAX_LENGTH, COLLECTION_MAX_LENGTH, LIMITS, type Label } from "./labels";

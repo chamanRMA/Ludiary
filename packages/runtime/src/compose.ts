@@ -83,6 +83,7 @@ export async function composeCore(
     const core = await createCore({
       connectors,
       library: repos.library,
+      userData: repos.userData,
       scanRoots: repos.scanRoots,
       syncState: repos.syncState,
       settings: repos.settings,

@@ -1,5 +1,5 @@
 import type { StoreId } from "@ludiary/api-contract";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "../app/router";
 import { STORE_BRAND, STORE_IDS } from "../app/stores";
@@ -15,17 +15,27 @@ type Install = "all" | "installed" | "notInstalled";
 export function Library() {
   const { t } = useTranslation();
   const { search } = useLocation();
-  const query = new URLSearchParams(search).get("q") ?? "";
+  const params = new URLSearchParams(search);
+  const query = params.get("q") ?? "";
+  // ADR 85: /library?favorite=1 and ?tag=<name> arrive from Collections; the chips keep working locally.
+  const urlFavorite = params.get("favorite") === "1";
+  const urlTag = params.get("tag") ?? undefined;
   const { data: library, error } = useQueryState(() => api.getLibrary());
   const [store, setStore] = useState<StoreId | "local" | "all">("all");
   const [install, setInstall] = useState<Install>("all");
-  const [favorite, setFavorite] = useState(false);
+  const [favorite, setFavorite] = useState(urlFavorite);
+  const [tag, setTag] = useState(urlTag);
+  useEffect(() => {
+    setFavorite(urlFavorite);
+    setTag(urlTag);
+  }, [urlFavorite, urlTag]);
   if (!library) return <LoadError error={error} />;
 
   const shown = filterGames(library, {
     ...(store === "all" ? {} : { store }),
     ...(install === "all" ? {} : { installed: install === "installed" }),
     favorite,
+    ...(tag === undefined ? {} : { tag }),
     query,
   }).sort((a, b) => a.title.localeCompare(b.title));
 
@@ -33,7 +43,7 @@ export function Library() {
     <div className={ui.stack}>
       <header>
         <PageTitle>{t("library.title")}</PageTitle>
-        <p className={ui.muted}>{t("library.count", { shown: shown.length, total: library.length })}{query && ` · ${t("library.searching", { query })}`}</p>
+        <p className={ui.muted}>{t("library.count", { shown: shown.length, count: library.length })}{query && ` · ${t("library.searching", { query })}`}</p>
       </header>
       <div role="group" aria-label={t("library.filterStore")} className={ui.chips}>
         <Chip active={store === "all"} onClick={() => setStore("all")}>{t("library.all")}</Chip>
@@ -47,6 +57,7 @@ export function Library() {
         <Chip active={install === "installed"} onClick={() => setInstall("installed")}>{t("common.installedPlural")}</Chip>
         <Chip active={install === "notInstalled"} onClick={() => setInstall("notInstalled")}>{t("common.notInstalledPlural")}</Chip>
         <Chip active={favorite} onClick={() => setFavorite((v) => !v)}>{t("library.favorites")}</Chip>
+        {tag !== undefined && <Chip active label={t("library.tagRemoveFilter", { tag })} onClick={() => setTag(undefined)}>{t("library.tag", { tag })}</Chip>}
       </div>
       <GameGrid games={shown} />
     </div>

@@ -1,4 +1,5 @@
 import type {
+  CollectionDto,
   DetectionMode,
   GameDetailDto,
   GameSummaryDto,
@@ -14,7 +15,8 @@ import type {
   WizardStepDto,
   WizardTarget,
 } from "@ludiary/api-contract";
-import type { CollectionDto, GeneralSettings, LudiaryApi, MaintenanceDto } from "./api";
+import type { GeneralSettings, LudiaryApi, MaintenanceDto } from "./api";
+import { ApiError } from "./http";
 import { validateField } from "./validate";
 
 /** Where the simulator keeps the few non-secret values ADR 69 allows (first run, language). */
@@ -188,12 +190,27 @@ function seedLibrary(): GameSummaryDto[] {
 
 // Sample user data (names are what a user would type), not UI text: not translated (invariant 6).
 const COLLECTIONS: CollectionDto[] = [
-  { id: "col-weekend", name: "Para el finde", gameIds: ["stardew", "rimworld", "horizon", "hogwarts"] },
-  { id: "col-pending", name: "Pendientes de terminar", gameIds: ["bg3", "elden-ring", "horizon", "stardew", "cyberpunk", "disco"] },
-  { id: "col-friends", name: "Con amigos", gameIds: ["fall-guys", "fifa", "stardew"] },
-  { id: "col-short", name: "Juegos cortos", gameIds: ["hades", "celeste", "hollow-knight", "portal2"] },
-  { id: "col-classic", name: "Clásicos", gameIds: ["doom-mod", "dos-classic", "portal2"] },
+  { id: "col-weekend", name: "Para el finde", source: null, gameIds: ["stardew", "rimworld", "horizon", "hogwarts"] },
+  { id: "col-pending", source: null, name: "Pendientes de terminar", gameIds: ["bg3", "elden-ring", "horizon", "stardew", "cyberpunk", "disco"] },
+  { id: "col-friends", source: null, name: "Con amigos", gameIds: ["fall-guys", "fifa", "stardew"] },
+  { id: "col-short", source: null, name: "Juegos cortos", gameIds: ["hades", "celeste", "hollow-knight", "portal2"] },
+  { id: "col-classic", name: "Clásicos", source: null, gameIds: ["doom-mod", "dos-classic", "portal2"] },
+  // ADR 88: a read-only mirror of a Steam collection.
+  { id: "col-steam-coop", name: "Cooperativo", source: "steam", gameIds: ["stardew", "rimworld", "portal2"] },
 ];
+const collectionManaged = () => new ApiError(422, "collection-managed", "core.errors.collectionManaged", { store: "Steam" });
+
+// Limits of ADR 85 point 5, without its full name normalization (the real server applies that).
+const MAX_TAG = 40;
+const MAX_COLLECTION_NAME = 60;
+const clean = (name: string, max: number): string => {
+  const text = name.replace(/\s+/g, " ").trim();
+  if (text === "") throw new ApiError(400, "invalid-input", "core.errors.label-empty");
+  if ([...text].length > max) throw new ApiError(400, "invalid-input", "core.errors.label-too-long", { max });
+  return text;
+};
+const limit = (max: number, what: string) => new ApiError(422, "limit-reached", `core.errors.limit-reached.${what}`, { max });
+const notFound = () => new ApiError(404, "not-found", "core.errors.not-found");
 
 const SERVICE_META: Record<ServiceId, Pick<ServiceStatusDto, "purpose" | "available">> = {
   rawg: { purpose: "metadata", available: true },
@@ -221,8 +238,12 @@ const ROOTS: ScanRootDto[] = [
 /** In-memory simulator of the future API. It validates formats and DISCARDS secret values (ADR 68). */
 export function createMockApi(storage: KeyValueStorage = browserStorage()): LudiaryApi {
   const library = seedLibrary();
+  const collections = COLLECTIONS.map((c) => ({ ...c, gameIds: [...c.gameIds] }));
   const stores = new Map<StoreId, StoreStatusDto>(
-    (Object.keys(STORE_META) as StoreId[]).map((store) => [store, { store, ...STORE_META[store], sync: [] }]),
+    (Object.keys(STORE_META) as StoreId[]).map((store) => [
+      store,
+      { store, ...STORE_META[store], ...(store === "steam" ? { collections: { status: "idle" as const, lastSuccessAt: now() - 5 * 60_000, accountVerified: false, favoritesPending: 3 } } : {}), sync: [] },
+    ]),
   );
   const services = new Map<ServiceId, ServiceStatusDto>(
     (Object.keys(SERVICE_META) as ServiceId[]).map((service) => [service, { service, ...SERVICE_META[service], configured: false }]),
@@ -237,6 +258,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     autoUpdate: true,
     autostart: false,
     syncOnStart: true,
+    storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
   };
   let onboarding: OnboardingDto = (() => {
     try {
@@ -278,6 +300,23 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
   function stepAt(target: WizardTarget, index: number): WizardResponseDto {
     const step = STEPS[targetId(target)]?.[index];
     return step ?? finish(target, false);
+  }
+
+  async function detail(id: string): Promise<GameDetailDto | null> {
+    const game = library.find((g) => g.id === id);
+    if (!game) return null;
+    return {
+      ...game,
+      properties: (game.stores.length === 0 ? (["manual"] as const) : game.stores).map((store) => ({
+        id: `${game.id}-${store}`,
+        store,
+        installed: game.installed,
+        ...(game.installed ? { installPath: store === "steam" ? "C:\\Program Files (x86)\\Steam\\steamapps\\common" : "D:\\Juegos" } : {}),
+        actions: game.installed ? (["play"] as const) : (["open-store-page", "install"] as const),
+      })),
+      dlc: id === "elden-ring" ? [{ id: "elden-sote", title: "Shadow of the Erdtree", store: "steam", installed: true }] : id === "bg3" ? [{ id: "bg3-dlc", title: "Digital Deluxe Edition Soundtrack", store: "gog", installed: false }] : [],
+      collections: collections.filter((c) => c.gameIds.includes(id)).map(({ id: cid, name, source }) => ({ id: cid, name, source })),
+    };
   }
 
   return {
@@ -352,7 +391,17 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       settings = { ...settings, scanRoots: settings.scanRoots.filter((r) => r.id !== id || r.origin !== "user") };
     },
     updateSettings: async (patch) => {
-      settings = { ...settings, ...patch };
+      const { storeCollections, ...plain } = patch;
+      settings = { ...settings, ...plain };
+      for (const [store, v] of Object.entries(storeCollections ?? {}) as [StoreId, { enabled?: boolean; unverifiedFavorites?: boolean }][]) {
+        const prev = settings.storeCollections[store];
+        if (!prev) continue;
+        settings = { ...settings, storeCollections: { ...settings.storeCollections, [store]: { ...prev, ...v } } };
+        if (v.enabled === false) for (let i = collections.length - 1; i >= 0; i--) if (collections[i]?.source === store) collections.splice(i, 1);
+        if (v.enabled === true && !collections.some((c) => c.source === store)) collections.push(...COLLECTIONS.filter((c) => c.source === store).map((c) => ({ ...c, gameIds: [...c.gameIds] })));
+        const cur = stores.get(store);
+        if (cur?.collections && v.enabled !== undefined) setStore(store, { collections: { ...cur.collections, status: v.enabled ? "idle" : "off" } });
+      }
       if (patch.locale) storage.setItem("ludiary.locale", patch.locale);
       if (patch.detection !== undefined) {
         onboarding = { ...onboarding, detection: patch.detection };
@@ -362,27 +411,56 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     },
 
     getLibrary: async () => library,
-    getGame: async (id): Promise<GameDetailDto | null> => {
-      const game = library.find((g) => g.id === id);
-      if (!game) return null;
-      return {
-        ...game,
-        properties: (game.stores.length === 0 ? (["manual"] as const) : game.stores).map((store) => ({
-          id: `${game.id}-${store}`,
-          store,
-          installed: game.installed,
-          ...(game.installed ? { installPath: store === "steam" ? "C:\\Program Files (x86)\\Steam\\steamapps\\common" : "D:\\Juegos" } : {}),
-          actions: game.installed ? (["play"] as const) : (["open-store-page", "install"] as const),
-        })),
-        dlc: id === "elden-ring" ? [{ id: "elden-sote", title: "Shadow of the Erdtree", store: "steam", installed: true }] : id === "bg3" ? [{ id: "bg3-dlc", title: "Digital Deluxe Edition Soundtrack", store: "gog", installed: false }] : [],
-        collections: COLLECTIONS.filter((c) => c.gameIds.includes(id)).map(({ id: cid, name }) => ({ id: cid, name })),
-      };
+    getGame: async (id): Promise<GameDetailDto | null> => detail(id),
+    updateGame: async (id, patch) => {
+      const at = library.findIndex((g) => g.id === id);
+      if (at < 0) throw notFound();
+      // ADR 88: ids of mirrors are ignored, and the memberships in mirrors stay as they are.
+      const mirrorIds = new Set(collections.filter((c) => c.source !== null).map((c) => c.id));
+      if (patch.collectionIds?.some((c) => !mirrorIds.has(c) && !collections.some((x) => x.id === c))) throw notFound();
+      const seen = new Set<string>(); // the first spelling of a repeated tag wins
+      const tags = patch.tags?.map((t) => clean(t, MAX_TAG)).filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+      if (tags && tags.length > 20 && tags.length > (library[at] as GameSummaryDto).tags.length) throw limit(20, "tagsPerGame");
+      const wanted = patch.collectionIds && new Set(patch.collectionIds.filter((c) => !mirrorIds.has(c)));
+      library[at] = { ...(library[at] as GameSummaryDto), ...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}), ...(tags ? { tags } : {}) };
+      for (const c of collections) {
+        if (!wanted || c.source !== null) continue;
+        const has = c.gameIds.includes(id);
+        if (has && !wanted.has(c.id)) c.gameIds = c.gameIds.filter((g) => g !== id);
+        else if (!has && wanted.has(c.id)) c.gameIds = [...c.gameIds, id];
+      }
+      return (await detail(id)) as GameDetailDto;
     },
-    getCollections: async () => COLLECTIONS,
+    createCollection: async (name) => {
+      const text = clean(name, MAX_COLLECTION_NAME);
+      const own = collections.filter((c) => c.source === null);
+      if (own.length >= 200) throw limit(200, "collections");
+      if (own.some((c) => c.name.toLowerCase() === text.toLowerCase())) throw new ApiError(422, "name-taken", "core.errors.name-taken");
+      const created = { id: `col-${now()}-${collections.length}`, name: text, source: null, gameIds: [] as string[] };
+      collections.push(created);
+      return created;
+    },
+    renameCollection: async (id, name) => {
+      const text = clean(name, MAX_COLLECTION_NAME);
+      const target = collections.find((c) => c.id === id);
+      if (!target) throw notFound();
+      if (target.source !== null) throw collectionManaged();
+      if (collections.some((c) => c.id !== id && c.source === null && c.name.toLowerCase() === text.toLowerCase())) throw new ApiError(422, "name-taken", "core.errors.name-taken");
+      target.name = text;
+      return { ...target };
+    },
+    deleteCollection: async (id) => {
+      const i = collections.findIndex((c) => c.id === id);
+      if (i >= 0 && collections[i]?.source !== null) throw collectionManaged();
+      if (i >= 0) collections.splice(i, 1);
+    },
+    getCollections: async () => collections.map((c) => ({ ...c, gameIds: library.filter((g) => c.gameIds.includes(g.id)).map((g) => g.id) })),
 
     getMaintenance: async () => ({ ...maintenance }),
     syncAll: async () => {
       maintenance.lastSyncAt = now();
+      const steam = stores.get("steam");
+      if (steam?.collections && steam.collections.status !== "off") setStore("steam", { collections: { ...steam.collections, status: "idle", lastSuccessAt: now() } });
     },
     scan: async () => {
       maintenance.lastScanAt = now();

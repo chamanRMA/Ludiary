@@ -1,6 +1,6 @@
 // Wire contract of the local API (ADR 68, 72, 74). TypeBox schemas are the source; DTO types derive from them.
 // The web imports this package with `import type` only, so TypeBox never reaches the browser bundle.
-import { Type, type Static } from "typebox";
+import { Type, type Static, type TSchema } from "typebox";
 
 /** Arrays become readonly arrays, recursively (the web treats every DTO as read-only data). */
 type RO<T> = T extends (infer U)[] ? readonly RO<U>[] : T extends object ? { [K in keyof T]: RO<T[K]> } : T;
@@ -67,6 +67,22 @@ export const SyncStatusSchema = Type.Object(
 );
 export type SyncStatusDto = RO<Static<typeof SyncStatusSchema>>;
 
+export const StoreCollectionsStatusSchema = Type.Object(
+  {
+    status: Type.Union([
+      Type.Literal("idle"), Type.Literal("error"), Type.Literal("off"), Type.Literal("needs-detection"),
+      Type.Literal("store-missing"), Type.Literal("unavailable"), Type.Literal("ambiguous"),
+    ]),
+    lastSuccessAt: Type.Union([EpochSchema, Type.Null()]),
+    /** null: no pass has succeeded yet. */
+    accountVerified: Type.Union([Type.Boolean(), Type.Null()]),
+    favoritesPending: Type.Integer({ minimum: 0 }),
+    error: Type.Optional(TranslatedErrorSchema),
+  },
+  strict,
+);
+export type StoreCollectionsStatusDto = RO<Static<typeof StoreCollectionsStatusSchema>>;
+
 export const StoreStatusSchema = Type.Object(
   {
     store: StoreIdSchema,
@@ -81,6 +97,8 @@ export const StoreStatusSchema = Type.Object(
     /** 'installed-only': Steam without key (ADR 43), and Ubisoft and EA. */
     mode: Type.Union([Type.Literal("library"), Type.Literal("installed-only")]),
     accountLabel: Type.Optional(Type.String()),
+    /** ADR 88. Only stores that mirror collections; the web shows the status line when some store has it (no store name in the code). */
+    collections: Type.Optional(StoreCollectionsStatusSchema),
     sync: Type.Array(SyncStatusSchema),
   },
   strict,
@@ -167,6 +185,11 @@ export type ScanRootPatchDto = Static<typeof ScanRootPatchSchema>;
 
 export const LocaleSchema = Type.Union([Type.Literal("system"), Type.Literal("es"), Type.Literal("en")]);
 
+/** An object with an optional entry per store and no other keys. */
+const perStore = <T extends TSchema>(s: T) =>
+  Type.Object({ steam: Type.Optional(s), gog: Type.Optional(s), epic: Type.Optional(s), ubisoft: Type.Optional(s), ea: Type.Optional(s) }, strict);
+const StoreCollectionsSettingsSchema = Type.Object({ enabled: Type.Boolean(), unverifiedFavorites: Type.Boolean() }, strict);
+
 export const SettingsSchema = Type.Object(
   {
     locale: LocaleSchema,
@@ -175,13 +198,19 @@ export const SettingsSchema = Type.Object(
     /** Absent: the feature is not available (ADR 72). */
     backups: Type.Optional(Type.Object({ periodic: Type.Boolean(), folder: Type.Union([Type.String(), Type.Null()]) }, strict)), // ADR 57
     autoUpdate: Type.Optional(Type.Boolean()), // ADR 32
+    /** ADR 88. Only the stores that mirror collections. */
+    storeCollections: perStore(StoreCollectionsSettingsSchema),
   },
   strict,
 );
 export type SettingsDto = RO<Static<typeof SettingsSchema>>;
 
 export const SettingsPatchSchema = Type.Object(
-  { locale: Type.Optional(LocaleSchema), detection: Type.Optional(DetectionModeSchema) },
+  {
+    locale: Type.Optional(LocaleSchema),
+    detection: Type.Optional(DetectionModeSchema),
+    storeCollections: Type.Optional(perStore(Type.Object({ enabled: Type.Optional(Type.Boolean()), unverifiedFavorites: Type.Optional(Type.Boolean()) }, strict))),
+  },
   strict,
 );
 export type SettingsPatchDto = Static<typeof SettingsPatchSchema>;
@@ -225,11 +254,32 @@ export const GameDetailSchema = Type.Object(
     ...GameSummarySchema.properties,
     properties: Type.Array(GamePropertySchema),
     dlc: Type.Array(Type.Object({ id: Id, title: Type.String(), store: StoreIdSchema, installed: Type.Boolean() }, strict), { maxItems: 1000 }),
-    collections: Type.Array(Type.Object({ id: Id, name: Type.String() }, strict)),
+    collections: Type.Array(Type.Object({ id: Id, name: Type.String(), source: Type.Union([StoreIdSchema, Type.Null()]) }, strict)),
   },
   strict,
 );
 export type GameDetailDto = RO<Static<typeof GameDetailSchema>>;
+
+// ---- User data (ADR 85). Raw limits here are the first barrier; the core applies the real ones.
+/** `source`: null = the user's own; a store id = read-only mirror of that store's collection (ADR 88). */
+export const CollectionSchema = Type.Object({ id: Id, name: Type.String(), source: Type.Union([StoreIdSchema, Type.Null()]), gameIds: Type.Array(Id) }, strict);
+export type CollectionDto = RO<Static<typeof CollectionSchema>>;
+
+const LabelText = Type.String({ maxLength: 200 });
+/** PATCH /api/games/:id. Each field replaces the whole set. */
+export const GamePatchSchema = Type.Object(
+  {
+    favorite: Type.Optional(Type.Boolean()),
+    tags: Type.Optional(Type.Array(LabelText, { maxItems: 1000 })),
+    collectionIds: Type.Optional(Type.Array(Id, { maxItems: 200 })),
+  },
+  { ...strict, minProperties: 1 },
+);
+export type GamePatchDto = RO<Static<typeof GamePatchSchema>>;
+export const CollectionCreateSchema = Type.Object({ name: LabelText }, strict);
+export type CollectionCreateDto = Static<typeof CollectionCreateSchema>;
+export const CollectionPatchSchema = CollectionCreateSchema;
+export type CollectionPatchDto = CollectionCreateDto;
 
 // ---- Launch and sync
 export const LaunchActionSchema = Type.Union([Type.Literal("play"), Type.Literal("install")]);

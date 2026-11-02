@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DatabaseTooNewError, MIGRATIONS, MigrationMismatchError, migrate, openDatabase, type EmbeddedMigration } from "../src";
+import { DatabaseTooNewError, ForeignKeyViolationError, MIGRATIONS, MigrationMismatchError, migrate, openDatabase, type EmbeddedMigration } from "../src";
 
 let dir = "";
 let db: Database.Database;
@@ -38,14 +38,16 @@ describe("embedded migrations", () => {
 describe("migrate", () => {
   it("builds the schema from an empty database without a safety copy", async () => {
     const res = await migrate(db, { backupDir: backupDir() });
-    expect(res).toEqual({ applied: ["0001_library_scan", "0002_store_account", "0003_recheck_steam_media", "0004_dlc"], backupFile: null });
+    expect(res).toEqual({ applied: ["0001_library_scan", "0002_store_account", "0003_recheck_steam_media", "0004_dlc", "0005_user_data", "0006_collection_source"], backupFile: null });
     expect(existsSync(backupDir())).toBe(false);
-    expect(tables()).toEqual(["canonical_games", "devices", "game_properties", "installations", "scan_roots", "schema_migrations", "secrets", "settings", "store_connections", "sync_state", "users"]);
+    expect(tables()).toEqual(["canonical_games", "collection_games", "collections", "devices", "game_properties", "game_tags", "installations", "scan_roots", "schema_migrations", "secrets", "settings", "store_connections", "sync_state", "tags", "user_game_data", "users"]);
     expect(db.prepare("SELECT id, hash FROM schema_migrations").all()).toEqual([
       { id: "0001_library_scan", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0002_store_account", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0003_recheck_steam_media", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0004_dlc", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      { id: "0005_user_data", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      { id: "0006_collection_source", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
     ]);
   });
 
@@ -126,5 +128,40 @@ describe("migrate", () => {
     expect(tables()).not.toContain("half");
     expect(db.prepare("SELECT id FROM schema_migrations").all()).toEqual([{ id: "0001_t1" }]);
     expect(readdirSync(backupDir())).toHaveLength(1); // the safety copy was made before trying
+  });
+
+  // ADR 85 point 12: with foreign_keys ON, rebuilding canonical_games (DROP TABLE) would cascade over game_tags.
+  const REBUILD: EmbeddedMigration = {
+    id: "0099_rebuild_canonical",
+    statements: [
+      "CREATE TABLE __new_canonical_games (id text PRIMARY KEY NOT NULL, user_id text NOT NULL, title text NOT NULL, normalized_title text NOT NULL, media text, metadata_source text, created_at integer NOT NULL, updated_at integer NOT NULL, extra text, FOREIGN KEY (user_id) REFERENCES users(id))",
+      "INSERT INTO __new_canonical_games (id, user_id, title, normalized_title, media, metadata_source, created_at, updated_at) SELECT id, user_id, title, normalized_title, media, metadata_source, created_at, updated_at FROM canonical_games",
+      "DROP TABLE canonical_games",
+      "ALTER TABLE __new_canonical_games RENAME TO canonical_games",
+    ],
+  };
+  const seedUserData = async () => {
+    await migrate(db, { backupDir: backupDir() });
+    db.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
+    db.exec("INSERT INTO canonical_games (id, user_id, title, normalized_title, created_at, updated_at) VALUES ('c', 'u', 'T', 't', 1, 1)");
+    db.exec("INSERT INTO tags (id, user_id, name, name_key, created_at) VALUES ('t', 'u', 'x', 'x', 1)");
+    db.exec("INSERT INTO game_tags (canonical_game_id, tag_id, user_id) VALUES ('c', 't', 'u')");
+  };
+
+  it("a migration that rebuilds canonical_games keeps the rows that reference it, and foreign keys are back on", async () => {
+    await seedUserData();
+    const res = await migrate(db, { backupDir: backupDir(), migrations: [...MIGRATIONS, REBUILD] });
+    expect(res.applied).toEqual(["0099_rebuild_canonical"]);
+    expect(db.prepare("SELECT canonical_game_id AS c FROM game_tags").all()).toEqual([{ c: "c" }]);
+    expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
+  });
+
+  it("rolls back a migration that leaves a broken foreign key, fails visibly and turns foreign keys back on", async () => {
+    await seedUserData();
+    const bad: EmbeddedMigration = { id: "0099_bad", statements: ["DELETE FROM canonical_games"] };
+    await expect(migrate(db, { backupDir: backupDir(), migrations: [...MIGRATIONS, bad] })).rejects.toBeInstanceOf(ForeignKeyViolationError);
+    expect(db.prepare("SELECT id FROM canonical_games").all()).toEqual([{ id: "c" }]);
+    expect(db.prepare("SELECT id FROM schema_migrations WHERE id = '0099_bad'").all()).toEqual([]);
+    expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
   });
 });

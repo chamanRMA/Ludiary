@@ -29,6 +29,20 @@
       "when": 1792846177866,
       "tag": "0003_dlc",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793618174322,
+      "tag": "0004_user_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793639492132,
+      "tag": "0005_collection_source",
+      "breakpoints": true
     }
   ]
 }

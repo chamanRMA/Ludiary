@@ -34,7 +34,61 @@ const serverSettings = {
   locale: "es",
   detection: "auto-and-manual",
   scanRoots: [{ id: "a", origin: "discovered", path: "C:\\Steam", enabled: true, store: "steam" }],
+  storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
 };
+
+describe("real client: favorites, tags and collections (ADR 85)", () => {
+  it("sends the exact requests", async () => {
+    const { http, log } = fakeHttp(() => undefined);
+    const api = createRealApi(http, createMockApi(memory()));
+    await api.updateGame("g/1", { favorite: true, tags: ["Coop"] });
+    await api.getCollections();
+    await api.createCollection("Pending");
+    await api.renameCollection("c 1", "Later");
+    await api.deleteCollection("c 1");
+    expect(log).toEqual([
+      'PATCH /api/games/g%2F1 {"favorite":true,"tags":["Coop"]}',
+      "GET /api/collections",
+      'POST /api/collections {"name":"Pending"}',
+      'PATCH /api/collections/c%201 {"name":"Later"}',
+      "DELETE /api/collections/c%201",
+    ]);
+  });
+
+  it("lets the server's translatable error through", async () => {
+    const { http } = fakeHttp(() => new ApiError(422, "name-taken", "core.errors.name-taken"));
+    const api = createRealApi(http, createMockApi(memory()));
+    await expect(api.createCollection("A")).rejects.toMatchObject({ code: "name-taken", key: "core.errors.name-taken" });
+  });
+});
+
+describe("real client: collections of a store (ADR 88)", () => {
+  it("has no import call; refreshing is the existing sync", async () => {
+    const { http, log } = fakeHttp(() => undefined);
+    const api = createRealApi(http, createMockApi(memory()));
+    expect("importCollections" in api).toBe(false);
+    await api.syncAll("manual");
+    expect(log).toEqual(['POST /api/sync {"trigger":"manual"}']);
+  });
+
+  it("reads the per-store settings from the server and sends their changes to it, not to the simulator", async () => {
+    const { http, log } = fakeHttp((m, p) => (p === "/api/settings" ? serverSettings : m === "GET" ? undefined : undefined));
+    const sim = createMockApi(memory());
+    const api = createRealApi(http, sim);
+    expect((await api.getSettings()).storeCollections).toEqual({ steam: { enabled: true, unverifiedFavorites: false } });
+    log.length = 0;
+    await api.updateSettings({ storeCollections: { steam: { enabled: false } } });
+    expect(log).toEqual(['PATCH /api/settings {"storeCollections":{"steam":{"enabled":false}}}', "GET /api/settings"]);
+    expect((await sim.getSettings()).storeCollections.steam?.enabled).toBe(true); // the simulator was not written
+  });
+
+  it("lets the server's read-only error through", async () => {
+    const { http } = fakeHttp(() => new ApiError(422, "collection-managed", "core.errors.collectionManaged"));
+    const api = createRealApi(http, createMockApi(memory()));
+    await expect(api.renameCollection("c", "A")).rejects.toMatchObject({ code: "collection-managed", key: "core.errors.collectionManaged" });
+    await expect(api.deleteCollection("c")).rejects.toMatchObject({ code: "collection-managed" });
+  });
+});
 
 describe("real client: what the server serves", () => {
   it("uses the server for library, first run, sync and scan with the exact bodies", async () => {
@@ -294,7 +348,6 @@ describe("real client: point B, the rest comes from the simulator", () => {
     const m = await api.getMaintenance();
     expect(m).toMatchObject({ lastScanAt: 7_000, lastSyncAt: 9_000 });
     expect(m.lastBackupAt).toBeNull(); // the simulator made one, but no real copy exists
-    expect(await api.getCollections()).toEqual([]);
     const none = await createRealApi(fakeHttp(() => []).http, createMockApi(memory())).getMaintenance();
     expect(none).toMatchObject({ lastScanAt: null, lastSyncAt: null });
   });

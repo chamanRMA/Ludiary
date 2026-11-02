@@ -19,5 +19,8 @@
   "connectors.steam.disconnect.revokeHint": "Ludiary borra la clave. Para anularla en Steam, pulsa Revoke en steamcommunity.com/dev/apikey.",
   "connectors.steam.errors.malformedFile": "Steam tiene un fichero que Ludiary no puede leer. Ese juego se omite.",
   "connectors.steam.errors.invalidAppId": "Este juego de Steam tiene un identificador no válido y no se puede lanzar.",
-  "connectors.steam.errors.launcherMissing": "No se encontró Steam en este equipo. Instálalo o comprueba que se detecta en Ajustes."
+  "connectors.steam.errors.launcherMissing": "No se encontró Steam en este equipo. Instálalo o comprueba que se detecta en Ajustes.",
+  "connectors.steam.collections.notFound": "No encontramos las colecciones de Steam en este equipo. Abre Steam una vez o conecta tu cuenta de Steam si usas varias.",
+  "connectors.steam.collections.ambiguous": "Hay varias cuentas de Steam en este equipo; conecta la tuya en Ajustes para traer sus colecciones.",
+  "connectors.steam.collections.accountNotFound": "Tu cuenta de Steam conectada no tiene colecciones guardadas en este equipo."
 }

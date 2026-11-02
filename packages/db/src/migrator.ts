@@ -24,6 +24,18 @@ export class MigrationMismatchError extends Error {
   }
 }
 
+/** ADR 85 point 12: a migration left rows pointing nowhere (e.g. a table rebuild dropped what they referenced). It is rolled back. */
+export class ForeignKeyViolationError extends Error {
+  readonly code = "foreign-key-violation";
+  constructor(
+    readonly migrationId: string,
+    readonly violations: number,
+  ) {
+    super(`Migration ${migrationId} left ${violations} rows with a broken foreign key; it was rolled back`);
+    this.name = "ForeignKeyViolationError";
+  }
+}
+
 export interface MigrateOptions {
   /** Folder for the pre-migration copy (ADR 57: %LOCALAPPDATA%\Ludiary\backups). Received, not computed. */
   backupDir: string;
@@ -73,11 +85,20 @@ export async function migrate(db: Database.Database, opts: MigrateOptions): Prom
   }
 
   const insert = db.prepare("INSERT INTO schema_migrations (id, hash, applied_at) VALUES (?, ?, ?)");
-  for (const m of pending) {
-    db.transaction(() => {
-      for (const statement of m.statements) db.exec(statement);
-      insert.run(m.id, hashMigration(m), now());
-    })();
+  // ADR 85 point 12: PRAGMA foreign_keys does nothing inside a transaction, and with it ON the DROP TABLE of a table
+  // rebuild would cascade over the user's data. So: OFF outside, foreign_key_check before each COMMIT, ON again always.
+  db.pragma("foreign_keys = OFF");
+  try {
+    for (const m of pending) {
+      db.transaction(() => {
+        for (const statement of m.statements) db.exec(statement);
+        const broken = db.pragma("foreign_key_check") as unknown[];
+        if (broken.length > 0) throw new ForeignKeyViolationError(m.id, broken.length);
+        insert.run(m.id, hashMigration(m), now());
+      })();
+    }
+  } finally {
+    db.pragma("foreign_keys = ON");
   }
   return { applied: pending.map((m) => m.id), backupFile };
 }

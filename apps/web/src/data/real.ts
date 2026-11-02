@@ -1,4 +1,8 @@
 import type {
+  CollectionCreateDto,
+  CollectionDto,
+  CollectionPatchDto,
+  GamePatchDto,
   StoreId,
   GameDetailDto,
   GameSummaryDto,
@@ -26,8 +30,8 @@ import { ApiError, type Http } from "./http";
 /**
  * Real client (ADR 72 points 6 and 7, answer B).
  *
- * Served by the local server: library, game sheet, launch, sync and scan, store status, first run,
- * detection mode, language and scan roots.
+ * Served by the local server: library, game sheet, favorites, tags and collections (ADR 85), launch, sync and scan,
+ * store status, first run, detection mode, language and scan roots.
  *
  * Store accounts (ADR 74, 77): `startWizard`, `submitWizard`, `cancelWizard`, `disconnect` and `wizardCallback` for the stores
  * in REAL_WIZARD_STORES (Steam, GOG, Epic, Ubisoft and EA).
@@ -134,6 +138,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       locale: server.locale,
       detection: server.detection,
       scanRoots: server.scanRoots,
+      storeCollections: server.storeCollections,
       // Present in the server answer: use it. Absent (feature not available yet): the simulator's value.
       backups: server.backups ?? local.backups,
       autoUpdate: server.autoUpdate ?? local.autoUpdate,
@@ -143,8 +148,12 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
   }
 
   async function updateSettings(patch: SettingsUpdate): Promise<GeneralSettings> {
-    const { locale, detection, ...rest } = patch;
-    const serverPatch: SettingsPatchDto = { ...(locale === undefined ? {} : { locale }), ...(detection === undefined ? {} : { detection }) };
+    const { locale, detection, storeCollections, ...rest } = patch;
+    const serverPatch: SettingsPatchDto = {
+      ...(locale === undefined ? {} : { locale }),
+      ...(detection === undefined ? {} : { detection }),
+      ...(storeCollections === undefined ? {} : { storeCollections }),
+    };
     if (Object.keys(serverPatch).length > 0) await http.patch<SettingsDto>("/api/settings", serverPatch);
     // The server has no field for the rest, so those changes live in the simulator only.
     if (Object.keys(rest).length > 0) await sim.updateSettings(rest);
@@ -192,6 +201,11 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
         throw e;
       }
     },
+    updateGame: (id, patch) => http.patch<GameDetailDto>(`/api/games/${enc(id)}`, patch satisfies GamePatchDto),
+    getCollections: () => http.get<readonly CollectionDto[]>("/api/collections"),
+    createCollection: (name) => http.post<CollectionDto>("/api/collections", { name } satisfies CollectionCreateDto),
+    renameCollection: (id, name) => http.patch<CollectionDto>(`/api/collections/${enc(id)}`, { name } satisfies CollectionPatchDto),
+    deleteCollection: (id) => http.delete(`/api/collections/${enc(id)}`),
     syncAll: async (trigger = "manual") => {
       const body: SyncRequestDto = { trigger };
       await http.post("/api/sync", body);
@@ -255,8 +269,6 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     // ---- Not available yet: the screens hide these in the real app, so nothing is simulated here.
     // shortcut: no services on the server yet (ADR 72 point B); an empty list, not the simulator's sample states.
     getServices: async () => [],
-    // shortcut: no collections on the server yet; the simulator's samples would look like the user's own, so none.
-    getCollections: async () => [],
     revokeSessions: async () => void (await http.post("/api/sessions/revoke", {})),
     createBackup: unavailable,
     exportLogs: unavailable,

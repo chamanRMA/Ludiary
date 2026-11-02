@@ -1,12 +1,17 @@
 
-import type { StoreId } from "@ludiary/api-contract";
+import type { GameDetailDto, GamePatchDto, StoreId } from "@ludiary/api-contract";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { errorText } from "../app/errors";
 import { Link } from "../app/Link";
 import { STORE_BRAND } from "../app/stores";
 import { useLaunch } from "../app/useLaunch";
 import { api, isSimulated } from "../data/api";
-import { useQueryState } from "../data/hooks";
+import { mutate, useQuery, useQueryState } from "../data/hooks";
 import { isUnsynced, primaryAction } from "../data/library";
+import { CollectionMenu } from "../components/CollectionMenu";
+import { FromStore } from "../components/CollectionsStatus";
+import { Icon } from "../components/Icon";
 import { cx, Cover, formatHours, LoadError, PageTitle, relativeTime } from "../components/bits";
 import ui from "../styles/ui.module.css";
 import { NotFound } from "./NotFound";
@@ -15,6 +20,10 @@ export function Game({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
   const { data: game, error } = useQueryState(() => api.getGame(id), [id]);
   const { launching, message, setMessage, play } = useLaunch();
+  const [busy, setBusy] = useState(false);
+  const working = useRef(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   if (game === undefined) return <LoadError error={error} />;
   if (game === null) return <NotFound />;
 
@@ -22,6 +31,25 @@ export function Game({ id }: { id: string }) {
   const action = primaryAction(game);
   const installable = game.properties.find((p) => !p.installed && p.actions.includes("install"));
   const storeName = primary && primary.store !== "manual" ? STORE_BRAND[primary.store].name : "";
+
+  /** ADR 85: every change is one PATCH that answers the whole game; mutate() refreshes the page and the lists. */
+  const save = async (patch: GamePatchDto): Promise<boolean> => {
+    // Controls stay enabled while saving (disabling would drop keyboard focus): clicks are ignored instead.
+    if (working.current) return false;
+    working.current = true;
+    setBusy(true);
+    try {
+      await mutate(api.updateGame(game.id, patch));
+      setSaveError(null);
+      return true;
+    } catch (e) {
+      setSaveError(errorText(t, e));
+      return false;
+    } finally {
+      working.current = false;
+      setBusy(false);
+    }
+  };
 
   return (
     <div className={ui.stack}>
@@ -38,7 +66,19 @@ export function Game({ id }: { id: string }) {
               </span>
             ))}
             <span className={cx(ui.chip, game.installed && ui.ok)}>{game.installed ? t("common.installed") : t("common.notInstalled")}</span>
-            {game.favorite && <span className={ui.chip}>{t("game.favorite")}</span>}
+            <button type="button" className={cx(ui.btn, ui.small, game.favorite && ui.pressed)} aria-pressed={game.favorite} onClick={() => void save({ favorite: !game.favorite })}>
+              <Icon name={game.favorite ? "starFilled" : "star"} size={16} />
+              {t("game.favorite")}
+            </button>
+            {game.collections.map((c) => (
+              <span key={c.id} style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                <Link to={`/collections/${encodeURIComponent(c.id)}`} className={ui.chipLink}>
+                  {c.name}
+                </Link>
+                {c.source !== null && <FromStore source={c.source} />}
+              </span>
+            ))}
+            <CollectionMenu game={game} save={save} error={saveError} onOpenChange={setPickerOpen} />
           </div>
           <div className={ui.chips}>
             {action === "install" ? (
@@ -101,14 +141,56 @@ export function Game({ id }: { id: string }) {
         </section>
       )}
 
-      <section className={ui.panel} aria-labelledby="g-tags">
-        <h2 id="g-tags">{t("game.organize")}</h2>
-        <div className={ui.chips}>
-          {game.tags.map((tag) => <span key={tag} className={ui.chip}>{tag}</span>)}
-          {game.collections.map((c) => <Link key={c.id} to="/collections" className={ui.chip}>{c.name}</Link>)}
-          {game.tags.length + game.collections.length === 0 && <span className={ui.muted}>{t("game.noTags")}</span>}
-        </div>
-      </section>
+      <Organize game={game} busy={busy} error={pickerOpen ? null : saveError} save={save} />
     </div>
+  );
+}
+
+function Organize({ game, busy, error, save }: { game: GameDetailDto; busy: boolean; error: string | null; save: (patch: GamePatchDto) => Promise<boolean> }) {
+  const { t } = useTranslation();
+  const library = useQuery(() => api.getLibrary());
+  const [draft, setDraft] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  const suggestions = [...new Set((library ?? []).flatMap((g) => g.tags))].filter((tag) => !game.tags.includes(tag)).sort();
+  const addTag = async (): Promise<void> => {
+    if (draft.trim() !== "" && (await save({ tags: [...game.tags, draft] }))) setDraft("");
+  };
+
+  return (
+    <section className={ui.panel} aria-labelledby="g-tags" aria-busy={busy}>
+      <h2 id="g-tags">{t("game.tags")}</h2>
+      <div className={ui.chips}>
+        {game.tags.map((tag) => (
+          <span key={tag} className={ui.chip}>
+            {tag}
+            <button type="button" className={ui.chipBtn} aria-label={t("game.tagRemove", { name: tag })} onClick={() => void save({ tags: game.tags.filter((x) => x !== tag) }).then(() => input.current?.focus())}>
+              <span aria-hidden="true">×</span>
+            </button>
+          </span>
+        ))}
+        {game.tags.length === 0 && <span className={ui.muted}>{t("game.noTags")}</span>}
+      </div>
+      <div className={ui.chips}>
+        <input
+          className={ui.field}
+          list="g-tag-suggestions"
+          value={draft}
+          maxLength={200}
+          aria-label={t("game.tagAdd")}
+          ref={input}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void addTag();
+          }}
+        />
+        <datalist id="g-tag-suggestions">
+          {suggestions.map((tag) => <option key={tag} value={tag} />)}
+        </datalist>
+        <button type="button" className={ui.btn} disabled={draft.trim() === ""} onClick={() => void addTag()}>
+          {t("game.tagAddButton")}
+        </button>
+      </div>
+      {error && <p role="alert" className={ui.error}>{error}</p>}
+    </section>
   );
 }

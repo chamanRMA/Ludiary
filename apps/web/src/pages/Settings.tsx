@@ -12,6 +12,7 @@ import { api, isSimulated } from "../data/api";
 import type { GeneralSettings, SettingsUpdate } from "../data/api";
 import { mutate, useQuery } from "../data/hooks";
 import { cx, PageTitle, relativeTime, SimNote } from "../components/bits";
+import { CollectionsStatusLine, withCollections } from "../components/CollectionsStatus";
 import { TargetRow } from "../components/TargetRow";
 import ui from "../styles/ui.module.css";
 import styles from "./settings.module.css";
@@ -152,6 +153,29 @@ function General() {
   );
 }
 
+/** ADR 88: the switches of the collections mirror of one store, with its status line. */
+function StoreCollections({ store }: { store: ReturnType<typeof withCollections>[number] }) {
+  const { t } = useTranslation();
+  const [settings, update] = useSettings();
+  const mine = settings?.storeCollections[store.store];
+  if (!mine) return null;
+  const name = STORE_BRAND[store.store].name;
+  const set = (patch: { enabled?: boolean; unverifiedFavorites?: boolean }) => void update({ storeCollections: { [store.store]: patch } });
+  return (
+    <>
+      <Row title={t("settings.stores.collections.enabled", { store: name })} hint={t("settings.stores.collections.enabledHint", { store: name })}>
+        <Switch checked={mine.enabled} label={t("settings.stores.collections.enabled", { store: name })} onChange={(enabled) => set({ enabled })} />
+      </Row>
+      {mine.enabled && store.collections.accountVerified === false && (
+        <Row title={t("settings.stores.collections.unverified", { store: name })} hint={t("settings.stores.collections.unverifiedHint", { store: name })}>
+          <Switch checked={mine.unverifiedFavorites} label={t("settings.stores.collections.unverified", { store: name })} onChange={(unverifiedFavorites) => set({ unverifiedFavorites })} />
+        </Row>
+      )}
+      <CollectionsStatusLine status={store} />
+    </>
+  );
+}
+
 function Stores() {
   const { t } = useTranslation();
   const stores = useQuery(() => api.getStores());
@@ -161,6 +185,7 @@ function Stores() {
     <>
       <p className={ui.muted}>{t("settings.stores.intro")}</p>
       <div>{stores?.map((s) => <TargetRow key={s.store} store={s} />)}</div>
+      {withCollections(stores).map((s) => <StoreCollections key={s.store} store={s} />)}
       {isSimulated && epic?.connection === "connected" && (
         <Row title={t("settings.stores.simulate")} hint={t("settings.stores.simulateHint")}>
           <button type="button" className={ui.btn} onClick={() => void mutate(api.simulateExpiredSession("epic")).then(() => setDone(true))}>

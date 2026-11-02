@@ -136,6 +136,7 @@ describe("access levels (ADR 67, 72)", () => {
       ["GET", "/api/library"], ["GET", "/api/games/g1"], ["POST", "/api/games/g1/launch"], ["POST", "/api/sync"],
       ["GET", "/api/stores"], ["GET", "/api/onboarding"], ["POST", "/api/onboarding/complete"],
       ["POST", "/api/onboarding/reset"], ["GET", "/api/settings"], ["PATCH", "/api/settings"],
+      ["PATCH", "/api/games/g1"], ["GET", "/api/collections"], ["POST", "/api/collections"], ["PATCH", "/api/collections/c1"], ["DELETE", "/api/collections/c1"],
       ["PATCH", "/api/scan-roots/r1"], ["DELETE", "/api/scan-roots/r1"], ["POST", "/api/scan-roots/pick"],
       ...WIZARD_ROUTES,
     ];
@@ -367,7 +368,7 @@ describe("routes against the fake facade (ADR 72, point 5)", () => {
     const { auth } = await login(port);
     const res = await send(port, "/api/stores", { headers: auth });
     expect(res.status).toBe(200);
-    expect(res.json()).toEqual([{ store: "steam", access: "official-api", connection: "disconnected", mode: "installed-only", sync: [{ operation: "scan", state: "idle" }] }]);
+    expect(res.json()).toEqual([{ store: "steam", access: "official-api", connection: "disconnected", mode: "installed-only", collections: { status: "idle", lastSuccessAt: 1000, accountVerified: true, favoritesPending: 0 }, sync: [{ operation: "scan", state: "idle" }] }]);
   });
 
   it("onboarding: get, complete (204, null allowed) and reset (204)", async () => {
@@ -389,11 +390,18 @@ describe("routes against the fake facade (ADR 72, point 5)", () => {
     const got = await send(port, "/api/settings", { headers: auth });
     expect(got.status).toBe(200);
     expect(got.json()["scanRoots"]).toHaveLength(1);
+    expect(got.json()["storeCollections"]).toEqual({ steam: { enabled: true, unverifiedFavorites: false } }); // ADR 88
     expect(got.json()).not.toHaveProperty("backups"); // optional: absent means not available
     const patched = await send(port, "/api/settings", { method: "PATCH", headers: auth, body: { locale: "es", detection: "later" } });
     expect(patched.status).toBe(200);
     expect(core.calls.find((c) => c[0] === "updateSettings")).toEqual(["updateSettings", { locale: "es", detection: "later" }]);
-    for (const body of [{ locale: "fr" }, { detection: null }, { scanRoots: [] }, { autoUpdate: true }]) {
+    const sc = await send(port, "/api/settings", { method: "PATCH", headers: auth, body: { storeCollections: { steam: { enabled: false } } } });
+    expect(sc.status).toBe(200);
+    expect(core.calls.filter((c) => c[0] === "updateSettings").at(-1)).toEqual(["updateSettings", { storeCollections: { steam: { enabled: false } } }]);
+    const before = core.calls.filter((c) => c[0] === "updateSettings").length;
+    const bad = [{ locale: "fr" }, { detection: null }, { scanRoots: [] }, { autoUpdate: true }, { storeCollections: { nope: { enabled: true } } }, { storeCollections: { steam: { enabled: "yes" } } }, { storeCollections: { steam: { path: "x" } } }, { storeCollections: [] }];
+    expect(before).toBeGreaterThan(0);
+    for (const body of bad) {
       expect((await send(port, "/api/settings", { method: "PATCH", headers: auth, body })).status, JSON.stringify(body)).toBe(400);
     }
   });
@@ -438,6 +446,74 @@ describe("routes against the fake facade (ADR 72, point 5)", () => {
     mode = "busy";
     expect((await pick()).status).toBe(409);
     expect((await pick({ path: "C:\\" })).status).toBe(400);
+  });
+});
+
+describe("favorites, tags and collections (ADR 85)", () => {
+  it("PATCH /api/games/:id passes the fields to the core and answers the game", async () => {
+    const { port, core } = await start();
+    const { auth } = await login(port);
+    const res = await send(port, "/api/games/g1", { method: "PATCH", headers: auth, body: { favorite: true, tags: ["Coop"], collectionIds: ["col1"] } });
+    expect(res.status).toBe(200);
+    expect(res.json()["id"]).toBe("g1");
+    expect(core.calls.find((c) => c[0] === "updateGame")).toEqual(["updateGame", "g1", { favorite: true, tags: ["Coop"], collectionIds: ["col1"] }]);
+  });
+
+  it("PATCH /api/games/:id rejects an empty body, extra fields, wrong types and too many items with 400, never calling the core", async () => {
+    const { port, core } = await start();
+    const { auth } = await login(port);
+    const bodies: unknown[] = [{}, { favorite: true, path: "x" }, { favorite: "yes" }, { tags: "a" }, { tags: [1] }, { tags: Array(1001).fill("a") }, { tags: ["x".repeat(201)] }, { collectionIds: Array(201).fill("c") }];
+    for (const body of bodies) expect((await send(port, "/api/games/g1", { method: "PATCH", headers: auth, body })).status, JSON.stringify(body).slice(0, 40)).toBe(400);
+    expect(core.calls.filter((c) => c[0] === "updateGame")).toEqual([]);
+  });
+
+  it("maps not-found to 404 and name-taken and limit-reached to 422 with their params", async () => {
+    const core = fakeCore({
+      updateGame: async () => { throw new FakeCoreError("not-found", "core.errors.not-found"); },
+      createCollection: async () => { throw new FakeCoreError("name-taken", "core.errors.name-taken"); },
+      renameCollection: async () => { throw new FakeCoreError("limit-reached", "core.errors.limit-reached", { max: 200 }); },
+    });
+    const { port } = await start({ core });
+    const { auth } = await login(port);
+    expect((await send(port, "/api/games/g1", { method: "PATCH", headers: auth, body: { favorite: true } })).status).toBe(404);
+    const taken = await send(port, "/api/collections", { method: "POST", headers: auth, body: { name: "A" } });
+    expect([taken.status, taken.json()["error"]]).toEqual([422, "name-taken"]);
+    const full = await send(port, "/api/collections/c1", { method: "PATCH", headers: auth, body: { name: "A" } });
+    expect([full.status, full.json()["detail"]]).toEqual([422, { code: "limit-reached", key: "core.errors.limit-reached", params: { max: 200 } }]);
+  });
+
+  it("collections: list, create 201, rename 200, delete 204, strict bodies", async () => {
+    const { port, core } = await start();
+    const { auth } = await login(port);
+    expect((await send(port, "/api/collections", { headers: auth })).json()).toEqual([{ id: "col1", name: "Pending", source: null, gameIds: ["g1"] }, { id: "col2", name: "Co-op", source: "steam", gameIds: ["g1"] }]);
+    const created = await send(port, "/api/collections", { method: "POST", headers: auth, body: { name: "Pending" } });
+    expect([created.status, created.json()]).toEqual([201, { id: "col1", name: "Pending", source: null, gameIds: [] }]);
+    expect((await send(port, "/api/collections/col1", { method: "PATCH", headers: auth, body: { name: "Renamed" } })).json()["name"]).toBe("Renamed");
+    expect((await send(port, "/api/collections/col1", { method: "DELETE", headers: auth })).status).toBe(204);
+    for (const body of [{}, { name: 5 }, { name: "A", gameIds: [] }]) {
+      expect((await send(port, "/api/collections", { method: "POST", headers: auth, body })).status).toBe(400);
+      expect((await send(port, "/api/collections/col1", { method: "PATCH", headers: auth, body })).status).toBe(400);
+    }
+    expect(core.calls.filter((c) => c[0] === "createCollection" || c[0] === "renameCollection")).toHaveLength(2);
+  });
+});
+
+describe("collections of a store as a mirror (ADR 88)", () => {
+  it("the import route no longer exists", async () => {
+    const { port } = await start();
+    const { auth } = await login(port);
+    expect((await send(port, "/api/collections/import", { method: "POST", headers: auth, body: { store: "steam" } })).status).toBe(404);
+  });
+
+  it("renaming or deleting a mirror is 422 with the managed key; the game page and the list carry the source", async () => {
+    const managed = async () => { throw new FakeCoreError("collection-managed", "core.errors.collectionManaged"); };
+    const { port } = await start({ core: fakeCore({ renameCollection: managed, deleteCollection: managed }) });
+    const { auth } = await login(port);
+    const rename = await send(port, "/api/collections/col2", { method: "PATCH", headers: auth, body: { name: "A" } });
+    expect([rename.status, rename.json()["error"], (rename.json()["detail"] as { key: string }).key]).toEqual([422, "collection-managed", "core.errors.collectionManaged"]);
+    expect((await send(port, "/api/collections/col2", { method: "DELETE", headers: auth })).status).toBe(422);
+    const game = await send(port, "/api/games/g1", { headers: auth });
+    expect(game.json()["collections"]).toEqual([{ id: "col1", name: "Pending", source: null }, { id: "col2", name: "Co-op", source: "steam" }]);
   });
 });
 

@@ -1,6 +1,8 @@
 import type {
   DetectionMode,
+  CollectionDto,
   GameDetailDto,
+  GamePatchDto,
   GameSummaryDto,
   OnboardingDto,
   ScanRootDto,
@@ -21,6 +23,12 @@ import type {
 export interface LudiaryCoreFacade {
   listLibrary(): Promise<readonly GameSummaryDto[]>;
   getGame(canonicalId: string): Promise<GameDetailDto | null>;
+  /** ADR 85. */
+  updateGame(canonicalId: string, patch: GamePatchDto): Promise<GameDetailDto>;
+  listCollections(): Promise<readonly CollectionDto[]>;
+  createCollection(name: string): Promise<CollectionDto>;
+  renameCollection(id: string, name: string): Promise<CollectionDto>;
+  deleteCollection(id: string): Promise<void>;
   launch(canonicalId: string, propertyId?: string, action?: "play" | "install"): Promise<{ status: "started" | "already-starting" }>;
   requestSync(req: { trigger: "open" | "manual"; operations?: readonly ("library" | "scan")[] }): Promise<void>;
   storeStatus(): Promise<readonly StoreStatusDto[]>;
@@ -55,5 +63,6 @@ export function statusForCoreError(code: string): number {
   if (code === "not-found") return 404;
   if (code === "invalid-input") return 400;
   if (code === "busy") return 409;
+  if (code === "internal") return 500;
   return 422;
 }

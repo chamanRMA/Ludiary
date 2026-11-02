@@ -2,10 +2,11 @@
 import { checkConnectorManifest } from "@ludiary/contracts";
 import type { GameAction, StoreConnector, StoreId } from "@ludiary/contracts";
 import type { CoreCapabilities, CoreDeps, Env, LudiaryCore } from "./env";
-import { CoreError, toErrorInfo } from "./errors";
+import { CoreError, limitReached, toErrorInfo } from "./errors";
+import { COLLECTION_MAX_LENGTH, LIMITS, normalizeLabel, TAG_MAX_LENGTH, type Label } from "./labels";
 import { withTimeout } from "./timeout";
 import { createLaunchService } from "./launch";
-import type { GameDetail, GameSummary, ScanRootRecord } from "./model";
+import type { GameDataPatch, GameDetail, GameSummary, ScanRootRecord } from "./model";
 import {
   completeOnboarding,
   readOnboarding,
@@ -17,6 +18,7 @@ import {
 import { createSyncService } from "./sync";
 import { storeScope, createVaultFactory } from "./vault";
 import { createWizardEngine } from "./wizards";
+import { createCollectionMirror } from "./collection-mirror";
 import { bumpEpoch, syncContext } from "./contexts";
 
 /** A connector was refused at startup (ADR 40 rule 11, ADR 72). `problems` are English, for developers. */
@@ -56,7 +58,8 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     throw new Error("vault factory not ready");
   } };
   env.vaultFor = createVaultFactory(env);
-  const sync = createSyncService(env);
+  const mirror = createCollectionMirror(env);
+  const sync = createSyncService(env, mirror);
   const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }));
   const launch = createLaunchService(env);
   const capabilities: CoreCapabilities = {
@@ -109,6 +112,37 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
       const g = await deps.library.getGame(canonicalId);
       return g ? withActions(g) : null;
     },
+    async updateGame(canonicalId, patch) {
+      if (typeof canonicalId !== "string" || canonicalId === "") throw new CoreError("invalid-input", "Missing game id");
+      if (patch.favorite !== undefined && typeof patch.favorite !== "boolean") throw new CoreError("invalid-input", "favorite must be a boolean");
+      const data: GameDataPatch = { ...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}) };
+      if (patch.tags !== undefined) {
+        // Repeated names (same key) are one tag; the first spelling wins.
+        const byKey = new Map<string, Label>();
+        for (const raw of patch.tags) {
+          const label = normalizeLabel(raw, TAG_MAX_LENGTH);
+          if (!byKey.has(label.key)) byKey.set(label.key, label);
+        }
+        // Raw cap only; the per-game rule (20, or no growth) needs the stored set and lives in the repository transaction.
+        if (byKey.size > LIMITS.tags) throw limitReached(LIMITS.tags, "tags");
+        data.tags = [...byKey.values()];
+      }
+      if (patch.collectionIds !== undefined) {
+        if (!patch.collectionIds.every((id) => typeof id === "string" && id !== "")) throw new CoreError("invalid-input", "Collection ids must be text");
+        data.collectionIds = [...new Set(patch.collectionIds)];
+      }
+      if (Object.keys(data).length === 0) throw new CoreError("invalid-input", "Nothing to change");
+      await deps.userData.updateGame(canonicalId, data, deps.clock.now());
+      const game = await deps.library.getGame(canonicalId);
+      if (!game) throw new CoreError("not-found", "The game is not shown");
+      return withActions(game);
+    },
+    listCollections: () => deps.userData.listCollections(),
+    createCollection: async (name) => deps.userData.createCollection(normalizeLabel(name, COLLECTION_MAX_LENGTH), deps.clock.now()),
+    async renameCollection(id, name) {
+      return deps.userData.renameCollection(id, normalizeLabel(name, COLLECTION_MAX_LENGTH), deps.clock.now());
+    },
+    deleteCollection: (id) => deps.userData.deleteCollection(id),
     launch: (canonicalId, propertyId, action) => launch.launch(canonicalId, propertyId, action),
     startWizard: (store, returnBase) => wizards.start(store, returnBase),
     submitWizard: (wizardId, stepId, input) => wizards.submit(wizardId, stepId, input),
@@ -150,8 +184,15 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
 
     getSettings: () => readSettings(env),
     async updateSettings(patch) {
-      const { settings, detectionChanged } = await writeSettings(env, patch);
+      const { settings, detectionChanged, collections } = await writeSettings(env, patch);
+      // ADR 88: off deletes the mirrors (the setting is already stored, so a pass in flight finds it off); on, or the favorites setting, runs a pass.
+      const again: StoreId[] = [];
+      for (const c of collections) {
+        if (c.enabledChanged && settings.storeCollections[c.store]?.enabled === false) await mirror.disable(c.store);
+        else again.push(c.store);
+      }
       if (detectionChanged) await rescan();
+      else if (again.length > 0) await rescan(again);
       return settings;
     },
     getOnboarding: () => readOnboarding(env),

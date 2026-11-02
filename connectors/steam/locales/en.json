@@ -19,5 +19,8 @@
   "connectors.steam.disconnect.revokeHint": "Ludiary deletes the key. To cancel it in Steam, press Revoke at steamcommunity.com/dev/apikey.",
   "connectors.steam.errors.malformedFile": "Steam has a file that Ludiary cannot read. That game is skipped.",
   "connectors.steam.errors.invalidAppId": "This Steam game has an invalid identifier and cannot be launched.",
-  "connectors.steam.errors.launcherMissing": "Steam was not found on this computer. Install Steam or check that it is detected in Settings."
+  "connectors.steam.errors.launcherMissing": "Steam was not found on this computer. Install Steam or check that it is detected in Settings.",
+  "connectors.steam.collections.notFound": "Ludiary did not find Steam collections on this computer. Open Steam once, or connect your Steam account if you use several.",
+  "connectors.steam.collections.ambiguous": "There are several Steam accounts on this computer. Connect yours in Settings to bring in its collections.",
+  "connectors.steam.collections.accountNotFound": "Your connected Steam account has no saved collections on this computer."
 }

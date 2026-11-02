@@ -5,13 +5,15 @@ import es from "../locales/web/es.json";
 const placeholders = (text: string): string[] => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1] as string).sort();
 
 it("web catalogs: Spanish and English have the same keys (ADR 68)", () => {
-  expect(Object.keys(es).sort()).toEqual(Object.keys(en).sort());
+  // Spanish also has `_many` (millions); English does not.
+  const noMany = (o: object) => Object.keys(o).filter((k) => !k.endsWith("_many")).sort();
+  expect(noMany(es)).toEqual(noMany(en));
 });
 
 it("web catalogs: no empty texts and the same {placeholders} in both languages", () => {
   const spanish = es as Record<string, string>;
   const english = en as Record<string, string>;
-  for (const key of Object.keys(spanish)) {
+  for (const key of Object.keys(spanish).filter((k) => !k.endsWith("_many"))) {
     expect(spanish[key]?.trim(), key).not.toBe("");
     expect(english[key]?.trim(), key).not.toBe("");
     expect(placeholders(spanish[key] ?? ""), key).toEqual(placeholders(english[key] ?? ""));
@@ -33,5 +35,17 @@ it("web: nothing the server owns is defined twice, and every key the server can 
     const keys = owned(core as Record<string, string>, conn as Record<string, string>);
     expect(Object.keys(own).filter((k) => keys.includes(k)), `${lang} duplicated in web json`).toEqual([]);
     for (const k of keys) expect((web as Record<string, string>)[k], `${lang} ${k}`).toBeTruthy();
+  }
+});
+
+it("web catalogs: every plural text has both _one and _other, and they use {count}", () => {
+  for (const [lang, catalog] of [["es", es], ["en", en]] as const) {
+    const keys = Object.keys(catalog);
+    for (const k of keys.filter((x) => x.endsWith("_one"))) {
+      const base = k.slice(0, -4);
+      expect(keys, `${lang} ${base}_other`).toContain(`${base}_other`);
+      expect(placeholders((catalog as Record<string, string>)[k] ?? ""), k).toContain("count");
+    }
+    for (const k of keys.filter((x) => x.endsWith("_other"))) expect(keys, `${lang} ${k}`).toContain(`${k.slice(0, -6)}_one`);
   }
 });

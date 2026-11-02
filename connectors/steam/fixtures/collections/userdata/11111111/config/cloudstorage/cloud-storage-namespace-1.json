@@ -1,0 +1,145 @@
+[
+ [
+  "user-collections.uc-a",
+  {
+   "key": "user-collections.uc-a",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-a\",\"name\":\"Pendientes de prueba\",\"added\":[250900,\"400\",620,\"620\",1.5,-3,{\"x\":1},\"abc\",\"99999999999\",0],\"removed\":[]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-b",
+  {
+   "key": "user-collections.uc-b",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-b\",\"name\":\"RPG\",\"added\":[250900,400],\"removed\":[400]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-c",
+  {
+   "key": "user-collections.uc-c",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-c\",\"name\":\"rpg\",\"added\":[620]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-d",
+  {
+   "key": "user-collections.uc-d",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-d\",\"name\":\"NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN\",\"added\":[250900]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-e",
+  {
+   "key": "user-collections.uc-e",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-e\",\"name\":\"Peligro‮oculto\",\"added\":[400]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-dyn",
+  {
+   "key": "user-collections.uc-dyn",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-dyn\",\"name\":\"Dinamica de prueba\",\"added\":[],\"removed\":[],\"filterSpec\":{\"nFormatVersion\":2}}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-del",
+  {
+   "key": "user-collections.uc-del",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-del\",\"name\":\"Borrada de prueba\",\"added\":[400]}",
+   "version": "1",
+   "is_deleted": true
+  }
+ ],
+ [
+  "user-collections.favorite",
+  {
+   "key": "user-collections.favorite",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"favorite\",\"name\":\"\",\"added\":[620,4000000000]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.hidden",
+  {
+   "key": "user-collections.hidden",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"hidden\",\"name\":\"\",\"added\":[400,620,250900],\"removed\":[620]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-bad",
+  {
+   "key": "user-collections.uc-bad",
+   "timestamp": 1700000000,
+   "value": "{not json",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-shortcut",
+  {
+   "key": "user-collections.uc-shortcut",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-shortcut\",\"name\":\"Accesos directos\",\"added\":[4000000000,250900]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.__proto__",
+  {
+   "key": "user-collections.__proto__",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"__proto__\",\"name\":\"__proto__\",\"added\":[400]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-pp",
+  {
+   "key": "user-collections.uc-pp",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-pp\",\"name\":\"Con proto\",\"added\":[620],\"__proto__\":{\"filterSpec\":1,\"id\":\"favorite\"}}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-ctor",
+  {
+   "key": "user-collections.uc-ctor",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"constructor\",\"name\":\"constructor\",\"added\":[620]}",
+   "version": "1"
+  }
+ ],
+ [
+  "user-collections.uc-noname",
+  {
+   "key": "user-collections.uc-noname",
+   "timestamp": 1700000000,
+   "value": "{\"id\":\"uc-noname\",\"added\":[400]}",
+   "version": "1"
+  }
+ ],
+ [
+  "other-key.not-a-collection",
+  {
+   "value": "ignored"
+  }
+ ],
+ "not-a-pair"
+]

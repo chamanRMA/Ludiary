@@ -47,5 +47,29 @@ export const MIGRATIONS: readonly EmbeddedMigration[] = [
     "statements": [
       "ALTER TABLE `game_properties` ADD `base_store_game_id` text;"
     ]
+  },
+  {
+    "id": "0005_user_data",
+    "statements": [
+      "CREATE TABLE `collection_games` (\n\t`collection_id` text NOT NULL,\n\t`canonical_game_id` text NOT NULL,\n\t`user_id` text NOT NULL,\n\t`position` integer NOT NULL,\n\t`added_at` integer NOT NULL,\n\tPRIMARY KEY(`collection_id`, `canonical_game_id`),\n\tFOREIGN KEY (`collection_id`) REFERENCES `collections`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`canonical_game_id`) REFERENCES `canonical_games`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action\n);",
+      "CREATE INDEX `collection_games_game_idx` ON `collection_games` (`canonical_game_id`);",
+      "CREATE TABLE `collections` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`user_id` text NOT NULL,\n\t`name` text NOT NULL,\n\t`name_key` text NOT NULL,\n\t`position` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action\n);",
+      "CREATE UNIQUE INDEX `collections_user_key_uq` ON `collections` (`user_id`,`name_key`);",
+      "CREATE TABLE `game_tags` (\n\t`canonical_game_id` text NOT NULL,\n\t`tag_id` text NOT NULL,\n\t`user_id` text NOT NULL,\n\tPRIMARY KEY(`canonical_game_id`, `tag_id`),\n\tFOREIGN KEY (`canonical_game_id`) REFERENCES `canonical_games`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action\n);",
+      "CREATE INDEX `game_tags_tag_idx` ON `game_tags` (`tag_id`);",
+      "CREATE TABLE `tags` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`user_id` text NOT NULL,\n\t`name` text NOT NULL,\n\t`name_key` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action\n);",
+      "CREATE UNIQUE INDEX `tags_user_key_uq` ON `tags` (`user_id`,`name_key`);",
+      "CREATE TABLE `user_game_data` (\n\t`canonical_game_id` text PRIMARY KEY NOT NULL,\n\t`user_id` text NOT NULL,\n\t`favorite` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tFOREIGN KEY (`canonical_game_id`) REFERENCES `canonical_games`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,\n\tCONSTRAINT \"user_game_data_favorite_check\" CHECK(\"user_game_data\".\"favorite\" IN (0, 1))\n);"
+    ]
+  },
+  {
+    "id": "0006_collection_source",
+    "statements": [
+      "DROP INDEX `collections_user_key_uq`;",
+      "ALTER TABLE `collections` ADD `source_store` text;",
+      "ALTER TABLE `collections` ADD `source_id` text;",
+      "CREATE UNIQUE INDEX `collections_source_uq` ON `collections` (`user_id`,`source_store`,`source_id`) WHERE \"collections\".\"source_store\" IS NOT NULL;",
+      "CREATE UNIQUE INDEX `collections_user_key_uq` ON `collections` (`user_id`,`name_key`) WHERE \"collections\".\"source_store\" IS NULL;"
+    ]
   }
 ];

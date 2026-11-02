@@ -48,21 +48,21 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 33 | Idiomas de la interfaz | Vigente |
 | 34 | Licencia del proyecto: GPL-3.0 | Vigente (confirmada por el usuario) |
 | 35 | Diagnóstico de fallos | Vigente |
-| 36 | Organización de la biblioteca en el MVP | Vigente |
+| 36 | Organización de la biblioteca en el MVP | Vigente; favoritos, etiquetas y colecciones concretados en la 85 |
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; propósito `library`, `SyncContext.fs`, `readBytes`, paso `embedded-login`, puerto `EmbeddedLogin` y fila de Ubisoft en la 80; fila de EA de la tabla y `readText` con UTF-16 en la 81; fila de EA otra vez y `source` en la captura de `embedded-login` en la 82 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; propósito `library`, `SyncContext.fs`, `readBytes`, paso `embedded-login`, puerto `EmbeddedLogin` y fila de Ubisoft en la 80; fila de EA de la tabla y `readText` con UTF-16 en la 81; fila de EA otra vez y `source` en la captura de `embedded-login` en la 82; `importCollections` y `CollectionImportContext` en la 87; `sourceId` en la 88 |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario); consecuencia sobre Ubisoft concretada en la 79 |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`); para Ubisoft, ventana de login integrada en la 80 (decisión expresa del usuario); para EA, en la 82 (decisión expresa del usuario, 23-10-2026) |
 | 44 | Nombre del proyecto (Ludiary) y ámbito de los paquetes | Vigente (confirmada por el usuario) |
 | 45 | Ejecutable, instalador, bandeja y almacén de claves en Windows | Vigente (confirmada por el usuario tras el prototipo); ampliada en las 62 a 65; la actualización con vuelta atrás pasa a la 58 |
 | 46 | Cifrado de secretos y rotación de la clave | Vigente (confirmada por el usuario; amplía la 14); token de instalación revisado en la 63 |
-| 47 | Modelo de datos detallado | Vigente (confirmada por el usuario; migraciones por fases) |
+| 47 | Modelo de datos detallado | Vigente (confirmada por el usuario; migraciones por fases); tablas de datos del usuario concretadas en la 85 (sin `hidden` por ahora, `name_key`, cascada) |
 | 48 | Framework de pruebas | Vigente (confirmada por el usuario) |
 | 49 | Traducción e idiomas de la documentación | Vigente (confirmada por el usuario) |
-| 50 | Intervalos mínimos de sincronización | Vigente (confirmada por el usuario); espera de 60 s extendida a todos los escaneos en la 72 |
+| 50 | Intervalos mínimos de sincronización | Vigente (confirmada por el usuario); espera de 60 s extendida a todos los escaneos en la 72; paso de colecciones al final del bucle, sin suelo propio, en la 88 |
 | 51 | Normalización de nombres y ediciones dudosas | Vigente (confirmada por el usuario) |
 | 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario); sección de Ajustes aplazada en la 83 |
 | 53 | Puerto: dónde se guarda y rango permitido | Vigente (confirmada por el usuario) |
@@ -95,8 +95,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 80 | Ubisoft: cuenta con ventana de login integrada, juegos poseídos y portadas con la caché local | Propuesta (vía C elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 42, 45, 74 y 79; revisa para Ubisoft la 43 y, de la 79, los puntos 1 y 5, el descarte de `configurations` y `access`; paso `embedded-login` y puerto `EmbeddedLogin` (subcomando del auxiliar de Go con WebView2), propósito `library`, `SyncContext.fs` y `readBytes`, aditivos, `contractVersion` 1; comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto; revisión del auditor sobre el diseño incorporada el 23-10-2026 en el punto 18, que prevalece: filtrado completo de la ventana, sin `WEBVIEW2_*`, perfil vaciado antes de cerrar, ejecutor propio, carreras del motor, topes de `configurations`, copia parcheada en `third_party/go-webview2`); captura del texto JSON, `captureUrl` con consulta y llegada a `doneUrl` por navegación (sustituye a `atDone`) añadidas en la 82 |
 | 81 | Conector de EA: instalados por `installerdata.xml` y Jugar con `origin2://` | Vigente (recomendada; encargada por el usuario el 23-10-2026; amplía las 40, 42 y 72; sin tipos nuevos; `discoverRoots` con `downloadinplacedir` de los ajustes de la app de EA tras cerrar EAD6 (punto 13); carpetas manuales admitidas; `readText` con UTF-16 con BOM; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: analizador sin expresiones de coste no acotado, `exists` antes de `readText` al lanzar, ID estable aceptado con comprobación manual, fichero de más de 1 MiB o no normal como `store.unexpected-response` en todas las tiendas); pendiente de la revisión del código y de la prueba manual). La 80 (Ubisoft) se escribe en otra copia de trabajo; cuenta, portadas, Instalar y `access` revisados en la 82 |
 | 82 | Cuenta de EA con la ventana de login integrada | Propuesta (vía elegida por el usuario el 23-10-2026, diseño recomendado; amplía las 40, 74, 80 y 81; revisa para EA la 43 y, de la 81, cuenta, portadas, Instalar y `access`; reutiliza el paso `embedded-login` de la 80 con `source: 'document-json'`, `captureUrl` con consulta exacta y llegada a `doneUrl` por navegación; solo el `access_token` cifrado con su caducidad, sin renovación; GraphQL `getEntitlements` y `getOffers` con el `contentId` de la 81; portadas en `drop-assets.ea.com`, sin confirmar; Instalar con `autoDownload=1`; contraseña en la ventana confirmada expresamente por el usuario el 23-10-2026 y 12.2 (a) decidida por él; 12.1, 12.3 y 12.4 aplicados por defecto; revisión del `auditor` sobre el diseño incorporada (punto 13); falta la del código y la prueba manual). **Revisada en su punto 14 (24-10-2026, decisión del usuario):** Google no funciona en la ventana integrada; EA conecta solo en el navegador del usuario con un paso `open-external` a la URL de token y pegando el JSON (`extract: 'json-field:access_token'`, como Epic), `authHosts` solo `accounts.ea.com`, la 43 vuelve a valer tal cual para EA, `document-json` sin uso por ahora y el armado por `NavigationId` sigue para Ubisoft; supuesto EAA13. DLC revisados en la 83 |
-| 83 | DLC dentro de la ficha de su juego base | Propuesta (encargada por el usuario el 24-10-2026; concreta las 21, 47 y 52; revisa los DLC de las 76, 77, 78 y 82 y el filtro de EA de la 50; GOG biblioteca y escaneo, Epic y EA biblioteca, Steam y Ubisoft fuera; migración 0003 con `base_store_game_id`; `contractVersion` 1; punto 10 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 13, que prevalece: precedencia del escaneo en `kind` y base, guardián de biblioteca vacía solo con juegos, `kindChanges`, borrado de canónicos vacíos, EA con `normalizeTitle` movida a `contracts`; falta la del código y la prueba manual); Steam y Ubisoft revisados en la 84 |
+| 83 | DLC dentro de la ficha de su juego base | Propuesta (encargada por el usuario el 24-10-2026; concreta las 21, 47 y 52; revisa los DLC de las 76, 77, 78 y 82 y el filtro de EA de la 50; GOG biblioteca y escaneo, Epic y EA biblioteca, Steam y Ubisoft fuera; migración 0003 con `base_store_game_id`; `contractVersion` 1; punto 10 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 13, que prevalece: precedencia del escaneo en `kind` y base, guardián de biblioteca vacía solo con juegos, `kindChanges`, borrado de canónicos vacíos, EA con `normalizeTitle` movida a `contracts`; falta la del código y la prueba manual); Steam y Ubisoft revisados en la 84; M1 revisado en la 85 para canónicos con datos del usuario |
 | 84 | DLC de Steam y Ubisoft en la ficha | Propuesta (encargada el 24-10-2026; amplía la 83 y revisa su punto 9 para Steam; Steam `dlc: 'scan'` por `InstalledDepots.dlcappid` y títulos con `resolveTitles` sobre `GetItems`, aditivo, `contractVersion` 1, sin migración; Ubisoft sigue `'none'`; punto 8 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 10, sin críticos ni altos; falta la del código y la prueba manual) |
+| 85 | Favoritos, etiquetas y colecciones | Propuesta (encargada el 2-11-2026; concreta las 36 y 47, revisa la M1 de la 83 y fija la regla de datos del usuario de las futuras fusiones y separaciones de las 20 y 51; migración 0004 con cascada, `PATCH /api/games/:id` y CRUD de colecciones `session+key`, `normalizeLabel` con límites; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 12, sin críticos (migrador con claves ajenas desactivadas fuera de la transacción y `foreign_key_check`, sin Playwright, `\p{Cf}`); falta la del código y la prueba manual); importación de colecciones de Steam en la 87; unicidad de `name_key` solo entre propias y espejos de solo lectura en la 88 |
+| 87 | Importar las colecciones de Steam | Propuesta (encargada el 2-11-2026; amplía las 40, 72 y 85; operación opcional `importCollections` del conector, aditiva, `contractVersion` 1, sin migración; lee `userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json` bajo `steam-root` solo a petición del usuario y con autodetección; bajo demanda con resumen previo (`dryRun`), solo aditiva y por `name_key`; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 13, sin críticos: errores sin texto del fichero, cuenta sin verificar sin favoritos, plan dentro de la transacción, lector estrechado a `userdata`; falta la del código y la prueba manual). La 86 (precios) se escribe en otra rama. **Revisada en la 88**: deja de ser bajo demanda y aditiva |
+| 88 | Colecciones de Steam que se cargan y se refrescan solas al sincronizar | Propuesta (encargada por el usuario el 2-11-2026; revisa las 85 y 87, amplía las 40 y 50; paso al final del bucle de sincronización de cada tienda con `importCollections`; espejo de solo lectura por `source_id` con la migración 0005 e índice único parcial de `name_key` solo entre propias; favoritos solo añadidos y solo los nuevos en Steam; ajustes persistentes `collections.<store>.enabled` y `unverifiedFavorites`; `sourceId` aditivo, `contractVersion` 1; se retiran la ruta de importación y su diálogo; punto 14 aplicado por defecto con (a) salvo 14.3 (b); revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 15, que prevalece: sin adopción, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, guardián de borrado explícito, cambio de cuenta, 200 propias + 200 espejos, migración `0005_collection_source` con id `0006`; falta el código, su revisión y la prueba manual) |
 
 ## Decisiones
 
@@ -461,7 +464,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - La plantilla de incidencias pide la versión de la aplicación, el sistema operativo y el fichero exportado.
 - No hay telemetría ni servidor propio.
 
-### 36. Organización de la biblioteca en el MVP
+### 36. Organización de la biblioteca en el MVP (concretada en la decisión 85)
 
 **Decisión:** el MVP incluye favoritos, etiquetas y colecciones propias, y tiempo de juego con última partida.
 
@@ -1059,7 +1062,7 @@ La elección se puede cambiar en Ajustes, donde cada ubicación detectada aparec
 
 **Consecuencias:** el núcleo depende del puerto `SecretCipher` (decisión 38) y la implementación vive en `platform-node`. Las pruebas cubren el recifrado, la clave perdida y la manipulación del AAD.
 
-### 47. Modelo de datos detallado
+### 47. Modelo de datos detallado (tablas de datos del usuario concretadas en la decisión 85)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** identificadores UUID en texto (`crypto.randomUUID`), fechas como enteros en milisegundos UTC y JSON en columnas de texto. Todas las tablas de datos llevan `user_id`.
 
@@ -5339,7 +5342,7 @@ Fuentes: los datos comprobados del 23-10-2026 (peticiones públicas sin cuenta, 
 - El `auditor` revisa el diseño antes del código y el código antes de cerrar; el `tester` amplía `docs/manual-tests/ea.md` (punto 10); el `documentalista`, las guías del punto 11.
 - **Por el punto 14:** EA se conecta en el navegador del usuario y pegando el JSON, sin ventana integrada; la 43 vuelve a valer tal cual para EA; `authHosts` se reduce a `accounts.ea.com`; nuevo texto común `wizard.paste.storeError`; `document-json` queda sin uso por ahora y el armado por `NavigationId` sigue para Ubisoft. La guía de conexión de EA (punto 11) explica iniciar sesión en ea.com, abrir el enlace, copiar y pegar, sin ventana de WebView2. El `auditor` revisa este cambio (`validate.ts` y el paso).
 
-### 83. DLC dentro de la ficha de su juego base (concreta las decisiones 21, 47 y 52; revisa el tratamiento de los DLC de las 76, 77, 78 y 82 y el filtro de EA de la revisión de la 50; sección de Ajustes de la 52 aplazada; punto 9 y valor `dlc` de Steam revisados en la decisión 84)
+### 83. DLC dentro de la ficha de su juego base (concreta las decisiones 21, 47 y 52; revisa el tratamiento de los DLC de las 76, 77, 78 y 82 y el filtro de EA de la revisión de la 50; sección de Ajustes de la 52 aplazada; punto 9 y valor `dlc` de Steam revisados en la decisión 84; punto M1 revisado en la decisión 85 para los canónicos con datos del usuario)
 
 Encargo del usuario (24-10-2026, rama `feature/dlc-en-juegos`): «los DLC deberían aparecer dentro de los juegos; revisa EA y también los demás».
 
@@ -5469,7 +5472,7 @@ Sin críticos. **Lo que sigue prevalece sobre los puntos 5 a 11 donde no coincid
   - el plan lleva `kindChanges: { propertyId, kind, canonicalId | null }[]`, con canónico nuevo en el paso de DLC a juego;
   - `applyPlan` y `applyLibrary` aplican primero `kind` y `canonical_game_id` y después el seguimiento del canónico (título y portada), sobre el canónico ya actualizado; nunca hacen ese seguimiento si la fila es o era `dlc`.
   - Prueba en `db`: un DLC que pasa a juego no cambia el título ni la portada del juego base.
-- **M1 (medio). Canónicos vacíos** (revisa el `shortcut` del punto 5 y la consecuencia correspondiente, que quedan retirados): un canónico que se queda sin ninguna propiedad, ni siquiera retirada, se borra en la misma transacción. Hoy no hay datos de usuario por canónico; cuando los haya, esta regla se revisa.
+- **M1 (medio). Canónicos vacíos** (revisa el `shortcut` del punto 5 y la consecuencia correspondiente, que quedan retirados): un canónico que se queda sin ninguna propiedad, ni siquiera retirada, se borra en la misma transacción. Hoy no hay datos de usuario por canónico; cuando los haya, esta regla se revisa. (Revisada en la decisión 85, punto 6.2: antes de borrarlo, sus datos del usuario pasan al canónico de destino si es único; si no, se borran en cascada y se cuentan.)
 - **M2 (medio). EA por el título** (revisa el punto 8):
   - se excluye de la deducción todo `contentId` instalado como juego (sigue siendo juego);
   - el DLC deducido guarda `storeMetadata.dlcInferred: true`;
@@ -5628,6 +5631,620 @@ Sin críticos ni altos. **Lo que sigue prevalece sobre los puntos 4 a 9 donde no
 - Revisión del `auditor` sobre el diseño incorporada (punto 10, sin críticos ni altos); prevalece sobre los puntos 4 a 9.
 - El `auditor` revisa el código (entrada no confiable del manifiesto y de `GetItems`, títulos sin registrar); el `tester` prepara la prueba del punto 9; el `documentalista` actualiza la guía de DLC por tienda.
 
+### 85. Favoritos, etiquetas y colecciones (concreta las decisiones 36 y 47; revisa el punto M1 de la 83 para los canónicos con datos del usuario; fija de antemano la regla de datos del usuario de las fusiones y separaciones de las 20 y 51; importación de colecciones de Steam en la decisión 87; unicidad de `name_key` y edición de las colecciones de Steam revisadas en la decisión 88)
+
+Encargo (2-11-2026, rama `feature/favoritos-etiquetas-colecciones`): diseñar el corte de favoritos, etiquetas y colecciones del MVP (36) con el menor cambio sobre la interfaz que ya existe.
+
+#### 1. Lo que ya está decidido
+
+- **36:** el MVP incluye favoritos, etiquetas y colecciones propias; son datos del usuario, ligados al juego canónico y no a una tienda, que entran en las copias y sobreviven a fusiones y separaciones.
+- **47:** tablas `user_game_data` (`canonical_game_id`, `user_id`, `favorite`, `hidden`, `updated_at`), `tags` y `game_tags`, `collections` y `collection_games` con `position`; migraciones por fases, sin columnas «para luego»; `user_id` en todas (invariante 7).
+- **57:** estos datos solo existen en Ludiary; las copias periódicas van desactivadas por defecto y Ajustes ya lo explica junto a la opción.
+- **67 y 72, punto 5:** toda ruta no declarada es `session+key`; las que cambian datos se quedan en ese nivel. Cuerpos con `additionalProperties: false`.
+- **71 y 72:** `GameSummaryDto` ya trae `favorite` y `tags: string[]`; `GameDetailDto`, `collections: { id, name }[]`. Hoy `repositories.ts` devuelve `favorite: false`, `tags: []` y `collections: []`.
+- **83, M1:** el canónico que se queda sin ninguna propiedad se borra en la misma transacción; «cuando haya datos de usuario, esta regla se revisa». Se revisa en el punto 6.
+- Invariante 6: los nombres que escribe el usuario no se traducen; todo texto de la interfaz, sí.
+
+#### 2. Qué hace hoy la web (leído el 2-11-2026)
+
+- **Biblioteca** (`Library.tsx`, `library.ts`): ficha «Favoritos» que filtra por `favorite`; la búsqueda libre (`?q=`) ya busca también dentro de las etiquetas (subcadena). **Tiendas** (`Store.tsx`) tiene la vista «Favoritos».
+- **Colecciones** (`Simple.tsx`, `Collections`): tarjeta fija «Favoritos» (con la etiqueta «Predeterminada»), una tarjeta por colección de `getCollections()` (`CollectionDto { id, name, gameIds }`, definido hoy en `apps/web/src/data/api.ts`), pestañas Colecciones y Etiquetas, panel de etiquetas con su número de juegos calculado desde la biblioteca, botón «Nueva colección» que solo muestra el aviso «Simulado». Las tarjetas no se pueden abrir.
+- **Ficha** (`Game.tsx`): ficha «Favorito» si lo es; sección «Organizar» que pinta etiquetas y colecciones (enlace a `/collections`) o «Sin etiquetas»; no se puede cambiar nada.
+- **Cliente real** (`real.ts`): `getCollections` devuelve `[]`; **simulador** (`mock.ts`): cinco colecciones de ejemplo y favoritos y etiquetas en la semilla.
+- **Servidor:** no hay tablas (migraciones 0000 a 0003) ni rutas de datos del usuario.
+
+#### 3. Decisión: alcance del corte
+
+**Entra:** marcar y quitar favorito; añadir y quitar etiquetas a un juego; crear, renombrar y borrar colecciones; meter y sacar un juego de colecciones; abrir una colección y ver sus juegos; filtrar la biblioteca por una etiqueta; todo guardado en el servidor, en las copias y con las reglas de vida del punto 6.
+
+**No entra:** `hidden` (ocultar juegos; ni columna ni interfaz, va en su propio corte con su migración, regla de la 47); tiempo de juego y última partida propios (corte 2b de la 72, 55 y 56); reordenar a mano los juegos de una colección y renombrar o borrar una etiqueta en todos sus juegos, salvo que el usuario los elija (punto 11.2 y 11.3); ordenar las colecciones entre sí; marcar favorito desde la cuadrícula; colecciones inteligentes (por reglas); importar etiquetas o colecciones de las tiendas (Steam las tiene, pero no por la API oficial con la API key); datos del usuario en DLC (21: no son entradas de la biblioteca).
+
+#### 4. Datos: migración `0004_user_data`
+
+Copia previa automática (57). Cuatro tablas nuevas y ningún cambio en las existentes. Todas las claves ajenas a `canonical_games`, `collections` y `tags` llevan **`ON DELETE CASCADE`**: `foreign_keys = ON` (`database.ts`), así que sin ella el borrado de canónicos vacíos de la 83 fallaría con datos del usuario y desharía la sincronización entera. La cascada es la red; la regla de qué se conserva va antes, en el punto 6.
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| `user_game_data` | `canonical_game_id` (PK, → `canonical_games` en cascada), `user_id` (→ `users`), `favorite` (entero 0/1, `CHECK`), `updated_at` | Una fila solo si hay algo distinto del valor por defecto: quitar el favorito borra la fila. Sin `hidden` (punto 3). |
+| `tags` | `id`, `user_id`, `name`, `name_key`, `created_at` | Único por (`user_id`, `name_key`). Una etiqueta sin ningún juego se borra en la misma transacción que le quita el último. |
+| `game_tags` | `canonical_game_id` (→ canónico en cascada), `tag_id` (→ `tags` en cascada), `user_id` | PK (`canonical_game_id`, `tag_id`); índice por `tag_id`. |
+| `collections` | `id`, `user_id`, `name`, `name_key`, `position`, `created_at`, `updated_at` | Único por (`user_id`, `name_key`). `position` = máximo + 1 al crear (orden de creación). |
+| `collection_games` | `collection_id` (→ `collections` en cascada), `canonical_game_id` (→ canónico en cascada), `user_id`, `position`, `added_at` | PK (`collection_id`, `canonical_game_id`); índice por `canonical_game_id`. `position` = máximo de la colección + 1 al añadir; los huecos se permiten. |
+
+- Instantánea de Drizzle y `migrations.generated.ts` regenerados, como en la 0003. La cascada se declara con `references(..., { onDelete: 'cascade' })`.
+- `listLibrary` y `getGame` rellenan `favorite`, `tags` (por `name_key`) y `collections` (por `collections.position`) con una consulta por tabla para todo el usuario, no una por juego.
+
+#### 5. Nombres de etiquetas y colecciones: normalización y límites
+
+Una función pura del núcleo, `normalizeLabel(input, maxLength)`, con pruebas, en la frontera de confianza:
+
+1. Debe ser texto. Se pasa a NFC (se conserva lo que escribió el usuario; no se usa `normalizeTitle`, que quita la puntuación y uniría «C++» con «C»).
+2. Se rechaza (`invalid-input`) si contiene caracteres de control (`\p{Cc}`), sustitutos sueltos (`\p{Cs}`), no caracteres (`U+FDD0`–`U+FDEF` y los terminados en `FFFE` o `FFFF`) o controles de dirección (`U+202A`–`U+202E`, `U+2066`–`U+2069`, `U+200E`, `U+200F`), que permiten nombres que se ven distintos de lo que son.
+3. Todo espacio en blanco (`\s`) pasa a un espacio, se colapsan y se recorta. Vacío: `invalid-input`.
+4. Longitud en puntos de código: etiqueta de 1 a **40**, colección de 1 a **60**. Más: `invalid-input` con `{ max }`.
+5. `name` es el resultado; `name_key` = NFKC de `name` y `toLowerCase()` (sin locale). Dos nombres con la misma clave son el mismo: una etiqueta nueva con la clave de una existente usa la existente (y su ortografía); una colección con la clave de otra da `name-taken`.
+
+Límites (se comprueban en el núcleo y otra vez dentro de la transacción):
+
+| Qué | Máximo | Error |
+|---|---|---|
+| Etiquetas por juego al editar | 20 | `limit-reached` `{ max: 20 }` |
+| Etiquetas distintas del usuario | 1000 | `limit-reached` `{ max: 1000 }` |
+| Colecciones del usuario | 200 | `limit-reached` `{ max: 200 }` |
+| Juegos por colección | 10 000 (el `MAX_ENTRIES` de una tienda) | `limit-reached` `{ max: 10000 }` |
+
+Las fusiones (punto 6) pueden dejar un juego con más de 20 etiquetas: el límite vale para lo que entra por la API, no se recorta nada guardado. Los esquemas de TypeBox llevan además topes brutos (texto de hasta 200 unidades UTF-16, `maxItems` 20 en `tags` y 200 en `collectionIds`) como primera barrera.
+
+Errores nuevos del núcleo: `name-taken` y `limit-reached` (422, «los demás errores de dominio» de la 72) con clave traducible en `core.errors.*`; `invalid-input` (400) y `not-found` (404) ya existen.
+
+**Registros:** solo contadores y códigos. Nunca nombres de etiquetas o colecciones, que son datos personales (35).
+
+#### 6. Vida de los datos
+
+1. **Un juego que deja de verse** (propiedades desposeídas o retiradas por una instantánea completa, o tienda desconectada): sus propiedades no se borran (`removed_at`), su canónico sigue y sus datos también. No sale en la biblioteca, ni en `GET /api/collections`, ni en los recuentos de etiquetas; si vuelve en una sincronización o un escaneo (la misma fila de propiedad), vuelve con su favorito, sus etiquetas y sus colecciones, en su sitio. Una etiqueta usada solo por juegos que no se ven sigue existiendo (y una nueva con su clave la reutiliza).
+2. **Canónico vacío que la 83 borra (revisa su M1):** en `applyKindsAndLinks`, antes de borrar un canónico vacío **con** datos del usuario:
+   - si todas las propiedades que salieron de él acabaron, tras `kindChanges` y `dlcLinks`, en **un mismo** canónico (el caso real: un juego de EA que pasa a DLC de su juego base), sus datos **se pasan a ese canónico** con la regla de fusión del punto 3 de esta lista;
+   - si no (pasa a DLC huérfano, o se reparte), los datos se borran con él por la cascada y se cuenta `userDataDropped` en el registro, sin nombres.
+   - Todo en la misma transacción del plan. Prueba en `db`. Que pasar los datos al juego base sea lo que quiere el usuario: punto 11.4.
+3. **Fusión futura** (20, 51; sin corte asignado): el canónico que queda recibe los datos del absorbido: favorito si lo era cualquiera de los dos; unión de etiquetas; unión de colecciones y, en una colección que tenía a los dos, se queda la posición menor. Después se borra el absorbido (la cascada no tiene ya nada que borrar). Función única del repositorio, `mergeUserData(from, to)`, que usan este punto y el anterior.
+4. **Separación futura:** el canónico nuevo recibe una **copia** de los datos del original (favorito, etiquetas y colecciones, al final de cada una). Motivo: el usuario ve dos entradas donde había una y ninguna pierde su organización; quitar lo que sobre es un clic, recuperar lo perdido no. Las sesiones de juego siguen a su propiedad (47).
+5. **Copias de seguridad:** van solas en la base (57). **Restaurar** una copia trae los datos de ese momento.
+6. **Borrar una colección** borra solo la colección y sus filas de `collection_games`, nunca juegos ni etiquetas.
+
+#### 7. API (todas `session+key`, el nivel por defecto de la 67; cuerpos estrictos)
+
+| Método y ruta | Cuerpo → respuesta |
+|---|---|
+| `PATCH /api/games/:id` | `{ favorite?: boolean, tags?: string[], collectionIds?: Id[] }`, al menos un campo → `200 GameDetailDto`. `tags` y `collectionIds` sustituyen el conjunto entero (sin repetidos tras normalizar; repetidos dan 400). Las colecciones nuevas añaden el juego al final; las que se mantienen no cambian su posición. 404 si el juego no se ve (misma condición que `getGame`) o si alguna colección no existe. Todo en una transacción. |
+| `GET /api/collections` | → `CollectionDto[]` ordenadas por `position`: `{ id, name, gameIds }`, con `gameIds` en orden de `position` y solo los juegos que se ven. |
+| `POST /api/collections` | `{ name: string }` → `201 CollectionDto` (vacía). `name-taken`, `limit-reached`. |
+| `PATCH /api/collections/:id` | `{ name: string }` → `200 CollectionDto`. Renombrar a la propia clave con otra ortografía es válido. |
+| `DELETE /api/collections/:id` | → 204, también si ya no existe. |
+
+- **Contrato:** `CollectionDto` pasa de `apps/web/src/data/api.ts` a `@ludiary/api-contract` (`CollectionSchema`), con `GamePatchSchema`, `CollectionCreateSchema` y `CollectionPatchSchema`. `GameSummaryDto` y `GameDetailDto` no cambian de forma: solo dejan de ir vacíos.
+- **Núcleo:** puerto nuevo `UserDataRepository` en `ports.ts` (`updateGame`, `listCollections`, `createCollection`, `renameCollection`, `deleteCollection`, y `mergeUserData`/`copyUserData` para el punto 6), implementado en `packages/db`. Las reglas de los puntos 5 y 6 viven en el núcleo y en la transacción; Fastify solo valida la forma.
+- Sin ruta de etiquetas: la lista sale de la biblioteca, como ya hace la página Colecciones. Si el usuario elige 11.3 (b), se añaden `POST /api/tags/rename { from, to }` (si `to` ya existe, une las dos) y `POST /api/tags/delete { name }`, las dos → 204.
+- Si elige 11.2 (b), se añade `PUT /api/collections/:id/order { gameIds }`: debe ser exactamente el conjunto de `gameIds` visibles de la colección (si no, 409 `stale` y la web recarga); los juegos visibles reciben, en el nuevo orden, las mismas posiciones que ya ocupaban entre ellos, y los que no se ven no se mueven.
+
+#### 8. Web: cambio mínimo sobre lo que existe
+
+- **`api.ts`, `real.ts`, `mock.ts`:** métodos `updateGame(id, patch)`, `createCollection(name)`, `renameCollection(id, name)` y `deleteCollection(id)`; `getCollections` llama al servidor. El simulador los implementa en memoria con las mismas reglas de límites (sin la normalización completa).
+- **Ficha (`Game.tsx`):**
+  - la ficha «Favorito» pasa a ser un botón de alternar con `aria-pressed` (sin texto nuevo para el estado; texto de la acción traducido);
+  - en «Organizar», cada etiqueta lleva un botón de quitar con nombre accesible, y un campo para añadir (Intro añade) con `<datalist>` de las etiquetas existentes;
+  - las colecciones, como casillas con todas las colecciones del usuario; si no hay ninguna, enlace a Colecciones;
+  - cada cambio llama a `PATCH /api/games/:id` y pinta la ficha devuelta; un error se muestra con el patrón de mensajes que ya usa la ficha.
+- **Colecciones (`Simple.tsx`):** «Nueva colección» abre un campo de nombre en la propia página (se quita el aviso «Simulado»); cada tarjeta enlaza a `/collections/:id`; la tarjeta «Favoritos» enlaza a `/library?favorite=1`; cada etiqueta del panel enlaza a `/library?tag=<nombre>`.
+- **Página nueva `/collections/:id`:** título con renombrar y borrar (con confirmación), y `GameGrid` con los juegos en el orden de la colección (orden en que se añadieron, punto 11.2). Sacar un juego de la colección se hace desde su ficha.
+- **Biblioteca:** lee `?favorite=1` y `?tag=` de la dirección al entrar; el filtro de etiqueta es igualdad exacta con el nombre (el servidor da una sola ortografía por clave) y se muestra como una ficha activa que se puede quitar. `filterGames` gana `tag?: string`. La búsqueda libre sigue encontrando etiquetas por subcadena.
+- **i18n:** claves nuevas en `web` (es y en) para las acciones (marcar y quitar favorito, añadir y quitar etiqueta, nombre de la colección, renombrar, borrar y su confirmación, colección vacía, filtro de etiqueta) y en `core.errors` (`name-taken`, `limit-reached` con `{max}`). La comprobación de CI de claves iguales cubre las dos lenguas. Los nombres del usuario nunca pasan por traducción.
+- Teclado y lector de pantalla en todo (37): botones reales, casillas reales, sin arrastrar.
+
+#### 9. Pruebas
+
+- **Núcleo:** `normalizeLabel` (NFC, espacios, recorte, longitudes en puntos de código con emoji, cada clase rechazada, clave con mayúsculas y compatibilidad, «C++» distinto de «C»); límites; `updateGame` con conjuntos repetidos, colección inexistente y juego que no se ve.
+- **`db`:** migración 0004 sobre una base con datos de la 0003; favorito que se quita borra la fila; etiqueta reutilizada por clave con su ortografía; etiqueta sin juegos borrada; posiciones al añadir y con huecos; `listLibrary` y `getGame` con datos y sin consultas por juego; **juego retirado y vuelto** conserva sus datos y no sale en colecciones mientras está retirado; **canónico vacío de la 83**: juego que pasa a DLC enlazado mueve sus datos a la base (unión, favorito, posición menor), que pasa a DLC huérfano los borra sin romper la transacción y cuenta `userDataDropped`; `mergeUserData` y `copyUserData`; cascada al borrar colección. Más las del punto 12: migración que reconstruye `canonical_games` sin perder `game_tags`, `foreign_key_check` con violación que deshace, `PATCH` contra un juego o una colección que desaparecen dentro de la transacción (404), etiquetas huérfanas borradas en la rama `userDataDropped` y destino que también se borra; `copyUserData` sale de esta lista (punto 12).
+- **API:** cada ruta con 401 sin clave de origen, 400 con campo de más o tipo erróneo, 404, 422 con `name-taken` y `limit-reached`, y la respuesta correcta.
+- **Web:** `filterGames` con `tag`; la ficha alterna favorito, añade y quita etiquetas y colecciones (simulador); Colecciones crea, abre, renombra y borra; enlaces de etiqueta y de Favoritos. Una prueba de Playwright del recorrido: marcar favorito, etiquetar, meter en una colección nueva, verlo en Biblioteca filtrada y en la colección. (Revisado en el punto 12: solo `filterGames` con `tag` y los métodos nuevos de `mock.ts` y `real.ts`; la interfaz, con la prueba manual.)
+- Ningún nombre de etiqueta o colección en los registros (prueba sobre el registro capturado).
+
+#### 10. Prueba manual (la prepara el `tester`; la hace el usuario)
+
+1. Marcar tres juegos como favoritos (uno de Steam y uno de GOG, al menos): salen en Biblioteca > Favoritos, en Tiendas > Favoritos y en la tarjeta Favoritos de Colecciones.
+2. Añadir la etiqueta «Cooperativo» a dos juegos y «cooperativo» a un tercero: queda una sola etiqueta con tres juegos. Pulsarla en Colecciones lleva a la biblioteca filtrada.
+3. Crear la colección «Pendientes», meter tres juegos desde sus fichas; abrirla: salen en el orden en que se añadieron. Renombrarla y borrarla; los juegos siguen ahí.
+4. Cerrar Ludiary desde la bandeja, volver a abrirlo: todo sigue.
+5. Desconectar una tienda con un juego favorito y etiquetado y volver a conectarla: el juego vuelve con sus datos.
+6. Probar un nombre con más de 40 caracteres y uno vacío: mensaje claro en el idioma de la interfaz.
+7. El registro exportado no contiene nombres de etiquetas ni de colecciones.
+
+#### 11. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
+
+1. **`hidden` (ocultar juegos):** (a) fuera de este corte (por defecto: no hay interfaz que lo pida y la 47 manda no crear columnas «para luego»); (b) dentro, con su filtro.
+2. **Orden dentro de una colección:** (a) orden en que se añadieron, sin reordenar en el MVP (por defecto; `position` queda guardado para reordenar después sin migración); (b) además, botones «subir» y «bajar» en la página de la colección (ruta del punto 7; coste pequeño); (c) arrastrar y soltar (más coste y peor con teclado, 37).
+3. **Renombrar o borrar una etiqueta en todos sus juegos:** (a) no, se edita juego a juego (por defecto); (b) sí, desde Colecciones > Etiquetas (dos rutas del punto 7; recomendado si el usuario prevé muchas etiquetas, porque corregir una errata en 30 juegos uno a uno es tedioso).
+4. **Datos de un juego que la tienda reclasifica como DLC de otro** (punto 6.2): (a) pasan al juego base (por defecto: no se pierde nada; el caso real son los DLC de EA deducidos por el título); (b) se pierden con él.
+5. **Favorito desde la cuadrícula** (estrella en cada tarjeta): (a) no, solo en la ficha (por defecto); (b) sí.
+
+#### 12. Revisión del auditor sobre el diseño (2 de noviembre de 2026)
+
+Sin críticos. **Lo que sigue prevalece sobre los puntos 4 a 10 donde no coincida.** El punto 11 sigue abierto, con (a) por defecto.
+
+- **Alto. Migraciones que reconstruyen tablas con cascada** (amplía el punto 4): con `foreign_keys = ON` y `ON DELETE CASCADE`, una migración futura de Drizzle que reconstruya `canonical_games` o `collections` (crear `__new_x`, copiar, `DROP TABLE`, renombrar) corre dentro de la transacción del migrador (`migrator.ts`), donde `PRAGMA foreign_keys = OFF` no hace nada; el `DROP TABLE` dispara la cascada y borra en silencio los datos del usuario. Regla del migrador en este corte: `PRAGMA foreign_keys = OFF` **fuera** de la transacción, aplicar las migraciones, `PRAGMA foreign_key_check` antes del `COMMIT` (con alguna violación, `ROLLBACK` y error fatal visible, 64) y `PRAGMA foreign_keys = ON` al terminar, también si falla. Prueba en `db`: una migración de prueba que reconstruye `canonical_games` conserva las filas de `game_tags`.
+- **Medio 1. Pruebas de la web** (revisa el punto 9): fuera de este corte las de Playwright y las de componentes (el repositorio no tiene Playwright, jsdom ni testing-library). Las pruebas de la web se quedan en la capa de datos: `filterGames` con `tag` y los métodos nuevos de `mock.ts` y `real.ts`. La interfaz la cubre la prueba manual del punto 10. Las pruebas de extremo a extremo, en su propia decisión.
+- **Medio 2. `PATCH /api/games/:id` dentro de la transacción** (amplía el punto 7): la visibilidad del juego y la existencia de cada colección se comprueban otra vez dentro de la transacción de escritura y, si fallan, se lanza `not-found` (404), nunca un 500 por un fallo de clave ajena. Prueba en `db`.
+- **Medio 3. Caracteres de formato** (revisa el punto 5, paso 2): `normalizeLabel` rechaza **toda** la categoría `\p{Cf}`, salvo `U+200C`, `U+200D` (emoji y escrituras que los usan) y `U+E0020`–`U+E007F` (etiquetas de banderas). Sustituye a la lista de controles de dirección, que quedan dentro de `\p{Cf}`.
+- **Bajos:**
+  - de las funciones del punto 6 solo se implementa ahora `mergeUserData`; `copyUserData` queda escrita como regla (6.4) y entra con el corte de separación;
+  - en la rama de borrado de 6.2, las etiquetas que se quedan sin ninguna fila de `game_tags` se borran en la misma transacción (prueba);
+  - en 6.2, los datos solo pasan al destino único si ese destino no se borra también en el mismo plan; si se borra, rama `userDataDropped`;
+  - en `PATCH /api/games/:id`, las etiquetas repetidas por `name_key` y las colecciones repetidas se unen en silencio, sin 400 (revisa el punto 7); `GamePatchSchema` lleva `minProperties: 1`.
+
+#### 13. Prueba en Chrome y revisión del auditor sobre el código (2 de noviembre de 2026)
+
+Probado en Chrome contra una compilación de prueba con los juegos instalados del usuario: favorito, etiquetas (con «Roguelike» y «roguelike» unidas), crear, renombrar y borrar una colección, filtros `?favorite=1` y `?tag=`, y los datos siguen tras reiniciar el servidor. Sin críticos ni altos en el código. **Prevalece sobre los puntos 5 a 12 donde no coincida.**
+
+- **Filtro `?tag=`** (revisa el 8): la web compara por la misma clave que el servidor (NFKC y minúsculas), no por el nombre exacto; `?tag=rpg` encuentra «RPG».
+- **Medio. Más de 20 etiquetas tras una fusión** (revisa el 5): un conjunto nuevo puede pasar de 20 solo si no crece respecto al actual; se comprueba en el repositorio dentro de la transacción. El tope bruto del esquema y del núcleo sube a 1000 (el total del usuario) para que un juego con 25 pueda bajar a 24.
+- **Medio. Foco del teclado** (revisa el 8): los controles de la ficha no se desactivan con `disabled` mientras se guarda (se ignoran los clics y la sección lleva `aria-busy`); al quitar una etiqueta, el foco pasa al campo de añadir.
+- **Bajos:** se retira la condición «el destino también se borra» del punto 12, que no tiene camino posible (el destino siempre conserva la propiedad movida); `limit-reached` dice qué límite se alcanzó; ZWNJ y ZWJ se escriben como escapes; la ficha de etiqueta activa dice que quita el filtro; las colecciones buscan los juegos con un `Map`; el texto de Colecciones ya no promete copias de seguridad ni fusiones, que aún no existen (57, 20).
+- Se mantiene `mergeUserData` en el puerto, como pide el 12. Queda sin resolver la concordancia «1 juegos» (el proyecto no usa plurales de i18next todavía).
+
+#### Supuestos
+
+Ninguno de terceros: el corte no toca tiendas ni servicios externos. Supuesto interno: las propiedades retiradas no se borran nunca (hoy no hay ningún `delete(gameProperties)` en `packages/db`); si alguna operación futura las borra, debe pasar por el punto 6.
+
+**Motivo:** el modelo de la 47 y los DTO de la 71 ya preveían estos datos y la web ya los pinta; falta guardarlos, poder cambiarlos y decidir qué pasa con ellos cuando la biblioteca cambia por debajo. Una sola ruta para la ficha (`PATCH /api/games/:id`) cubre los tres datos de un juego con una transacción; las colecciones tienen su CRUD mínimo. Los nombres se identifican por una clave sin mayúsculas para no tener «RPG» y «rpg» como dos etiquetas, sin la normalización de títulos, que se comería la puntuación. La cascada impide que el borrado de canónicos de la 83 rompa una sincronización, y la regla de fusión aplicada antes de borrar evita perder datos en el único caso que ya ocurre. Alternativas descartadas: etiquetas en una columna JSON de `user_game_data` (no permite renombrar en bloque ni contar sin leer todo, y la 47 ya fijó tablas); una ruta por dato (`/favorite`, `/tags`…) (más rutas sin ganancia); identificar etiquetas por ID en la API (la web y los DTO ya trabajan con nombres); conservar canónicos vacíos solo porque tienen datos (juegos fantasma que nunca vuelven a verse, porque una propiedad que pasa de DLC a juego recibe canónico nuevo).
+
+**Consecuencias:**
+
+- Migración 0004 con copia previa automática; claves ajenas en cascada hacia `canonical_games`.
+- El migrador desactiva las claves ajenas fuera de la transacción y comprueba `foreign_key_check` antes de confirmar (punto 12), para que una reconstrucción de tabla futura no borre en cascada los datos del usuario.
+- La M1 de la 83 deja de borrar a ciegas: antes pasa los datos del usuario si hay destino único que no se borra en el mismo plan (puntos 6.2 y 12).
+- Las futuras fusiones y separaciones (20, 51) tienen ya su regla de datos del usuario (puntos 6.3 y 6.4); ahora solo se implementa `mergeUserData` (punto 12).
+- Sin Playwright ni pruebas de componentes en este corte; las de extremo a extremo, en su propia decisión.
+- Revisión del `auditor` sobre el diseño incorporada (punto 12, sin críticos); prevalece sobre los puntos 4 a 10.
+- Puerto `UserDataRepository`, cinco rutas nuevas `session+key` y `CollectionDto` en `api-contract`; una página nueva en la web y cambios en Ficha, Colecciones y Biblioteca.
+- Coste estimado: el mayor de los cortes recientes en la web y de los menores en el núcleo; sin red ni conectores.
+- El `auditor` revisa el código (entrada no confiable en nombres, caracteres de formato, límites dentro de la transacción, cascada y registros sin nombres); el `tester` prepara la prueba del punto 10; el `documentalista` añade a la guía de usuario cómo organizar la biblioteca, que estos datos solo existen en Ludiary y que conviene activar las copias periódicas (57).
+
+### 87. Importar las colecciones de Steam (amplía las decisiones 40, 72 y 85; el punto 3 de la 85 dejaba fuera la importación desde las tiendas; revisada en la decisión 88: espejo automático al sincronizar)
+
+Encargo (2-11-2026, rama `feature/favoritos-etiquetas-colecciones`): traer las colecciones que el usuario ya tiene en Steam a las colecciones de Ludiary (85), sin red y sin tocar nada de Steam. La 86 (precios) se escribe en otra rama y no interviene aquí.
+
+#### 1. Lo que ya está decidido y se reutiliza
+
+- **85:** tablas `collections` y `collection_games`, `normalizeLabel` con `name_key`, límites (200 colecciones, 10 000 juegos por colección), `user_game_data.favorite`, sin `hidden`, puerto `UserDataRepository`, comprobaciones repetidas dentro de la transacción (12, M2), registros sin nombres.
+- **72 y 80:** el conector solo lee con `ScopedFileReader` confinado a raíces que da el núcleo (`realpath`, sin `..` ni uniones que escapen); `readBytes` con tope comprobado con `stat` antes de leer; leer ficheros de un launcher exige la autodetección (42), que es el permiso del usuario para mirar sus carpetas. `steam-root` (propósito `scan`) ya se resuelve del registro y `discoverRoots` ya lee `libraryfolders.vdf` debajo de ella.
+- **74:** con la cuenta conectada, el SteamID64 está cifrado en el almacén `store:steam` (`steamId`) y nunca va a registros ni respuestas.
+- **83 y 84:** los DLC no son entradas de la biblioteca ni llevan datos del usuario (21; 85, punto 3). Una propiedad `dlc` no entra en colecciones.
+- **84, motivo:** se descartó leer `localconfig.vdf` por ser «datos de la cuenta». Aquí sí se leen datos de la cuenta, pero solo porque el usuario pulsa un botón que lo pide (punto 5), nunca en la sincronización.
+
+#### 2. Qué guarda Steam (comprobado el 2-11-2026 en el equipo del usuario sin leer nombres; fuentes públicas en los supuestos)
+
+- `<steam-root>\userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json`: array JSON de pares `[clave, { …, value, is_deleted? }]`. Las claves `user-collections.<id>` llevan en `value` un **texto JSON** con `id`, `name`, `added` (appids) y `removed`; las dinámicas llevan `filterSpec`. En el equipo del usuario: 22 colecciones (18 normales, 1 dinámica, 3 borradas), 416 juegos en las normales; varias carpetas de cuenta en `userdata` y solo una con este fichero.
+- `userdata\<id>\7\remote\sharedconfig.vdf`: el formato antiguo (categorías). Según hilos del foro de Steam, la biblioteca nueva ya no lo lee y puede tener datos viejos (SC5). **No se lee.**
+- No hay API oficial para las colecciones (la Web API con la API key no las expone), así que leer el fichero local es la única vía, como con los `appmanifest` (invariante 8).
+
+#### 3. Dónde vive: opciones
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| **A. Operación opcional del contrato, `importCollections`, como `resolveTitles` (84)** (recomendada) | El formato de Steam se queda en `connectors/steam` (invariante 2, 38); el núcleo pone las reglas de la 85 y `db` escribe en una transacción, como siempre. Otra tienda con colecciones se añade igual. | Un método y un contexto nuevos en `contracts`, aditivos (`contractVersion` sigue en 1). |
+| B. Analizador en el núcleo | Sin cambio de contrato. | Conocimiento de una tienda en el núcleo (rompe el invariante 2 y la 38); el núcleo tendría que leer ficheros. |
+| C. Paquete aparte `importers/steam` | Separa importar de conectar. | Un tipo de paquete nuevo con sus fronteras y su CI para un solo fichero; duplica el VDF y la lógica de cuentas del conector. |
+
+Se elige **A**.
+
+#### 4. Contrato (aditivo, `contractVersion` sigue en 1)
+
+```ts
+// packages/contracts/src/connector.ts — ADR 87
+export interface StoreConnector {
+  // ...
+  /**
+   * ADR 87. Optional, on demand only (never in a sync). Reads the user's collections from the store's
+   * local files under ctx.fs. Requires capabilities.scan and at least one location with purpose 'scan'.
+   */
+  importCollections?(ctx: CollectionImportContext): Promise<CollectionImportSnapshot>;
+}
+
+export interface CollectionImportContext extends BaseContext {
+  /** Resolved locations of this connector with purpose 'scan' (same as DiscoveryContext). */
+  readonly locations: readonly ResolvedLocation[];
+  /** Read-only, confined to those locations. */
+  readonly fs: ScopedFileReader;
+  /** Vault of scope store:<id>; read only here (Steam: steamId of the connected account, if any). */
+  readonly secrets: SecretVault;
+}
+
+export interface CollectionImportSnapshot {
+  /** Plain collections in store order. Names are raw store data; the core normalizes them. */
+  readonly collections: readonly { readonly name: string; readonly storeGameIds: readonly string[] }[];
+  /** Store "favourites" (Steam: collection id 'favorite'). */
+  readonly favorites: readonly string[];
+  /** Counters only, for the result and the log (no names, no ids): dynamic, deleted, hidden, invalid… */
+  readonly skipped: Readonly<Record<string, number>>;
+}
+```
+
+- `checkConnectorManifest`: `importCollections` exige `capabilities.scan` y una ubicación `scan`.
+- Sin capacidad nueva: la presencia del método es la capacidad (como `resolveTitles`). `StoreStatusDto` gana `canImportCollections: boolean` para que la web no escriba el nombre de la tienda en el código.
+- Se reutiliza la confinación de `DiscoveryContext`: el lector ve lo mismo que ya ve `discoverRoots` (la carpeta de Steam), no más. Alternativa descartada: una ubicación nueva confinada a `<steam-root>\userdata` (más estrecha, pero exige un campo `relative` en `registry-value` y otra declaración; si el `auditor` la pide, es aditiva).
+
+#### 5. Núcleo: `importCollections(store, { dryRun })`
+
+1. El conector tiene `importCollections`; si no, `not-found`.
+2. **Detección:** solo con `auto-and-manual` (42, 80). Con otro modo, `collections.import.needs-detection` (422), que explica cómo activarla en Ajustes. Sin el puerto `LocationResolver` (Docker), `collections.import.unavailable`.
+3. Resuelve las ubicaciones `scan` del conector con las reglas de la 79 (ausente frente a ilegible) y filtra con `isLocalPath`. Ninguna: `collections.import.store-missing`.
+4. Una importación a la vez (`busy`, 409). Llama al conector con 30 s (`Clock.timeout`). Un `ConnectorError` pasa con su código; otra excepción, `internal`. No pasa por la cola de sincronización ni por el suelo de la 50: es local, manual y barata.
+5. **Valida la instantánea** (entrada no confiable, como `resolveTitles` en la 84, M4): objetos y arrays reales; como mucho 1000 colecciones y 10 000 ID por colección y 10 000 favoritos (lo de más se ignora y se cuenta); ID de 1 a 64 imprimibles; `name` de texto. Contadores del conector: enteros ≥ 0 con claves de una lista cerrada; lo demás se ignora.
+6. **Nombres:** se cortan a 60 puntos de código y pasan por `normalizeLabel(name, 60)`. Inválido (vacío, control, `\p{Cf}` fuera de las excepciones de la 85): la colección se salta y se cuenta `invalidName`. Cortado: se cuenta `nameTruncated`. Dos colecciones de Steam con la misma `name_key` se unen en una (unión en orden).
+7. **Juegos:** una consulta por importación (`findVisibleCanonicals(store, storeGameIds)` en `LibraryRepository`) traduce cada appid a su canónico **si la propiedad de esa tienda es `kind = 'game'` y el canónico se ve** (la misma condición que `getGame` y el `PATCH` de la 85). Propiedad `dlc`: se cuenta `dlc`. Sin propiedad o no visible (incluidos los accesos directos «no Steam», cuyos ID no son appids de la tienda): `notInLibrary`. Un canónico repetido dentro de una colección se queda con la primera aparición.
+8. **Plan** (puro, en el núcleo), siempre **solo aditivo**:
+   - colección con `name_key` ya existente en Ludiary: se le añaden al final, en el orden de Steam, los juegos que no tenía; no se renombra ni se quita nada;
+   - colección nueva: se crea al final (`position` máximo + 1) mientras el total no pase de 200; las que no caben se cuentan `limitCollections` (importación parcial, nunca error);
+   - por colección, hasta 10 000 juegos; lo de más, `limitGames`;
+   - una colección cuyos juegos no están en la biblioteca **no se crea** (`empty`): no tiene sentido crear colecciones vacías en masa;
+   - favoritos (punto 11.1): `favorite = 1` en los canónicos encontrados; nunca se quita un favorito.
+9. `dryRun: true` devuelve el resultado del plan sin escribir. `dryRun: false` lo aplica `UserDataRepository.applyCollectionImport(plan)` en **una** transacción que repite dentro los límites de 200 y 10 000 y la existencia de cada canónico y colección (85, 12 M2): lo que haya desaparecido entre medias se salta y se cuenta, sin 500.
+10. **Resultado** (`CollectionImportResult`): `collectionsCreated`, `collectionsUpdated`, `gamesAdded`, `favoritesAdded`, `notInLibrary`, `dlc` y `skipped` (`dynamic`, `deleted`, `hidden`, `invalid`, `invalidName`, `nameTruncated`, `empty`, `limitCollections`, `limitGames`). Solo números.
+11. **Registro:** un `info` con esos contadores y la duración. Nunca nombres de colecciones, appids, `accountid`, SteamID ni rutas (35, 85).
+
+#### 6. Conector de Steam (`connectors/steam/src/collections.ts`)
+
+1. **Cuenta** (punto 7): con `steamId` legible en `ctx.secrets`, `accountid` = SteamID64 − 76561197960265728 (con `BigInt`; resultado entre 1 y 2³²−1) y se lee solo esa carpeta; si no tiene el fichero, `collections.import.not-found` (no se cae a otra cuenta). Sin cuenta conectada: `readDir(<root>\userdata)`, solo carpetas de 1 a 10 dígitos distintas de `0`, y se queda con las que tienen el fichero: una, se usa; ninguna, `collections.import.not-found`; varias, `collections.import.ambiguous` («Conecta tu cuenta de Steam para elegir cuál importar»). Con varias `steam-root` resueltas, la primera que tenga `userdata`.
+2. **Lectura:** `readBytes(path, 8 MiB)` (el `readText` de 1 MiB podría quedarse corto con bibliotecas grandes; 8 MiB como en la 80, M4) y `TextDecoder('utf-8', { fatal: true })`, quitando un BOM inicial. Más de 8 MiB: `scan.root-unreadable` (regla de la 81, 12). JSON mal formado (fichero a medio escribir, SC4): `store.unexpected-response`, que la web traduce como «Inténtalo de nuevo; si sigue, cierra Steam».
+3. **Análisis estricto**, sin confiar en nada:
+   - el fichero es un array de como mucho 20 000 pares; cada par, un array de dos con clave de texto (≤ 256) y objeto; solo cuentan las claves que empiezan por `user-collections.`; lo demás se ignora sin contarlo;
+   - `is_deleted === true` → `deleted`; `value` debe ser texto de hasta 1 MiB, que se analiza con `JSON.parse` aparte (un `value` mal formado se salta y cuenta `invalid`, no tumba el resto);
+   - del objeto interno solo se leen propiedades propias (`Object.hasOwn`) `id`, `name`, `added`, `removed`, `filterSpec`; `__proto__` y similares no tienen efecto;
+   - con `filterSpec` presente → `dynamic` (su contenido lo calcula Steam con filtros que Ludiary no tiene; el fichero no trae los juegos);
+   - `id === 'favorite'` → `favorites` (punto 11.1); `id === 'hidden'` → solo el contador `hidden` (punto 11.2);
+   - `added` y `removed`: arrays de enteros entre 1 y 2³²−1 o textos de 1 a 10 dígitos con ese valor (cualquier otro elemento se ignora y se cuenta `invalid`); miembros = `added` sin `removed` (SC2), sin repetidos, en el orden de `added`;
+   - `name` debe ser texto; si no, `invalid`.
+4. No se aplica `EXCLUDED_APP_IDS`: lo que no es un juego de la biblioteca ya cae en `notInLibrary` en el núcleo.
+5. No lee `sharedconfig.vdf`, `localconfig.vdf`, `loginusers.vdf`, `.modified.json` ni nada más de `userdata`. Registro: solo contadores y si la cuenta salió del almacén o de la carpeta única.
+
+#### 7. Elegir la cuenta: opciones
+
+- **(a) Cuenta conectada si la hay; si no, la única carpeta con el fichero; si hay varias, pedir conectar** (recomendada): exacta cuando hay cuenta, cero pasos en el caso del usuario (una sola carpeta con fichero) y nunca importa en silencio las colecciones de otra persona que use el mismo PC si hay ambigüedad.
+- (b) Leer `config\loginusers.vdf` (`MostRecent`): adivina sin conectar, pero lee nombres de cuenta y alias de todas las cuentas del equipo para sacar un número.
+- (c) `HKCU\…\Steam\ActiveProcess\ActiveUser`: solo vale con Steam abierto, que es justo cuando el fichero puede estar atrasado (SC3).
+- (d) Mostrar al usuario la lista de `accountid`: números sin sentido para el público general (30).
+
+#### 8. API y web
+
+| Método y ruta | Cuerpo → respuesta |
+|---|---|
+| `POST /api/collections/import` | `{ store: StoreId, dryRun?: boolean }`, `additionalProperties: false` → `200 CollectionImportResultDto`. `session+key` (67: cambia datos y lee datos personales). 404 si la tienda no tiene la operación; 409 `busy`; 422 con los errores del punto 5 y 6. |
+
+- `api-contract`: `CollectionImportRequestSchema`, `CollectionImportResultSchema`; `StoreStatusDto.canImportCollections`.
+- **Web (punto 11.4):** en Colecciones, un botón «Importar de Steam» si alguna tienda tiene `canImportCollections`. Pulsarlo pide `dryRun` y muestra un diálogo con el resumen («Se crearán 15 colecciones y se añadirán 380 juegos; 30 juegos no están en tu biblioteca; 1 colección dinámica no se puede importar») y una nota: «Si acabas de cambiar colecciones en Steam, cierra Steam antes» (SC3). Confirmar repite la petición sin `dryRun` y recarga las colecciones con el resultado. Teclado y lector de pantalla como en la 85 (37).
+- `api.ts`, `real.ts`, `mock.ts`: `importCollections(store, dryRun)`; el simulador devuelve un resultado fijo.
+- **i18n** (es y en): botón, diálogo, cada contador con `{count}`, la nota de Steam y los errores `collections.import.*` (`needs-detection`, `unavailable`, `store-missing`, `not-found`, `ambiguous`) en `core.errors` o en `connectors.steam.*` según quién los lance. Los nombres importados no se traducen (invariante 6).
+
+#### 9. Repetir la importación sin duplicar ni borrar
+
+- **(a) Por `name_key`** (recomendada, aplicada en el punto 5.8): sin migración. Importar dos veces seguidas no cambia nada la segunda (0 creadas, 0 juegos añadidos); juegos nuevos en Steam entran al repetir. Nada del usuario se borra ni se renombra. Coste conocido: renombrar en Ludiary una colección importada y volver a importar recrea la de Steam con su nombre; un juego que el usuario sacó de una colección importada vuelve a entrar; una colección propia que se llame igual que una de Steam recibe sus juegos.
+- (b) **Guardar el id de origen** (`collections.source` = `steam:<id>`, migración 0005 con copia previa de la 57): sobrevive a los renombres de los dos lados. Coste: migración, otra columna en el plan y aun así no evita que vuelva a entrar un juego quitado a mano (haría falta guardar también los quitados, una tabla más).
+- (c) Sincronizar en los dos sentidos o borrar lo que Steam ya no tiene: descartada, pisa la organización del usuario y la 85 dice que estos datos son suyos.
+
+#### 10. Pruebas (fichero de ejemplo inventado; nunca el del usuario)
+
+- **Fixture** `connectors/steam/fixtures/collections/userdata/<accountid inventado, p. ej. 11111111>/config/cloudstorage/cloud-storage-namespace-1.json`, escrito a mano: nombres inventados («Pendientes de prueba», «RPG», «rpg», un nombre de 70 caracteres, uno con `U+202E`), appids públicos (250900, 400, 620), una dinámica con `filterSpec`, una con `is_deleted`, `favorite`, `hidden`, `added` con texto de dígitos, número negativo, decimal y objeto, `removed` que quita uno, un `value` mal formado, una clave `__proto__`, una clave ajena al prefijo y un ID de acceso directo «no Steam» (4 000 000 000). La comprobación de fixtures de la 48 y la 72 (SteamID64, `C:\Users\…`) la cubre.
+- **Conector:** el análisis de cada caso anterior; fichero que no es array, de más de 8 MiB, con BOM, UTF-8 inválido, JSON cortado a la mitad; elegir cuenta: conectada (cálculo con `BigInt` desde un SteamID64 inventado que cumpla el patrón, solo en memoria de la prueba), conectada sin fichero (no cae a otra), sin conexión con una, ninguna y varias carpetas con fichero, carpetas `0` y no numéricas ignoradas; ruta que escapa por unión (`PathEscapesRootsError`); conformidad del `testkit`.
+- **Núcleo:** modo de detección distinto de `auto-and-manual`; sin `LocationResolver`; `busy`; tiempo máximo; instantánea con tipos erróneos y topes; nombres cortados, inválidos y unidos por clave; unión con una colección propia existente; límite de 200 parcial y de 10 000; DLC y no visibles contados; favoritos que nunca se quitan; colección sin juegos no creada; `dryRun` no escribe; segunda importación idéntica sin cambios; registro capturado sin nombres, appids ni rutas.
+- **`db`:** `applyCollectionImport` en una transacción; canónico o colección que desaparecen dentro de ella se saltan; posiciones al final; límites dentro de la transacción.
+- **API:** 401 sin clave de origen, 400 con campo de más, 404 tienda sin la operación, 409, 422 y 200 con y sin `dryRun`.
+- **Web:** métodos de `mock.ts` y `real.ts` (sin pruebas de componentes, 85, 12 M1).
+- Más las del punto 13, que prevalecen.
+
+#### 11. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
+
+1. **Favoritos de Steam:** (a) se marcan como favoritos de Ludiary, solo añadiendo (por defecto: Ludiary ya tiene su favorito y es el mismo concepto); (b) se importan como una colección más («Favoritos de Steam»); (c) se ignoran.
+2. **Ocultos de Steam:** (a) se ignoran y el resumen dice cuántos (por defecto: Ludiary aún no tiene `hidden`, 85, punto 3; cuando lo tenga, la importación los marcará); (b) se importan como colección «Ocultos en Steam» (los juegos siguen viéndose en la biblioteca, que es justo lo contrario de lo que el usuario quiso en Steam); (c) adelantar el corte de `hidden` y marcarlos.
+3. **Repetir la importación:** (a) por nombre, sin migración (por defecto, punto 9); (b) guardando el id de origen.
+4. **Dónde está el botón:** (a) en Colecciones (por defecto); (b) en Ajustes > Tiendas > Steam; (c) en los dos.
+5. **Resumen antes de importar:** (a) sí, con los números del `dryRun` (por defecto: deshacer 18 colecciones a mano es tedioso); (b) importar directamente y mostrar el resultado.
+6. **Destino:** (a) colecciones (por defecto, es lo que se pidió); (b) etiquetas (choca con el tope de 20 por juego y con que Steam las llama colecciones).
+7. **Colecciones sin ningún juego de la biblioteca:** (a) no se crean (por defecto); (b) se crean vacías.
+
+#### 12. Prueba manual (la prepara el `tester`; la hace el usuario)
+
+1. Con Steam **cerrado** y detección automática: «Importar de Steam» → el resumen coincide con lo que se ve en Steam (unas 18 colecciones normales; la dinámica y las 3 borradas, contadas aparte). Anotar `notInLibrary` y `dlc`.
+2. Importar: abrir dos colecciones y compararlas con Steam (mismos juegos, mismo orden).
+3. Importar otra vez: 0 creadas y 0 juegos añadidos.
+4. Con Steam **abierto**, crear una colección en Steam e importar sin cerrarlo; después cerrar Steam e importar otra vez. Anotar en cuál aparece (cierra SC3 y SC6).
+5. Con la cuenta de Steam conectada: se usa su carpeta (si el fichero está en otra carpeta, sale «no se encontraron colecciones» y no se importa nada ajeno).
+6. Cambiar la detección a «solo carpetas manuales»: mensaje claro, nada importado.
+7. El registro exportado no contiene nombres de colecciones, appids, rutas ni números de cuenta.
+
+#### 13. Revisión del auditor sobre el diseño (2 de noviembre de 2026)
+
+Sin críticos. **Lo que sigue prevalece sobre los puntos 4 a 12 donde no coincida.** El punto 11 sigue abierto, con (a) por defecto, salvo lo que el medio 1 condiciona en 11.1.
+
+- **Alto. Fragmentos del fichero en los mensajes de error** (revisa los puntos 5.4 y 6.2): el `SyntaxError` de `JSON.parse` de Node cita un trozo de la entrada, y `toCoreError` (`packages/core/src/errors.ts`) copia `e.message`. El conector captura los errores de `JSON.parse` (externo e interno) y de `TextDecoder` y lanza `ConnectorError` con un mensaje fijo y **sin `cause`**. En el caso de uso, una excepción que no sea `ConnectorError` pasa a `internal` con un mensaje fijo, nunca con `e.message`. Prueba: un JSON cortado justo después de un nombre inventado; el nombre no aparece en el registro capturado ni en la respuesta.
+- **Medio 1. Cuenta sin verificar** (revisa los puntos 5.10, 6.1, 8 y 11.1): el conector devuelve el origen de la cuenta (`connected` o `single-folder`) y el resultado lleva `accountVerified: boolean`. Con `single-folder` el diálogo avisa, con texto traducido, de que no se pudo confirmar que esas colecciones sean de la cuenta del usuario, y los favoritos de Steam **no se importan** (no se pueden revertir en bloque: un favorito propio y uno importado son iguales); el resumen los cuenta como `favoritesSkippedUnverified`. Ofrecerlos aparte con la cuenta sin verificar queda como variante de 11.1, sin coste de diseño.
+- **Medio 2. Códigos de error** (revisa los puntos 5 y 6): «no encontrado» y «ambiguo» usan un `ConnectorErrorCode` existente (`scan.root-unreadable`) con `messageKey` `connectors.steam.collections.notFound` y `connectors.steam.collections.ambiguous`, y la API los da como 422. El 404 queda solo para «la tienda no tiene esta operación». `collections.import.not-found` y `collections.import.ambiguous` desaparecen; los demás errores del núcleo del punto 5 siguen.
+- **Medio 3. El plan dentro de la transacción** (revisa los puntos 5.8 y 5.9): `applyCollectionImport` recibe la instantánea ya normalizada y traducida a canónicos, y decide crear o unir por `name_key` **dentro** de la transacción, con `position` = máximo + 1 calculado allí, reutilizando la misma función pura del plan. `dryRun` ejecuta esa misma función sobre una lectura, sin escribir. Así no hay carrera entre leer las colecciones y escribir.
+- **Medio 4. Almacén de solo lectura** (revisa el punto 4): `CollectionImportContext extends DiscoveryContext { readonly secrets: Pick<SecretVault, "get"> }`; la vista de solo lectura la construye el núcleo.
+- **Medio 5. Coste de traducir appids** (revisa los puntos 5.5 y 5.7): los appids se deduplican en toda la instantánea y el total de distintos se limita a 100 000 (el resto se ignora y se cuenta `limitIds`). La traducción lee **una vez** todas las propiedades `game` visibles de la tienda en un `Map` (o por lotes de 500 como mucho); nada de un `IN (...)` gigante.
+- **Bajos:**
+  - el tope de 1000 colecciones del punto 5.5 es la barrera de la instantánea, no un límite de Ludiary (el de Ludiary sigue en 200), y tiene su contador `limitSnapshot`;
+  - la agrupación por `name_key` usa `Map`, no objetos; la fixture incluye colecciones llamadas «constructor» y «\_\_proto\_\_»;
+  - una carpeta de cuenta de `userdata` que es una unión que sale de la raíz (`PathEscapesRootsError`) se salta y se cuenta sin cuenta conectada, y da el error «no encontrado» con cuenta conectada;
+  - **el lector se estrecha a `<steam-root>\userdata`** (revisa el punto 4 y descarta su alternativa): el manifiesto declara la subcarpeta relativa (`importCollectionsRoot: 'userdata'`, sin `..` ni ruta absoluta, comprobado en `checkConnectorManifest`) y el núcleo confina el lector a esa subcarpeta de cada ubicación `scan` resuelta;
+  - el nombre de la carpeta de cuenta se acepta solo si vale como mucho 2³²−1; con la cuenta conectada se busca su `accountid` en **todas** las `steam-root` resueltas (revisa «la primera que tenga `userdata`» del 6.1);
+  - el diálogo muestra el resultado real de la importación, no el del `dryRun`, porque el fichero puede cambiar entre los dos.
+  - **opción del usuario (2-11-2026, tras probarlo con Steam sin conectar):** si la cuenta no está verificada y hay favoritos, el diálogo ofrece una casilla sin marcar «Importar también los favoritos de Steam (son míos)»; la petición real lleva `includeUnverifiedFavorites: true` solo si se marca. Sin la casilla, todo sigue como en el Medio 1. Cambia el cuerpo de `POST /api/collections/import` (campo opcional) y el caso de uso del núcleo.
+- **Pruebas que se añaden:** JSON cortado tras un nombre inventado (alto); `accountVerified` y favoritos no importados con `single-folder`; códigos y 422 de «no encontrado» y «ambiguo»; plan aplicado dentro de la transacción con una colección creada entre `dryRun` y confirmar (se une, no se duplica); el almacén no expone `set` ni `delete`; más de 100 000 appids distintos; nombres «constructor» y «\_\_proto\_\_»; carpeta de cuenta que es unión, con y sin cuenta; cuenta conectada en la segunda `steam-root`; lector que no puede salir de `userdata`; `checkConnectorManifest` con `importCollectionsRoot` absoluto o con `..`.
+
+#### Supuestos (fuentes de terceros; Valve no documenta nada de esto)
+
+- **SC1 (comprobado 2-11-2026 en el equipo del usuario, sin leer nombres):** ruta, forma de array de pares, `user-collections.<id>`, `value` como texto JSON con `id`, `name`, `added`, `removed`, `filterSpec` e `is_deleted`. Coincide con lo que describen DumpSteamCollections (en LevelDB), steam-categories y la documentación de SteamLibraryManager.
+- **SC2 (sin verificar, 2-11-2026):** los miembros son `added` menos `removed` (semántica `union-collections` citada por steam-mcp y DumpSteamCollections). La prueba manual (paso 2) lo confirma.
+- **SC3 (sin verificar, 2-11-2026):** con Steam abierto el fichero puede ir atrasado; steam-mcp dice que Steam lo escribe al salir y que los ficheros locales «van por detrás» de los cambios. Por eso la nota del diálogo.
+- **SC4 (sin verificar):** no se sabe si Steam lo escribe de forma atómica; un fichero a medio escribir da `store.unexpected-response` y se reintenta.
+- **SC5 (fuentes: hilos del foro de Steam de 2019 a 2023):** `sharedconfig.vdf` ya no es la fuente de las colecciones y puede tener datos viejos; no se usa.
+- **SC6 (sin verificar):** existe un `cloud-storage-namespace-1.modified.json` del que no se encontró descripción pública; se supone que guarda cambios locales aún no subidos. No se lee; si la prueba del paso 4 muestra que sin él se pierden cambios recientes, se decide aparte.
+- **SC7 (fuente: SteamLibraryManager y Aurelia, 2-11-2026):** las colecciones especiales tienen los id `favorite` y `hidden`, no se pueden borrar y su `name` puede venir vacío; se identifican por `id`, nunca por nombre.
+- **SC8 (conocimiento general de Steam, sin fuente oficial):** `accountid` (nombre de la carpeta de `userdata`) son los 32 bits bajos del SteamID64, es decir, SteamID64 − 76561197960265728.
+- **SC9 (fuentes: Aurelia y steam-mcp):** las dinámicas no traen sus juegos en el fichero; Steam los calcula con `filterSpec`.
+- El formato puede cambiar con cualquier versión del cliente de Steam sin aviso. Un cambio se nota como contadores `invalid` altos o `store.unexpected-response`; no estropea la biblioteca, porque la importación es manual y solo añade.
+
+**Motivo:** Steam no ofrece las colecciones por su API oficial y el usuario ya tiene en ellas su organización (18 colecciones, 416 juegos); el fichero local está en la carpeta de Steam que el conector ya puede leer con la autodetección, así que basta un método opcional del conector que lo analiza con desconfianza y un caso de uso del núcleo que aplica las reglas de la 85 en una transacción. Bajo demanda y solo aditivo, porque una sincronización automática en los dos sentidos pisaría lo que el usuario cambie en Ludiary. Por nombre y sin migración, porque cubre importar una vez y repetir tras añadir juegos en Steam, que es el uso esperado. Alternativas descartadas: puntos 3, 7 y 9; leer `sharedconfig.vdf` (atrasado, SC5); la caché LevelDB de `htmlcache` (formato binario de Chromium, y algunas herramientas avisan de que Steam la borra si está en uso); escribir en Steam (fuera del invariante de solo lectura de la 42).
+
+**Consecuencias:**
+
+- Contrato: `importCollections`, `CollectionImportContext` (con almacén de solo lectura), `CollectionImportSnapshot` e `importCollectionsRoot`, aditivos; `checkConnectorManifest` gana dos reglas. Sin migración.
+- Revisión del `auditor` sobre el diseño incorporada (punto 13, sin críticos); prevalece sobre los puntos 4 a 12. Los errores de análisis nunca llevan texto del fichero; sin cuenta conectada no se importan los favoritos y el usuario ve el aviso de cuenta sin verificar; el plan se decide dentro de la transacción.
+- Núcleo: un caso de uso con `dryRun`, `findVisibleCanonicals` en `LibraryRepository` y `applyCollectionImport` en `UserDataRepository`. Una ruta `session+key`, un campo en `StoreStatusDto`, un botón y un diálogo en Colecciones.
+- Primera lectura de datos de la cuenta en `userdata`, siempre por petición expresa del usuario y con la autodetección activada; nada sale del equipo (invariante 9).
+- Coste estimado: pequeño a medio; la mayor parte es el analizador del conector y sus pruebas. Sin red.
+- Riesgos: formato sin documentar (SC1 a SC9); fichero atrasado con Steam abierto; colecciones de otra cuenta del mismo PC si hay una sola carpeta con fichero y no hay cuenta conectada (el resumen previo lo deja ver antes de escribir); unión con colecciones propias del mismo nombre; los accesos directos «no Steam» nunca se importan.
+- El `auditor` revisa el diseño y el código (entrada no confiable del fichero, confinación del lector, cuenta, registros sin nombres ni números de cuenta); el `tester` prepara la prueba del punto 12; el `documentalista` añade a la guía de usuario cómo importar, qué no se importa (dinámicas, ocultos, juegos fuera de la biblioteca) y que conviene cerrar Steam antes.
+
+### 88. Colecciones de Steam que se cargan y se refrescan solas al sincronizar (revisa las decisiones 85 y 87; amplía las 40 y 50)
+
+Encargo (2-11-2026, rama `feature/favoritos-etiquetas-colecciones`). El usuario, probando con su Ludiary instalado y sin reconfigurarlo: «no carga las colecciones, al sincronizar también debería refrescar esas colecciones». Con la 87 solo se importa con un botón, solo se añade y se reconoce por nombre (87, 11.3 (a)). Esta decisión no toca `apps/web/src/pages/Store.tsx` (filtros por colección en la página de una tienda), que se programa a la vez en otra tarea.
+
+#### 1. Lo que ya está decidido y se reutiliza
+
+- **87:** operación `importCollections` del conector, lector confinado a `<steam-root>\userdata` (`importCollectionsRoot`), elección de la cuenta (7 (a)), análisis estricto del fichero, topes de la instantánea (1000 colecciones, 10 000 ID por lista, 100 000 ID distintos, 8 MiB), errores sin texto del fichero y sin `cause`, `findVisibleCanonicals` con una sola lectura, plan puro que se decide **dentro** de la transacción (13, M3), almacén de solo lectura (13, M4), registros solo con contadores, `accountVerified`, ocultos y dinámicas contados y no importados, sin colecciones vacías. Todo eso sigue.
+- **85:** tablas `collections` y `collection_games`, `normalizeLabel`, 200 colecciones por usuario, 10 000 juegos por colección, cascada, migrador con `foreign_key_check` (12), comprobaciones repetidas dentro de la transacción.
+- **42 y 80:** leer ficheros de un launcher exige la autodetección (`auto-and-manual`).
+- **50 y 72:** la sincronización corre al abrir la web (`trigger: 'open'`) y con el botón (`'manual'`); el escaneo espera 60 s entre intentos; cada tienda corre en su propio bucle (`runLoop`) y un fallo no afecta a las demás (invariante 2). `schedule` no hace nada antes de completar el primer arranque (72).
+- **Ajustes** se guardan en la tabla clave-valor `settings`: un ajuste nuevo no necesita migración.
+
+#### 2. Qué cambia respecto de la 87
+
+| Punto de la 87 | Pasa a ser |
+|---|---|
+| 1 y 4: «solo a petición, nunca en una sincronización» | Corre en cada sincronización de Steam (punto 3). |
+| 5.8 y 9 (a): solo añadir, por `name_key` | Espejo por id de origen (puntos 5 y 6). |
+| 8: botón «Importar de Steam», diálogo con `dryRun`, `POST /api/collections/import` | Se retiran (punto 10). |
+| 13: casilla `includeUnverifiedFavorites` en cada importación | Ajuste persistente (punto 8). |
+| 11.3 (a) | Queda resuelto con (b), id de origen. |
+
+El análisis del fichero, la cuenta y los topes de la 87 no cambian.
+
+#### 3. Cuándo se refresca
+
+1. **En cada pasada del bucle de Steam** (`runLoop`), como último paso, después de `library` y de `scan`, sea cual sea el disparador: abrir la web (`'open'`), el botón de sincronizar (`'manual'`), conectar la cuenta en el asistente (que solo programa `library`), cambiar la detección o las carpetas y completar el primer arranque. Así, conectar la cuenta (que pasa a verificada) o recibir juegos nuevos refresca también las colecciones.
+2. **Sin suelo propio:** el paso corre aunque el escaneo se haya saltado por la espera de 60 s, porque cuando el fichero no ha cambiado solo cuesta un `stat` (punto 9). Con la sincronización ya en curso, una petición nueva se encola como hoy (`queued`).
+3. **Al arrancar y tras actualizar Ludiary:** no hace falta nada aparte. La primera vez que se abre la web después de arrancar el servidor se dispara `'open'`, y con él el paso. El usuario que actualiza sin volver a pasar por el asistente recibe sus colecciones en esa primera apertura, siempre que la detección esté en `auto-and-manual`.
+4. **Primer arranque sin completar:** nada (72).
+5. **Detección distinta de `auto-and-manual`** (42, 80): el paso no lee nada. Las colecciones de Steam que ya existan **se quedan como están** (congeladas, sin borrar: no poder leer no prueba que Steam las haya borrado, regla de la 79). El estado del paso queda `needs-detection` y la web lo explica con un enlace a Ajustes (punto 10).
+6. **Sin carpeta de Steam, sin `LocationResolver` (Docker) o cuenta ambigua:** igual, sin cambios en los datos. Estados `store-missing`, `unavailable` y `ambiguous`.
+7. **Ajuste desactivado** (punto 8): el paso no corre.
+
+#### 4. Origen guardado: migración `0005_collection_source`
+
+Copia previa automática (57). Solo `ALTER TABLE ... ADD COLUMN` e índices nuevos; ninguna tabla se reconstruye (y si `drizzle-kit` generara una reconstrucción, la protege la regla del migrador de la 85, punto 12).
+
+| Cambio | Detalle |
+|---|---|
+| `collections.source_store` | Texto, nulo. `NULL` = colección propia del usuario; `'steam'` = espejo de Steam. |
+| `collections.source_id` | Texto, nulo. El `id` de la colección en Steam (p. ej. `uc-…`), de 1 a 64 imprimibles. Va con `source_store`: los dos nulos o los dos con valor (lo comprueba el repositorio). |
+| Índice `collections_user_key_uq` | **Se borra** y se crea parcial: único (`user_id`, `name_key`) **`WHERE source_store IS NULL`**. Revisa la 85, punto 4: la unicidad del nombre vale solo entre las colecciones propias. |
+| Índice nuevo `collections_source_uq` | Único (`user_id`, `source_store`, `source_id`) `WHERE source_store IS NOT NULL`. |
+
+- Motivo del índice parcial: así una colección propia «RPG» y una de Steam «RPG» conviven sin cambiar el nombre de ninguna (la web las distingue por la marca «De Steam», punto 10) y dos colecciones de Steam con el mismo nombre (Steam lo permite) son dos espejos, no una unión. Alternativas descartadas: añadir un sufijo al nombre (texto de la interfaz dentro de un dato, contra el invariante 6, y se rompe al cambiar de idioma) y unir el espejo con la propia (pisa la propia).
+- `createCollection` y `renameCollection` siguen dando `name-taken` solo contra las propias.
+- Instantánea de Drizzle y `migrations.generated.ts` regenerados, como en la 0004; el índice parcial se declara con `.where(...)`.
+
+#### 5. Semántica: espejo de Steam
+
+Opciones:
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| **A. Espejo de solo lectura** (recomendada) | Lo que se ve es lo que hay en Steam; refrescar no pierde nada porque no hay nada del usuario que perder; reglas simples y sin estado extra. | En Ludiary no se pueden renombrar, borrar ni editar sus juegos; para cambiarlas, en Steam. |
+| B. Espejo editable cuyos cambios se pierden al refrescar | El usuario puede retocar algo un rato. | Cambios que desaparecen solos en la siguiente sincronización: confuso y parece un fallo. |
+| C. Espejo editable con los cambios guardados (añadidos y quitados propios encima de Steam) | Lo más flexible. | Dos tablas más (quitados y añadidos a mano), reglas de conflicto (Steam quita lo que el usuario añadió…) y una interfaz para explicarlo. Mucho coste para un caso que ya cubre «crear una colección propia». |
+
+Se aplica **A**. Reglas, siempre por `source_id`:
+
+1. **Una colección de Steam está en Ludiary si y solo si** está en la instantánea leída bien, no está borrada (`is_deleted`), no es dinámica ni especial (`favorite`, `hidden`) y tiene al menos un juego que se ve en la biblioteca (87, 11.7: sin colecciones vacías).
+2. **Se crea** al final (`position` = máximo + 1) si no existía, mientras el total del usuario (propias y espejos) no pase de 200; las que no caben, `limitCollections`, en el orden de Steam.
+3. **Se renombra** cuando cambia su nombre en Steam (mismo `source_id`): `name` y `name_key` nuevos, con el corte a 60 y `normalizeLabel` de la 87. Nombre inválido: se salta en esta pasada (`invalidName`) y se deja como estaba.
+4. **Sus juegos son exactamente** los de Steam que se ven en la biblioteca (`findVisibleCanonicals`, como en la 87), en el orden de Steam, hasta 10 000. Se insertan los que faltan, se borran los que sobran y las posiciones se reescriben solo si el orden cambió (una pasada sin cambios no escribe nada). Un juego que deja de verse (85, 6.1) sale del espejo y vuelve en su sitio cuando vuelve: el orden lo da Steam, no se pierde nada.
+5. **Se borra** cuando Steam la borra o deja de tener juegos visibles. Su id en Ludiary cambia si vuelve a crearse; es aceptable, porque no lleva nada del usuario.
+6. **Nunca se toca una colección propia** (`source_store IS NULL`): ni sus juegos, ni su nombre, ni su posición. Una propia que se llame igual que una de Steam convive con ella (punto 4).
+7. **En Ludiary**, sobre un espejo:
+   - `PATCH /api/collections/:id` y `DELETE /api/collections/:id` dan 422 con clave nueva `core.errors.collectionManaged` («Esta colección viene de Steam; cámbiala en Steam»). La web no ofrece esas acciones (punto 10).
+   - `PATCH /api/games/:id` con `collectionIds`: los ids de espejos **se ignoran** en el conjunto pedido y se conservan las pertenencias actuales a espejos. Se elige ignorar y no dar error para que una web con datos viejos no falle al guardar las propias.
+   - `deleteCollection` de la 85 sigue valiendo para las propias.
+8. **Guardián contra un fichero vacío**, como el de la biblioteca vacía (74, S5; 83, A2): si la instantánea no trae ninguna colección de usuario (ni vigente ni borrada) y hay espejos guardados, no se borra nada y se cuenta `emptySnapshotKept`. Un borrado de verdad en Steam deja entradas con `is_deleted`, así que el caso normal no se ve afectado.
+9. **Cualquier error** (fichero ilegible o a medio escribir, tiempo máximo, cuenta ambigua o sin fichero) deja los espejos como estaban. Solo una instantánea leída y validada entera borra o cambia algo.
+10. **Cuenta distinta:** el espejo refleja siempre el fichero de la cuenta que se lee ahora (87, 7 (a)). Si el usuario conecta otra cuenta, los espejos de la anterior desaparecen en la siguiente pasada y aparecen los de la nueva.
+
+#### 6. Colecciones que ya importó la 87 (por nombre)
+
+La 87 no ha llegado a `main` (está en esta rama, sin commit), pero el usuario pudo usar una compilación de prueba. Tras la migración 0005, todas son propias (`source_store` nulo).
+
+| Opción | Qué pasa | Coste |
+|---|---|---|
+**Revisado en el punto 15 (alto): se aplica (b); no hay adopción.** La tabla queda como registro de las opciones.
+
+| (a) Adoptarlas una vez, solo si no se tocaron (descartada en el punto 15) | En la primera pasada correcta tras la 0005, una colección propia cuya `name_key` coincide con la de **una sola** colección de la instantánea y cuyos juegos son un subconjunto de los visibles de esa colección de Steam pasa a ser su espejo (`source_store`, `source_id`), y desde ahí se refresca. Las demás (con juegos añadidos a mano, o con varias candidatas de Steam) se quedan como propias. Ajuste interno `collections.steam.adoptedAt`, para no repetirlo nunca: una colección propia creada después con el mismo nombre no se adopta. | Una función pura más y su prueba. Un juego que el usuario quitó a mano de una colección importada vuelve a entrar (lo dicta Steam). |
+| **(b) Dejarlas como propias** (aplicada, punto 15) | Junto a cada una aparece su espejo «De Steam» con el mismo nombre; el usuario borra las viejas si quiere. | Cero código; duplicados visibles. |
+| (c) Adoptar todas las que coincidan por nombre | — | Pisa los juegos que el usuario añadió a mano. Descartada (85: estos datos son suyos). |
+
+Se aplica **(a)** por defecto. Si el usuario confirma que su instalación no tiene colecciones importadas con la 87, (b) es igual de buena y más barata (punto 14.3).
+
+#### 7. Favoritos de Steam
+
+1. **Solo se añaden; nunca se quita un favorito de Ludiary** (87, 11.1 (a) sigue).
+2. **Solo los nuevos en Steam:** si cada pasada volviera a marcar todos los favoritos de Steam, un favorito que el usuario quita en Ludiary volvería solo. Se guarda en el ajuste interno `collections.steam.favoritesSeen` la lista de appids de Steam ya **aplicados** (traducidos a un canónico visible y marcados, o que ya lo estaban). En cada pasada:
+   - se marcan los canónicos de los favoritos de Steam que no están en esa lista;
+   - la lista nueva es (lista anterior ∩ favoritos actuales de Steam) ∪ los aplicados ahora. Así, un juego que se quita y se vuelve a poner como favorito en Steam vuelve a marcarse, y uno que aún no está en la biblioteca se marca cuando llegue.
+   - Tope de la lista: 10 000 (el de la 87); se guarda en la misma transacción que el plan.
+3. La primera pasada (lista vacía) marca todos, como hacía la importación de la 87.
+
+#### 8. Cuenta sin verificar y ajustes
+
+Con la cuenta de Steam conectada, la carpeta sale de su SteamID (`accountVerified: true`). Sin ella, se usa la única carpeta con el fichero (`single-folder`); si hay varias, nada (`ambiguous`). El riesgo es importar las colecciones de otra persona que use Steam en el mismo PC.
+
+| Qué | Cuenta verificada | Cuenta sin verificar |
+|---|---|---|
+| Colecciones (espejo) | Sí | **Sí, sin preguntar** (recomendado, 14.4 (a)): son de solo lectura, llevan la marca «De Steam», no cambian nada del usuario y se quitan apagando el ajuste. Ajustes muestra «No se ha podido confirmar que sean de tu cuenta; conecta tu cuenta de Steam para confirmarlo». |
+| Favoritos de Steam | Sí | **Solo con el ajuste** «Importar los favoritos de Steam aunque la cuenta no esté verificada», **desactivado por defecto** (87, 13, M1: un favorito importado no se distingue de uno propio y no se puede deshacer en bloque). |
+
+Ajustes nuevos (clave-valor, sin migración), por tienda que tenga `importCollections`:
+
+| Clave | Valor por defecto | Qué hace |
+|---|---|---|
+| `collections.<store>.enabled` | `true` (14.1) | Activa el paso. Apagarlo **borra los espejos de esa tienda** en una transacción (son copia de Steam; nada del usuario se pierde) y deja de leer el fichero. Volver a encenderlo los recrea en la siguiente pasada (fuerza un escaneo, como un cambio de detección). Los favoritos ya marcados se quedan. |
+| `collections.<store>.unverifiedFavorites` | `false` (14.2) | Sustituye a `includeUnverifiedFavorites` de la 87. Al encenderlo, la siguiente pasada marca los favoritos pendientes (los que no están en `favoritesSeen`). |
+| `collections.<store>.favoritesSeen`, `collections.<store>.adoptedAt` | — | Internos; no salen en `SettingsDto`. |
+
+`SettingsDto` y su parche ganan `storeCollections: Partial<Record<StoreId, { enabled: boolean; unverifiedFavorites: boolean }>>`, solo con las tiendas que tienen la operación; un cambio en `enabled` lanza `rescan([store])`.
+
+#### 9. Coste y robustez
+
+1. **No leer si no cambió.** `ScopedFileReader` gana `stat(path): Promise<{ size: number; mtimeMs: number } | null>` (aditivo, misma confinación que `readBytes`, `null` si no existe, error si no es un fichero normal). El contrato pasa a:
+
+   ```ts
+   // packages/contracts/src/connector.ts — ADR 88 (additive, contractVersion stays 1)
+   importCollections?(ctx: CollectionImportContext): Promise<CollectionImportSnapshot | CollectionImportUnchanged>;
+
+   export interface CollectionImportContext extends DiscoveryContext {
+     readonly secrets: Pick<SecretVault, "get">;
+     /** ADR 88. Fingerprint returned by the previous successful call, if the core still has its snapshot. */
+     readonly previousFingerprint?: string;
+   }
+   export interface CollectionImportSnapshot {
+     /** ADR 88: sourceId = the store's own collection id (1-64 printable ASCII), stable across renames. */
+     readonly collections: readonly { readonly sourceId: string; readonly name: string; readonly storeGameIds: readonly string[] }[];
+     readonly favorites: readonly string[];
+     readonly accountSource: "connected" | "single-folder";
+     readonly skipped: Readonly<Record<string, number>>;
+     /** ADR 88. Opaque, at most 128 printable ASCII; no paths, account ids or names. Steam: v1|<accountSource>|<size>|<mtimeMs>. */
+     readonly fingerprint: string;
+   }
+   export interface CollectionImportUnchanged { readonly unchanged: true; readonly fingerprint: string }
+   ```
+
+   El conector hace `stat` **antes** de leer y construye la huella con ese resultado (si el fichero cambia entre medias, la siguiente pasada ve otra huella y vuelve a leer). Si coincide con `previousFingerprint`, devuelve `unchanged` sin leer. El núcleo guarda **en memoria** la última instantánea validada con su huella y la época de la conexión de la tienda (`epochOf`, 77); con `unchanged` y la misma época reutiliza esa instantánea y **vuelve a planificar** (los juegos visibles o el ajuste de favoritos pueden haber cambiado). `unchanged` sin instantánea en memoria o con otra época, o una huella inválida, es `store.unexpected-response`. Al arrancar el servidor no hay instantánea: la primera pasada lee.
+2. **Topes de la 87** sin cambios; `sourceId` repetido dentro de la instantánea: se queda el primero y se cuenta `invalid`.
+3. **Una sola transacción** por pasada (`UserDataRepository.applyCollectionMirror(store, input, at, adopt)`, que sustituye a `applyCollectionImport`): adopción (punto 6), crear, renombrar, juegos, borrar, favoritos y `favoritesSeen`, con el plan puro `planCollectionMirror` calculado dentro sobre lo leído en la misma transacción (87, 13, M3) y los límites repetidos dentro. Con nada que cambiar, la transacción no escribe.
+4. **Un fallo nunca rompe la sincronización:** el paso va en su propio `try/catch` al final de `runLoop`, después de `accepted()`; no escribe en `sync_state` de `library` ni de `scan`, no cambia su estado ni su error y no afecta a otras tiendas (cada una tiene su bucle). Tiempo máximo 30 s (`Clock.timeout`). Si ya hay un paso de colecciones en curso, se salta (la siguiente pasada lo hará).
+5. **Estado del paso, en memoria** (sin migración): `{ status: 'idle' | 'error' | 'off' | 'needs-detection' | 'store-missing' | 'unavailable' | 'ambiguous', lastSuccessAt, accountVerified, favoritesPending, error }`. `StoreStatusDto` gana `collections?: StoreCollectionsStatusDto` (solo en tiendas con la operación; sustituye a `canImportCollections`, que queda como «la tienda tiene la operación» mientras lo use la página de la tienda). Tras reiniciar el servidor, `lastSuccessAt` vuelve a `null` hasta la siguiente pasada; es aceptable.
+6. **Registros** (35): un `info` por pasada con contadores (`unchanged`, `collectionsCreated`, `collectionsRenamed`, `collectionsDeleted`, `collectionsAdopted`, `gamesAdded`, `gamesRemoved`, `favoritesAdded`, `favoritesPending`, `notInLibrary`, `dlc`, `skipped_*`, `emptySnapshotKept`) y la duración; un `warn` con el código si falla. Nunca nombres, appids, `source_id`, `accountid`, SteamID ni rutas.
+7. **Steam abierto (SC3):** el espejo refleja el fichero tal como está; si va atrasado, se pone al día en la primera pasada tras cerrar Steam (cambia la huella). Un fichero a medio escribir (SC4) da error y no cambia nada (punto 5.9). La web lo dice en Colecciones («Los cambios hechos en Steam pueden tardar hasta que cierres Steam») en lugar del aviso del diálogo de la 87.
+
+#### 10. Web y API
+
+- **Se retiran:** `POST /api/collections/import`, `CollectionImportRequestSchema`, `includeUnverifiedFavorites`, `dryRun`, el componente `ImportCollections.tsx` con su diálogo y `importRows.ts` si solo lo usaba ese diálogo, y `importCollections` de `api.ts`, `real.ts` y `mock.ts`. No hace falta ruta nueva: refrescar es sincronizar.
+- **`CollectionDto`** gana `source: StoreId | null` (`null` = propia). `GameDetailDto.collections` gana el mismo campo.
+- **Colecciones (`Simple.tsx`):** las tarjetas de espejos llevan la marca «De Steam» (texto traducido con el nombre de la tienda de su clave de i18n, no escrito en el código). En lugar del botón «Importar de Steam», una línea de estado por tienda con colecciones: «Colecciones de Steam: actualizadas hace X», el aviso de Steam abierto y un botón «Sincronizar ahora» que llama a la ruta de sincronización que ya existe (`trigger: 'manual'`). Con estado `needs-detection`, `store-missing`, `ambiguous` o `error`, el mensaje correspondiente y enlace a Ajustes; con `favoritesPending > 0` y cuenta sin verificar, «Hay N favoritos de Steam sin importar porque no se pudo confirmar la cuenta» con enlace al ajuste.
+- **Página de una colección (`Collection.tsx`):** en un espejo, sin renombrar ni borrar; en su lugar, «Se gestiona en Steam; los cambios llegan al sincronizar».
+- **Ficha (`Game.tsx`):** las casillas de colecciones muestran solo las propias; las de Steam en que está el juego salen como enlaces de solo lectura con la marca.
+- **Ajustes > Tiendas > Steam:** interruptor «Traer mis colecciones de Steam» (encendido), interruptor «Importar los favoritos aunque la cuenta no esté verificada» (apagado; solo se muestra con cuenta sin verificar) y la línea de estado.
+- **Página de la tienda (`Store.tsx`):** fuera de esta decisión. Los espejos le llegan como colecciones normales por `getCollections()`; si quiere la marca, usa `source`. Lo coordina la sesión principal con el programador que trabaja en ella.
+- **i18n** (es y en): marca, línea de estado, avisos, interruptores y `core.errors.collectionManaged`; se borran las claves del diálogo de la 87 y la comprobación de claves sin uso de la 48 lo vigila. Teclado y lector de pantalla como en la 85 (37).
+- El simulador (`mock.ts`) siembra una colección con `source: 'steam'` y el estado del paso.
+
+#### 11. Pruebas
+
+- **`db`:** migración 0005 sobre una base con datos de la 0004 (colecciones propias intactas, índice parcial: propia «RPG» y espejo «RPG» conviven, dos propias con la misma clave siguen dando `name-taken`, dos espejos con el mismo `source_id` no); `applyCollectionMirror` en una transacción: crea, renombra por `source_id`, añade y quita juegos, reordena solo si cambia, borra, no toca propias, guardián de instantánea vacía, `favoritesSeen` (no vuelve a marcar uno quitado por el usuario; vuelve a marcar tras quitarlo y ponerlo en Steam; marca uno que llega más tarde a la biblioteca), límite de 200 con propias, pasada sin cambios sin escrituras; canónico o colección que desaparecen dentro de la transacción.
+- **Núcleo:** el paso corre al final del bucle con `'open'`, `'manual'` y solo `library`; corre aunque el escaneo se salte por los 60 s; no corre sin primer arranque, con el ajuste apagado ni sin `auto-and-manual` (y no borra espejos en esos casos); error del conector o tiempo máximo no cambian `sync_state` ni los espejos ni la sincronización de otra tienda; `unchanged` reutiliza la instantánea y replanifica; `unchanged` sin instantánea, con otra época o con huella inválida; favoritos con cuenta sin verificar según el ajuste y `favoritesPending`; `PATCH /games/:id` ignora ids de espejos y conserva sus pertenencias; renombrar o borrar un espejo da `collection-managed`; apagar el ajuste borra los espejos; registro capturado sin nombres, appids, `source_id` ni rutas.
+- **Conector de Steam:** `sourceId` de cada colección; huella con `stat` antes de leer; `unchanged` sin llamar a `readBytes` (doble de prueba que falla si se lee); huella distinta con otro origen de cuenta; fichero ausente en `stat`. La fixture de la 87 gana un `id` renombrado entre dos versiones del fichero.
+- **Contratos y runtime:** `stat` confinado (ruta que escapa por unión da `PathEscapesRootsError`), `null` si no existe, error si es carpeta; `testkit` con `stat`.
+- **API:** 422 al renombrar y borrar un espejo; `CollectionDto.source`; `SettingsDto.storeCollections` con su validación (`additionalProperties: false`); la ruta de importación ya no existe (404).
+- **Web:** métodos de `mock.ts` y `real.ts` (ajustes, `source`); sin pruebas de componentes (85, 12, M1).
+- Más las del punto 15, que prevalecen: salen las de `stat`, huella, `unchanged` y adopción.
+
+#### 12. Prueba manual (la prepara el `tester`; la hace el usuario)
+
+0. En Ajustes, comprobar que la detección está en «automática y carpetas manuales» (si no, Colecciones debe decirlo con un enlace).
+1. Actualizar su Ludiary instalado **sin pasar por el asistente**, con Steam cerrado, y abrir la web: sin pulsar nada, aparecen sus colecciones de Steam con la marca «De Steam», con los mismos juegos y en el mismo orden que en Steam.
+2. Con Steam: renombrar una colección, quitarle un juego, añadir otro a otra y borrar una tercera; cerrar Steam y pulsar sincronizar: los cuatro cambios se ven en Ludiary.
+3. Sincronizar otra vez sin cambios: el registro da todos los contadores de cambios a cero.
+4. Crear una colección propia con el mismo nombre que una de Steam: conviven, y la propia no recibe juegos al sincronizar.
+5. Intentar renombrar o borrar una de Steam: no hay opción; en la ficha, la de Steam sale como enlace, no como casilla.
+6. Marcar un favorito en Steam, sincronizar: aparece. Quitarlo en Ludiary y sincronizar: no vuelve.
+7. Sin cuenta de Steam conectada: aviso de cuenta sin verificar, favoritos pendientes contados y no importados; encender el ajuste: se importan.
+8. Apagar «Traer mis colecciones de Steam»: desaparecen las de Steam, las propias siguen; encenderlo: vuelven.
+9. Con Steam **abierto**, cambiar una colección y sincronizar; cerrar Steam y sincronizar. Anotar cuándo aparece (SC3, SC6).
+10. El registro exportado no contiene nombres de colecciones, appids, ids de colección, rutas ni números de cuenta.
+
+#### 13. Supuestos
+
+- **SC10 (sin verificar, 2-11-2026):** el `id` de las colecciones de usuario de Steam (`uc-…`, en la clave `user-collections.<id>` y en `value.id`) no cambia al renombrarlas. Lo describen así SteamLibraryManager y DumpSteamCollections; lo confirma el paso 2 de la prueba manual. Si cambiara, un renombre en Steam se vería como borrar y crear (se pierde solo la posición de la colección entre las demás).
+- ~~SC11~~ (fecha de modificación del fichero): retirado en el punto 15, que quita la huella.
+- Siguen los SC1 a SC9 de la 87.
+
+#### 14. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
+
+1. **Interruptor «Traer mis colecciones de Steam»:** (a) existe y viene encendido (por defecto: es lo que pidió y quien no quiera que Ludiary lea esos datos puede apagarlo); (b) existe y viene apagado; (c) no existe.
+2. **Favoritos con cuenta sin verificar:** (a) ajuste persistente apagado por defecto, con aviso de los pendientes (por defecto, 87, 13, M1); (b) encendido por defecto; (c) nunca, solo con la cuenta conectada.
+3. **Colecciones importadas con la 87:** (a) adoptar una vez las que no se tocaron; **(b) dejarlas como propias (aplicada en el punto 15 por la coordinación, tras el auditor)**.
+4. **Colecciones con cuenta sin verificar:** (a) se traen sin preguntar, con aviso (por defecto); (b) solo con la cuenta conectada o con un ajuste.
+5. **Espejo editable:** (a) solo lectura (por defecto, punto 5 A); (b) editable con cambios que se pierden; (c) editable con cambios guardados.
+6. **Apagar el interruptor:** (a) borra las de Steam (por defecto: son copia de Steam); (b) las convierte en propias (exige resolver choques de nombre con las propias).
+
+#### 15. Revisión del auditor sobre el diseño (2 de noviembre de 2026)
+
+Sin críticos. Decisiones de la coordinación sobre los hallazgos. **Lo que sigue prevalece sobre los puntos 3 a 14 donde no coincida.** El punto 14 sigue con (a) por defecto, salvo 14.3, que pasa a (b).
+
+- **Alto. Sin adopción** (revisa los puntos 6, 9.3, 11, 12.1 y 14.3): nada distingue una colección importada con la 87 de una hecha a mano, y las vacías se adoptarían. Se aplica 14.3 (b): las colecciones que ya existen se quedan como propias del usuario. Desaparecen la adopción, `collections.<store>.adoptedAt`, el contador `collectionsAdopted`, el parámetro `adopt` de `applyCollectionMirror` y sus pruebas.
+- **Medio 1. Sin huella** (revisa los puntos 9.1, 9.4, 9.6, 11, 12.3 y 13): se retiran `ScopedFileReader.stat`, `fingerprint`, `CollectionImportUnchanged`, `previousFingerprint`, la instantánea en memoria y el supuesto SC11. El conector lee siempre con `readBytes` y el tope de 8 MiB (87). La instantánea solo gana `sourceId`. Una pasada sin cambios no escribe nada. El registro da los contadores (a cero), sin `unchanged`. Se quita también el indicador `running` del paso: el bucle de cada tienda ya lo serializa.
+- **Medio 2. Ajuste releído en la transacción** (amplía los puntos 8 y 9.3): `applyCollectionMirror` vuelve a leer `collections.<store>.enabled` dentro de la transacción; si está apagado, no escribe nada. Así un apagado durante una pasada no deja espejos recreados.
+- **Medio 3. Guardas en el repositorio, dentro de la transacción** (revisa el punto 5.7): `createCollection` y `renameCollection` buscan la `name_key` solo con `source_store IS NULL`; `deleteCollection` y el `DELETE` de `setCollections` (pertenencias de `PATCH /api/games/:id`) llevan `source_store IS NULL`; los ids de espejos se quitan del conjunto pedido (`wanted`) **antes** de comprobar que se encontraron todas (`found.length`). `collection-managed` se decide dentro de la transacción, no antes en el núcleo.
+- **Bajos:**
+  - **Migración** (revisa el punto 4): fichero `0005_collection_source.sql` con id incrustado `0006_collection_source`, encima de una base que ya tiene `0005_user_data`; no se funde con la 0004. El SQL que genere `drizzle-kit` se revisa antes de incrustarlo (que sean `ADD COLUMN` e índices, sin reconstrucción).
+  - **Guardián de borrado explícito** (revisa el punto 5.8): instantánea vacía es `collections.length === 0 && skipped.deleted === 0`. Además, no se borra ningún espejo (solo se crean y actualizan) si `findVisibleCanonicals` no devuelve ningún juego, o si la pasada tiene `invalid > 0` o `limitSnapshot > 0`.
+  - **Cambio de cuenta** (amplía el punto 5.10): se guarda en el ajuste interno `collections.<store>.mirrorAccountSource` el `accountSource` que produjo los espejos. Si pasa de `single-folder` a `connected` y la cuenta conectada no tiene fichero (error «no encontrado»), los espejos se borran, porque eran de una cuenta sin verificar que ya no es la del usuario. En los demás errores siguen sin tocarse (5.9).
+  - **Límites separados** (revisa el punto 5.2): 200 colecciones propias y 200 espejos, cada uno con su tope; los espejos nunca impiden crear una propia.
+  - **Texto del interruptor** (punto 8 y 10): dice también que marca como favoritos los favoritos de Steam cuando la cuenta está verificada (solo los añade, nunca los quita).
+- **Pruebas que se añaden:** ajuste apagado dentro de la transacción (no escribe); `createCollection`, `renameCollection`, `deleteCollection` y `PATCH /api/games/:id` con un espejo de por medio (ids de espejos fuera de `wanted` antes de `found.length`, sin 404 falso); `collection-managed` dentro de la transacción; migración 0005 sobre una base con `0005_user_data`; guardián con `skipped.deleted === 0`, sin juegos visibles, con `invalid > 0` y con `limitSnapshot > 0` (crea y actualiza, no borra); `single-folder` a `connected` sin fichero borra los espejos, y otro error no; 200 propias más 200 espejos; pasada sin cambios sin escrituras y con contadores a cero. **Salen:** las de `stat`, huella, `unchanged` y adopción.
+
+#### 16. Decisiones del equipo tras la revisión del código (2 de noviembre de 2026)
+
+- **Convención de errores del conector:** los errores de fichero llevan `messageKey` `connectors.<id>.collections.notFound`, `.ambiguous` y `.accountNotFound`. Solo `accountNotFound` (la cuenta conectada no tiene fichero) borra los espejos cuando venían de `single-folder`; `notFound` solo informa. No se consulta el estado de la conexión.
+- **Borrados bloqueados además con `limitIds > 0`** (ids truncados harían parecer vacías colecciones reales).
+- **`favoritesSeen` solo crece en una pasada con borrados bloqueados**: así un favorito que el usuario quitó no vuelve tras un fichero vacío o parcial.
+- `core.errors.collectionManaged` lleva el nombre de la tienda como parámetro `{store}`.
+
+**Motivo:** el usuario espera que sus colecciones de Steam estén en Ludiary sin hacer nada y que sigan a Steam; con un botón que solo añade por nombre, ni aparecen solas ni reflejan renombres ni borrados. Leer el fichero ya es local, barato y está confinado (87), así que se lee entero en cada pasada (punto 15: sin huella) y una pasada sin cambios no escribe. Un espejo de solo lectura identificado por el id de Steam es la única forma de refrescar sin pisar nada del usuario: lo que viene de Steam se distingue de lo propio (columna de origen e índice parcial), y lo propio no se toca nunca. Los favoritos, que sí son del usuario, solo se añaden y solo cuando son nuevos en Steam, para que quitar uno en Ludiary no se deshaga solo. Alternativas descartadas: puntos 5 B y C, 6 (c); seguir con el botón (no es lo que se pidió); sincronizar en los dos sentidos (escribir en Steam, fuera de la 42); guardar la huella en la base (una migración o un ajuste más para ahorrar una sola lectura tras cada arranque).
+
+**Consecuencias:**
+
+- Revisa la 87: deja de ser bajo demanda y aditiva; se retiran la ruta, el diálogo, `dryRun` e `includeUnverifiedFavorites`; su 11.3 se resuelve con (b). Revisa la 85: la unicidad de `name_key` vale solo entre las colecciones propias, y renombrar, borrar y cambiar pertenencias no vale sobre espejos.
+- Revisión del `auditor` sobre el diseño incorporada (punto 15, sin críticos); prevalece sobre los puntos 3 a 14. Sin adopción de las colecciones de la 87, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, topes separados.
+- Migración `0005_collection_source.sql` (id `0006_collection_source`) con copia previa; dos columnas e índices parciales, sin reconstruir tablas; SQL de `drizzle-kit` revisado antes de incrustarlo.
+- Contrato aditivo (`contractVersion` 1): solo `sourceId` en la instantánea. Amplía la 40.
+- Amplía la 50: un paso nuevo al final del bucle de cada tienda con la operación, sin suelo propio y sin estado en `sync_state`.
+- Núcleo: `planCollectionMirror` (sustituye a `planCollectionImport`), `favoritesSeen`, `mirrorAccountSource`, estado en memoria, error `collection-managed`; `db`: `applyCollectionMirror`; API: `CollectionDto.source`, `StoreStatusDto.collections`, `SettingsDto.storeCollections`.
+- Web: marca «De Steam», línea de estado con «Sincronizar ahora», espejos de solo lectura en la página de la colección y en la ficha, interruptores en Ajustes. `Store.tsx` no se toca aquí.
+- Primera lectura automática de datos de la cuenta de Steam, siempre con la autodetección activada y con un interruptor para apagarla; nada sale del equipo (invariante 9).
+- Coste estimado: medio; la mayor parte en el plan del espejo y sus pruebas en `db` y núcleo. El conector solo gana `sourceId`.
+- Riesgos: SC10; las colecciones importadas con la 87 conviven con sus espejos como propias (el usuario borra las que sobren); colecciones de otra persona del mismo PC con cuenta sin verificar (marcadas, de solo lectura y sin favoritos); un cambio de formato de Steam deja los espejos congelados, no los borra.
+- El `auditor` revisa el diseño y el código (escritura automática sin confirmación, guardián de borrado, guardas de espejos en el repositorio, registros); el diseño ya está revisado (punto 15). El `tester` prepara la prueba del punto 12. El `documentalista` cambia en la guía de usuario «importar colecciones» por «colecciones de Steam» (se traen solas, son de solo lectura, cómo apagarlo, que hace falta la autodetección y que conviene cerrar Steam para ver los cambios al momento).
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -5677,6 +6294,10 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 82 (EA, cuenta): el 24-10-2026 el usuario cambió la vía a navegador y pegar (punto 14), porque Google no funciona en la ventana integrada; la ventana deja de usarse en EA y la confirmación de la contraseña en la ventana queda sin objeto. 12.2 (a) decidida por él («Reconectar al caducar»). Puntos 12.1, 12.3 y 12.4 aplicados por defecto, que el usuario puede cambiar. Falta: implementar el punto 14 (paso `open-external`, `authHosts`, `wizard.paste.storeError` en `validate.ts`), la revisión del `auditor` sobre ese cambio y sobre el código, y la prueba manual (puntos 10 y 14) para cerrar EAA2, EAA5 a EAA13 y NV2, con el host de `packArt` (EAA11) y la duración del token (EAA6). `document-json` del auxiliar, sin uso por ahora: decidir si se retira cuando quede claro que ninguna tienda lo necesita. Ubisoft repite el paso 1 de su prueba manual por el cambio del auxiliar (punto 3).
 - Decisión 83 (DLC en la ficha): punto 10 aplicado por defecto con (a) en todo (huérfanos sin pantalla, EA por el título, solo «Instalado», Steam y Ubisoft fuera); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 13, sin críticos, tres altos). Falta la del código y la prueba manual (punto 12) para cerrar GD1, GD2, ED1 y AD1. La sección de huérfanos de la 52 queda para su propio corte; los DLC de Steam y Ubisoft (punto 9), en la 84.
 - Decisión 84 (DLC de Steam y Ubisoft): punto 8 elegido por el usuario, (a) en todo (punto 11). Revisiones del `auditor` sobre el diseño (punto 10) y el código (punto 11) incorporadas. Falta la prueba manual (punto 9) para cerrar SD2 y SD3. UD2 y UD3 siguen abiertos (Ubisoft sin DLC).
+- Decisión 85 (favoritos, etiquetas y colecciones): punto 11 aplicado por defecto con (a) en todo (sin `hidden`, orden en que se añadieron sin reordenar, etiquetas editadas juego a juego, datos de un juego reclasificado como DLC pasados a su base, favorito solo en la ficha); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 12); falta la del código y la prueba manual (punto 10).
+- Decisión 87 (importar colecciones de Steam): punto 11 aplicado por defecto con (a) en todo (favoritos de Steam como favoritos de Ludiary, ocultos ignorados y contados, repetir por nombre sin migración, botón en Colecciones, resumen previo, destino colecciones, sin colecciones vacías); el usuario puede cambiarlo, en especial 11.1 (que el punto 13 limita a la cuenta verificada) y 11.2. Revisión del `auditor` sobre el diseño incorporada (punto 13); falta la del código y la prueba manual (punto 12) para cerrar SC2 a SC4 y SC6. Va después de cerrar el código de la 85. **Revisada en la 88** (2-11-2026): 11.3 resuelto con (b); su botón, su diálogo y su ruta se retiran; su prueba manual la sustituye la de la 88.
+- Decisión 88 (colecciones de Steam que se refrescan solas): punto 14 aplicado por defecto con (a) salvo 14.3, que pasa a (b) (interruptor encendido, favoritos sin verificar con ajuste apagado, las importadas con la 87 se quedan como propias, colecciones sin verificar traídas con aviso, espejo de solo lectura, apagar borra los espejos); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 15, sin críticos). Falta el código, su revisión y la prueba manual (punto 12) para cerrar SC10 (y SC2 a SC4 y SC6 de la 87). La página de la tienda (`Store.tsx`) recibe los espejos como colecciones normales con `source`; coordinarlo con su tarea.
+- Transversal, fuera de la 87 (hallazgo del `auditor`, 2-11-2026): `toCoreError` (`packages/core/src/errors.ts`) copia `e.message`, y los `SyntaxError` de `JSON.parse` y otros errores de análisis citan trozos de la entrada. Revisar en **todos** los conectores que ningún error con texto de ficheros o respuestas de tiendas llegue a registros o respuestas (mensaje fijo, sin `cause`), y si `toCoreError` debe dejar de copiar `e.message`.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.

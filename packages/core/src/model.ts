@@ -1,4 +1,5 @@
 // Domain types of the core (ADR 72, 74). Plain data; no I/O. The API layer maps them to DTOs.
+import type { Label } from "./labels";
 import type { ConnectorErrorCode, EntryMedia, ExternalIds, GameAction, I18nKey, I18nParams, StoreId } from "@ludiary/contracts";
 
 export type DetectionMode = "auto-and-manual" | "manual-only" | "later";
@@ -14,6 +15,9 @@ export type CoreErrorCode =
   | "launch.launcher-missing"
   | "busy"
   | "invalid-input"
+  | "name-taken"
+  | "collection-managed"
+  | "limit-reached"
   | "picker-unavailable";
 
 export interface CoreErrorInfo {
@@ -44,11 +48,21 @@ export interface ScanRootRecord {
   enabled: boolean;
 }
 
+export interface StoreCollectionsSettings {
+  enabled: boolean;
+  unverifiedFavorites: boolean;
+}
 export interface Settings {
   locale: "system" | "es" | "en";
   detection: DetectionMode | null;
+  /** ADR 88. Only the stores that have the operation. */
+  storeCollections: Partial<Record<StoreId, StoreCollectionsSettings>>;
 }
-export type SettingsPatch = Partial<Settings>;
+export interface SettingsPatch {
+  locale?: Settings["locale"];
+  detection?: DetectionMode | null;
+  storeCollections?: Partial<Record<StoreId, Partial<StoreCollectionsSettings>>>;
+}
 
 export interface Onboarding {
   completedAt: number | null;
@@ -85,7 +99,76 @@ export interface GameDetail extends GameSummary {
   properties: readonly GamePropertyDetail[];
   /** ADR 83. `installed`: a row in `installations` on this device. */
   dlc: readonly { id: string; title: string; store: StoreId; installed: boolean }[];
-  collections: readonly { id: string; name: string }[];
+  collections: readonly { id: string; name: string; source: StoreId | null }[];
+}
+
+/** ADR 85. `gameIds`: only the games that are shown, in the order they were added. */
+export interface CollectionRecord {
+  id: string;
+  name: string;
+  /** ADR 88. null = the user's own; a store id = read-only mirror of that store. */
+  source: StoreId | null;
+  gameIds: readonly string[];
+}
+
+/** ADR 85. Each field replaces the whole set; names arrive normalized by the core. */
+export interface GameDataPatch {
+  favorite?: boolean;
+  tags?: readonly Label[];
+  collectionIds?: readonly string[];
+}
+
+/** ADR 88. Closed list of the counters the connector's snapshot and the pass add up; they go to the log as `skipped_*`. */
+export const MIRROR_SKIPPED_KEYS = [
+  "dynamic", "deleted", "hidden", "invalid", "invalidName", "nameTruncated", "empty",
+  "limitCollections", "limitGames", "limitSnapshot", "limitIds",
+] as const;
+export type MirrorSkippedKey = (typeof MIRROR_SKIPPED_KEYS)[number];
+
+/** ADR 88. Input of `UserDataRepository.applyCollectionMirror`: names normalized, ids already translated to canonical games. */
+export interface CollectionMirrorInput {
+  /** Unique by `sourceId`; `gameIds` are canonical ids without repeats, in store order. */
+  collections: readonly { sourceId: string; name: string; key: string; gameIds: readonly string[] }[];
+  /** Mirrors with these source ids are never deleted this pass (their name was invalid and they were skipped). */
+  protectedSourceIds: readonly string[];
+  /** Every favorite the store has now: its store id and the canonical game, or null if it is not (yet) in the library. */
+  favorites: readonly { storeGameId: string; canonicalId: string | null }[];
+  /** false: the account is not verified and the user did not ask for these favorites. Nothing is marked, nothing is remembered. */
+  favoritesAllowed: boolean;
+  accountSource: "connected" | "single-folder";
+  /** ADR 88 point 15: a partial snapshot or no visible game. Mirrors are created and updated, never deleted. */
+  blockDeletes: boolean;
+  /** The store reported no collection at all (and none deleted): counted if there are mirrors that stay. */
+  emptySnapshot: boolean;
+}
+
+/** ADR 88. What the pass did. Numbers only. `off`: the setting was found off inside the transaction and nothing was written. */
+export interface CollectionMirrorCounts {
+  off: boolean;
+  collectionsCreated: number;
+  collectionsRenamed: number;
+  collectionsDeleted: number;
+  gamesAdded: number;
+  gamesRemoved: number;
+  favoritesAdded: number;
+  /** Store favorites not applied yet because the account is not verified. */
+  favoritesPending: number;
+  emptySnapshotKept: number;
+  /** Games that stopped being shown between the lookup and the write. */
+  gone: number;
+  empty: number;
+  limitCollections: number;
+  limitGames: number;
+}
+
+/** ADR 88. In memory. */
+export type CollectionsStepStatus = "idle" | "error" | "off" | "needs-detection" | "store-missing" | "unavailable" | "ambiguous";
+export interface StoreCollectionsStatus {
+  status: CollectionsStepStatus;
+  lastSuccessAt: number | null;
+  accountVerified: boolean | null;
+  favoritesPending: number;
+  error: CoreErrorInfo | null;
 }
 
 export interface StoreStatus {
@@ -94,6 +177,8 @@ export interface StoreStatus {
   connection: "connected" | "expired" | "disconnected" | "not-applicable";
   mode: "library" | "installed-only";
   accountLabel?: string;
+  /** ADR 88. The connector can mirror the store's collections (and this mode can look for its files). Absent: the store has no such operation. */
+  collections?: StoreCollectionsStatus;
   sync: readonly SyncStateRecord[];
 }
 
