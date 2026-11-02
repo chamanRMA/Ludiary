@@ -36,7 +36,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 21 | DLC y contenidos adicionales | Vigente |
 | 22 | Lanzamiento y escaneo directos en modo localhost | Vigente |
 | 23 | Seguridad local del servidor | Vigente; ampliada en la 63, la 66 y la 67 |
-| 24 | Comparador de precios: IsThereAnyDeal primero | Vigente |
+| 24 | Comparador de precios: IsThereAnyDeal primero | Vigente; concretada en la 86 |
 | 25 | Secuencia: localhost primero, Docker después | Vigente |
 | 26 | Instalador y acceso directo en localhost | Vigente; instancia única concretada en la 62 |
 | 27 | Sistemas operativos del modo localhost | Vigente |
@@ -98,6 +98,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 83 | DLC dentro de la ficha de su juego base | Propuesta (encargada por el usuario el 24-10-2026; concreta las 21, 47 y 52; revisa los DLC de las 76, 77, 78 y 82 y el filtro de EA de la 50; GOG biblioteca y escaneo, Epic y EA biblioteca, Steam y Ubisoft fuera; migración 0003 con `base_store_game_id`; `contractVersion` 1; punto 10 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 13, que prevalece: precedencia del escaneo en `kind` y base, guardián de biblioteca vacía solo con juegos, `kindChanges`, borrado de canónicos vacíos, EA con `normalizeTitle` movida a `contracts`; falta la del código y la prueba manual); Steam y Ubisoft revisados en la 84; M1 revisado en la 85 para canónicos con datos del usuario |
 | 84 | DLC de Steam y Ubisoft en la ficha | Propuesta (encargada el 24-10-2026; amplía la 83 y revisa su punto 9 para Steam; Steam `dlc: 'scan'` por `InstalledDepots.dlcappid` y títulos con `resolveTitles` sobre `GetItems`, aditivo, `contractVersion` 1, sin migración; Ubisoft sigue `'none'`; punto 8 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 10, sin críticos ni altos; falta la del código y la prueba manual) |
 | 85 | Favoritos, etiquetas y colecciones | Propuesta (encargada el 2-11-2026; concreta las 36 y 47, revisa la M1 de la 83 y fija la regla de datos del usuario de las futuras fusiones y separaciones de las 20 y 51; migración 0004 con cascada, `PATCH /api/games/:id` y CRUD de colecciones `session+key`, `normalizeLabel` con límites; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 12, sin críticos (migrador con claves ajenas desactivadas fuera de la transacción y `foreign_key_check`, sin Playwright, `\p{Cf}`); falta la del código y la prueba manual); importación de colecciones de Steam en la 87; unicidad de `name_key` solo entre propias y espejos de solo lectura en la 88 |
+| 86 | Comparador de precios con IsThereAnyDeal | Propuesta (encargada el 02-11-2026, fase 3; concreta las 24 y 31; solo IsThereAnyDeal con la clave del usuario, sin precios directos de tienda; paquete `@ludiary/itad` con las reglas de un conector; ID de IsThereAnyDeal por ID de tienda en Steam y GOG y por título en Epic, Ubisoft y EA; precios bajo demanda con caché de 6 h; migración `000N_prices`; `PriceProvider` y `capabilities.price` sin cambios; decisiones de producto del punto 12 abiertas; antes de implementar, consulta a IsThereAnyDeal del punto 13) |
 | 87 | Importar las colecciones de Steam | Propuesta (encargada el 2-11-2026; amplía las 40, 72 y 85; operación opcional `importCollections` del conector, aditiva, `contractVersion` 1, sin migración; lee `userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json` bajo `steam-root` solo a petición del usuario y con autodetección; bajo demanda con resumen previo (`dryRun`), solo aditiva y por `name_key`; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 13, sin críticos: errores sin texto del fichero, cuenta sin verificar sin favoritos, plan dentro de la transacción, lector estrechado a `userdata`; falta la del código y la prueba manual). La 86 (precios) se escribe en otra rama. **Revisada en la 88**: deja de ser bajo demanda y aditiva |
 | 88 | Colecciones de Steam que se cargan y se refrescan solas al sincronizar | Propuesta (encargada por el usuario el 2-11-2026; revisa las 85 y 87, amplía las 40 y 50; paso al final del bucle de sincronización de cada tienda con `importCollections`; espejo de solo lectura por `source_id` con la migración 0005 e índice único parcial de `name_key` solo entre propias; favoritos solo añadidos y solo los nuevos en Steam; ajustes persistentes `collections.<store>.enabled` y `unverifiedFavorites`; `sourceId` aditivo, `contractVersion` 1; se retiran la ruta de importación y su diálogo; punto 14 aplicado por defecto con (a) salvo 14.3 (b); revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 15, que prevalece: sin adopción, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, guardián de borrado explícito, cambio de cuenta, 200 propias + 200 espejos, migración `0005_collection_source` con id `0006`; falta el código, su revisión y la prueba manual) |
 
@@ -321,7 +322,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - **Ampliación (decisión 66):** «solo en `127.0.0.1`» pasa a ser «solo en la interfaz de bucle local»: el servidor escucha en `127.0.0.1` y en `[::1]`, en el mismo puerto, y nunca en otra interfaz. `Host` y `Origin` se validan contra una lista cerrada con el nombre `ludiary.localhost` y la dirección `127.0.0.1`, siempre con el puerto vigente.
 - **Ampliación (decisión 67):** el «token por instalación en las acciones que cambian datos o lanzan procesos» se concreta, para el navegador, en dos factores: la cookie de sesión y una clave ligada al origen que la página envía en una cabecera. La cookie sola no autoriza ninguna de esas acciones.
 
-### 24. Comparador de precios: IsThereAnyDeal primero (revisa la decisión 9)
+### 24. Comparador de precios: IsThereAnyDeal primero (revisa la decisión 9; concretada en la decisión 86)
 
 **Decisión:** el comparador usa IsThereAnyDeal como fuente principal de precios, y el histórico y los mínimos salen del mismo servicio. Los precios directos de cada tienda solo se añaden donde ese servicio no cubra.
 
@@ -485,7 +486,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - La navegación con teclado sigue siendo una base de accesibilidad, aunque no se prepare soporte de mando.
 - Si en el futuro se quisiera un modo de mando o de televisión, bastaría una interfaz alternativa sobre el mismo núcleo, sin rehacerlo.
 
-### 38. Estructura del repositorio y fronteras entre paquetes
+### 38. Estructura del repositorio y fronteras entre paquetes (paquete `packages/itad` añadido en la decisión 86)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** un único repositorio organizado como monorepo con workspaces (decisión 39), TypeScript con módulos ES en todos los paquetes y referencias de proyecto de TypeScript. Ámbito de paquetes `@ludiary/`, con todos los paquetes privados (decisión 44).
 
@@ -6245,6 +6246,212 @@ Sin críticos. Decisiones de la coordinación sobre los hallazgos. **Lo que sigu
 - Riesgos: SC10; las colecciones importadas con la 87 conviven con sus espejos como propias (el usuario borra las que sobren); colecciones de otra persona del mismo PC con cuenta sin verificar (marcadas, de solo lectura y sin favoritos); un cambio de formato de Steam deja los espejos congelados, no los borra.
 - El `auditor` revisa el diseño y el código (escritura automática sin confirmación, guardián de borrado, guardas de espejos en el repositorio, registros); el diseño ya está revisado (punto 15). El `tester` prepara la prueba del punto 12. El `documentalista` cambia en la guía de usuario «importar colecciones» por «colecciones de Steam» (se traen solas, son de solo lectura, cómo apagarlo, que hace falta la autodetección y que conviene cerrar Steam para ver los cambios al momento).
 
+### 86. Comparador de precios con IsThereAnyDeal (concreta las decisiones 24 y 31; amplía las 38, 47 y 69)
+
+Encargo (02-11-2026, rama `feature/comparador-precios`): diseñar el comparador de precios de la fase 3. La fase 4 (histórico y alertas) no entra, pero el diseño no debe impedirla.
+
+#### 1. Lo que ya está decidido
+
+- **24:** IsThereAnyDeal es la fuente principal, también del histórico y los mínimos; los precios directos de tienda, solo donde no cubra.
+- **31:** cada usuario aporta su clave, opcional, con un asistente en Ajustes y cifrada como los tokens; sin clave el comparador queda desactivado.
+- **40:** `capabilities.price` (hoy `false` en todas) y `prices?: PriceProvider` reservados para los precios directos de tienda; `checkConnectorManifest` exige que coincidan.
+- **69:** IsThereAnyDeal va en Ajustes > Servicios y no aparece en el primer arranque hasta la fase 3.
+- **Invariantes 5, 6, 8 y 9:** clave cifrada; textos traducidos; vías oficiales; nada sale del equipo salvo hacia las tiendas y los servicios que configure el usuario.
+
+#### 2. Qué hay hoy (leído el 02-11-2026)
+
+- **Web:** `Prices` (`apps/web/src/pages/Simple.tsx`) es un panel «Próximamente»; el menú marca «Comparador» con `soon`. En modo real, `getServices` devuelve `[]` y Ajustes oculta «Servicios» (`Settings.tsx`); el simulador tiene `itad: { purpose: "prices", available: false }`.
+- **API:** `ServiceId` ya incluye `"itad"`; `WizardTarget` ya admite `{ kind: "service" }`, pero en el servidor no hay ningún servicio.
+- **Núcleo:** el motor de asistentes (`wizards.ts`) solo trabaja con tiendas (`StoreId`, `vaultFor(store)`, prefijo `connectors.<id>.`). `secrets.scope` ya prevé `service:<id>` (47). `matchProperties` (`normalize.ts`) existe y no lo usa nadie.
+- **Datos:** migraciones 0000 a 0003; nada de precios.
+
+#### 3. Qué ofrece cada fuente (comprobado el 02-11-2026 salvo donde se indica)
+
+| Fuente | Qué da | Acceso |
+|---|---|---|
+| **IsThereAnyDeal**, API 2.11.0 en `api.isthereanydeal.com` | Precio actual por tienda, precio normal, descuento, mínimo histórico, histórico, paquetes; búsqueda por título; traducción de ID de tienda a ID propio (UUID) | Clave de API (`key` o cabecera `ITAD-API-Key`) en los datos públicos; OAuth 2.0 con PKCE solo para los datos de la cuenta (lista de espera, colección). `service/shops/v1` responde sin clave; `games/lookup/v1` sin clave da 403 (ITAD1, ITAD2) |
+| Steam, `store.steampowered.com/api/appdetails?filters=price_overview&cc=` | Precio de Steam en la moneda del país | Pública, sin clave, sin documentación oficial (ITAD8) |
+| GOG, `api.gog.com/products/<id>/prices?countryCode=` | Precio base y final de GOG | Pública, sin clave, no oficial (ITAD8) |
+| Epic | Solo el GraphQL interno de la tienda | No oficial |
+| Ubisoft, EA | Nada público conocido (24) | — |
+
+Tiendas de Ludiary en IsThereAnyDeal (`service/shops/v1?country=ES`, 02-11-2026, sin clave): **Steam 61** (326 580 juegos), **GOG 35** (12 810), **Epic Game Store 16** (14 530), **Ubisoft Store 62** (786, 0 ofertas ese día), **EA Store 52** (563). Las cinco están cubiertas; Ubisoft y EA con catálogo corto.
+
+#### 4. Decisión: de dónde salen los precios
+
+**Solo IsThereAnyDeal, con la clave del usuario.** Ningún conector implementa precios directos en este corte: `capabilities.price` sigue `false`, `PriceProvider` sigue reservado sin cambios (la 24 lo deja para «donde no cubra», y hoy cubre las cinco) y `contractVersion` sigue en 1. Sin clave no hay comparador (31).
+
+IsThereAnyDeal no es una tienda: va en un **paquete propio, `packages/itad` (`@ludiary/itad`)**, con las mismas reglas que `connectors/*` (decisión 38: solo importa `contracts`; sin `node:*` de E/S, `fetch`, `process.env` ni temporizadores; red solo por el `HttpClient` del contexto; registro estático en `runtime`). Fila nueva en la tabla de la 38: `packages/itad` → `contracts`. `runtime` es el único que lo conoce.
+
+#### 5. Contrato (`packages/contracts/src/prices.ts`, nuevo; aditivo)
+
+```ts
+// ADR 86. Price service contract. The service describes and fetches; the core validates, caches and decides.
+export type PriceServiceId = 'itad';
+
+export interface PriceService {
+  readonly id: PriceServiceId;
+  readonly nameKey: I18nKey;
+  /** HTTPS hosts the HttpClient may call, e.g. ['api.isthereanydeal.com']. */
+  readonly apiHosts: readonly string[];
+  /** HTTPS hosts a deal link may point to (shown to the user, never fetched). */
+  readonly linkHosts: readonly string[];
+  /** Key wizard: same engine and step kinds as a store (ADR 40, 74). */
+  readonly connection: ConnectionWizard;
+  /** Store property -> service game id. Absent key in the result = not found. */
+  lookupByStore(store: StoreId, storeGameIds: readonly string[], ctx: SyncContext): Promise<ReadonlyMap<string, string>>;
+  lookupByTitle(titles: readonly string[], ctx: SyncContext): Promise<ReadonlyMap<string, string>>;
+  search(title: string, ctx: SyncContext): Promise<readonly { id: string; title: string; type: string }[]>;
+  /** Current prices per shop plus the historical low, for up to 200 ids. */
+  prices(ids: readonly string[], q: { country: string; shops: readonly StoreId[] | 'all' }, ctx: SyncContext):
+    Promise<readonly PriceSnapshot[]>;
+}
+
+export interface PriceSnapshot {
+  readonly id: string;
+  readonly deals: readonly {
+    shop: { storeId: StoreId | null; serviceShopId: number; name: string };
+    amountMinor: number; regularMinor: number; currency: string; cut: number;
+    voucher: string | null; url: string; expiresAt: string | null;
+  }[];
+  readonly historyLow: { amountMinor: number; currency: string } | null;
+}
+```
+
+- `checkPriceServiceManifest` (como `checkConnectorManifest`): hosts en minúsculas y sin esquema, `linkHosts` no vacío, `connection` presente.
+- El núcleo valida toda la salida como no confiable (punto 7) y nunca la reenvía sin filtrar.
+
+#### 6. Paquete `@ludiary/itad`
+
+- **Clave:** en la cabecera `ITAD-API-Key` como `Secret`, nunca en la consulta (no acaba en URL ni en registros).
+- **Lookup por tienda:** `POST /lookup/id/shop/{shopId}/v1` con un lote de ID. **Steam:** `app/<appid>` (formato comprobado en las páginas de producto de IsThereAnyDeal, ITAD4). **GOG:** el ID de producto tal cual, que es el `storeGameId` de la 76 (1512372112, Cold Waters, comprobado en la página de producto, ITAD4). **Epic, Ubisoft y EA no:** IsThereAnyDeal guarda allí ID de oferta o de su tienda web (32 hexadecimales o *slug* en Epic, `Origin.OFR.…` y `OFB-EAST:…` en EA, hexadecimales de 24 en Ubisoft), que no son los `storeGameId` de las 78, 79 y 81 (ITAD5).
+- **Lookup por título:** `POST /lookup/id/title/v1`, coincidencia exacta tras el preproceso de IsThereAnyDeal (ITAD3). Se manda el `title` del canónico, no el normalizado.
+- **Búsqueda:** `GET /games/search/v1?title=` (lista de seguimiento, punto 9).
+- **Precios:** `POST /games/prices/v3?country=<cc>&shops=<ids>`, lotes de hasta 200 UUID; `amountInt` → `amountMinor`; `historyLow.all` → `historyLow` (ITAD6). Con `shops: 'all'` se omite el parámetro. El mapa `StoreId` → ID de tienda (61, 35, 16, 62, 52) va en el paquete; una prueba lo contrasta con la respuesta grabada de `service/shops/v1`.
+- **Errores:** 401/403 → `auth.invalid`; 429 → `store.rate-limited` con `retryAfterMs` de `Retry-After`; 5xx → `network.unavailable`; forma inesperada → `store.unexpected-response`. Sin reintentos propios (regla 10 de la 40).
+- **Asistente (`connection`):** tres pasos.
+  1. `info`: qué es, que es opcional, que el proyecto no está afiliado y **qué se envía**: ID de Steam y GOG y títulos de los juegos cuyo precio se consulta, y el país.
+  2. `open-external` a `https://isthereanydeal.com/apps/my/` con un campo secreto y Pegar: crear cuenta y **verificar el correo** (el límite de 1000 peticiones depende de ello, ITAD2), registrar una aplicación (por ejemplo «Ludiary personal»), copiar la **API key** (no el *Client ID* ni el secreto de OAuth). Patrón permisivo `^[A-Za-z0-9_-]{16,128}$` (formato no publicado, ITAD7).
+  3. Comprobación en el servidor con **una** petición barata (`lookup/id/shop/61/v1` con `["app/220"]`): 200 → `done`; 401/403 → el mismo paso con `auth.invalid`.
+  - `status`: `connected` si hay clave (sin petición); `disconnect` borra la clave **y la caché de precios** (punto 8).
+- Registros: solo contadores (`requested`, `found`, `notFound`, `deals`). Nunca títulos, ID ni la clave.
+
+#### 7. Núcleo (`packages/core/src/prices.ts`)
+
+- **Asistente:** el motor de `wizards.ts` pasa de `StoreId` a `WizardTarget` (tienda o servicio), con `vaultFor` por ámbito (`store:<id>` o `service:itad`, 47) y prefijos de claves `connectors.itad.` y `connectors.common.` (los textos de RAWG e IGDB ya usan `connectors.<servicio>.*`). El paquete trae `locales/es.json` y `en.json`, que `i18n` agrega como los de los conectores.
+- **Emparejar un juego con IsThereAnyDeal** (por canónico, solo `kind = 'game'`):
+  1. ID de tienda, en este orden: propiedades de Steam y después de GOG;
+  2. si ninguna da resultado, el título del canónico;
+  3. si dos propiedades dan ID distintos: `conflict`, sin precios (mismo criterio conservador que la 20: mejor nada que el precio de otro juego);
+  4. el resultado se guarda con su `source` y un `inputs_hash` de lo consultado. Se vuelve a buscar si cambia el hash (propiedad nueva, título nuevo) o, si no se encontró, a los 30 días.
+  - El usuario puede marcar «No es este juego» (`excluded`): ya no se busca ni se muestra. `shortcut:` la marca cuelga del canónico y se pierde si este se borra (83, M1) o se fusiona; cuando exista el emparejamiento, pasa a claves estables como `match_decisions`.
+  - **No alimenta el emparejamiento de la 20/51.** Un ID sacado por título no es un ID externo. Cuando llegue ese corte podrá valorar los obtenidos por ID de tienda; aquí no se toca `matchProperties`.
+- **Cuándo se pide (bajo demanda, sin sincronización en segundo plano):**
+  - al abrir la ficha de un juego o la página Comparador, la web pide `POST /api/prices/refresh` con los canónicos o elementos visibles; el núcleo solo consulta los que no tienen precio de ese país o lo tienen de hace más de **6 horas** (`PRICE_TTL_MS`);
+  - botón «Actualizar precios» con el suelo de 1 minuto de `MANUAL_SYNC_FLOOR_MS` (50, revisión del 24-10-2026).
+- **Cuotas:** presupuesto propio de **200 peticiones cada 5 minutos** (la quinta parte del límite por defecto, ITAD2), contado en memoria. Si se agota, se sirve lo guardado y se marca `stale`. Un 429 fija un único `waitUntil` para el servicio con `Retry-After`, con el tope de un día de la 73. Una biblioteca de 2000 juegos cuesta como mucho unas 10 + 10 + 10 peticiones la primera vez (lookup por Steam, por GOG y por título) y 10 de precios; en la práctica, solo lo que el usuario mira.
+- **Validación de la salida** (como `validate.ts` y `media.ts`): UUID con formato de UUID; `amountMinor` y `regularMinor` enteros entre 0 y 10⁹; `currency` `^[A-Z]{3}$`; `cut` entero de 0 a 100; `url` `https` con host en `linkHosts` (si no, el enlace se descarta y el precio se muestra sin él); textos sin caracteres de control y de 300 como mucho; como mucho 100 ofertas por juego; tienda desconocida con `storeId: null`. **Los datos se muestran sin alterar** (condición de uso, ITAD9): ni redondeo, ni conversión de moneda, ni se quitan parámetros de afiliado de la URL.
+- Tiempo máximo y respuesta de 4 MiB por petición; un fallo de precios nunca afecta a la biblioteca ni a las tiendas.
+
+#### 8. Datos (migración `000N_prices`, el siguiente número libre al integrar: la 85 puede tomar el 0004)
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| `price_links` | `user_id`, `canonical_game_id` (FK, `ON DELETE CASCADE`), `service` (`itad`), `service_game_id` (nulo si no se encontró), `status` (`found` / `not-found` / `conflict` / `excluded`), `source` (`steam` / `gog` / `title` / `manual`), `inputs_hash`, `looked_up_at` | Clave (`user_id`, `canonical_game_id`, `service`). |
+| `price_snapshots` | `user_id`, `service`, `service_game_id`, `country`, `data` (JSON validado: ofertas y mínimo), `fetched_at` | Clave (`user_id`, `service`, `service_game_id`, `country`). Una fila por juego y país: es caché, no histórico. |
+| `price_watch` (solo si se elige la lista de seguimiento, punto 12.2) | `id`, `user_id`, `service`, `service_game_id`, `title`, `added_at` | Datos del usuario: entran en las copias (36). |
+
+- Ajustes (`settings`, ámbito de usuario): `prices.country` (ISO 3166-1 alfa-2) y `prices.shops` (`'ludiary'` / `'all'`).
+- Clave: `secrets` con ámbito `service:itad` y nombre `apiKey` (46).
+- Desconectar borra la clave, `price_snapshots` y los `price_links` que no sean `excluded`. Copia previa a la migración (57).
+- **Fase 4:** las alertas cuelgan de `price_links` y `price_watch` (qué juegos, con qué ID); el histórico se pide a IsThereAnyDeal (`games/history/v2`, `storelow/v2`) cuando haga falta, sin guardar uno propio. Los *webhooks* de IsThereAnyDeal no sirven (exigen un servidor accesible desde internet, 7); las alertas serían comprobaciones al abrir la aplicación.
+
+#### 9. Qué ve el usuario
+
+- **Ajustes > Servicios** (deja de ocultarse en modo real, solo con IsThereAnyDeal; RAWG e IGDB siguen simulados y ocultos hasta su corte): estado, Conectar/Desconectar, selector de país y «solo mis tiendas / todas las tiendas autorizadas».
+- **Ficha del juego:** panel «Precios» si hay clave: mejor precio actual (tienda, precio, normal, descuento), mínimo histórico, una fila por tienda con enlace (`<a target="_blank" rel="noopener noreferrer">`, solo `https`, 68), país y moneda, fecha de la consulta, «Actualizar precios», «No es este juego» y «Precios de IsThereAnyDeal» con enlace a `isthereanydeal.com` (atribución recomendada, ITAD9). Estados: sin encontrar, conflicto, sin datos de ese país, límite alcanzado (con la fecha de lo guardado). Los DLC no tienen panel.
+- **Página Comparador** (quita `soon` del menú): según el punto 12.1. Sin clave: el panel actual con un botón a Ajustes > Servicios.
+- Precios con `Intl.NumberFormat(locale, { style: 'currency', currency })` sobre `amountMinor` y los decimales de la moneda; es formato, no alteración.
+- Textos nuevos en `packages/i18n` y en `locales/` del paquete (6). Sin imágenes de IsThereAnyDeal: la CSP no cambia.
+- **API:** `GET /api/prices/games/:canonicalId` y `GET /api/prices` solo leen la caché, nunca llaman a la red; `POST /api/prices/refresh` (`{ canonicalIds?: string[] ≤ 200, watchIds?: string[] ≤ 200 }`) y `POST /api/prices/games/:canonicalId/exclude` exigen la clave de origen (67), igual que el asistente. Ninguna respuesta lleva la clave (68).
+
+#### 10. Pruebas
+
+- **`@ludiary/itad`:** respuestas inventadas con la forma de la documentación (sin datos personales) para `lookup/id/shop`, `lookup/id/title`, `games/search` y `games/prices/v3`, más la respuesta pública grabada de `service/shops/v1?country=ES`. Casos: `app/<id>` para Steam y el ID tal cual para GOG; valores `null`; la clave va en la cabecera y nunca en `query`; 401, 403, 429 con y sin `Retry-After`, 5xx, cuerpo raro; lotes de 200; `shops` con las cinco tiendas y sin parámetro con `'all'`; asistente: patrón, comprobación correcta y clave rechazada. Conformidad con `checkPriceServiceManifest`.
+- **Núcleo:** orden Steam → GOG → título; conflicto; `inputs_hash`; reintento a los 30 días; `excluded` no se consulta; TTL de 6 h por país; presupuesto agotado → `stale` sin red; 429 → `waitUntil` compartido y tope de un día; validación (UUID, importes, moneda, `cut`, URL fuera de `linkHosts`, más de 100 ofertas, control); DLC sin consulta; el motor de asistentes con `WizardTarget` de servicio y el prefijo de claves; registros sin títulos ni ID.
+- **`db`:** migración sobre una base con 0003 (y la de la 85, si va antes); cascada al borrar un canónico; desconectar borra caché y enlaces salvo `excluded`.
+- **API:** las rutas `POST` sin clave de origen → 403; las `GET` no llaman al servicio (doble que falla si se le llama).
+- **Web:** panel con precios, sin clave, sin encontrar, conflicto, `stale`; Comparador sin clave; Ajustes > Servicios real.
+
+#### 11. Prueba manual (la prepara el `tester`; la hace el usuario con su propia clave)
+
+1. Crear la clave siguiendo el asistente (correo verificado); comprobar que una clave inventada se rechaza.
+2. País ES: un juego de Steam y uno de GOG (Cold Waters, si sigue en la biblioteca) muestran precios en EUR y el mínimo histórico; anotar si `source` es `steam`/`gog` (cierra ITAD4 y ITAD6).
+3. Un juego de Epic, uno de Ubisoft y uno de EA: anotar cuántos se encuentran por título y si alguno es el juego equivocado (ITAD3, ITAD5).
+4. «No es este juego» y «Actualizar precios» dos veces seguidas (la segunda espera al suelo).
+5. Cambiar el país a US: precios en USD sin borrar los de ES.
+6. Desconectar: desaparecen la clave y la caché.
+7. El registro exportado no contiene la clave, títulos ni ID.
+
+#### 12. Lo que decide el usuario (solo producto; abierto, con la recomendación del arquitecto)
+
+1. **Qué juegos entran en el Comparador:**
+   - (a) solo la biblioteca: lista de los juegos propios con su mejor precio (poco útil: ya los tiene);
+   - (b) **recomendada:** ficha de los juegos propios bajo demanda **más una lista de seguimiento local** (buscar en IsThereAnyDeal por título y añadir; tabla `price_watch`), que es lo que la página Comparador muestra, ordenada por descuento, con «Ya lo tienes» si coincide con un juego de la biblioteca. Es lo que da sentido a un comparador y lo que necesitarán las alertas de la fase 4;
+   - (c) como (b) pero importando además la lista de deseos de Steam (`IWishlistService/GetWishlist`, sin verificar, ITAD10) o la lista de espera de IsThereAnyDeal (exige OAuth con PKCE y volver a `ludiary.localhost`): en su propio corte.
+2. **Cuándo se consultan precios de la biblioteca:** (a) **recomendada:** solo de los juegos que el usuario mira (ficha, Comparador): menos datos de su biblioteca salen hacia IsThereAnyDeal y menos cuota; (b) toda la biblioteca de una vez al conectar.
+3. **Tiendas:** (a) **recomendada:** las cinco de Ludiary por defecto, con opción «todas las autorizadas»; (b) todas por defecto.
+4. **País:** (a) **recomendada:** se propone el de la región del idioma del navegador (`es-ES` → ES) y, si no la tiene, se pide en Ajustes antes de la primera consulta; (b) EE. UU. por defecto, como la API.
+5. **Sin clave:** (a) **recomendada:** nada en la ficha y el aviso con botón solo en la página Comparador; (b) también una línea en la ficha.
+6. **Primer arranque:** (a) **recomendada:** IsThereAnyDeal solo en Ajustes; (b) añadirlo al paso 4 de la 69.
+7. **Sin clave, precios directos de Steam y GOG** (`appdetails` y `api.gog.com`, públicos, ITAD8): (a) **recomendada:** no (revisaría la 31, son dos vías más que mantener y sin histórico); (b) sí, como modo reducido.
+
+#### 13. Antes de implementar
+
+- **Escribir a `api@isthereanydeal.com`** (ya previsto en la 69), lo hace el usuario: describir Ludiary (código abierto, GPL, local, cada usuario registra su propia aplicación y su clave) y preguntar si lo aceptan y si la cláusula de no competir les preocupa. Precedente público: la extensión Game Scout de Raycast pide a cada usuario su propia clave. **Recomendación: no publicar el comparador sin esa respuesta**; el diseño no depende de ella salvo que la rechacen.
+- El `auditor` revisa el diseño (entrada no confiable, rutas nuevas, privacidad del asistente) antes del código.
+
+#### 14. Coste
+
+| Parte | Tamaño |
+|---|---|
+| Contrato `PriceService` y `checkPriceServiceManifest` | S |
+| Paquete `@ludiary/itad` (lookup, precios, búsqueda, asistente, errores) con pruebas | M |
+| Motor de asistentes para servicios (`WizardTarget`, ámbito de secretos, prefijos) | S |
+| Núcleo `prices.ts` (emparejamiento, caché, presupuesto, 429, validación) | M |
+| Migración y repositorios | S |
+| API (cuatro rutas, esquemas) | S |
+| Web: Ajustes > Servicios real, panel de la ficha, página Comparador | M |
+| Lista de seguimiento (si 12.1 b): búsqueda, tabla, interfaz | M |
+| Total | L (M sin la lista de seguimiento) |
+
+Orden: contrato → paquete y núcleo en paralelo → datos y API → web. El `tester` prepara las respuestas y la prueba manual; el `auditor`, antes y después del código.
+
+#### Supuestos
+
+- **ITAD1 (comprobado 02-11-2026, documentación):** API 2.11.0; clave por `key` o `ITAD-API-Key`; OAuth 2.0 con PKCE solo para datos de la cuenta; `lookup/id/shop/{shopId}/v1`, `lookup/id/title/v1`, `games/search/v1`, `games/prices/v3` (1 a 200 UUID, `country` ISO alfa-2 por defecto US, `shops` como enteros separados por comas), `games/overview/v2`, `games/historylow/v1`, `games/history/v2`. `service/shops/v1` responde sin clave; `games/lookup/v1` sin clave da 403.
+- **ITAD2 (comprobado 02-11-2026, documentación):** 1000 peticiones por ventana de 5 minutos con el correo verificado; 429 con `Retry-After`; piden caché y no agotar la cuota; saltarse los límites puede acabar en bloqueo.
+- **ITAD3 (sin verificar):** `lookup/id/title/v1` encuentra los juegos de Epic, Ubisoft y EA con el título de la tienda en una proporción útil; la documentación avisa de que solo hay coincidencia exacta tras un preproceso.
+- **ITAD4 (formato comprobado 02-11-2026 en páginas de producto; respuesta de la API sin verificar):** Steam se identifica como `app/<appid>` y GOG con el ID de producto (1512372112). Que `lookup/id/shop/35/v1` acepte ese ID de GOG no se ha podido probar sin clave.
+- **ITAD5 (comprobado 02-11-2026, páginas de producto):** para Epic, EA y Ubisoft IsThereAnyDeal guarda ID que no son los nuestros (oferta o *slug* de Epic; `Origin.OFR.…` y `OFB-EAST:…` en EA; 24 hexadecimales en Ubisoft). Si una tienda resulta dar un ID compatible (por ejemplo, el `originOfferId` de EA de la 82), se añade como fuente por ID en su propia decisión.
+- **ITAD6 (sin verificar):** `prices/v3` sin `deals` devuelve todas las tiendas con precio y no solo las ofertas; `historyLow` trae `all`; `amountInt` está en unidades menores; la moneda la decide el país (ES → EUR).
+- **ITAD7 (sin verificar):** formato de la clave; patrón permisivo.
+- **ITAD8 (comprobado 02-11-2026, sin clave):** `appdetails?appids=220&cc=es&filters=price_overview` da el precio de Steam en EUR; `api.gog.com/products/1512372112/prices?countryCode=ES` da precios base y final en EUR y USD. Ninguna está documentada como API pública estable.
+- **ITAD9 (comprobado 02-11-2026, condiciones de la documentación):** uso comercial permitido si la aplicación es pública y uso personal permitido; atribución recomendada, no obligatoria; prohibido alterar los datos (incluidas las etiquetas de afiliado), dar a entender afiliación, competir con IsThereAnyDeal o ayudar a un competidor; acceso revocable. No dicen nada de aplicaciones abiertas con la clave de cada usuario (punto 13).
+- **ITAD10 (sin verificar):** `IWishlistService/GetWishlist` con el SteamID de un perfil público, sin clave; la prueba con un perfil ajeno devolvió `response` vacío, sin poder distinguir lista oculta de clave necesaria.
+- **ITAD11 (comprobado 02-11-2026):** IsThereAnyDeal cubre las cinco tiendas (IDs 61, 35, 16, 62 y 52); Ubisoft Store tenía 0 ofertas registradas ese día.
+
+**Motivo:** IsThereAnyDeal cubre ya las cinco tiendas con una API oficial, histórico incluido, así que los precios directos no hacen falta y el contrato reservado puede esperar sin cambios. Un paquete con las reglas de un conector aísla la parte frágil y la deja comprobable con respuestas grabadas, sin tocar el contrato de las tiendas. Consultar solo lo que el usuario mira respeta el invariante 9 en su espíritu (sale lo mínimo, y solo hacia el servicio que él configuró) y deja la cuota muy por debajo del límite. Emparejar por ID de tienda donde coincide y por título exacto donde no, con conflicto visible y «No es este juego», sigue el criterio conservador de la 20. Alternativas descartadas: precios directos de cada tienda (sin histórico, cinco vías que mantener, Epic no oficial y Ubisoft y EA inexistentes; la 24 ya los dejaba para lo no cubierto); una clave del proyecto en el repositorio (31); OAuth de IsThereAnyDeal para todo (solo hace falta para la lista de espera; la clave basta para precios); sincronización periódica de toda la biblioteca (más datos fuera y más cuota sin necesidad); *webhooks* (exigen exponer el equipo a internet, 7); leer IsThereAnyDeal con `games/overview/v2` (solo la mejor oferta, y el comparador necesita todas); poner IsThereAnyDeal como un `StoreConnector` más (no tiene biblioteca, escaneo ni acciones, y ensuciaría `StoreId`).
+
+**Consecuencias:**
+
+- Contrato nuevo `PriceService` en `contracts` (aditivo); `PriceProvider` y `capabilities.price` intactos; `contractVersion` sigue en 1. Fila nueva en la tabla de dependencias de la 38.
+- El motor de asistentes deja de ser solo de tiendas: servirá también para RAWG e IGDB cuando lleguen.
+- Migración `000N_prices` con copia previa; la caché de precios no es dato del usuario, la lista de seguimiento sí.
+- Ludiary envía a IsThereAnyDeal ID y títulos de los juegos consultados: el asistente lo dice y la guía de privacidad también.
+- Dependencia de un tercero que puede revocar el acceso: si lo hace, el comparador muestra el error y lo guardado, y el resto de la aplicación sigue igual.
+- El `documentalista` escribe la guía para crear la clave (con capturas), la nota de privacidad y el aviso de no afiliación; el `tester`, las respuestas y la prueba del punto 11; el `auditor` revisa diseño y código.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -6298,6 +6505,7 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 87 (importar colecciones de Steam): punto 11 aplicado por defecto con (a) en todo (favoritos de Steam como favoritos de Ludiary, ocultos ignorados y contados, repetir por nombre sin migración, botón en Colecciones, resumen previo, destino colecciones, sin colecciones vacías); el usuario puede cambiarlo, en especial 11.1 (que el punto 13 limita a la cuenta verificada) y 11.2. Revisión del `auditor` sobre el diseño incorporada (punto 13); falta la del código y la prueba manual (punto 12) para cerrar SC2 a SC4 y SC6. Va después de cerrar el código de la 85. **Revisada en la 88** (2-11-2026): 11.3 resuelto con (b); su botón, su diálogo y su ruta se retiran; su prueba manual la sustituye la de la 88.
 - Decisión 88 (colecciones de Steam que se refrescan solas): punto 14 aplicado por defecto con (a) salvo 14.3, que pasa a (b) (interruptor encendido, favoritos sin verificar con ajuste apagado, las importadas con la 87 se quedan como propias, colecciones sin verificar traídas con aviso, espejo de solo lectura, apagar borra los espejos); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 15, sin críticos). Falta el código, su revisión y la prueba manual (punto 12) para cerrar SC10 (y SC2 a SC4 y SC6 de la 87). La página de la tienda (`Store.tsx`) recibe los espejos como colecciones normales con `source`; coordinarlo con su tarea.
 - Transversal, fuera de la 87 (hallazgo del `auditor`, 2-11-2026): `toCoreError` (`packages/core/src/errors.ts`) copia `e.message`, y los `SyntaxError` de `JSON.parse` y otros errores de análisis citan trozos de la entrada. Revisar en **todos** los conectores que ningún error con texto de ficheros o respuestas de tiendas llegue a registros o respuestas (mensaje fijo, sin `cause`), y si `toCoreError` debe dejar de copiar `e.message`.
+- Decisión 86 (comparador de precios): puntos 12.1 a 12.7 abiertos para el usuario, con la recomendación del arquitecto; antes de implementar, el usuario escribe a `api@isthereanydeal.com` (punto 13) y el `auditor` revisa el diseño. La prueba manual (punto 11) cierra ITAD3, ITAD4, ITAD6 e ITAD7; ITAD10 solo si se elige 12.1 (c).
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
