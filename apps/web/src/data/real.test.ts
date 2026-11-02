@@ -112,23 +112,24 @@ describe("real client: what the server serves", () => {
 });
 
 describe("real client: point B, the rest comes from the simulator", () => {
-  it("delegates other stores' wizards, services, collections, backups and logs without touching the server", async () => {
+  it("delegates other stores' wizards without touching the server; services are empty and simulated-only actions are refused", async () => {
     const { http, log } = fakeHttp(() => []);
     const sim = createMockApi(memory());
-    const names = ["getServices", "startWizard", "submitWizard", "cancelWizard", "disconnect", "createBackup", "exportLogs", "simulateExpiredSession"] as const;
+    const names = ["startWizard", "submitWizard", "cancelWizard", "disconnect"] as const;
     for (const name of names) vi.spyOn(sim as LudiaryApi, name);
     const api = createRealApi(http, sim, null);
     const epic = { kind: "service", service: "rawg" } as const;
-    await api.getServices();
+    expect(await api.getServices()).toEqual([]);
     await api.startWizard(epic);
     await api.submitWizard(epic, { kind: "continue" });
     await api.cancelWizard(epic);
     await api.disconnect(epic);
-    await api.createBackup();
-    await api.exportLogs();
-    await api.simulateExpiredSession("ubisoft");
+    await expect(api.createBackup()).rejects.toBeInstanceOf(ApiError);
+    await expect(api.exportLogs()).rejects.toBeInstanceOf(ApiError);
+    await expect(api.simulateExpiredSession("ubisoft")).rejects.toBeInstanceOf(ApiError);
+    await api.revokeSessions();
     for (const name of names) expect(sim[name], name).toHaveBeenCalled();
-    expect(log).toEqual([]);
+    expect(log).toEqual(["POST /api/sessions/revoke {}"]);
   });
 
   it("settings: server fields from the server, the rest from the simulator, and each patch goes to its owner", async () => {

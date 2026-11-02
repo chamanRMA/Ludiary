@@ -81,7 +81,12 @@ function compose(serverRole: boolean): RuntimeDeps {
   const localAppData = env["LOCALAPPDATA"];
   const embeddedLogin =
     localAppData && isAbsolute(localAppData)
-      ? new HelperProcessEmbeddedLogin({ helperPath: trayHelper, tmpRoot: join(localAppData, "Ludiary", "tmp"), env })
+      ? new HelperProcessEmbeddedLogin({
+          helperPath: trayHelper,
+          tmpRoot: join(localAppData, "Ludiary", "tmp"),
+          env,
+          log: (code) => createFileLogger(platform.dataDir, "server")("warn", code), // ADR 80, A3: the code only
+        })
       : undefined;
   // Only the server role sweeps leftover login profiles: the launcher must never touch one that is in use.
   if (serverRole) embeddedLogin?.start();

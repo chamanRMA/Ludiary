@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "../app/router";
 import { STORE_BRAND, STORE_IDS } from "../app/stores";
 import { api } from "../data/api";
-import { useQuery } from "../data/hooks";
+import { useQueryState } from "../data/hooks";
 import { filterGames } from "../data/library";
-import { FilterChip as Chip, PageTitle } from "../components/bits";
+import { FilterChip as Chip, LoadError, PageTitle } from "../components/bits";
 import { GameGrid } from "../components/GameCard";
 import ui from "../styles/ui.module.css";
 
@@ -16,11 +16,11 @@ export function Library() {
   const { t } = useTranslation();
   const { search } = useLocation();
   const query = new URLSearchParams(search).get("q") ?? "";
-  const library = useQuery(() => api.getLibrary());
+  const { data: library, error } = useQueryState(() => api.getLibrary());
   const [store, setStore] = useState<StoreId | "local" | "all">("all");
   const [install, setInstall] = useState<Install>("all");
   const [favorite, setFavorite] = useState(false);
-  if (!library) return null;
+  if (!library) return <LoadError error={error} />;
 
   const shown = filterGames(library, {
     ...(store === "all" ? {} : { store }),

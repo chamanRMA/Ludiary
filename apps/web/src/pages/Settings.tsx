@@ -16,8 +16,10 @@ import { TargetRow } from "../components/TargetRow";
 import ui from "../styles/ui.module.css";
 import styles from "./settings.module.css";
 
-export const SETTINGS_SECTIONS = ["general", "stores", "services", "folders", "backups", "privacy", "about"] as const;
-export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+const ALL_SECTIONS = ["general", "stores", "services", "folders", "backups", "privacy", "about"] as const;
+export type SettingsSection = (typeof ALL_SECTIONS)[number];
+// Services and backups only exist in the simulator for now: the real app must not suggest them (ADR 57).
+export const SETTINGS_SECTIONS: readonly SettingsSection[] = isSimulated ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s !== "services" && s !== "backups");
 const isSection = (v: string): v is SettingsSection => (SETTINGS_SECTIONS as readonly string[]).includes(v);
 
 function Switch({ checked, onChange, label }: { checked: boolean; onChange(v: boolean): void; label: string }) {
@@ -127,12 +129,16 @@ function General() {
           onChange={setThemePref}
         />
       </Row>
-      <Row title={t("settings.general.autostart")} hint={t("settings.general.autostartHint")}>
-        <Switch checked={settings.autostart} label={t("settings.general.autostart")} onChange={(autostart) => void update({ autostart })} />
-      </Row>
-      <Row title={t("settings.general.syncOnStart")} hint={t("settings.general.syncOnStartHint")}>
-        <Switch checked={settings.syncOnStart} label={t("settings.general.syncOnStart")} onChange={(syncOnStart) => void update({ syncOnStart })} />
-      </Row>
+      {isSimulated && (
+        <>
+          <Row title={t("settings.general.autostart")} hint={t("settings.general.autostartHint")}>
+            <Switch checked={settings.autostart} label={t("settings.general.autostart")} onChange={(autostart) => void update({ autostart })} />
+          </Row>
+          <Row title={t("settings.general.syncOnStart")} hint={t("settings.general.syncOnStartHint")}>
+            <Switch checked={settings.syncOnStart} label={t("settings.general.syncOnStart")} onChange={(syncOnStart) => void update({ syncOnStart })} />
+          </Row>
+        </>
+      )}
       <Row title={t("settings.general.repeat")} hint={t("settings.general.repeatHint")}>
         <button
           type="button"
@@ -155,7 +161,7 @@ function Stores() {
     <>
       <p className={ui.muted}>{t("settings.stores.intro")}</p>
       <div>{stores?.map((s) => <TargetRow key={s.store} store={s} />)}</div>
-      {epic?.connection === "connected" && (
+      {isSimulated && epic?.connection === "connected" && (
         <Row title={t("settings.stores.simulate")} hint={t("settings.stores.simulateHint")}>
           <button type="button" className={ui.btn} onClick={() => void mutate(api.simulateExpiredSession("epic")).then(() => setDone(true))}>
             {t("settings.stores.simulateButton")}
@@ -299,12 +305,19 @@ function Privacy() {
           <li key={k}>{t(`settings.privacy.${k}`)}</li>
         ))}
       </ul>
-      <Row title={t("settings.privacy.export")} hint={t("settings.privacy.exportHint")}>
-        <button type="button" className={ui.btn} onClick={() => void mutate(api.exportLogs()).then(() => setExported(true))}>
-          {t("settings.privacy.exportButton")}
+      {isSimulated && (
+        <Row title={t("settings.privacy.export")} hint={t("settings.privacy.exportHint")}>
+          <button type="button" className={ui.btn} onClick={() => void mutate(api.exportLogs()).then(() => setExported(true))}>
+            {t("settings.privacy.exportButton")}
+          </button>
+        </Row>
+      )}
+      <SimNote show={exported} />
+      <Row title={t("settings.privacy.revoke")} hint={t("settings.privacy.revokeHint")}>
+        <button type="button" className={ui.btn} onClick={() => window.confirm(t("settings.privacy.revokeConfirm")) && void mutate(api.revokeSessions())}>
+          {t("settings.privacy.revokeButton")}
         </button>
       </Row>
-      <SimNote show={exported} />
     </>
   );
 }
@@ -317,7 +330,7 @@ function About() {
       <p>{t("settings.about.what")}</p>
       <p className={ui.muted}>{t("settings.about.license")}</p>
       <p className={ui.muted}>{t("settings.about.affiliation")}</p>
-      {settings && (
+      {isSimulated && settings && (
         <Row title={t("settings.about.autoUpdate")} hint={t("settings.about.autoUpdateHint")}>
           <Switch checked={settings.autoUpdate} label={t("settings.about.autoUpdate")} onChange={(autoUpdate) => void update({ autoUpdate })} />
         </Row>

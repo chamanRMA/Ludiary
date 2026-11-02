@@ -3,9 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Link } from "../app/Link";
 import { STORE_BRAND, isStoreId } from "../app/stores";
 import { api } from "../data/api";
-import { mutate, useQuery } from "../data/hooks";
+import { mutate, useQueryState } from "../data/hooks";
 import { filterGames } from "../data/library";
-import { cx, FilterChip, PageTitle, relativeTime, StoreBadge } from "../components/bits";
+import { cx, FilterChip, LoadError, PageTitle, relativeTime, StoreBadge } from "../components/bits";
 import { ConnectWizard } from "../components/ConnectWizard";
 import { GameGrid } from "../components/GameCard";
 import { StoreNotices } from "../components/StoreNotices";
@@ -17,14 +17,14 @@ type View = "all" | "installed" | "notInstalled" | "favorites";
 
 export function Store({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
-  const library = useQuery(() => api.getLibrary());
-  const stores = useQuery(() => api.getStores());
+  const { data: library, error: libraryError } = useQueryState(() => api.getLibrary());
+  const { data: stores, error: storesError } = useQueryState(() => api.getStores());
   const [view, setView] = useState<View>("all");
   const [reconnecting, setReconnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   if (!isStoreId(id)) return <NotFound />;
   const status = stores?.find((s) => s.store === id);
-  if (!library || !status) return null;
+  if (!library || !status) return <LoadError error={libraryError ?? storesError} />;
 
   const name = STORE_BRAND[id].name;
   const all = filterGames(library, { store: id });

@@ -302,6 +302,12 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     return reply.code(204).send();
   });
 
+  // ADR 54, 67: revokes every browser session, the caller's included. Default level (session+key).
+  app.post("/api/sessions/revoke", { schema: { querystring: noQuery } }, async (_req, reply) => {
+    deps.sessions.revokeAll();
+    return reply.code(204).send();
+  });
+
   app.get("/api/settings", { schema: { querystring: noQuery, response: { 200: SettingsSchema } } }, async () =>
     core.getSettings(),
   );

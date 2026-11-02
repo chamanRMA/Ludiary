@@ -149,7 +149,7 @@
   "settings.general.syncOnStart": "Sincronizar al arrancar",
   "settings.general.syncOnStartHint": "Actualiza las tiendas cada vez que se abre Ludiary.",
   "settings.general.repeat": "Asistente de primer arranque",
-  "settings.general.repeatHint": "Vuelve a pasar por el idioma, la detección, las tiendas y los servicios.",
+  "settings.general.repeatHint": "Vuelve a pasar por el idioma, la detección y las tiendas.",
   "settings.general.repeatButton": "Repetir el asistente",
   "settings.stores.intro": "Estado de cada tienda. Conectar o reconectar abre el mismo asistente del primer arranque.",
   "settings.stores.simulate": "Simulación",
@@ -270,5 +270,10 @@
   "wizard.embedded.busy": "Ya hay una ventana de inicio de sesión abierta. Ciérrala y vuelve a intentarlo.",
   "wizard.embedded.runtimeMissing": "Falta Microsoft Edge WebView2 en este equipo. Instálalo desde https://developer.microsoft.com/microsoft-edge/webview2/ y vuelve a intentarlo.",
   "wizard.embedded.unavailable": "Este inicio de sesión necesita Ludiary en el escritorio de Windows.",
-  "wizard.paste.storeError": "La tienda ha respondido con un error en lugar del código: inicia sesión en su web en tu navegador y vuelve a abrir el enlace."
+  "wizard.paste.storeError": "La tienda ha respondido con un error en lugar del código: inicia sesión en su web en tu navegador y vuelve a abrir el enlace.",
+  "common.retry": "Reintentar",
+  "settings.privacy.revoke": "Sesiones del navegador",
+  "settings.privacy.revokeHint": "Cierra la sesión de todos los navegadores abiertos en Ludiary, también este. Vuelve a abrirlo desde el acceso directo.",
+  "settings.privacy.revokeButton": "Cerrar todas las sesiones del navegador",
+  "settings.privacy.revokeConfirm": "¿Cerrar todas las sesiones del navegador? Tendrás que abrir Ludiary de nuevo desde el acceso directo."
 }
