@@ -4,18 +4,18 @@ import { useTranslation } from "react-i18next";
 import { Link } from "../app/Link";
 import { STORE_BRAND } from "../app/stores";
 import { useLaunch } from "../app/useLaunch";
-import { api } from "../data/api";
-import { useQuery } from "../data/hooks";
+import { api, isSimulated } from "../data/api";
+import { useQueryState } from "../data/hooks";
 import { isUnsynced, primaryAction } from "../data/library";
-import { cx, Cover, formatHours, PageTitle, relativeTime } from "../components/bits";
+import { cx, Cover, formatHours, LoadError, PageTitle, relativeTime } from "../components/bits";
 import ui from "../styles/ui.module.css";
 import { NotFound } from "./NotFound";
 
 export function Game({ id }: { id: string }) {
   const { t, i18n } = useTranslation();
-  const game = useQuery(() => api.getGame(id), [id]);
+  const { data: game, error } = useQueryState(() => api.getGame(id), [id]);
   const { launching, message, setMessage, play } = useLaunch();
-  if (game === undefined) return null;
+  if (game === undefined) return <LoadError error={error} />;
   if (game === null) return <NotFound />;
 
   const primary = game.properties.find((p) => p.installed) ?? game.properties[0];
@@ -50,7 +50,7 @@ export function Game({ id }: { id: string }) {
                 {t("common.play")}
               </button>
             ) : (
-              <button type="button" className={ui.btn} onClick={() => setMessage({ text: t("game.openStoreSimulated", { store: storeName }), error: false })}>
+              isSimulated && <button type="button" className={ui.btn} onClick={() => setMessage({ text: t("game.openStoreSimulated", { store: storeName }), error: false })}>
                 {t("common.openInStore", { store: storeName })}
               </button>
             )}

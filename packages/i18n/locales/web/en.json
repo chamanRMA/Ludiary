@@ -149,7 +149,7 @@
   "settings.general.syncOnStart": "Sync on startup",
   "settings.general.syncOnStartHint": "Refreshes the stores every time Ludiary opens.",
   "settings.general.repeat": "First-run wizard",
-  "settings.general.repeatHint": "Go through language, detection, stores and services again.",
+  "settings.general.repeatHint": "Go through language, detection and stores again.",
   "settings.general.repeatButton": "Repeat the wizard",
   "settings.stores.intro": "Status of each store. Connecting or reconnecting opens the same wizard as the first run.",
   "settings.stores.simulate": "Simulation",
@@ -270,5 +270,10 @@
   "wizard.embedded.busy": "A sign-in window is already open. Close it and try again.",
   "wizard.embedded.runtimeMissing": "Microsoft Edge WebView2 is missing on this PC. Install it from https://developer.microsoft.com/microsoft-edge/webview2/ and try again.",
   "wizard.embedded.unavailable": "This sign-in needs Ludiary on the Windows desktop.",
-  "wizard.paste.storeError": "The store answered with an error instead of the code: sign in on its website in your browser and open the link again."
+  "wizard.paste.storeError": "The store answered with an error instead of the code: sign in on its website in your browser and open the link again.",
+  "common.retry": "Retry",
+  "settings.privacy.revoke": "Browser sessions",
+  "settings.privacy.revokeHint": "Signs out every browser that is open on Ludiary, this one included. Open it again from the shortcut.",
+  "settings.privacy.revokeButton": "Sign out all browser sessions",
+  "settings.privacy.revokeConfirm": "Sign out all browser sessions? You will need to open Ludiary again from the shortcut."
 }

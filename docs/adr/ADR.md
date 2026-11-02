@@ -5294,6 +5294,17 @@ Sin críticos. Lo que sigue prevalece sobre los puntos 2 a 9 donde no coincida.
 - **Prueba manual** (revisa los pasos 1 a 3 del punto 10): con la sesión de ea.com abierta en el navegador (con Google), abrir el enlace, copiar y pegar → «Conectado como <nombre>» (EAA13, EAA8); sin sesión, pegar el JSON de error → mensaje `storeError`. Los pasos 4 a 10 siguen; el 10 (regresión de Ubisoft) también, por el cambio del auxiliar ya hecho.
 - **Supuesto nuevo EAA13 (sin verificar con cuenta real):** con la sesión iniciada en ea.com en el navegador del usuario, esa URL muestra en la pestaña el JSON con `access_token`. Lutris usa la misma URL con las cookies de la sesión. EAA1 (recorrido de la ventana) y EAA3 y EAA4 (pintado en WebView2 y `login_check`) dejan de aplicar a EA.
 
+#### 15. Revisión del auditor sobre el código de las decisiones 80 y 82 (26 de octubre de 2026)
+
+Sin críticos ni altos. Lo probado por el usuario el 23 y 24-10 se mantiene. Corregido:
+
+- **Medio. Registro de los errores de GraphQL de EA** (punto 5): se registraban hasta 200 caracteres del primer `message`, que puede repetir ID de ofertas o de la cuenta. Ahora solo `count` y un `code` (`extensions.code` o `classification` si cumple `^[A-Z_]{1,40}$`).
+- **Bajo. Tope del token** (revisa el `maxLength` 8192 del punto 14): `TOKEN_RE` pasa a `{64,4096}`, el límite de campos del núcleo (74); el campo ya usaba 4096.
+- **Bajo. `webview-cleanup-failed`** (80, punto 18 A3): el ejecutable pasa ya el registro al puerto `EmbeddedLogin`; solo se escribe el código.
+- **Bajo. Fallar cerrado ante un pánico** (80, punto 18 A1): la decisión de navegación cancela la navegación antes de propagar el pánico.
+- **Bajo. Portadas de EA:** el host real visto el 24-10-2026 es `app-images.ea.com` (además de `drop-assets.ea.com`); está en `mediaHosts` y en la CSP. EAA11 queda cerrado con ese host.
+- **Pendiente de decidir:** retirar el modo `document-json` del auxiliar, sin uso desde el punto 14 (no es explotable hoy: solo lo activa un conector del repositorio y los hosts siguen limitados a `authHosts`).
+
 #### Supuestos de la cuenta de EA (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
 
 - **EAA0 (punto 13):** EA no ofrece API oficial para listar la biblioteca de un usuario; todo lo de esta decisión va sobre API internas.

@@ -1,16 +1,16 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "../app/Link";
 import { api } from "../data/api";
-import { useQuery } from "../data/hooks";
-import { cx, Cover, PageTitle, relativeTime } from "../components/bits";
+import { useQueryState } from "../data/hooks";
+import { cx, Cover, LoadError, PageTitle, relativeTime } from "../components/bits";
 import { GameAction, GameGrid } from "../components/GameCard";
 import ui from "../styles/ui.module.css";
 
 export function Home() {
   const { t, i18n } = useTranslation();
-  const library = useQuery(() => api.getLibrary());
-  const stores = useQuery(() => api.getStores());
-  if (!library || !stores) return null;
+  const { data: library, error: libraryError } = useQueryState(() => api.getLibrary());
+  const { data: stores, error: storesError } = useQueryState(() => api.getStores());
+  if (!library || !stores) return <LoadError error={libraryError ?? storesError} />;
 
   const recent = [...library].filter((g) => g.lastPlayedAt).sort((a, b) => (b.lastPlayedAt ?? 0) - (a.lastPlayedAt ?? 0));
   const hero = recent.find((g) => g.installed);

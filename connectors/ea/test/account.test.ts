@@ -33,7 +33,7 @@ describe("wizard (ADR 82, point 2)", () => {
       bodyKey: "connectors.ea.login.body",
       url: "https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none",
       awaits: "input",
-      fields: [{ name: "token", labelKey: "connectors.ea.login.field", secret: true, paste: true, extract: "json-field:access_token", pattern: "^[A-Za-z0-9+/=_.-]{64,8192}$", maxLength: 4096 }],
+      fields: [{ name: "token", labelKey: "connectors.ea.login.field", secret: true, paste: true, extract: "json-field:access_token", pattern: "^[A-Za-z0-9+/=_.-]{64,4096}$", maxLength: 4096 }],
     });
     expect(CAPTURE_URL).toBe((step as { url: string }).url);
     expect(c.authHosts).toContain(new URL(CAPTURE_URL).hostname);
@@ -307,11 +307,14 @@ describe("listLibrary (ADR 82, points 4 to 6, and 13)", () => {
     expect(logged(r.ctx, "nameFallback")).toBe(1);
   });
 
-  it("GraphQL errors are logged by their first message only, trimmed", async () => {
-    const http = fakeHttp(() => ({ status: 200, body: { errors: [{ message: "Unknown argument \"limit\" on field ownedGameProducts" }] } }), { hosts: c.apiHosts });
+  it("GraphQL errors log a count and a short code, never the free message", async () => {
+    const message = "Unknown argument \"limit\" on offer 1234567";
+    const http = fakeHttp(() => ({ status: 200, body: { errors: [{ message, extensions: { code: "GRAPHQL_VALIDATION_FAILED" } }, { message }] } }), { hosts: c.apiHosts });
     const r = run({}, http);
     await expect(r.result).rejects.toMatchObject({ code: "store.unexpected-response" });
-    expect(JSON.stringify(r.ctx.logs)).toContain("Unknown argument");
+    const logs = JSON.stringify(r.ctx.logs);
+    expect(logs).not.toMatch(/Unknown argument|1234567/);
+    expect(logs).toMatch(/"count":2.*"code":"GRAPHQL_VALIDATION_FAILED"/);
   });
 
   it("an offer that does not come back makes it partial", async () => {

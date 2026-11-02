@@ -371,6 +371,13 @@ func (b *Browser) harden(ev Events) error {
 			if args == 0 {
 				return eFail
 			}
+			// Fail closed: a panic below must still cancel the navigation before Invoke's recover returns E_FAIL.
+			defer func() {
+				if p := recover(); p != nil {
+					putBool(args, slotNavStartPutCancel, true)
+					panic(p)
+				}
+			}()
 			uri := getString(args, slotNavStartGetUri)
 			var redirected int32
 			slot(args, slotNavStartGetRedirect).Call(args, uintptr(unsafe.Pointer(&redirected)))

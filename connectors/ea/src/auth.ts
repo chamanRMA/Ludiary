@@ -6,7 +6,7 @@ import { ConnectorError, makeSecret, type I18nKey, type Secret, type SyncContext
 export const CAPTURE_URL = "https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none";
 export const GRAPHQL_URL = "https://service-aggregation-layer.juno.ea.com/graphql";
 /** Accepted shape of the access token (assumption EAA5); the redactor's pattern is a superset of it. */
-export const TOKEN_RE = /^[A-Za-z0-9+/=_.-]{64,8192}$/;
+export const TOKEN_RE = /^[A-Za-z0-9+/=_.-]{64,4096}$/; // 4096: the core's field limit (ADR 74)
 /** Assumption EAA6: the token lives about 60 minutes; 10 minutes of margin. */
 export const TOKEN_TTL_MS = 50 * 60_000;
 
@@ -71,10 +71,12 @@ export class EaGraphql {
     const body = await res.json();
     const errors = isObject(body) ? body["errors"] : undefined;
     if (!isObject(body) || (Array.isArray(errors) ? errors.length > 0 : errors != null) || !isObject(body["data"])) {
-      // Schema validation messages (e.g. an unknown field) tell what changed at EA; no token or account data is in them.
+      // Counters and a short code only (ADR 82, point 5): the free message can echo offer or account ids.
       const first: unknown = Array.isArray(errors) ? errors[0] : undefined;
-      const msg = isObject(first) && typeof first["message"] === "string" ? first["message"].replace(/[^\x20-\x7e]/g, " ").slice(0, 200) : "";
-      this.log?.warn("EA graphql errors", { what, count: Array.isArray(errors) ? errors.length : 0, first: msg });
+      const ext = isObject(first) && isObject(first["extensions"]) ? first["extensions"] : {};
+      const raw = ext["code"] ?? ext["classification"];
+      const code = typeof raw === "string" && /^[A-Z_]{1,40}$/.test(raw) ? raw : "";
+      this.log?.warn("EA graphql errors", { what, count: Array.isArray(errors) ? errors.length : 0, code });
       throw new ConnectorError("store.unexpected-response", `${what} answer has errors or no data`);
     }
     return body["data"];

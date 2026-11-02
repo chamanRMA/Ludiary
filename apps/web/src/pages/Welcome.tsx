@@ -4,18 +4,19 @@ import { useTranslation } from "react-i18next";
 import { changeLocale, type UiLocale } from "../app/i18n";
 import { navigate } from "../app/router";
 import { STORE_BRAND } from "../app/stores";
-import { api } from "../data/api";
+import { api, isSimulated } from "../data/api";
 import { mutate, useQuery } from "../data/hooks";
 import { cx } from "../components/bits";
 import { TargetRow } from "../components/TargetRow";
 import ui from "../styles/ui.module.css";
 import styles from "./welcome.module.css";
 
-const STEPS = ["language", "detection", "stores", "services", "done"] as const;
-type StepName = (typeof STEPS)[number];
+type StepName = "language" | "detection" | "stores" | "services" | "done";
+// Services are simulated until the server has them: the real app does not offer them.
+const STEPS: readonly StepName[] = isSimulated ? ["language", "detection", "stores", "services", "done"] : ["language", "detection", "stores", "done"];
 const DETECTION: readonly DetectionMode[] = ["auto-and-manual", "manual-only", "later"];
 const WIZARD_STORES: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
-const WIZARD_SERVICES: readonly ServiceId[] = ["rawg", "igdb"]; // ADR 69: IsThereAnyDeal does not appear until phase 3
+const WIZARD_SERVICES: readonly ServiceId[] = isSimulated ? ["rawg", "igdb"] : []; // ADR 69: IsThereAnyDeal does not appear until phase 3
 
 /** First-run wizard (ADR 69): five steps, every one skippable, and "Skip all". */
 export function Welcome() {

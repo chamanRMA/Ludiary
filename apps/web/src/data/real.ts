@@ -33,7 +33,7 @@ import { ApiError, type Http } from "./http";
  * in REAL_WIZARD_STORES (Steam, GOG, Epic, Ubisoft and EA).
  *
  * Delegated to `sim`, method by method, and never stored in the server: the same wizard methods for the other
- * stores and services, `getServices`, collections, backups, log export, `simulateExpiredSession`, and the settings the
+ * stores and services and the settings the
  * server does not have (`autostart`, `syncOnStart`, and `backups`/`autoUpdate` while the server
  * leaves them out of SettingsDto).
  *
@@ -60,6 +60,7 @@ function sessionStore(): WizardIdStorage | null {
 /** Stores whose wizard is served by the real server (ADR 77 point 8). */
 export const REAL_WIZARD_STORES: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
 const realStore = (t: WizardTarget): StoreId | null => (t.kind === "store" && REAL_WIZARD_STORES.includes(t.store) ? t.store : null);
+const unavailable = (): Promise<never> => Promise.reject(new ApiError(501, "not-implemented", "errors.generic"));
 const expired = (): ApiError => new ApiError(404, "not-found", "wizard.expired");
 
 export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStorage | null = sessionStore()): LudiaryApi {
@@ -251,13 +252,15 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       return track(res.response);
     },
 
-    // ---- Simulated (point B): same behavior as before, nothing is stored in the server
-    getServices: () => sim.getServices(),
+    // ---- Not available yet: the screens hide these in the real app, so nothing is simulated here.
+    // shortcut: no services on the server yet (ADR 72 point B); an empty list, not the simulator's sample states.
+    getServices: async () => [],
     // shortcut: no collections on the server yet; the simulator's samples would look like the user's own, so none.
     getCollections: async () => [],
-    createBackup: () => sim.createBackup(),
-    exportLogs: () => sim.exportLogs(),
-    simulateExpiredSession: (store) => sim.simulateExpiredSession(store),
+    revokeSessions: async () => void (await http.post("/api/sessions/revoke", {})),
+    createBackup: unavailable,
+    exportLogs: unavailable,
+    simulateExpiredSession: unavailable,
   };
   return api;
 }

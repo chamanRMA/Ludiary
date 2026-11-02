@@ -196,6 +196,22 @@ describe("library operation: who, when and in which order", () => {
     expect(s.calls.library).toBe(2); // automatic respects the connector's floor
   });
 
+  it("completing the first run again does not bypass the manual floor of 1 minute", async () => {
+    const { h, s } = await lib();
+    await h.core.completeOnboarding("manual-only");
+    await h.core.whenIdle();
+    expect(s.calls.library).toBe(1);
+    h.clock.time += 30_000;
+    await h.core.resetOnboarding();
+    await h.core.completeOnboarding("manual-only");
+    await h.core.whenIdle();
+    expect(s.calls.library).toBe(1); // 30 s later: refused
+    h.clock.time += 31_000;
+    await h.core.completeOnboarding("manual-only");
+    await h.core.whenIdle();
+    expect(s.calls.library).toBe(2);
+  });
+
   it("opening the web syncs only when the last good one is older than 6 hours", async () => {
     const { h, s } = await lib();
     await syncLibrary(h, "open");

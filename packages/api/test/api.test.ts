@@ -440,3 +440,19 @@ describe("routes against the fake facade (ADR 72, point 5)", () => {
     expect((await pick({ path: "C:\\" })).status).toBe(400);
   });
 });
+
+describe("revoke all browser sessions (ADR 54, 67)", () => {
+  it("needs cookie plus origin key and signs out every session, the caller's included", async () => {
+    const { port } = await start();
+    const a = await login(port);
+    const b = await login(port);
+    expect((await send(port, "/api/sessions/revoke", { method: "POST", body: {}, headers: { cookie: a.cookie } })).status).toBe(401);
+    expect((await send(port, "/api/library", { headers: b.auth })).status).toBe(200); // the refused call revoked nothing
+    expect((await send(port, "/api/sessions/revoke", { method: "POST", body: {}, headers: a.auth })).status).toBe(204);
+    for (const s of [a, b]) {
+      const res = await send(port, "/api/library", { headers: s.auth });
+      expect(res.status).toBe(401);
+      expect(res.json()).toEqual({ error: "session_required" });
+    }
+  });
+});

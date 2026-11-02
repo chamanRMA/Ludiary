@@ -2,8 +2,11 @@ import type { TFunction } from "i18next";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { GameSummaryDto, StoreId } from "@ludiary/api-contract";
+import { errorText } from "../app/errors";
 import { STORE_BRAND } from "../app/stores";
 import { isSimulated } from "../data/api";
+import { ApiError } from "../data/http";
+import { refresh } from "../data/hooks";
 import ui from "../styles/ui.module.css";
 
 export const cx = (...names: (string | false | undefined)[]): string => names.filter(Boolean).join(" ");
@@ -70,6 +73,20 @@ export function Cover({ game, height = 190, bare }: { game: Pick<GameSummaryDto,
 }
 
 /** Tells the user a button only touched the simulated state. */
+/** Shared load-failure state: message plus retry. A 401 has its own notice (AuthNotice), so it renders nothing here. */
+export function LoadError({ error }: { error: unknown }) {
+  const { t } = useTranslation();
+  if (error === undefined || (error instanceof ApiError && error.status === 401)) return null;
+  return (
+    <div className={ui.error} role="alert">
+      <p>{errorText(t, error)}</p>
+      <button type="button" className={ui.btn} onClick={refresh}>
+        {t("common.retry")}
+      </button>
+    </div>
+  );
+}
+
 export function SimNote({ show }: { show: boolean }) {
   const { t } = useTranslation();
   // Not only in the simulator: the real client still delegates some actions to it, and they must say so (ADR 74 point 7).

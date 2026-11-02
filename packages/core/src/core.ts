@@ -158,7 +158,9 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     async completeOnboarding(mode) {
       await completeOnboarding(env, mode);
       // A store connected during the first run could not sync before this point (ADR 74).
-      await sync.schedule({ force: true, operations: ["library", "scan"] });
+      // The library goes through the manual floor (ADR 50): reset + complete in a loop must not bypass it. The scan is not floored.
+      await sync.schedule({ force: false, trigger: "manual", operations: ["library"] });
+      await sync.schedule({ force: true, operations: ["scan"] });
     },
     resetOnboarding: () => resetOnboarding(env),
 

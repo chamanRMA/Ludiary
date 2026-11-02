@@ -79,6 +79,8 @@ export interface LudiaryApi {
   scan(): Promise<void>;
   /** Launches a stored game by id (ADR 72, invariant 3). `propertyId` picks one of its properties; `action` defaults to play (ADR 74). */
   launchGame(id: string, propertyId?: string, action?: LaunchActionDto): Promise<LaunchResponseDto>;
+  /** Revokes every browser session, this one included (ADR 54). The next request answers 401. */
+  revokeSessions(): Promise<void>;
   createBackup(): Promise<void>;
   exportLogs(): Promise<void>;
   /** Simulator only: lets the Epic "expired session" screens be reached. Goes away with the real API. */
