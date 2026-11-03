@@ -1,6 +1,6 @@
 // Domain types of the core (ADR 72, 74). Plain data; no I/O. The API layer maps them to DTOs.
 import type { Label } from "./labels";
-import type { ConnectorErrorCode, EntryMedia, ExternalIds, GameAction, I18nKey, I18nParams, StoreId } from "@ludiary/contracts";
+import type { ConnectorErrorCode, EntryMedia, ExternalIds, GameAction, I18nKey, I18nParams, PriceServiceId, StoreId } from "@ludiary/contracts";
 
 export type DetectionMode = "auto-and-manual" | "manual-only" | "later";
 export type SyncOperation = "library" | "scan";
@@ -330,6 +330,60 @@ export interface LaunchTarget {
   property: PropertyRecord;
   /** null when the property is not installed on this device. */
   installation: InstallationRecord | null;
+}
+
+// ---- Prices (ADR 86, point 8). Cache and links are not user data; the watch list is.
+export type PriceLinkStatus = "found" | "not-found" | "conflict" | "excluded";
+export type PriceLinkSource = "steam" | "gog" | "title";
+export type PriceShops = "ludiary" | "all";
+export type PriceKind = "game" | "dlc" | "package";
+
+/** One row per (canonical game, service). `serviceGameId` is null unless status is 'found'. */
+export interface PriceLinkRecord {
+  canonicalGameId: string;
+  service: PriceServiceId;
+  serviceGameId: string | null;
+  status: PriceLinkStatus;
+  source: PriceLinkSource | null;
+  inputsHash: string;
+  lookedUpAt: number;
+}
+
+/** A deal after the core validated it (ADR 86, point 7). `url` is absent when its host is not in linkHosts. */
+export interface PriceDealRecord {
+  shop: { storeId: StoreId | null; name: string };
+  amountMinor: number;
+  regularMinor: number;
+  currency: string;
+  cut: number;
+  voucher: string | null;
+  url?: string;
+  expiresAt?: number;
+}
+
+export interface PriceSnapshotData {
+  deals: readonly PriceDealRecord[];
+  historyLow: { amountMinor: number; currency: string } | null;
+}
+
+/** Cache row, keyed by (service, serviceGameId, country, shops) for the only user (ADR 86, point 15, M4). */
+export interface PriceSnapshotRecord {
+  service: PriceServiceId;
+  serviceGameId: string;
+  country: string;
+  shops: PriceShops;
+  data: PriceSnapshotData;
+  fetchedAt: number;
+}
+
+/** Follow list entry. Title and type come from the server-held search result, never from the web (point 15, M6). */
+export interface PriceWatchRecord {
+  id: string;
+  service: PriceServiceId;
+  serviceGameId: string;
+  title: string;
+  type: PriceKind | null;
+  addedAt: number;
 }
 
 /** Redacted structured log; messages in English, never paths, names or secrets (ADR 59). */

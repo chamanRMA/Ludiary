@@ -246,7 +246,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     ]),
   );
   const services = new Map<ServiceId, ServiceStatusDto>(
-    (Object.keys(SERVICE_META) as ServiceId[]).map((service) => [service, { service, ...SERVICE_META[service], configured: false }]),
+    (Object.keys(SERVICE_META) as ServiceId[]).map((service) => [service, { service, ...SERVICE_META[service], configured: false, status: "disconnected" as const }]),
   );
   const sessions = new Map<string, number>(); // wizard target -> step index. Never holds values.
   const maintenance: MaintenanceDto = { lastBackupAt: null, lastScanAt: now() - HOUR, lastSyncAt: now() - 5 * 60_000 };
@@ -292,7 +292,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       if (store && (installedOnly || !label)) delete store.accountLabel;
     } else {
       const current = services.get(target.service);
-      if (current) services.set(target.service, { ...current, configured: true });
+      if (current) services.set(target.service, { ...current, configured: true, status: "connected" });
     }
     return { kind: "done", ...(label && !installedOnly ? { accountLabel: label } : {}) };
   }
@@ -361,7 +361,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
         stores.set(target.store, { store: target.store, ...meta, sync: [] });
       } else {
         const current = services.get(target.service);
-        if (current) services.set(target.service, { ...current, configured: false });
+        if (current) services.set(target.service, { ...current, configured: false, status: "disconnected" });
       }
     },
 
