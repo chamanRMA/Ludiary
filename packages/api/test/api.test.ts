@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createLocalServer, type LocalServer, type LocalServerDeps } from "../src/server";
 import { SessionStore } from "../src/sessions";
 import { spaCsp, type WebAsset } from "../src/web";
-import { FakeCoreError, WIZARD_ROUTES, fakeCore, send } from "./helpers";
+import { FakeCoreError, PRICE_ROUTES, WIZARD_ROUTES, fakeCore, send } from "./helpers";
 
 const KEY = randomBytes(32);
 const HEADER = "x-ludiary-origin-key";
@@ -139,6 +139,7 @@ describe("access levels (ADR 67, 72)", () => {
       ["PATCH", "/api/games/g1"], ["GET", "/api/collections"], ["POST", "/api/collections"], ["PATCH", "/api/collections/c1"], ["DELETE", "/api/collections/c1"],
       ["PATCH", "/api/scan-roots/r1"], ["DELETE", "/api/scan-roots/r1"], ["POST", "/api/scan-roots/pick"],
       ...WIZARD_ROUTES,
+      ...PRICE_ROUTES,
     ];
     for (const [method, path] of routes) {
       const res = await send(port, path, { method, headers: { cookie }, ...(method === "GET" || method === "DELETE" ? {} : { body: {} }) });
@@ -530,5 +531,93 @@ describe("revoke all browser sessions (ADR 54, 67)", () => {
       expect(res.status).toBe(401);
       expect(res.json()).toEqual({ error: "session_required" });
     }
+  });
+});
+
+describe("services and prices (ADR 86, point 15 A2)", () => {
+  it("every route, the GET ones included, is refused without the origin key and never reaches the core", async () => {
+    const { port, core } = await start();
+    const { cookie } = await login(port);
+    for (const [method, path] of PRICE_ROUTES) {
+      const res = await send(port, path, { method, headers: { cookie }, ...(method === "GET" || method === "DELETE" ? {} : { body: {} }) });
+      expect(res.status, `${method} ${path}`).toBe(401);
+      expect(res.json()).toEqual({ error: "origin_key_required" });
+    }
+    expect(core.calls).toEqual([]);
+  });
+
+  it("answers the happy paths with the documented status codes", async () => {
+    const { port, core } = await start();
+    const { auth } = await login(port);
+    const go = (method: string, path: string, body?: unknown) => send(port, path, { method, headers: auth, ...(body !== undefined ? { body } : {}) });
+    expect((await go("GET", "/api/services")).status).toBe(200);
+    expect((await go("POST", "/api/services/itad/wizard", {})).status).toBe(201);
+    expect(core.calls.find((c) => c[0] === "startServiceWizard")).toEqual(["startServiceWizard", "itad", `http://127.0.0.1:${port}`]);
+    expect((await go("DELETE", "/api/services/itad/connection")).status).toBe(204);
+    expect((await go("GET", "/api/prices/games/g1")).json()).toMatchObject({ link: "found" });
+    expect((await go("GET", "/api/prices")).status).toBe(200);
+    expect((await go("POST", "/api/prices/refresh", { canonicalIds: ["g1"], manual: true })).status).toBe(204);
+    expect((await go("PUT", "/api/prices/games/g1/exclusion", {})).status).toBe(204);
+    expect((await go("DELETE", "/api/prices/games/g1/exclusion")).status).toBe(204);
+    expect((await go("POST", "/api/prices/search", { title: "hi" })).json()).toEqual([{ resultId: "r1", title: "Found", type: "game", watched: false }]);
+    expect((await go("POST", "/api/prices/watch", { resultId: "r1" })).status).toBe(201);
+    expect((await go("DELETE", "/api/prices/watch/w1")).status).toBe(204);
+    expect(core.calls.find((c) => c[0] === "setPriceExclusion")).toEqual(["setPriceExclusion", "g1", true]);
+  });
+
+  it("the GET routes only call the readers of the core", async () => {
+    const { port, core } = await start();
+    const { auth } = await login(port);
+    for (const path of ["/api/prices/games/g1", "/api/prices", "/api/services"]) await send(port, path, { headers: auth });
+    expect(core.calls.map((c) => c[0])).toEqual(["getGamePrices", "getPriceBoard", "listServices"]);
+  });
+
+  it("watch answers 200 when the game was already followed", async () => {
+    const again = fakeCore({ watchPrice: async () => ({ item: { id: "w1", title: "Found", type: null, prices: null }, created: false }) });
+    const { port } = await start({ core: again });
+    const { auth } = await login(port);
+    expect((await send(port, "/api/prices/watch", { method: "POST", headers: auth, body: { resultId: "r1" } })).status).toBe(200);
+  });
+
+  it("rejects extra keys, empty and oversized bodies, a service that is not implemented and a query string with 400, never calling the core", async () => {
+    const { port, core } = await start();
+    const { auth } = await login(port);
+    const go = (method: string, path: string, body?: unknown) => send(port, path, { method, headers: auth, ...(body !== undefined ? { body } : {}) });
+    const ids = (n: number) => Array.from({ length: n }, (_, i) => `g${i}`);
+    const bad: [string, string, unknown][] = [
+      ["POST", "/api/prices/refresh", {}],
+      ["POST", "/api/prices/refresh", { manual: true, extra: 1 }],
+      ["POST", "/api/prices/refresh", { canonicalIds: ids(201) }],
+      ["POST", "/api/prices/refresh", { canonicalIds: ["a", "a"] }],
+      ["POST", "/api/prices/search", { title: "a" }],
+      ["POST", "/api/prices/search", { title: "x".repeat(101) }],
+      ["POST", "/api/prices/search", { title: "ok", extra: 1 }],
+      ["POST", "/api/prices/watch", { resultId: "r1", title: "forged" }],
+      ["POST", "/api/prices/watch", {}],
+      ["POST", "/api/services/rawg/wizard", {}],
+      ["POST", "/api/services/itad/wizard", { extra: 1 }],
+      ["PUT", "/api/prices/games/g1/exclusion", { extra: 1 }],
+      ["PATCH", "/api/settings", { prices: { country: "es" } }],
+      ["PATCH", "/api/settings", { prices: { shops: "none" } }],
+      ["PATCH", "/api/settings", { prices: { currency: "EUR" } }],
+    ];
+    for (const [m, p, b] of bad) expect((await go(m, p, b)).status, `${m} ${p} ${JSON.stringify(b)}`).toBe(400);
+    expect((await go("GET", "/api/prices?x=1")).status).toBe(400);
+    expect(core.calls).toEqual([]);
+  });
+
+  it("maps the errors of the price routes: no key 422, unknown game 404, list full 422 with its params", async () => {
+    const throwing = fakeCore({
+      refreshPrices: async () => { throw new FakeCoreError("action-unavailable", "prices.errors.notConnected"); },
+      getGamePrices: async () => { throw new FakeCoreError("not-found", "core.errors.not-found"); },
+      watchPrice: async () => { throw new FakeCoreError("limit-reached", "core.errors.limit-reached.watch", { max: 500 }); },
+    });
+    const { port } = await start({ core: throwing });
+    const { auth } = await login(port);
+    const r = await send(port, "/api/prices/refresh", { method: "POST", headers: auth, body: { manual: true } });
+    expect(r.status).toBe(422);
+    expect(r.json()).toMatchObject({ error: "action-unavailable", detail: { key: "prices.errors.notConnected" } });
+    expect((await send(port, "/api/prices/games/zz", { headers: auth })).status).toBe(404);
+    expect((await send(port, "/api/prices/watch", { method: "POST", headers: auth, body: { resultId: "r1" } })).json()).toMatchObject({ detail: { params: { max: 500 } } });
   });
 });

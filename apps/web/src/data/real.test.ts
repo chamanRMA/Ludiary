@@ -25,6 +25,7 @@ function fakeHttp(handler: Handler): { http: Http; log: string[] } {
       get: (p) => run("GET", p),
       post: (p, b) => run("POST", p, b),
       patch: (p, b) => run("PATCH", p, b),
+      put: (p, b) => run("PUT", p, b),
       delete: async (p) => void (await run("DELETE", p)),
     },
   };
@@ -166,14 +167,13 @@ describe("real client: what the server serves", () => {
 });
 
 describe("real client: point B, the rest comes from the simulator", () => {
-  it("delegates other stores' wizards without touching the server; services are empty and simulated-only actions are refused", async () => {
+  it("delegates other stores' wizards without touching the server; RAWG and IGDB stay simulated and simulated-only actions are refused", async () => {
     const { http, log } = fakeHttp(() => []);
     const sim = createMockApi(memory());
     const names = ["startWizard", "submitWizard", "cancelWizard", "disconnect"] as const;
     for (const name of names) vi.spyOn(sim as LudiaryApi, name);
     const api = createRealApi(http, sim, null);
     const epic = { kind: "service", service: "rawg" } as const;
-    expect(await api.getServices()).toEqual([]);
     await api.startWizard(epic);
     await api.submitWizard(epic, { kind: "continue" });
     await api.cancelWizard(epic);
@@ -184,6 +184,45 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await api.revokeSessions();
     for (const name of names) expect(sim[name], name).toHaveBeenCalled();
     expect(log).toEqual(["POST /api/sessions/revoke {}"]);
+  });
+
+  it("IsThereAnyDeal (ADR 86): services, key wizard, disconnect and every price call go to the server", async () => {
+    const step = { kind: "info", id: "intro", titleKey: "connectors.itad.intro.title", bodyKey: "connectors.itad.intro.body" };
+    const { http, log } = fakeHttp((m, p) => (p === "/api/services/itad/wizard" ? { wizardId: "w 1", response: step } : p === "/api/wizards/w%201/submit" ? { kind: "done" } : m === "GET" ? [] : undefined));
+    const sim = createMockApi(memory());
+    const api = createRealApi(http, sim, null);
+    const itad = { kind: "service", service: "itad" } as const;
+    await api.getServices();
+    await api.startWizard(itad);
+    await api.submitWizard(itad, { kind: "continue" });
+    expect(await api.submitWizard(itad, { kind: "continue" }).catch((e: unknown) => (e as ApiError).key)).toBe("wizard.expired"); // the wizard is over
+    await api.startWizard(itad);
+    await api.cancelWizard(itad);
+    await api.disconnect(itad);
+    await api.getGamePrices("g/1");
+    await api.getPriceBoard();
+    await api.refreshPrices({ canonicalIds: ["g1"], manual: true });
+    await api.setPriceExclusion("g1", true);
+    await api.setPriceExclusion("g1", false);
+    await api.searchPrices("hades");
+    await api.watchPrice("r1");
+    await api.unwatchPrice("w1");
+    expect(log).toEqual([
+      "GET /api/services",
+      "POST /api/services/itad/wizard {}",
+      'POST /api/wizards/w%201/submit {"stepId":"intro","input":{"kind":"continue"}}',
+      "POST /api/services/itad/wizard {}",
+      "DELETE /api/wizards/w%201",
+      "DELETE /api/services/itad/connection",
+      "GET /api/prices/games/g%2F1",
+      "GET /api/prices",
+      'POST /api/prices/refresh {"canonicalIds":["g1"],"manual":true}',
+      "PUT /api/prices/games/g1/exclusion {}",
+      "DELETE /api/prices/games/g1/exclusion",
+      'POST /api/prices/search {"title":"hades"}',
+      'POST /api/prices/watch {"resultId":"r1"}',
+      "DELETE /api/prices/watch/w1",
+    ]);
   });
 
   it("settings: server fields from the server, the rest from the simulator, and each patch goes to its owner", async () => {

@@ -5,7 +5,7 @@ import { ConnectorRegistrationError, createCore, type CoreLogger, type LudiaryCo
 import { createRepositories, DatabaseTooNewError, migrate } from "@ludiary/db";
 import { translate, type ConnectorMessageKey, type MessageKey } from "@ludiary/i18n";
 import { createHttpClient, createNodeLocalFiles, createSecretCipher, systemClock } from "@ludiary/platform-node";
-import { createConnectors, unionUriSchemes } from "./connectors";
+import { createConnectors, createPriceServices, unionUriSchemes } from "./connectors";
 import { createCoreFacade } from "./core-adapter";
 import { EXIT, localeOf, type RuntimeDeps } from "./deps";
 import type { Logger } from "./files";
@@ -90,6 +90,8 @@ export async function composeCore(
       identity: repos.identity,
       secrets: repos.secrets,
       connections: repos.connections,
+      prices: repos.prices,
+      priceServices: deps.priceServices ?? createPriceServices(),
       cipher: createSecretCipher(masterKey),
       files,
       ...(locations ? { locations } : {}),

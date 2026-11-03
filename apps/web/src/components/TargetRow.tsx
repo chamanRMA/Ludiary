@@ -5,6 +5,7 @@ import { errorText } from "../app/errors";
 import { STORE_BRAND } from "../app/stores";
 import { api } from "../data/api";
 import { mutate } from "../data/hooks";
+import { browserCountry } from "../data/prices";
 import ui from "../styles/ui.module.css";
 import { cx, StoreBadge } from "./bits";
 import { ConnectWizard } from "./ConnectWizard";
@@ -15,6 +16,17 @@ import styles from "./wizard.module.css";
 const SERVICE_NAMES = { rawg: "RAWG", igdb: "IGDB", itad: "IsThereAnyDeal" } as const;
 
 type Props = { store: StoreStatusDto; service?: never } | { service: ServiceStatusDto; store?: never };
+
+/** ADR 86 point 9: after connecting, if no country is set and the browser's region is a valid one, it is saved. Never a default. */
+async function proposeCountry(): Promise<void> {
+  try {
+    const settings = await api.getSettings();
+    const country = browserCountry(typeof navigator === "undefined" ? undefined : navigator.language);
+    if (settings.prices && settings.prices.country === null && country) await mutate(api.updateSettings({ prices: { country } }));
+  } catch {
+    /* Settings > Services asks for the country instead */
+  }
+}
 
 /** One store or service with its status and its connection wizard. Used by Settings and by the first-run wizard (ADR 69). */
 export function TargetRow(props: Props) {
@@ -50,21 +62,23 @@ export function TargetRow(props: Props) {
     canConnect = s.available;
     chip = !s.available
       ? { text: t("common.comingSoon") }
-      : s.configured
-        ? { text: t("services.status.configured"), tone: "ok" }
-        : { text: t("services.status.notConfigured") };
+      : s.status === "invalid" || s.status === "expired"
+        ? { text: t(s.status === "invalid" ? "services.status.invalid" : "services.status.expired"), tone: "warn" }
+        : s.configured
+          ? { text: t("services.status.configured"), tone: "ok" }
+          : { text: t("services.status.notConfigured") };
   }
 
   const description = t(props.store ? `stores.${id}.desc` : `services.${id}.desc`);
   const unofficial = props.store?.access === "unofficial-api";
-  const expired = props.store?.connection === "expired";
+  const expired = props.store?.connection === "expired" || props.service?.status === "invalid" || props.service?.status === "expired";
 
   return (
     <div className={styles.target}>
       <div className={styles.targetHead}>
         <div className={styles.targetInfo}>
           {props.store ? (
-            <StoreBadge store={props.store.store} size="md" warning={expired} />
+            <StoreBadge store={props.store.store} size="md" warning={props.store.connection === "expired"} />
           ) : (
             <span className={cx(ui.badge, ui.badgeMd)} style={{ background: "var(--hi)", color: "var(--tx)" }} aria-hidden="true">
               {name.slice(0, 1)}
@@ -117,7 +131,7 @@ export function TargetRow(props: Props) {
           </div>
         </div>
       )}
-      {open && <ConnectWizard target={target} onDone={() => setOpen(false)} onCancel={() => setOpen(false)} />}
+      {open && <ConnectWizard target={target} onDone={() => { setOpen(false); if (id === "itad") void proposeCountry(); }} onCancel={() => setOpen(false)} />}
     </div>
   );
 }

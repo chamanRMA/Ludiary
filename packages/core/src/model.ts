@@ -52,9 +52,16 @@ export interface StoreCollectionsSettings {
   enabled: boolean;
   unverifiedFavorites: boolean;
 }
+export interface PricesSettings {
+  /** null: not chosen yet (never a default country, ADR 86 point 15 B5). */
+  country: string | null;
+  shops: PriceShops;
+}
 export interface Settings {
   locale: "system" | "es" | "en";
   detection: DetectionMode | null;
+  /** ADR 86. Absent: no price service in this build. */
+  prices?: PricesSettings;
   /** ADR 88. Only the stores that have the operation. */
   storeCollections: Partial<Record<StoreId, StoreCollectionsSettings>>;
 }
@@ -62,6 +69,7 @@ export interface SettingsPatch {
   locale?: Settings["locale"];
   detection?: DetectionMode | null;
   storeCollections?: Partial<Record<StoreId, Partial<StoreCollectionsSettings>>>;
+  prices?: { country?: string; shops?: PriceShops };
 }
 
 export interface Onboarding {
@@ -384,6 +392,51 @@ export interface PriceWatchRecord {
   title: string;
   type: PriceKind | null;
   addedAt: number;
+}
+
+// ---- Prices as the API shows them (ADR 86 point 15, A2). Same shape as the DTOs.
+export type ServiceState = "disconnected" | "connected" | "invalid" | "expired";
+export interface ServiceStatus {
+  service: PriceServiceId;
+  purpose: "prices";
+  available: true;
+  configured: boolean;
+  status: ServiceState;
+}
+export interface PricesView {
+  country: string;
+  fetchedAt: number;
+  /** Older than the TTL: the refresh did not run or could not renew it. */
+  stale: boolean;
+  deals: readonly PriceDealRecord[];
+  historyLow: PriceSnapshotData["historyLow"];
+}
+export interface PriceBoardState {
+  service: ServiceState;
+  needsCountry: boolean;
+  /** Epoch ms until which the service will not be asked (429 or spent budget). */
+  limitedUntil?: number;
+}
+export interface GamePrices extends PriceBoardState {
+  link: "pending" | PriceLinkStatus;
+  prices: PricesView | null;
+}
+export interface WatchItem {
+  id: string;
+  title: string;
+  type: PriceKind | null;
+  ownedGameId?: string;
+  prices: PricesView | null;
+}
+export interface PriceBoard extends PriceBoardState {
+  items: readonly WatchItem[];
+}
+export interface PriceSearchResult {
+  resultId: string;
+  title: string;
+  type: PriceKind | null;
+  ownedGameId?: string;
+  watched: boolean;
 }
 
 /** Redacted structured log; messages in English, never paths, names or secrets (ADR 59). */

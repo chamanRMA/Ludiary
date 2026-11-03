@@ -148,17 +148,3 @@ export function Local() {
     </div>
   );
 }
-
-export function Prices() {
-  const { t } = useTranslation();
-  return (
-    <div className={ui.stack}>
-      <PageTitle>{t("prices.title")}</PageTitle>
-      <section className={cx(ui.panel, ui.dashed)}>
-        <span className={ui.chip} style={{ alignSelf: "flex-start" }}>{t("common.comingSoon")}</span>
-        <h2>{t("home.pricesTitle")}</h2>
-        <p className={ui.muted}>{t("prices.body")}</p>
-      </section>
-    </div>
-  );
-}

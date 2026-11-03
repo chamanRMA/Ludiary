@@ -549,6 +549,9 @@ export async function harness(
     cipher?: SecretCipher;
     /** Stores that start with a 'connected' row (ADR 74). */
     connected?: StoreId[];
+    /** ADR 86. */
+    prices?: CoreDeps["prices"];
+    priceServices?: CoreDeps["priceServices"];
   } = {},
 ): Promise<Harness> {
   const store = new MemoryStore();
@@ -621,6 +624,8 @@ export async function harness(
     ...(launcher ? { launcher } : {}),
     ...(opts.picker ? { folderPicker: opts.picker } : {}),
     ...(opts.http ? { http: opts.http } : {}),
+    ...(opts.prices ? { prices: opts.prices } : {}),
+    ...(opts.priceServices ? { priceServices: opts.priceServices } : {}),
     cipher: opts.cipher ?? fakeCipher(),
     clock,
     newId: ids,

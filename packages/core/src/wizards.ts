@@ -2,13 +2,13 @@
 // the server stops, finished, cancelled or idle for 15 minutes. The connector decides the steps; the core validates
 // everything it returns and everything the web sends, and accepts each step once.
 import { ConnectorError } from "@ludiary/contracts";
-import type { ConnectionWizard, EmbeddedLogin, StoreConnector, StoreId, WizardContext, WizardDone, WizardField, WizardInput, WizardStep } from "@ludiary/contracts";
-import { bumpEpoch, epochOf, memoryVault, syncContext } from "./contexts";
+import type { ConnectionWizard, EmbeddedLogin, PriceServiceId, StoreId, SyncContext, WizardContext, WizardDone, WizardField, WizardInput, WizardStep } from "@ludiary/contracts";
+import { bumpEpoch, epochOf, memoryVault, serviceContext, serviceKey, syncContext, type SubjectKey } from "./contexts";
 import { EMBEDDED_LOGIN_MS, MAX_WIZARDS, WIZARD_CALL_MS, WIZARD_TTL_MS, type Env, type WizardResponse } from "./env";
 import { asKey, CoreError, defaultKey, toErrorInfo } from "./errors";
 import type { CoreErrorInfo } from "./model";
 import { withTimeout } from "./timeout";
-import { storeScope } from "./vault";
+import { serviceStatusKey, storeScope } from "./vault";
 
 const STEP_ID = /^[a-z][a-z0-9-]{0,31}$/;
 const FIELD_NAME = /^[A-Za-z][A-Za-z0-9]{0,31}$/;
@@ -23,11 +23,32 @@ const CAPTURE_KEY = /^[A-Za-z0-9_.-]{1,64}$/;
 const HOST_SHAPE = /^[a-z0-9][a-z0-9.-]{0,252}$/;
 const MAX_CAPTURE_LENGTH = 8192;
 
+/** Who the wizard is for (ADR 86 point 15 A1): a store or a price service. Each kind has its adapter in `createWizardEngine`. */
+export type WizardTarget = { kind: "store"; store: StoreId } | { kind: "service"; service: PriceServiceId };
+
+interface WizardSubject {
+  readonly target: WizardTarget;
+  /** Epochs and `cancelTarget`. */
+  readonly key: SubjectKey;
+  /** `connectors.<id>.`: the translation keys its steps may use (besides `connectors.common.`). */
+  readonly keyPrefix: string;
+  /** Hosts an `open-external` or embedded step may open. */
+  readonly authHosts: readonly string[];
+  readonly apiHosts: readonly string[];
+  readonly connection: ConnectionWizard;
+  readonly logFields: Readonly<Record<string, string>>;
+  /** A service has no login window and no return route: `embedded-login` and `awaits: 'callback'` are refused. */
+  readonly interactive: boolean;
+  context(signal: AbortSignal): Promise<SyncContext>;
+  /** The connection finished. `live`: the session is still the open one. */
+  onDone(s: Session, stepId: string, done: WizardDone, live: boolean): Promise<WizardResponse>;
+  /** An error or timeout that is not the connector's own rejection closed the session. */
+  onInternalError(): Promise<void>;
+}
+
 interface Session {
   id: string;
-  store: StoreId;
-  connector: StoreConnector;
-  connection: ConnectionWizard;
+  subject: WizardSubject;
   callbackUrl: string;
   step: WizardStep | null;
   /** Wizard state of the connector (ADR 40): memory only. */
@@ -36,15 +57,18 @@ interface Session {
   busy: boolean;
   /** ADR 80: aborts the login window; present only while it is open. */
   abort: AbortController | null;
+  /** Epoch of a service when the session began: a disconnect in between rejects the end (ADR 86 point 15 A1). */
+  epoch: number;
 }
 
 export interface WizardEngine {
-  start(store: StoreId, returnBase: string): Promise<{ wizardId: string; response: WizardResponse }>;
+  start(target: WizardTarget, returnBase: string): Promise<{ wizardId: string; response: WizardResponse }>;
   submit(wizardId: string, stepId: string, input: WizardInput): Promise<WizardResponse>;
+  /** A service session is refused with `invalid-input` before it is touched. */
   callback(wizardId: string, query: Readonly<Record<string, string>>): Promise<{ store: StoreId; response: WizardResponse }>;
   cancel(wizardId: string): void;
-  /** Drops the open wizard of a store, if any (disconnect). */
-  cancelStore(store: StoreId): void;
+  /** Drops the open wizard of a store or service, if any (disconnect). */
+  cancelTarget(key: SubjectKey): void;
   /** Server shutdown: closes every open login window. */
   shutdown(): void;
 }
@@ -54,14 +78,14 @@ const rejectedCode = (stepId: string, code: "invalid-input" | "busy" | "internal
   rejected(stepId, { code, key: defaultKey(code), ...(params ? { params } : {}) });
 
 /** Rule 4 of ADR 40 on a step returned by the connector. Throws if it does not comply. */
-function checkStep(step: unknown, c: StoreConnector): asserts step is WizardStep {
+function checkStep(step: unknown, c: WizardSubject): asserts step is WizardStep {
   const bad = (why: string): never => {
     throw new Error(`Invalid wizard step: ${why}`);
   };
   if (!step || typeof step !== "object") return bad("not an object");
   const s = step as Record<string, unknown>;
   if (typeof s.id !== "string" || !STEP_ID.test(s.id)) bad("id");
-  const prefixes = [`connectors.${c.id}.`, "connectors.common."];
+  const prefixes = [c.keyPrefix, "connectors.common."];
   const key = (v: unknown, what: string) => {
     if (typeof v !== "string" || !prefixes.some((p) => v.startsWith(p)) || v.length > 200 || CONTROL.test(v)) bad(what);
   };
@@ -88,9 +112,10 @@ function checkStep(step: unknown, c: StoreConnector): asserts step is WizardStep
   };
   if (s.kind === "info") return;
   if (s.kind === "input") return checkFields(s.fields);
-  if (s.kind === "embedded-login") return checkEmbedded(s, c, key, bad);
+  if (s.kind === "embedded-login") return c.interactive ? checkEmbedded(s, c, key, bad) : bad("embedded login not allowed");
   if (s.kind !== "open-external") return bad("kind");
   if (s.awaits !== "callback" && s.awaits !== "input") bad("awaits");
+  if (s.awaits === "callback" && !c.interactive) bad("callback not allowed");
   if (s.fields !== undefined) {
     if (s.awaits !== "input") bad("fields need awaits 'input'");
     checkFields(s.fields);
@@ -105,7 +130,7 @@ function checkStep(step: unknown, c: StoreConnector): asserts step is WizardStep
 }
 
 /** ADR 80 point 6: validation of an embedded-login step. */
-function checkEmbedded(s: Record<string, unknown>, c: StoreConnector, key: (v: unknown, what: string) => void, bad: (why: string) => never): void {
+function checkEmbedded(s: Record<string, unknown>, c: WizardSubject, key: (v: unknown, what: string) => void, bad: (why: string) => never): void {
   key(s.windowTitleKey, "windowTitleKey");
   const capture = s.capture;
   const sources = Array.isArray(capture) ? (capture as Record<string, unknown>[]).map((f) => (f && typeof f === "object" ? (f.source ?? "local-storage") : null)) : [];
@@ -229,18 +254,80 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
   }
 
   async function context(s: Session, signal: AbortSignal): Promise<WizardContext> {
-    return { ...(await syncContext(env, s.connector, signal, { epoch: "bump" })), callbackUrl: s.callbackUrl, wizardState: memoryVault(s.state), now: () => deps.clock.now() };
+    return { ...(await s.subject.context(signal)), callbackUrl: s.callbackUrl, wizardState: memoryVault(s.state), now: () => deps.clock.now() };
   }
 
-  async function finish(s: Session, done: WizardDone): Promise<WizardResponse> {
+  async function finish(s: Session, store: StoreId, done: WizardDone): Promise<WizardResponse> {
     const label = typeof done.accountLabel === "string" ? done.accountLabel.trim() : "";
     const accountLabel = label !== "" && label.length <= MAX_LABEL && !CONTROL.test(label) ? label : null;
-    await deps.connections.put({ store: s.store, status: "connected", accountLabel, connectedAt: deps.clock.now() });
+    await deps.connections.put({ store, status: "connected", accountLabel, connectedAt: deps.clock.now() });
     sessions.delete(s.id);
-    deps.log.info("Store connected", { connector: s.store });
+    deps.log.info("Store connected", { connector: store });
     // The first library sync is forced (no floor); a failure here must not undo the connection.
-    await onConnected(s.store).catch(() => deps.log.warn("Could not schedule the first library sync", { connector: s.store }));
+    await onConnected(store).catch(() => deps.log.warn("Could not schedule the first library sync", { connector: store }));
     return { kind: "done", ...(accountLabel ? { accountLabel } : {}) };
+  }
+
+  /** The behavior of a store (ADR 74): the connector stored its secrets; the core records the connection and syncs. */
+  function storeSubject(store: StoreId): WizardSubject {
+    const connector = env.connectors.get(store);
+    const connection = connector?.connection;
+    if (!connector || !connection) throw new CoreError("not-found", "This store has no connection wizard");
+    return {
+      target: { kind: "store", store },
+      key: store,
+      keyPrefix: `connectors.${store}.`,
+      authHosts: connector.authHosts,
+      apiHosts: connector.apiHosts,
+      connection,
+      logFields: { connector: store },
+      interactive: true,
+      context: (signal) => syncContext(env, connector, signal, { epoch: "bump" }),
+      async onDone(s, stepId, done, live) {
+        // Cancelled or disconnected while the connector was working: do not mark it connected, drop what it stored.
+        if (!live) {
+          await deps.secrets.deleteScope(storeScope(store));
+          return rejectedCode(stepId, "invalid-input");
+        }
+        return finish(s, store, done);
+      },
+      async onInternalError() {
+        // A timeout can land after the connector stored secrets: without a connection row they would be orphaned.
+        if (!(await deps.connections.get(store))) await deps.secrets.deleteScope(storeScope(store));
+      },
+    };
+  }
+
+  /**
+   * ADR 86 point 15 A1. The package leaves the checked key in the wizard state; only here is it stored. Nothing the
+   * wizard does can delete a key that was already there: a retry that fails keeps the good one.
+   */
+  function serviceSubject(service: PriceServiceId): WizardSubject {
+    const svc = env.services.get(service);
+    if (!svc) throw new CoreError("not-found", "This service has no connection wizard");
+    return {
+      target: { kind: "service", service },
+      key: serviceKey(service),
+      keyPrefix: `connectors.${service}.`,
+      authHosts: svc.authHosts,
+      apiHosts: svc.apiHosts,
+      connection: svc.connection,
+      logFields: { service },
+      interactive: false,
+      context: (signal) => serviceContext(env, svc, signal, { maxBytes: 1024 * 1024 }),
+      async onDone(s, stepId, done, live) {
+        if (!live || epochOf(env, serviceKey(service)) !== s.epoch) return rejectedCode(stepId, "invalid-input");
+        const apiKey = s.state.get("apiKey");
+        if (apiKey === undefined || apiKey === "") return rejectedCode(stepId, "internal");
+        await env.serviceVaultFor(service).set("apiKey", apiKey);
+        await deps.settings.delete(serviceStatusKey(service));
+        bumpEpoch(env, serviceKey(service));
+        sessions.delete(s.id);
+        deps.log.info("Service connected", { service });
+        return { kind: "done" };
+      },
+      async onInternalError() {},
+    };
   }
 
   /** Runs one connector call. A ConnectorError is a rejection of the same step; anything else is 'internal' and closes the session. */
@@ -250,25 +337,19 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
       const signal = deps.clock.timeout(WIZARD_CALL_MS);
       const out = await withTimeout(signal, async () => work(await context(s, signal)));
       if (out && typeof out === "object" && (out as WizardDone).kind === "done") {
-        // Cancelled or disconnected while the connector was working: do not mark it connected, drop what it stored.
-        if (sessions.get(s.id) !== s) {
-          await deps.secrets.deleteScope(storeScope(s.store));
-          return rejectedCode(stepId, "invalid-input");
-        }
-        return await finish(s, out as WizardDone);
+        return await s.subject.onDone(s, stepId, out as WizardDone, sessions.get(s.id) === s);
       }
-      checkStep(out, s.connector);
+      checkStep(out, s.subject);
       s.step = out;
       return out;
     } catch (e) {
       if (e instanceof ConnectorError) {
-        deps.log.warn("Wizard step rejected by the connector", { connector: s.store, code: e.code });
+        deps.log.warn("Wizard step rejected by the connector", { ...s.subject.logFields, code: e.code });
         return rejected(stepId, toErrorInfo(e));
       }
-      deps.log.error("Wizard failed", { connector: s.store, error: e instanceof Error ? e.name : "unknown" });
+      deps.log.error("Wizard failed", { ...s.subject.logFields, error: e instanceof Error ? e.name : "unknown" });
       sessions.delete(s.id);
-      // A timeout can land after the connector stored secrets: without a connection row they would be orphaned.
-      if (!(await deps.connections.get(s.store))) await deps.secrets.deleteScope(storeScope(s.store));
+      await s.subject.onInternalError();
       return rejectedCode(stepId, "internal");
     } finally {
       s.busy = false;
@@ -291,8 +372,8 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
     sessions.delete(s.id);
   }
 
-  function cancelStore(store: StoreId): void {
-    for (const s of [...sessions.values()]) if (s.store === store) drop(s);
+  function cancelTarget(key: SubjectKey): void {
+    for (const s of [...sessions.values()]) if (s.subject.key === key) drop(s);
   }
 
   const embeddedRejected = (stepId: string, name: string, code: CoreErrorInfo["code"]): WizardResponse =>
@@ -308,8 +389,8 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
     s.busy = true;
     s.abort = abort;
     try {
-      bumpEpoch(env, s.store);
-      const epoch = epochOf(env, s.store);
+      bumpEpoch(env, s.subject.key);
+      const epoch = epochOf(env, s.subject.key);
       const started = deps.clock.now();
       let result: Awaited<ReturnType<EmbeddedLogin["run"]>>;
       try {
@@ -319,7 +400,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
             startUrl: step.url,
             doneUrl: step.doneUrl,
             captureUrl: step.captureUrl,
-            allowedHosts: [...s.connector.authHosts],
+            allowedHosts: [...s.subject.authHosts],
             capture: step.capture.map(({ name, source, storageKeys, jsonField, maxLength }) => ({ name, ...(source ? { source } : {}), storageKeys: [...(storageKeys ?? [])], jsonField, maxLength })),
           },
           abort.signal,
@@ -330,13 +411,13 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
       const outcome = result.kind === "unavailable" || result.kind === "failed" ? `${result.kind}:${result.reason}` : result.kind;
       const blocked = "blockedHosts" in result ? result.blockedHosts.filter((h) => typeof h === "string" && HOST_SHAPE.test(h)).slice(0, 32) : [];
       // Never the captured values (ADR 80): result, duration and blocked hosts only.
-      deps.log.info("Embedded login finished", { connector: s.store, result: outcome, durationMs: deps.clock.now() - started, blockedHosts: blocked.join(",") });
+      deps.log.info("Embedded login finished", { ...s.subject.logFields, result: outcome, durationMs: deps.clock.now() - started, blockedHosts: blocked.join(",") });
       if (result.kind === "unavailable") {
         return result.reason === "busy" ? embeddedRejected(step.id, "busy", "busy") : embeddedRejected(step.id, "runtimeMissing", "action-unavailable");
       }
       if (result.kind === "failed") return embeddedRejected(step.id, result.reason === "capture-missing" ? "captureMissing" : "failed", "invalid-input");
       // Cancelled, disconnected, a newer wizard or a changed session while the window was open: the values are dropped.
-      if (result.kind === "cancelled" || abort.signal.aborted || sessions.get(s.id) !== s || epochOf(env, s.store) !== epoch) {
+      if (result.kind === "cancelled" || abort.signal.aborted || sessions.get(s.id) !== s || epochOf(env, s.subject.key) !== epoch) {
         return embeddedRejected(step.id, "cancelled", "invalid-input");
       }
       const captured = result.values;
@@ -352,8 +433,8 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
         });
       if (!valid) return embeddedRejected(step.id, "failed", "invalid-input");
       return await call(s, step.id, async (ctx) => {
-        if (sessions.get(s.id) !== s || epochOf(env, s.store) !== epoch) throw new ConnectorError("auth.required", "The session changed during the login");
-        return s.connection.submit(ctx, step.id, { kind: "embedded", values: captured });
+        if (sessions.get(s.id) !== s || epochOf(env, s.subject.key) !== epoch) throw new ConnectorError("auth.required", "The session changed during the login");
+        return s.subject.connection.submit(ctx, step.id, { kind: "embedded", values: captured });
       });
     } finally {
       s.abort = null;
@@ -363,10 +444,8 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
   }
 
   return {
-    async start(store, returnBase) {
-      const connector = env.connectors.get(store);
-      const connection = connector?.connection;
-      if (!connector || !connection) throw new CoreError("not-found", "This store has no connection wizard");
+    async start(target, returnBase) {
+      const subject = target.kind === "store" ? storeSubject(target.store) : serviceSubject(target.service);
       let origin: URL;
       try {
         origin = new URL(returnBase);
@@ -377,23 +456,22 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
         throw new CoreError("invalid-input", "Invalid return base");
       }
       purge();
-      cancelStore(store);
+      cancelTarget(subject.key);
       if (sessions.size >= MAX_WIZARDS) throw new CoreError("busy", "Too many open wizards");
       const id = deps.newId();
       const s: Session = {
         id,
-        store,
-        connector,
-        connection,
+        subject,
         callbackUrl: `${returnBase}/connect/return?w=${id}`,
         step: null,
         state: new Map(),
         touchedAt: deps.clock.now(),
         busy: false,
         abort: null,
+        epoch: epochOf(env, subject.key),
       };
       sessions.set(id, s);
-      const response = await call(s, "start", (ctx) => connection.start(ctx));
+      const response = await call(s, "start", (ctx) => subject.connection.start(ctx));
       if (response.kind === "rejected") {
         sessions.delete(id);
         throw new CoreError(response.error.code, "The wizard could not start", { key: response.error.key, ...(response.error.params ? { params: response.error.params } : {}) });
@@ -415,27 +493,31 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
         const values: Record<string, string> = {};
         for (const f of fields) {
           const raw = input.values[f.name];
-          const clean = typeof raw === "string" ? cleanField(f, raw, [...s.connector.authHosts, ...s.connector.apiHosts]) : null;
+          const clean = typeof raw === "string" ? cleanField(f, raw, [...s.subject.authHosts, ...s.subject.apiHosts]) : null;
           if (clean === null) return rejectedCode(step.id, "invalid-input", { field: f.name });
           values[f.name] = clean;
         }
-        return call(s, step.id, (ctx) => s.connection.submit(ctx, step.id, { kind: "fields", values }));
+        return call(s, step.id, (ctx) => s.subject.connection.submit(ctx, step.id, { kind: "fields", values }));
       }
       if (step.kind === "open-external" && step.awaits === "callback") return rejectedCode(step.id, "invalid-input"); // only by the return route
       if (input.kind !== "continue") return rejectedCode(step.id, "invalid-input");
       if (step.kind === "embedded-login") return runEmbedded(s, step);
-      return call(s, step.id, (ctx) => s.connection.submit(ctx, step.id, { kind: "continue" }));
+      return call(s, step.id, (ctx) => s.subject.connection.submit(ctx, step.id, { kind: "continue" }));
     },
 
     async callback(wizardId, query) {
+      // A service wizard has no return route: refused before the session is touched (ADR 86 point 15 A2).
+      if (typeof wizardId === "string" && sessions.get(wizardId)?.subject.target.kind === "service") throw new CoreError("invalid-input", "This wizard has no return route");
       const s = live(wizardId);
       checkQuery(query);
       const step = s.step;
-      if (s.busy || !step) return { store: s.store, response: rejectedCode(step?.id ?? "start", "busy") };
+      const store = s.subject.target.kind === "store" ? s.subject.target.store : null;
+      if (store === null) throw new CoreError("invalid-input", "This wizard has no return route");
+      if (s.busy || !step) return { store, response: rejectedCode(step?.id ?? "start", "busy") };
       // Accepted once: after a success the wizard is on the next step, so a repeated return finds no callback step.
-      if (step.kind !== "open-external" || step.awaits !== "callback") return { store: s.store, response: rejectedCode(step.id, "invalid-input") };
-      const response = await call(s, step.id, (ctx) => s.connection.submit(ctx, step.id, { kind: "callback", query: { ...query } }));
-      return { store: s.store, response };
+      if (step.kind !== "open-external" || step.awaits !== "callback") return { store, response: rejectedCode(step.id, "invalid-input") };
+      const response = await call(s, step.id, (ctx) => s.subject.connection.submit(ctx, step.id, { kind: "callback", query: { ...query } }));
+      return { store, response };
     },
 
     cancel(wizardId) {
@@ -443,7 +525,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
       if (s) drop(s);
     },
 
-    cancelStore,
+    cancelTarget,
 
     shutdown() {
       for (const s of [...sessions.values()]) drop(s);

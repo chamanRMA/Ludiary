@@ -70,7 +70,7 @@ export function toCoreError(e: unknown): CoreError {
 }
 
 /** ADR 85. `max` goes to the translated text. */
-export type LimitName = "tagsPerGame" | "tags" | "collections" | "gamesPerCollection";
+export type LimitName = "tagsPerGame" | "tags" | "collections" | "gamesPerCollection" | "watch";
 export const limitReached = (max: number, what: LimitName): CoreError =>
   new CoreError("limit-reached", `User data limit reached: ${what}`, { key: asKey(`core.errors.limit-reached.${what}`), params: { max } });
 /** Brand names for texts with a {store} parameter (proper names, not translated). */

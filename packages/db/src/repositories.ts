@@ -1,7 +1,7 @@
 // Repositories that implement the persistence ports of @ludiary/core (ADR 38, 72) over Drizzle + better-sqlite3.
 // Methods are async in the signature although the driver is synchronous, so the core is not tied to it.
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type Database from "better-sqlite3";
 import { normalizeTitle, type EntryMedia, type I18nKey, type StoreId } from "@ludiary/contracts";
@@ -19,6 +19,11 @@ import type {
   LaunchTarget,
   LibraryPlan,
   LibraryRepository,
+  PriceKind,
+  PriceLinkRecord,
+  PriceRepository,
+  PriceSnapshotRecord,
+  PriceWatchRecord,
   PropertyRecord,
   ScanPlan,
   ScanRootRecord,
@@ -39,6 +44,9 @@ import {
   gameProperties,
   gameTags,
   installations,
+  priceLinks,
+  priceSnapshots,
+  priceWatch,
   scanRoots,
   secrets as secretsTable,
   settings,
@@ -65,6 +73,7 @@ export interface Repositories {
   settings: SettingsRepository;
   secrets: SecretRepository;
   connections: ConnectionRepository;
+  prices: PriceRepository;
 }
 
 interface Scope {
@@ -799,7 +808,124 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
     },
   };
 
-  return { identity, library, userData, scanRoots: roots, syncState: sync, settings: settingsRepo, secrets, connections };
+  const toLink = (r: typeof priceLinks.$inferSelect): PriceLinkRecord => ({
+    canonicalGameId: r.canonicalGameId,
+    service: r.service as PriceLinkRecord["service"],
+    serviceGameId: r.serviceGameId,
+    status: r.status as PriceLinkRecord["status"],
+    source: r.source as PriceLinkRecord["source"],
+    inputsHash: r.inputsHash,
+    lookedUpAt: r.lookedUpAt,
+  });
+  const toWatch = (r: typeof priceWatch.$inferSelect): PriceWatchRecord => ({
+    id: r.id,
+    service: r.service as PriceWatchRecord["service"],
+    serviceGameId: r.serviceGameId,
+    title: r.title,
+    type: r.type as PriceKind | null,
+    addedAt: r.addedAt,
+  });
+  // ADR 86 point 8. Links and cache are rebuildable; the watch list is the user's.
+  const prices: PriceRepository = {
+    async getLinks(service, canonicalIds) {
+      const s = need();
+      const out = new Map<string, PriceLinkRecord>();
+      for (const part of chunks(canonicalIds)) {
+        const rows = db.select().from(priceLinks).where(and(eq(priceLinks.userId, s.userId), eq(priceLinks.service, service), inArray(priceLinks.canonicalGameId, part))).all();
+        for (const r of rows) out.set(r.canonicalGameId, toLink(r));
+      }
+      return out;
+    },
+    async putLink(rec) {
+      const s = need();
+      if (!db.select({ id: canonicalGames.id }).from(canonicalGames).where(and(eq(canonicalGames.userId, s.userId), eq(canonicalGames.id, rec.canonicalGameId))).get()) {
+        throw new CoreError("not-found", "The game does not exist");
+      }
+      const values = { serviceGameId: rec.serviceGameId, status: rec.status, source: rec.source, inputsHash: rec.inputsHash, lookedUpAt: rec.lookedUpAt };
+      db.insert(priceLinks)
+        .values({ userId: s.userId, canonicalGameId: rec.canonicalGameId, service: rec.service, ...values })
+        .onConflictDoUpdate({ target: [priceLinks.userId, priceLinks.canonicalGameId, priceLinks.service], set: values })
+        .run();
+    },
+    async deleteLink(service, canonicalId) {
+      const s = need();
+      db.delete(priceLinks).where(and(eq(priceLinks.userId, s.userId), eq(priceLinks.service, service), eq(priceLinks.canonicalGameId, canonicalId))).run();
+    },
+    async findOwned(service, serviceGameIds) {
+      const s = need();
+      const out = new Map<string, string>();
+      for (const part of chunks(serviceGameIds)) {
+        // Oldest lookup wins when two games share an id; only games that are shown (a non-retired `game` property).
+        const rows = db
+          .select({ sid: priceLinks.serviceGameId, cid: priceLinks.canonicalGameId })
+          .from(priceLinks)
+          .where(and(eq(priceLinks.userId, s.userId), eq(priceLinks.service, service), eq(priceLinks.status, "found"), inArray(priceLinks.serviceGameId, part), sql`EXISTS (SELECT 1 FROM game_properties gp WHERE gp.canonical_game_id = ${priceLinks.canonicalGameId} AND gp.removed_at IS NULL AND gp.kind = 'game')`))
+          .orderBy(desc(priceLinks.lookedUpAt))
+          .all();
+        for (const r of rows) if (r.sid !== null) out.set(r.sid, r.cid);
+      }
+      return out;
+    },
+    async getSnapshots(service, serviceGameIds, country, shops) {
+      const s = need();
+      const out = new Map<string, PriceSnapshotRecord>();
+      for (const part of chunks(serviceGameIds)) {
+        const rows = db
+          .select()
+          .from(priceSnapshots)
+          .where(and(eq(priceSnapshots.userId, s.userId), eq(priceSnapshots.service, service), eq(priceSnapshots.country, country), eq(priceSnapshots.shops, shops), inArray(priceSnapshots.serviceGameId, part)))
+          .all();
+        for (const r of rows) {
+          out.set(r.serviceGameId, { service, serviceGameId: r.serviceGameId, country: r.country, shops: r.shops as PriceSnapshotRecord["shops"], data: r.data, fetchedAt: r.fetchedAt });
+        }
+      }
+      return out;
+    },
+    async putSnapshots(records) {
+      const s = need();
+      db.transaction((tx) => {
+        for (const r of records) {
+          const values = { data: r.data, fetchedAt: r.fetchedAt };
+          tx.insert(priceSnapshots)
+            .values({ userId: s.userId, service: r.service, serviceGameId: r.serviceGameId, country: r.country, shops: r.shops, ...values })
+            .onConflictDoUpdate({ target: [priceSnapshots.userId, priceSnapshots.service, priceSnapshots.serviceGameId, priceSnapshots.country, priceSnapshots.shops], set: values })
+            .run();
+        }
+      });
+    },
+    async listWatch(service) {
+      const s = need();
+      return db.select().from(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.service, service))).orderBy(asc(priceWatch.addedAt), asc(priceWatch.id)).all().map(toWatch);
+    },
+    async getWatch(id) {
+      const s = need();
+      const r = db.select().from(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, id))).get();
+      return r ? toWatch(r) : null;
+    },
+    async addWatch(rec, max) {
+      const s = need();
+      return db.transaction((tx) => {
+        const old = tx.select().from(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.service, rec.service), eq(priceWatch.serviceGameId, rec.serviceGameId))).get();
+        if (old) return { record: toWatch(old), created: false };
+        if (countOf(tx, priceWatch, s.userId) >= max) throw limitReached(max, "watch");
+        tx.insert(priceWatch).values({ id: rec.id, userId: s.userId, service: rec.service, serviceGameId: rec.serviceGameId, title: rec.title, type: rec.type, addedAt: rec.addedAt }).run();
+        return { record: rec, created: true };
+      });
+    },
+    async deleteWatch(id) {
+      const s = need();
+      db.delete(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, id))).run();
+    },
+    async clearService(service) {
+      const s = need();
+      db.transaction((tx) => {
+        tx.delete(priceSnapshots).where(and(eq(priceSnapshots.userId, s.userId), eq(priceSnapshots.service, service))).run();
+        tx.delete(priceLinks).where(and(eq(priceLinks.userId, s.userId), eq(priceLinks.service, service), ne(priceLinks.status, "excluded"))).run();
+      });
+    },
+  };
+
+  return { identity, library, userData, scanRoots: roots, syncState: sync, settings: settingsRepo, secrets, connections, prices };
 }
 
 function toRoot(r: typeof scanRoots.$inferSelect): ScanRootRecord {
@@ -1035,7 +1161,7 @@ function readCollections(tx: Db | Tx, s: Scope, onlyId?: string): CollectionReco
   return rows.map((c) => ({ id: c.id, name: c.name, source: (c.sourceStore as StoreId | null) ?? null, gameIds: games.get(c.id) ?? [] }));
 }
 
-const countOf = (tx: Db | Tx, table: typeof tags | typeof collections, userId: string): number =>
+const countOf = (tx: Db | Tx, table: typeof tags | typeof collections | typeof priceWatch, userId: string): number =>
   tx.select({ n: sql<number>`count(*)` }).from(table).where(eq(table.userId, userId)).get()!.n;
 
 /** The user's own collections (ADR 88: mirrors are not counted against the limit). */
