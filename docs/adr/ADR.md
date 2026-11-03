@@ -74,7 +74,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario); ampliada en la 70 |
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
-| 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26) |
+| 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26); el lanzador interno lo toma también fuera del servidor para las actualizaciones (decisión 90, punto 18, B6) |
 | 63 | Autenticación entre el lanzador y el servidor local | Vigente (confirmada por el usuario; amplía la 23 y revisa el token de la 46); URL del enlace revisada en la 66; alcance de la sesión ligada al puerto corregido en la 67 |
 | 64 | Errores fatales visibles y credenciales no reconocidas | Vigente (compartimento de claves decidido por el usuario; amplía las 35, 45 y 46); código de salida 14 añadido en la 72 |
 | 65 | Ganchos de prueba y opciones de Node en el ejecutable publicado | Vigente (recomendada; amplía la 45) |
@@ -100,7 +100,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 85 | Favoritos, etiquetas y colecciones | Propuesta (encargada el 2-11-2026; concreta las 36 y 47, revisa la M1 de la 83 y fija la regla de datos del usuario de las futuras fusiones y separaciones de las 20 y 51; migración 0004 con cascada, `PATCH /api/games/:id` y CRUD de colecciones `session+key`, `normalizeLabel` con límites; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 12, sin críticos (migrador con claves ajenas desactivadas fuera de la transacción y `foreign_key_check`, sin Playwright, `\p{Cf}`); falta la del código y la prueba manual); importación de colecciones de Steam en la 87; unicidad de `name_key` solo entre propias y espejos de solo lectura en la 88 |
 | 87 | Importar las colecciones de Steam | Propuesta (encargada el 2-11-2026; amplía las 40, 72 y 85; operación opcional `importCollections` del conector, aditiva, `contractVersion` 1, sin migración; lee `userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json` bajo `steam-root` solo a petición del usuario y con autodetección; bajo demanda con resumen previo (`dryRun`), solo aditiva y por `name_key`; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 13, sin críticos: errores sin texto del fichero, cuenta sin verificar sin favoritos, plan dentro de la transacción, lector estrechado a `userdata`; falta la del código y la prueba manual). La 86 (precios) se escribe en otra rama. **Revisada en la 88**: deja de ser bajo demanda y aditiva |
 | 88 | Colecciones de Steam que se cargan y se refrescan solas al sincronizar | Propuesta (encargada por el usuario el 2-11-2026; revisa las 85 y 87, amplía las 40 y 50; paso al final del bucle de sincronización de cada tienda con `importCollections`; espejo de solo lectura por `source_id` con la migración 0005 e índice único parcial de `name_key` solo entre propias; favoritos solo añadidos y solo los nuevos en Steam; ajustes persistentes `collections.<store>.enabled` y `unverifiedFavorites`; `sourceId` aditivo, `contractVersion` 1; se retiran la ruta de importación y su diálogo; punto 14 aplicado por defecto con (a) salvo 14.3 (b); revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 15, que prevalece: sin adopción, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, guardián de borrado explícito, cambio de cuenta, 200 propias + 200 espejos, migración `0005_collection_source` con id `0006`; falta el código, su revisión y la prueba manual) |
-| 90 | Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás | Propuesta (encargada por el usuario el 3-11-2026; concreta las 32 y 58, amplía las 45, 57, 64, 65 y 69; el paquete es el instalador de Inno en silencio; lanzador estable en Go con `app-<versión>` y `versions.json`; `releases/latest` sin token con ETag, solo estable; manifiesto firmado con Ed25519 y verificado otra vez justo antes de ejecutar; se aplica solo en un arranque en frío o con «Reiniciar y actualizar»; copia previa y restauración siempre en la vuelta atrás; código de salida 20; punto 15 aplicado por defecto con (a) en todo, incluido 15.2, que pide cambiar el invariante 9, y 15.3, que revisa la custodia de la clave de la 58; falta la revisión del `auditor`, el código y la prueba manual) |
+| 90 | Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás | Propuesta (encargada por el usuario el 3-11-2026; concreta las 32 y 58, amplía las 45, 57, 64, 65 y 69; el paquete es el instalador de Inno en silencio; lanzador estable en Go con `app-<versión>` y `versions.json`; `releases/latest` sin token con ETag, solo estable; manifiesto firmado con Ed25519 y verificado otra vez justo antes de ejecutar; se aplica solo en un arranque en frío o con «Reiniciar y actualizar»; copia previa y restauración siempre en la vuelta atrás; código de salida 20; punto 15 aplicado por defecto con (a) salvo 15.1 y 15.2, que esperan al usuario (sin su conformidad para cambiar el invariante 9 no hay `auto` por defecto); 15.3 revisa la custodia de la clave de la 58; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 18, que prevalece: sin críticos y 3 altos (vuelta atrás reanudable, restauración de la 89 bajo el cerrojo de la 62, cerrojo de aplicación y prueba autenticada con la acción `version`); revisa la 62 y amplía la 63; se implementa después de integrar la 89; falta el código, su revisión y la prueba manual) |
 
 ## Decisiones
 
@@ -6246,7 +6246,9 @@ Sin críticos. Decisiones de la coordinación sobre los hallazgos. **Lo que sigu
 - Riesgos: SC10; las colecciones importadas con la 87 conviven con sus espejos como propias (el usuario borra las que sobren); colecciones de otra persona del mismo PC con cuenta sin verificar (marcadas, de solo lectura y sin favoritos); un cambio de formato de Steam deja los espejos congelados, no los borra.
 - El `auditor` revisa el diseño y el código (escritura automática sin confirmación, guardián de borrado, guardas de espejos en el repositorio, registros); el diseño ya está revisado (punto 15). El `tester` prepara la prueba del punto 12. El `documentalista` cambia en la guía de usuario «importar colecciones» por «colecciones de Steam» (se traen solas, son de solo lectura, cómo apagarlo, que hace falta la autodetección y que conviene cerrar Steam para ver los cambios al momento).
 
-### 90. Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás (concreta las decisiones 32 y 58; amplía las 45, 57, 64, 65 y 69)
+### 90. Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás (concreta las decisiones 32 y 58; amplía las 45, 57, 63, 64, 65 y 69; revisa la 62; se implementa después de la 89)
+
+*Revisión del auditor sobre el diseño en el punto 18, que prevalece sobre los puntos 1 a 17 donde no coincida.*
 
 Encargo (3-11-2026, rama `feature/actualizador`). El usuario: «me gustaría que si se publica una nueva release en GitHub, al iniciar Ludiary validara si existe una nueva y se actualizase en segundo plano si el usuario lo tiene configurado con actualización automática».
 
@@ -6341,7 +6343,7 @@ Ajuste `updates.mode` (clave-valor, sin migración):
 | `notify` | Sí | Cuando el usuario pulsa «Descargar e instalar» | En el próximo arranque o con «Reiniciar y actualizar» |
 | `off` | No; solo con «Buscar ahora» | Igual que `notify` | Igual que `notify` |
 
-- Valor por defecto: 15.1, recomendado `auto` (lo pide la 32, confirmada por el usuario).
+- Valor por defecto: 15.1, recomendado `auto` (lo pide la 32, confirmada por el usuario). *Revisado en el punto 18, M5: depende del 15.2, que decide el usuario; sin su conformidad para cambiar el invariante 9, no puede ser `auto`.*
 - **Invariante 9:** es una llamada saliente nueva a `api.github.com`, `github.com` y su CDN de descargas. Sale la IP y el `User-Agent` con la versión; ni identificadores, ni tokens, ni datos de la biblioteca. El invariante dice «servicios que él configure»: con `auto` por defecto, GitHub no lo ha configurado él. **Contradicción a resolver en 15.2.** Recomendado (a): el invariante gana una excepción explícita («y la comprobación de actualizaciones del propio proyecto en GitHub, explicada en el primer arranque y desactivable»); la sesión principal cambia `CLAUDE.md` con la conformidad del usuario.
 - **Dónde se explica:** paso 1 del asistente de primer arranque (69), con una frase y el selector. Las instalaciones que ya pasaron el asistente ven una tarjeta, una sola vez, en la biblioteca (ajuste interno `updates.noticeSeen`). Ajustes > Acerca de, con el selector. Y la guía de privacidad.
 
@@ -6443,7 +6445,7 @@ Casos límite:
   ```
 
   `updateKeys` y `updateRepo` llegan por constantes de compilación. `createUpdateDownloader` vive en `platform-node`. Solo de Windows: el lanzador estable, `/UPDATE=1` de Inno, el contrato del código 20 y `versions.json`.
-- **`versions.json`** (lo escriben el instalador y el lanzador estable): `{ "active": "0.3.0", "previous": "0.2.0" | null, "trial": boolean, "trials": 0..2 }`.
+- **`versions.json`** (lo escriben el instalador y el lanzador estable): `{ "active": "0.3.0", "previous": "0.2.0" | null, "trial": boolean, "trials": 0..2 }`. *Revisado en el punto 18, M2 y M3: lo escribe solo Go y gana `rollingBack` y `badVersions`; `state.json` pierde `badVersions` y `dbCopy`.*
 - **`updates/state.json`** (lo escribe Node; el lanzador estable solo borra carpetas): `{ "state": "idle" | "downloading" | "ready" | "applying" | "failed" | "rolled-back", "version"?, "from"?, "to"?, "dbCopy"?, "attempts"?, "badVersions": string[], "code"? }`. Escritura atómica; si no se puede leer, cuenta como `idle` con `badVersions` vacío.
 - **Registros** (35, 59): códigos, versiones y estados; nunca URL firmadas de la CDN (llevan parámetros temporales) ni rutas con el nombre del usuario.
 
@@ -6460,6 +6462,7 @@ Casos límite:
 | Dependencias maliciosas en la compilación | Fichero de bloqueo y `minimumReleaseAge` (39); la compilación no es reproducible (riesgo aceptado y anotado). |
 | Ficheros enormes o respuestas lentas | Topes de tamaño y de tiempo. |
 | Argumentos del instalador | Fijos, sin nada que venga de la red. |
+| Clave privada comprometida (punto 18, B7) | Versión firmada con la clave de reserva que retira la comprometida, publicada cuanto antes; hasta que se instala, lo firmado con la comprometida se acepta. Guía de respuesta en `docs/release.md`. |
 
 #### 14. Pruebas
 
@@ -6471,8 +6474,8 @@ Casos límite:
 
 #### 15. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
 
-1. **Modo por defecto:** **(a) `auto` (por defecto: es la 32)**; (b) `notify`; (c) `off`.
-2. **Invariante 9:** **(a) excepción explícita en el invariante para la comprobación de actualizaciones del proyecto, explicada en el primer arranque y desactivable (por defecto)**; (b) ninguna petición hasta que el usuario elija en el asistente o en la tarjeta.
+1. **Modo por defecto:** (a) `auto` (recomendado: es la 32; solo si el usuario acepta 15.2 (a)); (b) `notify`; (c) `off`. **Sin valor por defecto hasta que el usuario decida 15.2** (punto 18, M5).
+2. **Invariante 9 (pendiente del usuario, no se aplica por defecto; punto 18, M5):** (a) excepción explícita en el invariante para la comprobación de actualizaciones del proyecto, explicada en el primer arranque y desactivable (recomendada; exige su conformidad para cambiar `CLAUDE.md`); (b) ninguna petición hasta que el usuario elija un modo en el asistente, en la tarjeta o en Acerca de. En los dos casos, nada antes de completar el asistente o de `updates.noticeSeen`, y «Buscar ahora» siempre.
 3. **Custodia de la clave de firma:** **(a) fuera de línea, con el mantenedor, cifrada y con clave de reserva; cada versión se firma en local (por defecto; revisa la 58)**; (b) secreto de CI en un entorno protegido (lo que decía la 58; más cómodo, pero quien controle la cuenta de GitHub puede llegar a la clave).
 4. **Cuándo se instala:** **(a) en el próximo arranque y con «Reiniciar y actualizar» (por defecto)**; (b) además, sola al pulsar «Salir» en la bandeja; (c) además, reiniciando sola cuando no se usa.
 5. **Canal:** **(a) solo estable (por defecto)**; (b) canal beta opcional con pre-releases.
@@ -6508,6 +6511,123 @@ Es la validación del ciclo completo que exigen la 45 y la 58.
 - **W2 (comprobado en la 45):** instalación silenciosa por usuario sin UAC, con `--stop` previo.
 - **W3 (sin verificar):** Inno puede reemplazar `{app}\Ludiary.exe` porque el lanzador estable ya salió. Si Defender bloquea un momento el fichero, Inno falla, `versions.json` no cambia y sigue la versión vieja (punto 8).
 - **N1 (sin verificar dentro del SEA):** `crypto.verify(null, …)` con claves Ed25519 en Node 24.20.
+- **W4 (sin verificar, añadido en el punto 18):** comportamiento real de Inno Setup 6.7 en `/UPDATE=1`: que reemplace el lanzador estable recién salido, el idioma que usa en modo silencioso (el guardado de la instalación anterior o el del sistema) y que `SetupMutex` exista y se pueda consultar desde Go con `OpenMutex`.
+
+#### 18. Revisión del auditor sobre el diseño (3 de noviembre de 2026)
+
+Sin críticos; 3 altos. Se aceptan todos los hallazgos. **Lo que sigue prevalece sobre los puntos 1 a 17 donde no coincida.**
+
+**Dependencia de la decisión 89.** La restauración de la base que usa la vuelta atrás no existe en `main`. La define la 89 (copias y restauración, rama `feature/copias-seguridad`, en implementación): cerrojo de la 62, borrado de `-wal` y `-shm` y copia a `.partial` con renombrado. **La 90 se implementa después de integrar la 89** y reutiliza su función de restauración: hay una sola en el código, y el actualizador no tiene otra propia.
+
+**Altos**
+
+- **A1. Orden de la vuelta atrás, reanudable** (revisa el punto 8.1 a 8.3):
+  1. El lanzador estable escribe en `versions.json` el marcador `rollingBack: { from, to }`. Solo lo escribe Go.
+  2. `app-<to>\Ludiary.exe --stop`. Si no devuelve 0, no se toca nada más y sale el cuadro fatal de la 64 (A2).
+  3. `app-<from>\Ludiary.exe --rollback-update`: restaura la base y devuelve 0.
+  4. Go añade `to` a `badVersions`, escribe `active: from` y quita `rollingBack`.
+  5. Borra `app-<to>`.
+  - Si algo se corta, el siguiente arranque ve `rollingBack` y sigue por el primer paso no hecho: se repite desde el 2, y todos los pasos son idempotentes.
+  - **Nunca se sobrescribe una copia previa existente:** si ya hay una copia para el par (`from`, `to`) y esa actualización no se ha confirmado (`trial: false`), se reutiliza y no se hace otra. Así un reintento tras una vuelta atrás cortada no copia encima la base ya migrada.
+  - `state.json` distingue `install-interrupted` (había `applying`, `active` sigue siendo `from` y no hay `rollingBack`) de `rollback-interrupted` (hay `rollingBack`), para el aviso de la web y para el registro.
+- **A2. Restauración segura** (revisa el punto 8.3). `--rollback-update`:
+  - toma el cerrojo de la 62 durante **toda** la restauración y, si no lo consigue, aborta sin tocar nada (código 1);
+  - hace `PRAGMA wal_checkpoint(TRUNCATE)` de la base actual antes de guardarla como copia;
+  - comprueba si la base tiene migraciones desconocidas para `from`, solo para el registro y el aviso: la copia se restaura igual (punto 8);
+  - restaura con la función de la 89.
+  - Si `--stop` de la versión nueva no devuelve 0, no se restaura nada y sale el cuadro fatal de la 64.
+- **A3. Cerrojo de aplicación y prueba autenticada** (revisa el punto 7.3 a 7.5):
+  - **Cerrojo de aplicación**, desde que Go recibe el código 20 hasta el final de la prueba. Es una cadena de relevos con solapes, porque el lanzador estable tiene que salir para que Inno lo reemplace:
+    1. Go abre en exclusiva `updates\apply.lock` (lo suelta el sistema si Go muere).
+    2. Lanza el instalador y espera hasta 10 s a que exista su `SetupMutex` (`Ludiary-Setup`, directiva nueva del `.iss`). Solo entonces suelta `apply.lock` y sale.
+    3. Inno retiene el mutex hasta terminar. Su `[Run]` lanza `Ludiary.exe --commit-update <to>`.
+    4. Ese Go toma `apply.lock` y espera a que desaparezca el mutex antes de seguir con la prueba.
+    - Un lanzador estable que arranca con `apply.lock` ocupado o con el mutex presente no ejecuta nada: espera hasta 120 s y después sigue normal.
+  - **`--trial` solo da por buena la versión si:**
+    1. no había ningún servidor respondiendo antes de empezar (si lo hay, la prueba falla);
+    2. arrancó el servidor él mismo;
+    3. ese servidor contesta a una acción nueva `version` del protocolo de la 63, con resultado firmado (aditiva a `LauncherAction`), igual a la versión propia;
+    4. después se obtiene el enlace de `open-link` como hoy.
+
+**Medios**
+
+- **M1.** Go aplica también las reglas 1 a 4 del punto 4, no solo la firma y el hash: versión mayor que la activa e igual a `to`, fuera de `badVersions`, `schema`, `product`, `channel`, `name` y `target`. Los vectores de prueba (manifiestos y firmas buenos y malos) son ficheros compartidos en `packages/runtime/test/fixtures/update-vectors/`, que usan Vitest y `go test`.
+- **M2. `versions.json` lo escribe solo Go** (revisa el punto 7.4):
+  - Inno ya no lo escribe: al terminar, su `[Run]` lanza `Ludiary.exe --commit-update <to>`.
+  - Si Inno se corta antes, el siguiente arranque de Go confirma igual cuando encuentra `app-<to>` completa y `applying`.
+  - Escritura: temporal, `FlushFileBuffers` y `MoveFileEx(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)`.
+  - Inno escribe el marcador de carpeta completa `app-<v>\.complete` como **último** fichero (`CurStepChanged(ssPostInstall)`).
+  - La reserva del punto 7.9 descarta las carpetas sin marcador y las versiones de `badVersions`.
+- **M3. Un escritor por fichero** (revisa el punto 12; resuelve que el punto 12 asignara `badVersions` a `state.json` mientras el punto 8 lo escribía en la vuelta atrás):
+  - **Go:** `versions.json`, que pasa a ser `{ active, previous, trial, trials, rollingBack?, badVersions: string[] }`.
+  - **Node:** `updates/state.json`, sin `badVersions` ni `dbCopy`. Cada uno solo lee el fichero del otro.
+  - La ruta de la copia previa no se guarda: se deriva de `from` y `to` (la más reciente `backups/pre-update-<timestamp>-<from>-to-<to>.sqlite`).
+  - Node escribe con fsync y renombrado.
+- **M4. Cuándo se vuelve atrás** (revisa los puntos 7.5 y 8):
+  - Al segundo fallo de la prueba (código 1 o tiempo agotado) o al primer fatal explícito (códigos 10 a 14, decisión 64).
+  - El tiempo de la prueba es `START_TIMEOUT_MS` (60 s, `launcher.ts`) más 60 s de margen: 120 s, y se deriva de esa constante, no se escribe aparte.
+  - **«Buscar ahora» puede reintentar una versión mala.** La web avisa de que ya falló; Node escribe `retryBad: <v>` en `state.json`; Go solo acepta una versión de `badVersions` con ese valor; y si la prueba sale bien, la quita de la lista.
+- **M5. Ninguna comprobación automática antes de que el usuario sepa que existe** (revisa los puntos 3.1 y 5):
+  - Nada hasta completar el asistente de primer arranque (69) o hasta `updates.noticeSeen = true`.
+  - «Buscar ahora» funciona siempre.
+  - **El punto 15.2 queda para el usuario y no se aplica por defecto.** Sin su conformidad para cambiar el invariante 9 en `CLAUDE.md`, el modo por defecto **no puede ser `auto`**: la alternativa es (b), ninguna petición hasta que el usuario elija un modo en el asistente, en la tarjeta o en Acerca de. El 15.1 depende del 15.2.
+  - Mientras tanto se implementa la puerta de M5, que vale para las dos, y el valor inicial de `updates.mode` se fija cuando el usuario decida.
+- **M6.** El registro de Inno va a `updates\<v>\install.log`, fuera de `logs\`, porque lleva rutas completas. La exportación (35) lo incluye solo pasado por `redactHome`. Prueba: la exportación no contiene la carpeta del usuario.
+- **M7. Una sola poda de copias por fecha** (revisa el punto 7.2 y amplía la 57):
+  - Nombres `pre-<kind>-<timestamp>-…`, con `kind` = `migration` o `update`, para el migrador, la 89 y la 90.
+  - Se conservan las 3 más recientes de todas.
+  - Nunca se borra la copia de la actualización en curso hasta `trial: false`.
+- **M8. Instalación manual sobre la disposición nueva:**
+  - El instalador sin `/UPDATE=1` también lanza `--commit-update <v>`, y Go escribe `{ active: nueva, previous: activa anterior, trial: true }`.
+  - En su primera prueba, Node limpia un `applying` que haya quedado.
+  - Si la versión instalada es menor que la anterior, la web avisa una vez de que es una bajada y de que, si la base es más nueva, saldrá el error 14 y conviene restaurar una copia.
+
+**Bajos**
+
+- **B1.**
+  - Go abre el instalador con compartición solo de lectura, calcula el hash sobre **ese mismo descriptor** y lo mantiene abierto hasta `CreateProcess`, para que nadie pueda cambiarlo entre la verificación y la ejecución.
+  - Inno se extrae a `%TEMP%` (`is-*.tmp`) y ejecuta desde allí: queda anotado como superficie fuera de este control. Ya era así en la instalación manual.
+- **B2.** Toda versión leída de la red, de `state.json` o de `versions.json` se valida con `^\d+\.\d+\.\d+$` antes de componer una ruta o un argumento.
+- **B3.**
+  - `browser_download_url` tiene que empezar exactamente por `https://github.com/chamanRMA/Ludiary/releases/download/v<v>/<name>`.
+  - La etiqueta y `version` usan la misma expresión estricta, con un máximo de 32 caracteres.
+- **B4. Claves y contexto de la firma:**
+  - Un solo origen de claves, `apps/desktop/update-keys.json`, con `keyId` y la clave pública en base64 crudo (32 bytes). `build.mjs` lo convierte para Node (SPKI o JWK) y para Go.
+  - La compilación de publicación falla si las claves son las de prueba o si Node y Go no tienen el mismo conjunto.
+  - Lo firmado es `ludiary-update-v1\n` seguido de los bytes del manifiesto (prefijo de contexto, para que una firma no valga en otro uso).
+- **B5. Lanzador estable:**
+  - Usa la misma carpeta de datos que `platform-windows/src/info.ts`: `%LOCALAPPDATA%\Ludiary`; sin `LOCALAPPDATA`, error.
+  - En la compilación de publicación no lee ninguna variable de ganchos de prueba (65); la variante de pruebas usa una etiqueta de compilación de Go.
+  - Carga `wintrust.dll` solo desde System32, cuando haya Authenticode.
+  - `/LOG=<ruta>` va como un único argumento, sin comillas internas.
+  - Sus textos es/en van en un fichero de mensajes incrustado, con la misma aceptación frente al invariante 6 que los del instalador en la 45: fichero solo de mensajes y la compilación falla si una clave falta en un idioma.
+- **B6.**
+  - **Revisa la 62:** el lanzador interno toma el cerrojo de instancia fuera del papel de servidor (copia previa del punto 7.2 y `--rollback-update`).
+  - **Código 20:** el lanzador interno solo lo devuelve si se le llama con `--from-launcher`, que añade el lanzador estable. Sin ese argumento, por ejemplo si alguien ejecuta `app-<v>\Ludiary.exe` directamente, no aplica nada, limpia `applying` y arranca normal.
+  - **Compatibilidad del almacén de claves entre versiones:** una versión nueva no cambia el nombre ni el formato de las entradas del Administrador de credenciales (huecos de la clave maestra, token de instalación; 46, 63 y 64) de manera que la versión conservada en `previous` no las entienda. Un cambio así exige su propia decisión con un paso de compatibilidad.
+- **B7.** Se añade a la tabla del punto 13 la fila: *clave privada comprometida* → se publica cuanto antes una versión firmada con la clave de reserva que retira la comprometida. Hasta que la instalen, las instalaciones aceptan lo firmado con la comprometida: el punto débil es ese intervalo. Se añade también la guía de respuesta en `docs/release.md`.
+
+**Pruebas que se añaden:**
+- vuelta atrás cortada en cada uno de sus pasos y reanudada;
+- copia previa existente reutilizada, no sobrescrita;
+- `install-interrupted` frente a `rollback-interrupted`;
+- `--rollback-update` sin cerrojo aborta, y con `--stop` distinto de 0 no restaura nada;
+- `apply.lock` y `SetupMutex` con dos lanzadores a la vez;
+- `--trial` con un servidor ya en marcha o con otra versión en `version`;
+- vectores compartidos en Go y Vitest;
+- carpeta sin `.complete` excluida de la reserva;
+- `retryBad`;
+- ninguna petición antes del asistente o de `noticeSeen`;
+- exportación con el registro de Inno sin la carpeta del usuario;
+- poda conjunta que respeta la copia en curso;
+- instalación manual de una bajada;
+- ruta con una versión inválida rechazada;
+- URL de descarga con otro prefijo rechazada;
+- compilación de publicación con claves de prueba que falla;
+- firma sin el prefijo de contexto rechazada;
+- código 20 sin `--from-launcher`.
+
+**Prueba manual que se añade:** pasos de corte en la vuelta atrás (también en el 10); dos clics seguidos en el acceso directo durante la instalación; y W4.
 
 **Motivo:** el usuario quiere que una versión publicada en GitHub llegue sola, y la 32 y la 58 ya fijaban el qué (al arrancar, firmado, con vuelta atrás). Esta decisión fija el cómo con las piezas que ya existen:
 
@@ -6524,14 +6644,23 @@ Aplicar solo en un arranque en frío garantiza que no se interrumpe nada. Altern
 - Cambia la disposición de la instalación: lanzador estable en Go en la raíz, `app-<versión>` y `versions.json`. El instalador gana `/UPDATE=1`, la migración desde la disposición en plano y la limpieza en la desinstalación. `build.mjs` compila también el lanzador estable e incrusta las claves y el repositorio.
 - Código de salida nuevo 20 (`applyUpdate`) y papeles `--trial`, `--rollback-update` y `--after-stop`. `LUDIARY_UPDATE_FEED` entra en los ganchos de prueba (65).
 - Ajustes `updates.mode`, `updates.cache` y `updates.noticeSeen`, sin migración. API `/api/updates*`. Sección Acerca de, paso 1 del asistente (amplía la 69), tarjeta única y entradas de la bandeja.
-- Llamada saliente nueva a GitHub, configurable y explicada. Si se aplica 15.2 (a), la sesión principal actualiza el invariante 9 de `CLAUDE.md` con la conformidad del usuario.
+- Llamada saliente nueva a GitHub, configurable y explicada, y nunca antes del asistente o de la tarjeta (punto 18, M5). Si el usuario elige 15.2 (a), la sesión principal actualiza el invariante 9 de `CLAUDE.md` con su conformidad; si no, se aplica (b).
+- Revisión del `auditor` sobre el diseño incorporada (punto 18, sin críticos, 3 altos), que prevalece:
+  - vuelta atrás reanudable con `rollingBack`;
+  - restauración con la función de la 89 y bajo el cerrojo de la 62;
+  - cerrojo de aplicación (`apply.lock` y `SetupMutex`) y prueba autenticada con la acción `version` (amplía la 63);
+  - un escritor por fichero;
+  - Go aplica todas las reglas del manifiesto;
+  - poda conjunta de copias (amplía la 57);
+  - el lanzador interno toma el cerrojo de la 62 fuera del servidor (revisa la 62).
+- **Depende de la 89:** se implementa después de integrarla y reutiliza su restauración.
 - Unos 100 MB más en disco por la segunda versión conservada, más 27 MB pasajeros por descarga.
 - Coste estimado: medio-alto. Lanzador estable en Go (~300 líneas con pruebas), módulo de actualizaciones y cliente de descargas (~800 con pruebas), cambios del instalador (~60), Acerca de y ajustes en la web, y guiones de publicación (~150).
 - Riesgos: GH5, W1, W3. La cuenta de GitHub y la clave del proyecto son el punto único de confianza de las actualizaciones. Las actualizaciones se quedan esperando hasta el siguiente arranque en frío (lo mitiga el botón «Reiniciar y actualizar»). Un fallo que aparezca después del periodo de prueba no provoca vuelta atrás automática.
 
 **Orden de implementación:**
 
-1. `auditor`: revisa este diseño antes del código (firma y doble verificación, hosts y redirecciones, código 20 y papeles nuevos, invariantes 1, 4 y 9, rutas con la 67, custodia de la clave).
+1. `auditor`: revisa este diseño antes del código (firma y doble verificación, hosts y redirecciones, código 20 y papeles nuevos, invariantes 1, 4 y 9, rutas con la 67, custodia de la clave). *Hecho el 3-11-2026 (punto 18).* Antes de empezar el código, integrar la 89 en `main` (punto 18).
 2. `empaquetador`:
    - lanzador estable en Go (`apps/desktop/launcher`) y disposición `app-<versión>`;
    - `/UPDATE=1`, migración desde la disposición en plano y `[UninstallDelete]` en Inno;
@@ -6585,11 +6714,11 @@ Sin fase asignada: juegos manuales y personalización de metadatos por el usuari
 
 Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 
-- Actualizador con vuelta atrás (decisión 58), **diseñado en la 90** (3-11-2026): falta la revisión del `auditor` sobre el diseño, el código y la prueba manual del punto 16, que es la validación del ciclo completo que exigían la 45 y la 58. Punto 15 aplicado por defecto con (a) en todo; el usuario puede cambiarlo, en especial:
-  - 15.2: aceptar la excepción al invariante 9 (la sesión principal cambia `CLAUDE.md`) o no hacer ninguna petición hasta que el usuario elija;
-  - 15.3: custodia de la clave, que revisa la 58.
+- Actualizador con vuelta atrás (decisión 58), **diseñado en la 90** (3-11-2026). Revisión del `auditor` sobre el diseño incorporada en su punto 18, que prevalece. Se implementa **después de integrar la 89** y reutiliza su restauración. Falta el código, su revisión y la prueba manual del punto 16 (con los pasos añadidos en el 18), que es la validación del ciclo completo que exigían la 45 y la 58.
+  - **15.2, pendiente del usuario (no se aplica por defecto):** (a) aceptar la excepción al invariante 9 (la sesión principal cambia `CLAUDE.md`) o (b) ninguna petición hasta que el usuario elija un modo. Sin (a), el modo por defecto no puede ser `auto` (15.1).
+  - 15.3 (custodia de la clave, que revisa la 58), 15.4 y 15.5 aplicados por defecto con (a); el usuario puede cambiarlos.
   - Antes de publicar la primera versión con actualizador: generar las dos claves, activar las *immutable releases* y 2FA en `chamanRMA/Ludiary`. Quien tenga una compilación anterior instala esa versión a mano una vez.
-  - Supuestos por cerrar: GH4, GH5, W1, W3 y N1.
+  - Supuestos por cerrar: GH4, GH5, W1, W3, W4 y N1.
 - Detección del proceso de cada juego: propuesta en la 55. Se cierra en el corte 2b de la 72 (tiempo de juego), que pasa a ir **después** del primer corte de GOG (decisión 76), con al menos tres juegos reales, y se revalida con cada tienda nueva.
 - Puntos de producto de la decisión 72: A y B decididos por el usuario. (C), orden de los cortes, **resuelto** el 22-10-2026: tras la cuenta de Steam (74) el usuario encargó GOG (76), antes del corte 2b.
 - Decisión 76, punto 11.1 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste). El punto 11.2 queda **resuelto** el 22-10-2026: el usuario eligió (b), la cuenta de GOG ahora, pero sin el emparejamiento, que va en su propio corte; el corte 2b va después (decisión 77).
