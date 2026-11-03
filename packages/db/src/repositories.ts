@@ -826,6 +826,8 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
     ...(r.coverUrl ? { coverUrl: r.coverUrl } : {}),
     ...(r.coverFallbackUrl ? { coverFallbackUrl: r.coverFallbackUrl } : {}),
     addedAt: r.addedAt,
+    origin: r.origin as PriceWatchRecord["origin"],
+    originStoreGameId: r.originStoreGameId,
   });
   // ADR 86 point 8. Links and cache are rebuildable; the watch list is the user's.
   const prices: PriceRepository = {
@@ -910,13 +912,30 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
         const old = tx.select().from(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.service, rec.service), eq(priceWatch.serviceGameId, rec.serviceGameId))).get();
         if (old) return { record: toWatch(old), created: false };
         if (countOf(tx, priceWatch, s.userId) >= max) throw limitReached(max, "watch");
-        tx.insert(priceWatch).values({ id: rec.id, userId: s.userId, service: rec.service, serviceGameId: rec.serviceGameId, title: rec.title, type: rec.type, coverUrl: rec.coverUrl ?? null, coverFallbackUrl: rec.coverFallbackUrl ?? null, addedAt: rec.addedAt }).run();
+        tx.insert(priceWatch).values({ id: rec.id, userId: s.userId, service: rec.service, serviceGameId: rec.serviceGameId, title: rec.title, type: rec.type, coverUrl: rec.coverUrl ?? null, coverFallbackUrl: rec.coverFallbackUrl ?? null, addedAt: rec.addedAt, origin: rec.origin, originStoreGameId: rec.originStoreGameId }).run();
         return { record: rec, created: true };
       });
     },
     async deleteWatch(id) {
       const s = need();
       db.delete(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, id))).run();
+    },
+    async applyWishlistImport(plan, max) {
+      const s = need();
+      return db.transaction((tx) => {
+        let removed = 0;
+        for (const id of plan.remove) removed += tx.delete(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, id))).run().changes;
+        for (const r of plan.rekey) tx.update(priceWatch).set({ originStoreGameId: r.originStoreGameId }).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, r.id), ne(priceWatch.origin, "manual"))).run();
+        let added = 0;
+        for (const rec of plan.add) {
+          const old = tx.select({ id: priceWatch.id }).from(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.service, rec.service), eq(priceWatch.serviceGameId, rec.serviceGameId))).get();
+          if (old) continue; // followed meanwhile: it stays as it is
+          if (countOf(tx, priceWatch, s.userId) >= max) throw limitReached(max, "watch"); // rolls everything back
+          tx.insert(priceWatch).values({ id: rec.id, userId: s.userId, service: rec.service, serviceGameId: rec.serviceGameId, title: rec.title, type: rec.type, coverUrl: rec.coverUrl ?? null, coverFallbackUrl: rec.coverFallbackUrl ?? null, addedAt: rec.addedAt, origin: rec.origin, originStoreGameId: rec.originStoreGameId }).run();
+          added++;
+        }
+        return { added, removed };
+      });
     },
     async clearService(service) {
       const s = need();

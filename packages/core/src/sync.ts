@@ -38,6 +38,11 @@ export interface SyncService {
   schedule(opts: ScheduleOptions): Promise<void>;
   whenIdle(): Promise<void>;
   storeStatus(): Promise<readonly StoreStatus[]>;
+  /**
+   * ADR 91 point 13 (M1). Runs fn alone for this store: waits for the pass in flight (if any), then holds the store's slot until
+   * fn settles. A pass asked meanwhile is always queued, and runs when fn ends.
+   */
+  exclusive<T>(store: StoreId, fn: () => Promise<T>): Promise<T>;
 }
 
 /** Minimum time between two forced (manual) library syncs of one store. */
@@ -50,6 +55,8 @@ export function createSyncService(env: Env, mirror: CollectionMirrorService): Sy
   const media = createMediaStep(env);
   const inFlight = new Map<StoreId, Promise<void>>();
   const queued = new Map<StoreId, Set<SyncOperation>>();
+  /** Stores whose slot is held by `exclusive`: a pass asked then is queued even if not forced. */
+  const held = new Set<StoreId>();
 
   const connectorLog = (id: StoreId): ConnectorLogger => connectorLogger(env, id);
 
@@ -71,7 +78,7 @@ export function createSyncService(env: Env, mirror: CollectionMirrorService): Sy
       if (ops.has("library") && (await libraryEligible(c))) mine.add("library");
       if (mine.size === 0) continue;
       if (inFlight.has(c.id)) {
-        if (opts.force) queued.set(c.id, new Set([...(queued.get(c.id) ?? []), ...mine]));
+        if (opts.force || held.has(c.id)) queued.set(c.id, new Set([...(queued.get(c.id) ?? []), ...mine]));
         continue;
       }
       let markAccepted: () => void = () => undefined;
@@ -443,8 +450,36 @@ export function createSyncService(env: Env, mirror: CollectionMirrorService): Sy
     }
   }
 
+  function exclusive<T>(store: StoreId, fn: () => Promise<T>): Promise<T> {
+    return (async () => {
+      // Atomic: nothing awaits between the check and `inFlight.set`, so two waiters cannot both take the slot.
+      while (inFlight.has(store)) await inFlight.get(store)!.catch(() => undefined);
+      const task = Promise.resolve().then(fn);
+      held.add(store);
+      const slot = task
+        .then(
+          () => undefined,
+          () => undefined,
+        )
+        .then(async () => {
+          held.delete(store);
+          const c = env.connectors.get(store);
+          const ops = queued.get(store);
+          if (c && ops && ops.size > 0) await runLoop(c, ops, true, "manual", () => undefined);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          held.delete(store);
+          inFlight.delete(store);
+        });
+      inFlight.set(store, slot);
+      return task;
+    })();
+  }
+
   return {
     schedule,
+    exclusive,
     async whenIdle() {
       while (inFlight.size > 0) await Promise.allSettled([...inFlight.values()]);
     },

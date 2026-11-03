@@ -2,7 +2,7 @@
 // everything it returns as untrusted, caches, spends a budget and decides what the user sees.
 import { ConnectorError } from "@ludiary/contracts";
 import type { EntryMedia, HttpClient, PriceService, PriceServiceId, PriceSnapshot, StoreId, SyncContext } from "@ludiary/contracts";
-import { epochOf, bumpEpoch, serviceContext, serviceKey } from "./contexts";
+import { epochOf, bumpEpoch, serviceContext, serviceKey, syncContext } from "./contexts";
 import {
   PRICE_BATCH,
   PRICE_BATCH_ALL,
@@ -16,10 +16,13 @@ import {
   SEARCH_KEEP,
   SEARCH_MAX_RESULTS,
   SEARCH_TTL_MS,
+  LIBRARY_TIMEOUT_MS,
   WATCH_MAX,
+  WISHLIST_IMPORT_FLOOR_MS,
+  WISHLIST_MAX_ENTRIES,
   type Env,
 } from "./env";
-import { asKey, CoreError } from "./errors";
+import { asKey, CoreError, STORE_NAMES, toCoreError } from "./errors";
 import type {
   GamePrices,
   PriceBoard,
@@ -37,11 +40,12 @@ import type {
   ServiceState,
   ServiceStatus,
   WatchItem,
+  WishlistImportResult,
 } from "./model";
 import { readPriceSettings } from "./settings";
 import { MANUAL_SYNC_FLOOR_MS } from "./sync";
 import { withTimeout } from "./timeout";
-import { isNonEmptyText, validateMedia } from "./validate";
+import { cleanTitle, isNonEmptyText, isStoreGameId, validateMedia } from "./validate";
 import { serviceScope, serviceStatusKey } from "./vault";
 
 const ID: PriceServiceId = "itad";
@@ -170,6 +174,8 @@ export interface PriceFeature {
   search(title: string): Promise<readonly PriceSearchResult[]>;
   watch(resultId: string): Promise<{ item: WatchItem; created: boolean }>;
   unwatch(id: string): Promise<void>;
+  /** ADR 91 and its point 13. Follows the store's wishlist; see the function for the rules. */
+  importWishlist(store: StoreId): Promise<WishlistImportResult>;
 }
 
 /** Budget and 429 wait of the service, shared by the queries and the key check of the wizard (ADR 86 point 7). */
@@ -227,13 +233,21 @@ export function createPriceGate(env: Env): PriceGate {
 }
 
 /** `cancelWizards` drops the open wizard of the service (disconnect). */
-export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (key: ReturnType<typeof serviceKey>) => void): PriceFeature {
+export function createPriceFeature(
+  env: Env,
+  gate: PriceGate,
+  cancelWizards: (key: ReturnType<typeof serviceKey>) => void,
+  /** `SyncService.exclusive` (ADR 91 point 13, M1). */
+  exclusive: <T>(store: StoreId, fn: () => Promise<T>) => Promise<T>,
+): PriceFeature {
   const { deps } = env;
   const key = serviceKey(ID);
   const repo = () => deps.prices;
   const limitedUntil = gate.limitedUntil;
   let lastManualAt = -Infinity;
   const inflight = new Map<string, Promise<void>>();
+  /** ADR 91: when each store was last imported (memory only). */
+  const lastImport = new Map<StoreId, number>();
   /** Recent search results, per user: resultId -> what the server saw (point 15, M6). */
   const searches = new Map<string, Map<string, SearchEntry>>();
 
@@ -410,7 +424,138 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
   ): Promise<WatchItem> {
     const snap = snaps.get(w.serviceGameId);
     const ownedId = owned.get(w.serviceGameId);
-    return { id: w.id, title: w.title, type: w.type, ...(ownedId ? { ownedGameId: ownedId } : {}), ...(await coversOf(ownedId, w, library)), prices: snap ? view(snap) : null };
+    return { id: w.id, title: w.title, type: w.type, ...(ownedId ? { ownedGameId: ownedId } : {}), ...(await coversOf(ownedId, w, library)), origin: w.origin, prices: snap ? view(snap) : null };
+  }
+
+  /**
+   * ADR 91 point 5 and 13. Reads the store's wishlist (ids), looks the new ids up in the service in the store's order until the
+   * follow list is full, asks the store for the title and image of only those, and writes everything in ONE transaction at the end:
+   * a failed batch writes nothing. Only rows with this store as origin are ever deleted, and only after a complete, non-empty list.
+   */
+  async function importWishlist(storeRaw: StoreId): Promise<WishlistImportResult> {
+    const svc = await ready();
+    const c = typeof storeRaw === "string" ? env.connectors.get(storeRaw) : undefined;
+    if (!c || !c.readWishlist || !c.describeWishlistItems || (c.id !== "steam" && c.id !== "gog")) throw new CoreError("action-unavailable", "This store has no wishlist import");
+    const readWishlist = c.readWishlist.bind(c);
+    const describe = c.describeWishlistItems.bind(c);
+    const origin: "steam" | "gog" = c.id;
+    const connected = async () => (await deps.connections.get(c.id))?.status === "connected";
+    if (!(await connected())) throw new CoreError("auth.required", "The store is not connected");
+    const now = deps.clock.now();
+    const next = (lastImport.get(c.id) ?? -Infinity) + WISHLIST_IMPORT_FLOOR_MS;
+    if (now < next) throw new CoreError("store.rate-limited", "The wishlist was imported a moment ago", { key: asKey("prices.errors.wishlistFloor"), params: { minutes: Math.ceil((next - now) / 60_000) } });
+    lastImport.set(c.id, now);
+    const store = repo()!;
+
+    return exclusive(c.id, async () => {
+      const storeEpoch = epochOf(env, c.id);
+      const svcEpoch = epochOf(env, key);
+      const signal = deps.clock.timeout(LIBRARY_TIMEOUT_MS);
+      try {
+        if (!(await connected())) throw new CoreError("auth.required", "The store is not connected");
+        // 1. The ids, in store order. The context lets GOG rotate its token (it is not a sync: the lock above is what keeps two renewals apart).
+        const snapshot = await withTimeout(signal, async () => readWishlist(await syncContext(env, c, signal, { epoch: "guard" })));
+        if (!snapshot || typeof snapshot !== "object" || !Array.isArray(snapshot.entries)) throw new ConnectorError("store.unexpected-response", "readWishlist returned no list");
+        const ids: string[] = [];
+        const seen = new Set<string>();
+        let lossy = snapshot.entries.length > WISHLIST_MAX_ENTRIES;
+        for (const e of snapshot.entries.slice(0, WISHLIST_MAX_ENTRIES)) {
+          const id = (e as { storeGameId?: unknown } | null)?.storeGameId;
+          if (!isStoreGameId(id)) lossy = true;
+          else if (!seen.has(id)) {
+            seen.add(id);
+            ids.push(id);
+          }
+        }
+        const complete = snapshot.complete === true && !lossy;
+        const result: WishlistImportResult = { added: 0, removed: 0, alreadyWatched: 0, notFound: 0, overLimit: 0, hiddenOrEmpty: ids.length === 0 };
+        if (ids.length === 0) return result; // hidden or empty: nothing is added and, above all, nothing is deleted
+
+        // 2. What is already followed.
+        const watch = await store.listWatch(ID);
+        const bySgid = new Map(watch.map((w) => [w.serviceGameId, w]));
+        const known = new Set(watch.filter((w) => w.origin === origin).map((w) => w.originStoreGameId));
+        const stale = complete ? watch.filter((w) => w.origin === origin && w.originStoreGameId !== null && !seen.has(w.originStoreGameId)) : [];
+        const staleIds = new Set(stale.map((w) => w.id));
+        const fresh = ids.filter((id) => !known.has(id));
+        result.alreadyWatched = ids.length - fresh.length;
+        // As if every stale row went; a row that stays (below) takes its slot back.
+        const hole = Math.max(0, WATCH_MAX - (watch.length - stale.length));
+
+        // 3. Lookup in batches of 200, in store order, until the finds fill the hole. A failed batch ends everything with nothing written.
+        const found: { id: string; sgid: string }[] = [];
+        const taken = new Set<string>();
+        const rekey = new Map<string, string>(); // watch id -> new origin id (point 13, low (b), same store)
+        let looked = 0;
+        for (const batch of chunk(fresh, PRICE_LOOKUP_BATCH)) {
+          if (found.length >= hole) break;
+          const answer = validateLookup(await query(svcEpoch, svc, MIB, (ctx) => svc.lookupByStore(origin, batch, ctx)), new Set(batch));
+          looked += batch.length;
+          for (const id of batch) {
+            const sgid = answer.get(id);
+            if (!sgid) result.notFound++;
+            else if (taken.has(sgid)) result.alreadyWatched++; // two ids of the store are one game of the service
+            else {
+              taken.add(sgid);
+              const w = bySgid.get(sgid);
+              if (!w) found.push({ id, sgid });
+              else {
+                result.alreadyWatched++;
+                if (staleIds.has(w.id)) {
+                  staleIds.delete(w.id);
+                  rekey.set(w.id, id);
+                }
+              }
+            }
+          }
+        }
+        result.overLimit += fresh.length - looked; // never looked up: there was no room
+
+        // 4. Titles and images of only the ones that will be added.
+        const capacity = Math.max(0, WATCH_MAX - (watch.length - staleIds.size));
+        const add = found.slice(0, capacity);
+        result.overLimit += found.length - add.length;
+        let info: ReadonlyMap<string, { title?: unknown; media?: unknown }> = new Map();
+        if (add.length > 0) {
+          const answer = await withTimeout(signal, async () => describe(add.map((a) => a.id), await syncContext(env, c, signal)));
+          if (!(answer instanceof Map)) throw new ConnectorError("store.unexpected-response", "describeWishlistItems did not return a Map");
+          info = answer as ReadonlyMap<string, { title?: unknown; media?: unknown }>;
+        }
+        const at = deps.clock.now();
+        const records: PriceWatchRecord[] = add.map((a) => {
+          const i = info.get(a.id);
+          const media = validateMedia(i?.media, c.mediaHosts);
+          return {
+            id: deps.newId(),
+            service: ID,
+            serviceGameId: a.sgid,
+            title: cleanTitle(i?.title) ?? `${STORE_NAMES[origin]} ${a.id}`,
+            type: null,
+            ...(media?.coverUrl ? { coverUrl: media.coverUrl } : {}),
+            ...(media?.heroUrl ? { coverFallbackUrl: media.heroUrl } : {}),
+            addedAt: at,
+            origin,
+            originStoreGameId: a.id,
+          };
+        });
+
+        // 5. One transaction, only if neither the store nor the service changed meanwhile (point 5.5).
+        if (epochOf(env, c.id) !== storeEpoch) throw new CoreError("auth.required", "The store connection changed during the import");
+        if (epochOf(env, key) !== svcEpoch) throw notConnected();
+        const done = await store.applyWishlistImport({ remove: [...staleIds], rekey: [...rekey].map(([id, originStoreGameId]) => ({ id, originStoreGameId })), add: records }, WATCH_MAX);
+        result.added = done.added;
+        result.removed = done.removed;
+        result.alreadyWatched += records.length - done.added; // followed by hand while the import ran
+        deps.log.info("Wishlist imported", { store: origin, requested: fresh.length, found: found.length, notFound: result.notFound, added: result.added, removed: result.removed });
+        return result;
+      } catch (e) {
+        if (e instanceof Stop) throw e.reason === "limited" ? limited() : e.reason === "invalid" ? invalidKey() : notConnected();
+        // Point 13 M2: a failure never touches the connection, but a rejected GOG renewal is an expired session, as in the sync (ADR 77).
+        if (e instanceof ConnectorError && e.code === "auth.expired" && epochOf(env, c.id) === storeEpoch) await deps.connections.setStatus(c.id, "expired");
+        deps.log.warn("Wishlist import failed", { store: origin, code: e instanceof ConnectorError || e instanceof CoreError ? e.code : "internal" });
+        throw toCoreError(e);
+      }
+    });
   }
 
   return {
@@ -459,16 +604,18 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
     async board() {
       const st = await boardState();
       const store = repo();
-      if (!store) return { ...publicState(st), items: [] };
+      if (!store) return { ...publicState(st), items: [], wishlistStores: [] };
       const watch = await store.listWatch(ID);
       const ids = watch.map((w) => w.serviceGameId);
       const [snaps, owned] = await Promise.all([st.country ? store.getSnapshots(ID, ids, st.country, st.shops) : new Map<string, PriceSnapshotRecord>(), store.findOwned(ID, ids)]);
       // One library read for the whole board instead of one getGame per owned game.
       const library = owned.size > 0 ? new Map((await deps.library.listLibrary()).map((g) => [g.id, g])) : undefined;
       const items = await Promise.all(watch.map((w) => itemOf(w, snaps, owned, library)));
+      const connected = new Set((await deps.connections.list()).filter((r) => r.status === "connected").map((r) => r.store));
+      const wishlistStores = [...env.connectors.values()].filter((c) => c.readWishlist && connected.has(c.id)).map((c) => c.id);
       const best = (i: WatchItem) => Math.max(-1, ...(i.prices?.deals.map((d) => d.cut) ?? []));
       // Largest discount first; Array.sort is stable, so equal ones keep the order they were added.
-      return { ...publicState(st), items: items.sort((a, b) => best(b) - best(a)) };
+      return { ...publicState(st), items: items.sort((a, b) => best(b) - best(a)), wishlistStores };
     },
 
     async refresh(req) {
@@ -575,11 +722,13 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
       const entry = typeof resultId === "string" ? searches.get(env.userId)?.get(resultId) : undefined;
       if (!entry || deps.clock.now() - entry.at >= SEARCH_TTL_MS) throw new CoreError("not-found", "Unknown or expired search result");
       const store = repo()!;
-      const { record, created } = await store.addWatch({ id: deps.newId(), service: ID, serviceGameId: entry.serviceGameId, title: entry.title, type: entry.type, ...(entry.media?.coverUrl ? { coverUrl: entry.media.coverUrl } : {}), ...(entry.media?.heroUrl ? { coverFallbackUrl: entry.media.heroUrl } : {}), addedAt: deps.clock.now() }, WATCH_MAX);
+      const { record, created } = await store.addWatch({ id: deps.newId(), service: ID, serviceGameId: entry.serviceGameId, title: entry.title, type: entry.type, ...(entry.media?.coverUrl ? { coverUrl: entry.media.coverUrl } : {}), ...(entry.media?.heroUrl ? { coverFallbackUrl: entry.media.heroUrl } : {}), addedAt: deps.clock.now(), origin: "manual", originStoreGameId: null }, WATCH_MAX);
       const { country, shops } = await readPriceSettings(env);
       const snaps = country ? await store.getSnapshots(ID, [record.serviceGameId], country, shops) : new Map<string, PriceSnapshotRecord>();
       return { item: await itemOf(record, snaps, await store.findOwned(ID, [record.serviceGameId])), created };
     },
+
+    importWishlist,
 
     async unwatch(id) {
       if (typeof id !== "string" || id === "") throw new CoreError("invalid-input", "Missing id");

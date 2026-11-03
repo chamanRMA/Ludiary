@@ -1,8 +1,10 @@
-import type { PriceSearchResultDto, WatchItemDto } from "@ludiary/api-contract";
+import type { PriceSearchResultDto, StoreId, WatchItemDto, WishlistImportDto } from "@ludiary/api-contract";
 import { useEffect, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { errorText } from "../app/errors";
 import { Link } from "../app/Link";
+import { STORE_BRAND } from "../app/stores";
 import { api } from "../data/api";
 import { mutate, useQuery, useQueryState } from "../data/hooks";
 import { cx, Cover, PageTitle } from "../components/bits";
@@ -73,6 +75,7 @@ function WatchCard({ item, onUnfollow }: { item: WatchItemDto; onUnfollow(): voi
       </div>
       <span className={ui.chips}>
         <TypeChip type={item.type} />
+        {item.origin !== "manual" && <span className={ui.chip}>{t("prices.wishlist.origin", { store: STORE_BRAND[item.origin].name })}</span>}
         <button type="button" className={cx(ui.btn, ui.small)} onClick={onUnfollow}>
           {t("prices.unfollow")}
         </button>
@@ -145,6 +148,72 @@ function Search() {
   );
 }
 
+/** One line with the counters of an import: "12 added, 3 already followed, ..." (ADR 91 point 8). */
+function wishlistSummary(t: TFunction, r: WishlistImportDto): string {
+  const parts = (["added", "alreadyWatched", "notFound", "overLimit", "removed"] as const)
+    .filter((k) => r[k] > 0)
+    .map((k) => t(`prices.wishlist.${k}`, { count: r[k], max: 500 }));
+  return parts.length > 0 ? parts.join(", ") : t("prices.wishlist.nothing");
+}
+
+/** ADR 91: one button per connected store that can import its wishlist. Before sending anything, a dialog says what leaves the PC. */
+function WishlistImport({ stores }: { stores: readonly StoreId[] }) {
+  const { t } = useTranslation();
+  const [asking, setAsking] = useState<"steam" | "gog" | null>(null);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<{ store: "steam" | "gog"; counts: WishlistImportDto } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const importable = stores.filter((s): s is "steam" | "gog" => s === "steam" || s === "gog");
+  if (importable.length === 0) return null;
+
+  const run = async (store: "steam" | "gog"): Promise<void> => {
+    setAsking(null);
+    setRunning(true);
+    setResult(null);
+    setError(null);
+    try {
+      setResult({ store, counts: await mutate(api.importWishlist(store)) });
+    } catch (e) {
+      setError(errorText(t, e));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const name = asking ? STORE_BRAND[asking].name : "";
+  return (
+    <section className={ui.panel} aria-labelledby="p-wishlist" aria-busy={running}>
+      <h2 id="p-wishlist">{t("prices.wishlist.title")}</h2>
+      <div className={ui.chips}>
+        {importable.map((store) => (
+          <button key={store} type="button" className={cx(ui.btn, ui.small)} disabled={running || asking !== null} onClick={() => setAsking(store)}>
+            {t("prices.wishlist.button", { store: STORE_BRAND[store].name })}
+          </button>
+        ))}
+      </div>
+      {asking && (
+        <div role="alertdialog" aria-label={t("prices.wishlist.confirmTitle", { store: name })} className={cx(ui.panel, ui.dashed)} onKeyDown={(e) => { if (e.key === "Escape") setAsking(null); }}>
+          <p>{t("prices.wishlist.confirmBody", { store: name })}</p>
+          <p className={ui.muted}>{t("prices.wishlist.confirmRemoves", { store: name })}</p>
+          <div className={ui.chips}>
+            <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void run(asking)} autoFocus>
+              {t("prices.wishlist.confirm")}
+            </button>
+            <button type="button" className={ui.btn} onClick={() => setAsking(null)}>
+              {t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+      {running && <p className={ui.muted} role="status">{t("prices.wishlist.running")}</p>}
+      {error && <p role="alert" className={ui.error}>{error}</p>}
+      {result && (
+        <p role="status">{result.counts.hiddenOrEmpty ? t(`prices.wishlist.hidden.${result.store}`) : wishlistSummary(t, result.counts)}</p>
+      )}
+    </section>
+  );
+}
+
 /** The follow list ordered by discount (ADR 86 point 9). Without a key the page only explains and points to Settings. */
 export function Prices() {
   const { t, i18n } = useTranslation();
@@ -153,6 +222,7 @@ export function Prices() {
   const { data: board } = useQueryState(() => (configured ? api.getPriceBoard() : Promise.resolve(null)), [configured]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
   const ready = board?.service === "connected" && !board.needsCountry;
   const ids = (board?.items ?? []).map((i) => i.id);
   const idsKey = ids.join(",");
@@ -200,6 +270,8 @@ export function Prices() {
   const unfollow = async (item: WatchItemDto): Promise<void> => {
     try {
       await mutate(api.unwatchPrice(item.id));
+      // ADR 91 point 9.3 (a): an imported game that is still on the store's wishlist comes back with the next import.
+      setNote(item.origin === "manual" ? null : t("prices.wishlist.unfollowNote", { store: STORE_BRAND[item.origin].name }));
     } catch (e) {
       setError(errorText(t, e));
     }
@@ -214,7 +286,9 @@ export function Prices() {
       <ServiceNotice service={board.service} needsCountry={board.needsCountry} />
       {board.limitedUntil !== undefined && <p className={ui.muted} role="status">{t("prices.limitedShort", { until: new Date(board.limitedUntil).toLocaleTimeString(i18n.language) })}</p>}
       {error && <p role="alert" className={ui.error}>{error}</p>}
+      {note && <p className={ui.muted} role="status">{note}</p>}
       <Search />
+      <WishlistImport stores={board.wishlistStores} />
       <section className={ui.panel} aria-labelledby="p-list" aria-busy={busy}>
         <h2 id="p-list">{t("prices.list", { count: board.items.length })}</h2>
         {board.items.length === 0 && <p className={ui.muted}>{t("prices.empty")}</p>}

@@ -6734,7 +6734,7 @@ Mientras no decida, se aplica la recomendada de cada punto.
 - **Contrato:** `checkConnectorManifest` con `readWishlist` sin `connection` o sin `apiHosts`; conformidad de los cinco conectores (Epic, Ubisoft y EA no lo declaran).
 - **Núcleo:** sin IsThereAnyDeal o con `invalid`, sin red; solo se buscan los ID nuevos; `notFound` no se guarda; límite de 500 con `overLimit`; lo manual nunca se toca; borrado solo con `complete` y lista no vacía, y solo del mismo origen; época de la tienda o del servicio cambiada a mitad → no se escribe; encadenado con la sincronización de esa tienda; suelo de 1 minuto; registros sin ID ni títulos.
 - **`db`:** `0008_watch_origin.sql` (id `0009_watch_origin`) sobre `0007_watch_media.sql` (id `0008_watch_media`) con datos (las filas quedan `manual`); los `CHECK` de `origin` y de la pareja `origin` / `origin_store_game_id`.
-- **API:** sin clave de origen → 403; `:store` fuera de `steam`/`gog` → 400; cuerpo con claves → 400.
+- **API:** sin clave de origen → 401 `origin_key_required`, como el resto de la API; `:store` fuera de `steam`/`gog` → 400; cuerpo con claves → 400.
 - **Web:** botones solo para `wishlistStores`, diálogo, resumen, `hiddenOrEmpty`, etiqueta de origen.
 
 #### 11. Prueba manual (la prepara el `tester`; la hace el usuario con sus cuentas)

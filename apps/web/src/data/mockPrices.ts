@@ -1,14 +1,16 @@
-import type { GamePricesDto, GameSummaryDto, PriceBoardDto, PricesDto, PriceSearchResultDto, ServiceStatusDto, StoreId, WatchItemDto } from "@ludiary/api-contract";
+import type { GamePricesDto, GameSummaryDto, PriceBoardDto, PricesDto, PriceSearchResultDto, ServiceStatusDto, StoreId, WatchItemDto, WishlistImportDto } from "@ludiary/api-contract";
 import type { LudiaryApi } from "./api";
 import { ApiError } from "./http";
 
 /** Simulator of the price comparison (ADR 86). Same rules as the server: needs a key and a country, 1 minute floor, 500 followed. */
-type PricesApi = Pick<LudiaryApi, "getGamePrices" | "getPriceBoard" | "refreshPrices" | "setPriceExclusion" | "searchPrices" | "watchPrice" | "unwatchPrice">;
+type PricesApi = Pick<LudiaryApi, "getGamePrices" | "getPriceBoard" | "refreshPrices" | "setPriceExclusion" | "searchPrices" | "watchPrice" | "unwatchPrice" | "importWishlist">;
 
 export interface MockPricesDeps {
   library(): readonly GameSummaryDto[];
   service(): ServiceStatusDto["status"];
   prices(): { country: string | null; shops: "ludiary" | "all" };
+  /** Stores with a connected account (the board offers the wishlist import for Steam and GOG among them). */
+  connectedStores(): readonly StoreId[];
   now(): number;
 }
 
@@ -20,6 +22,12 @@ const imagesOf = (title: string): { coverUrl?: string; coverFallbackUrl?: string
   const base = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${app}`;
   return app === undefined ? {} : { coverUrl: `${base}/library_600x900.jpg`, coverFallbackUrl: `${base}/header.jpg` };
 };
+// Invented wishlists of the simulator (ADR 91). "Unlisted Game" is one that IsThereAnyDeal does not know.
+const WISHLISTS: Record<"steam" | "gog", readonly string[]> = {
+  steam: ["Hades II", "Celeste", "Balatro", "Unlisted Game", "Portal 2"],
+  gog: ["Disco Elysium", "Hollow Knight"],
+};
+const WISHLIST_FLOOR_MS = 10 * 60_000;
 const SHOPS: { storeId: StoreId | null; name: string }[] = [
   { storeId: "steam", name: "Steam" },
   { storeId: "gog", name: "GOG" },
@@ -28,7 +36,7 @@ const SHOPS: { storeId: StoreId | null; name: string }[] = [
 ];
 const CURRENCY: Record<string, string> = { ES: "EUR", US: "USD", GB: "GBP" };
 const hashOf = (text: string): number => [...text].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 100_003, 7);
-const err = (status: number, code: string, key: string) => new ApiError(status, code, key);
+const err = (status: number, code: string, key: string, params?: Record<string, string | number>) => new ApiError(status, code, key, params);
 
 function dealsFor(seed: string, country: string, shops: "ludiary" | "all", at: number): PricesDto {
   const h = hashOf(seed);
@@ -52,7 +60,8 @@ function dealsFor(seed: string, country: string, shops: "ludiary" | "all", at: n
 export function createMockPrices(d: MockPricesDeps): PricesApi {
   const excluded = new Set<string>();
   const fetched = new Map<string, number>(); // key -> when, by country+shops
-  const watch: { id: string; title: string; type: "game" | "dlc" | "package" | null }[] = [];
+  const watch: { id: string; title: string; type: "game" | "dlc" | "package" | null; origin: WatchItemDto["origin"] }[] = [];
+  const lastImport = new Map<string, number>();
   const results = new Map<string, { title: string; type: "game" | "dlc" | "package" | null }>();
   let lastManual = -Infinity;
   const fkey = (id: string) => `${id}|${d.prices().country}|${d.prices().shops}`;
@@ -81,10 +90,10 @@ export function createMockPrices(d: MockPricesDeps): PricesApi {
     async getPriceBoard(): Promise<PriceBoardDto> {
       const items: WatchItemDto[] = watch.map((w) => {
         const owned = ownedOf(w.title);
-        return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), ...coversOf(w.title), prices: view(w.id) };
+        return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), ...coversOf(w.title), origin: w.origin, prices: view(w.id) };
       });
       const best = (i: WatchItemDto) => Math.max(-1, ...(i.prices?.deals.map((x) => x.cut) ?? []));
-      return { ...state(), items: items.sort((a, b) => best(b) - best(a)) };
+      return { ...state(), items: items.sort((a, b) => best(b) - best(a)), wishlistStores: d.connectedStores().filter((s): s is "steam" | "gog" => s === "steam" || s === "gog") };
     },
     async refreshPrices(req) {
       const st = d.service();
@@ -120,15 +129,41 @@ export function createMockPrices(d: MockPricesDeps): PricesApi {
       let w = watch.find((x) => x.title === r.title);
       if (!w) {
         if (watch.length >= 500) throw new ApiError(422, "limit-reached", "core.errors.limit-reached.watch", { max: 500 });
-        w = { id: `watch-${watch.length}-${r.title}`, ...r };
+        w = { id: `watch-${watch.length}-${r.title}`, ...r, origin: "manual" };
         watch.push(w);
       }
       const owned = ownedOf(w.title);
-      return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), ...coversOf(w.title), prices: view(w.id) };
+      return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), ...coversOf(w.title), origin: w.origin, prices: view(w.id) };
     },
     async unwatchPrice(id) {
       const i = watch.findIndex((w) => w.id === id);
       if (i >= 0) watch.splice(i, 1);
+    },
+    async importWishlist(store): Promise<WishlistImportDto> {
+      if (d.service() === "disconnected") throw err(422, "action-unavailable", "prices.errors.notConnected");
+      if (!d.connectedStores().includes(store)) throw err(422, "auth.required", "connectors.common.errors.auth.required");
+      const next = (lastImport.get(store) ?? -Infinity) + WISHLIST_FLOOR_MS;
+      if (d.now() < next) throw err(422, "store.rate-limited", "prices.errors.wishlistFloor", { minutes: Math.ceil((next - d.now()) / 60_000) });
+      lastImport.set(store, d.now());
+      const list = WISHLISTS[store];
+      const res: WishlistImportDto = { added: 0, removed: 0, alreadyWatched: 0, notFound: 0, overLimit: 0, hiddenOrEmpty: list.length === 0 };
+      for (const title of list) {
+        if (watch.some((w) => w.title === title)) res.alreadyWatched++;
+        else if (title === "Unlisted Game") res.notFound++;
+        else if (watch.length >= 500) res.overLimit++;
+        else {
+          watch.push({ id: `watch-${watch.length}-${title}`, title, type: "game", origin: store });
+          res.added++;
+        }
+      }
+      // What came from this store's list and is not in it any more goes (ADR 91 point 5.5); what was added by hand never does.
+      for (let i = watch.length - 1; i >= 0; i--) {
+        if (watch[i]!.origin === store && !list.includes(watch[i]!.title)) {
+          watch.splice(i, 1);
+          res.removed++;
+        }
+      }
+      return res;
     },
   };
 }

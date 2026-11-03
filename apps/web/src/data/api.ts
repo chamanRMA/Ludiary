@@ -18,6 +18,7 @@ import type {
   StoreId,
   StoreStatusDto,
   WatchItemDto,
+  WishlistImportDto,
   WizardInputDto,
   WizardResponseDto,
   WizardTarget,
@@ -109,6 +110,8 @@ export interface LudiaryApi {
   searchPrices(title: string): Promise<readonly PriceSearchResultDto[]>;
   watchPrice(resultId: string): Promise<WatchItemDto>;
   unwatchPrice(id: string): Promise<void>;
+  /** ADR 91. Only for the stores in `PriceBoardDto.wishlistStores`. Counters only; the follow list is read again afterwards. */
+  importWishlist(store: "steam" | "gog"): Promise<WishlistImportDto>;
   /** Simulator only: lets the Epic "expired session" screens be reached. Goes away with the real API. */
   simulateExpiredSession(store: StoreId): Promise<void>;
 }

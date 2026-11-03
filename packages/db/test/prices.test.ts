@@ -37,7 +37,7 @@ describe("migration 0007_prices", () => {
     old.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
     old.exec("INSERT INTO canonical_games (id, user_id, title, normalized_title, created_at, updated_at) VALUES ('c', 'u', 'T', 't', 1, 1)");
     const res = await migrate(old, { backupDir: join(dir, "b") });
-    expect(res.applied).toEqual(["0007_prices", "0008_watch_media"]);
+    expect(res.applied).toEqual(["0007_prices", "0008_watch_media", "0009_watch_origin"]);
     expect(res.backupFile).toBeTruthy();
     expect(old.prepare("SELECT id FROM canonical_games").all()).toEqual([{ id: "c" }]);
     expect(old.pragma("foreign_key_check")).toEqual([]);
@@ -55,7 +55,7 @@ describe("migration 0008_watch_media (ADR 86 point 17)", () => {
     await migrate(old, { backupDir: join(dir, "b2"), migrations: MIGRATIONS.slice(0, 7) });
     old.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
     old.exec("INSERT INTO price_watch (id, user_id, service, service_game_id, title, type, added_at) VALUES ('w', 'u', 'itad', 'g', 'T', NULL, 1)");
-    expect((await migrate(old, { backupDir: join(dir, "b2") })).applied).toEqual(["0008_watch_media"]);
+    expect((await migrate(old, { backupDir: join(dir, "b2"), migrations: MIGRATIONS.slice(0, 8) })).applied).toEqual(["0008_watch_media"]);
     expect(old.prepare("SELECT id, title, cover_url, cover_fallback_url FROM price_watch").all()).toEqual([{ id: "w", title: "T", cover_url: null, cover_fallback_url: null }]);
     expect(old.pragma("foreign_key_check")).toEqual([]);
     const put = (col: string, len: number) => old.prepare(`INSERT INTO price_watch (id, user_id, service, service_game_id, title, added_at, ${col}) VALUES (?, 'u', 'itad', ?, 'T', 1, ?)`).run(`x${col}${len}`, `g${col}${len}`, "h".repeat(len));
@@ -66,12 +66,59 @@ describe("migration 0008_watch_media (ADR 86 point 17)", () => {
     old.close();
   });
   it("saves and reads the covers of a followed item", async () => {
-    await repos.prices.addWatch({ id: "w1", service: "itad", serviceGameId: "g1", title: "T", type: null, coverUrl: "https://a.example/c", coverFallbackUrl: "https://a.example/h", addedAt: 1 }, 5);
-    await repos.prices.addWatch({ id: "w2", service: "itad", serviceGameId: "g2", title: "T", type: null, addedAt: 2 }, 5);
+    await repos.prices.addWatch({ id: "w1", service: "itad", serviceGameId: "g1", title: "T", type: null, coverUrl: "https://a.example/c", coverFallbackUrl: "https://a.example/h", addedAt: 1, origin: "manual", originStoreGameId: null }, 5);
+    await repos.prices.addWatch({ id: "w2", service: "itad", serviceGameId: "g2", title: "T", type: null, addedAt: 2, origin: "manual", originStoreGameId: null }, 5);
     expect(await repos.prices.listWatch("itad")).toEqual([
-      { id: "w1", service: "itad", serviceGameId: "g1", title: "T", type: null, coverUrl: "https://a.example/c", coverFallbackUrl: "https://a.example/h", addedAt: 1 },
-      { id: "w2", service: "itad", serviceGameId: "g2", title: "T", type: null, addedAt: 2 },
+      { id: "w1", service: "itad", serviceGameId: "g1", title: "T", type: null, coverUrl: "https://a.example/c", coverFallbackUrl: "https://a.example/h", addedAt: 1, origin: "manual", originStoreGameId: null },
+      { id: "w2", service: "itad", serviceGameId: "g2", title: "T", type: null, addedAt: 2, origin: "manual", originStoreGameId: null },
     ]);
+  });
+});
+
+describe("migration 0009_watch_origin (ADR 91 point 6)", () => {
+  it("keeps the rows of 0008_watch_media as manual and checks origin and its pair", async () => {
+    const old = openDatabase(join(dir, "old3.sqlite"), undefined);
+    await migrate(old, { backupDir: join(dir, "b3"), migrations: MIGRATIONS.slice(0, 8) });
+    old.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
+    old.exec("INSERT INTO price_watch (id, user_id, service, service_game_id, title, type, added_at, cover_url) VALUES ('w', 'u', 'itad', 'g', 'T', NULL, 1, 'https://a.example/c')");
+    expect((await migrate(old, { backupDir: join(dir, "b3") })).applied).toEqual(["0009_watch_origin"]);
+    expect(old.prepare("SELECT id, cover_url, origin, origin_store_game_id FROM price_watch").all()).toEqual([{ id: "w", cover_url: "https://a.example/c", origin: "manual", origin_store_game_id: null }]);
+    expect(old.pragma("foreign_key_check")).toEqual([]);
+    const put = (id: string, origin: string, osg: string | null) =>
+      old.prepare("INSERT INTO price_watch (id, user_id, service, service_game_id, title, added_at, origin, origin_store_game_id) VALUES (?, 'u', 'itad', ?, 'T', 1, ?, ?)").run(id, `g-${id}`, origin, osg);
+    put("a", "steam", "10");
+    put("b", "gog", "20");
+    expect(() => put("c", "epic", "1")).toThrow(/CHECK/);
+    expect(() => put("d", "steam", null)).toThrow(/CHECK/);
+    expect(() => put("e", "manual", "1")).toThrow(/CHECK/);
+    old.close();
+  });
+});
+
+describe("applyWishlistImport (ADR 91 point 5 and 13 c)", () => {
+  const w = (id: string, game: string, origin: "manual" | "steam" | "gog" = "steam", osg: string | null = origin === "manual" ? null : `o-${id}`) => ({ id, service: "itad" as const, serviceGameId: game, title: "T", type: null, addedAt: 1, origin, originStoreGameId: osg });
+  const ids = async () => (await repos.prices.listWatch("itad")).map((x) => x.id);
+
+  it("removes, moves the origin id and adds in one go; skips what is already followed", async () => {
+    await repos.prices.addWatch(w("m", "g0", "manual"), 10);
+    await repos.prices.addWatch(w("s1", "g1"), 10);
+    await repos.prices.addWatch(w("s2", "g2"), 10);
+    const res = await repos.prices.applyWishlistImport({ remove: ["s1"], rekey: [{ id: "s2", originStoreGameId: "new" }], add: [w("n1", "g3"), w("n2", "g0")] }, 10);
+    expect(res).toEqual({ added: 1, removed: 1 });
+    expect(await ids()).toEqual(["m", "n1", "s2"]); // same addedAt: by id
+    expect((await repos.prices.getWatch("s2"))?.originStoreGameId).toBe("new");
+  });
+
+  it("never touches a manual row, even if asked", async () => {
+    await repos.prices.addWatch(w("m", "g0", "manual"), 10);
+    await repos.prices.applyWishlistImport({ remove: [], rekey: [{ id: "m", originStoreGameId: "x" }], add: [] }, 10);
+    expect(await repos.prices.getWatch("m")).toMatchObject({ origin: "manual", originStoreGameId: null });
+  });
+
+  it("past the limit nothing is written (rolled back)", async () => {
+    await repos.prices.addWatch(w("s1", "g1"), 2);
+    await expect(repos.prices.applyWishlistImport({ remove: ["s1"], rekey: [], add: [w("a", "g2"), w("b", "g3"), w("c", "g4")] }, 2)).rejects.toMatchObject({ code: "limit-reached" });
+    expect(await ids()).toEqual(["s1"]);
   });
 });
 
@@ -97,7 +144,7 @@ describe("CHECK constraints and keys", () => {
   });
 
   it("the watch list has a unique game per user and a limit", async () => {
-    const w = (id: string, game: string) => ({ id, service: "itad" as const, serviceGameId: game, title: "T", type: null, addedAt: 1 });
+    const w = (id: string, game: string) => ({ id, service: "itad" as const, serviceGameId: game, title: "T", type: null, addedAt: 1, origin: "manual" as const, originStoreGameId: null });
     expect(await repos.prices.addWatch(w("w1", "g1"), 2)).toMatchObject({ created: true });
     expect(await repos.prices.addWatch(w("w2", "g1"), 2)).toMatchObject({ created: false, record: { id: "w1" } });
     await repos.prices.addWatch(w("w3", "g2"), 2);
@@ -146,7 +193,7 @@ describe("PriceRepository", () => {
     await repos.prices.putLink(link());
     await repos.prices.putLink(link({ canonicalGameId: "c2", serviceGameId: null, status: "excluded", source: null }));
     await repos.prices.putSnapshots([{ service: "itad", serviceGameId: "g", country: "ES", shops: "all", data: { deals: [], historyLow: null }, fetchedAt: 1 }]);
-    await repos.prices.addWatch({ id: "w", service: "itad", serviceGameId: "g", title: "T", type: "game", addedAt: 1 }, 500);
+    await repos.prices.addWatch({ id: "w", service: "itad", serviceGameId: "g", title: "T", type: "game", addedAt: 1, origin: "manual", originStoreGameId: null }, 500);
     await repos.prices.clearService("itad");
     expect([...(await repos.prices.getLinks("itad", ["c1", "c2"])).keys()]).toEqual(["c2"]);
     expect(rows("price_snapshots")).toBe(0);

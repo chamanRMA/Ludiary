@@ -12,8 +12,8 @@ import {
   LaunchResponseSchema, OnboardingCompleteSchema, OnboardingSchema, PickCancelledSchema, ScanRootPatchSchema,
   ScanRootSchema, SettingsPatchSchema, SettingsSchema, StoreParamsSchema, StoreStatusSchema, SyncRequestSchema,
   WizardCallbackSchema, WizardIdParamsSchema, WizardSubmitSchema,
-  GamePricesSchema, PriceBoardSchema, PriceRefreshSchema, PriceSearchResultSchema, PriceSearchSchema, PriceWatchSchema, ServiceParamsSchema, ServiceStatusSchema, WatchItemSchema,
-  type PriceRefreshDto, type PriceSearchDto, type PriceWatchDto, type ServiceParams,
+  GamePricesSchema, PriceBoardSchema, PriceRefreshSchema, PriceSearchResultSchema, PriceSearchSchema, PriceWatchSchema, ServiceParamsSchema, ServiceStatusSchema, WatchItemSchema, WishlistImportSchema, WishlistStoreParamsSchema,
+  type PriceRefreshDto, type PriceSearchDto, type PriceWatchDto, type ServiceParams, type WishlistStoreParams,
   type IdParams, type LaunchRequestDto, type StoreParams, type WizardCallbackDto, type WizardIdParams, type WizardSubmitDto, type OnboardingCompleteDto, type ScanRootPatchDto, type SettingsPatchDto,
   type SyncRequestDto,
 } from "@ludiary/api-contract";
@@ -482,6 +482,13 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     await core.unwatchPrice(req.params.id);
     return reply.code(204).send();
   });
+
+  // ADR 91: reads the store's wishlist and follows it in IsThereAnyDeal. Counters only in the answer.
+  app.post<{ Params: WishlistStoreParams }>(
+    "/api/prices/wishlist/:store/import",
+    { schema: { params: WishlistStoreParamsSchema, querystring: noQuery, body: EmptyObjectSchema, response: { 200: WishlistImportSchema } } },
+    async (req) => core.importWishlist(req.params.store),
+  );
 
   // ---- SPA (ADR 72, point 6): only what is in the in-memory map; no paths computed from the request.
   const NO_FALLBACK_PREFIXES = ["/api/", "/open", "/assets/"];

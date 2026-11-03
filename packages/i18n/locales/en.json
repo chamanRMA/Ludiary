@@ -39,6 +39,7 @@
   "prices.errors.notConnected": "Connect IsThereAnyDeal in Settings > Services to compare prices.",
   "prices.errors.countryMissing": "Choose your country in Settings > Services before looking up prices.",
   "prices.errors.limited": "The limit of price requests has been reached. Try again later.",
+  "prices.errors.wishlistFloor": "This wishlist was imported a moment ago. Try again in about {minutes} min.",
   "core.errors.picker-unavailable": "This mode of Ludiary cannot open the folder picker.",
   "core.errors.timeout": "The operation took too long and was cancelled.",
   "core.errors.collectionManaged": "This collection comes from {store}. Change it in {store}.",

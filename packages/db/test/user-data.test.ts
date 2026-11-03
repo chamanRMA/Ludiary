@@ -239,7 +239,7 @@ describe("migration 0006_collection_source (ADR 88)", () => {
     old.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
     old.exec("INSERT INTO collections (id, user_id, name, name_key, position, created_at, updated_at) VALUES ('own', 'u', 'RPG', 'rpg', 1, 1, 1)");
     const res = await migrate(old, { backupDir: join(dir, "b5") });
-    expect(res.applied).toEqual(["0006_collection_source", "0007_prices", "0008_watch_media"]);
+    expect(res.applied).toEqual(["0006_collection_source", "0007_prices", "0008_watch_media", "0009_watch_origin"]);
     expect(res.backupFile).toBeTruthy(); // a copy first (ADR 57)
     expect(old.prepare("SELECT id, source_store AS s, source_id AS i FROM collections").all()).toEqual([{ id: "own", s: null, i: null }]);
     const ins = (id: string, key: string, store: string | null, source: string | null) =>

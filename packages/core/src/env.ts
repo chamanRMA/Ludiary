@@ -14,6 +14,7 @@ import type {
   PriceSearchResult,
   ServiceStatus,
   WatchItem,
+  WishlistImportResult,
   ScanRootRecord,
   Settings,
   SettingsPatch,
@@ -72,6 +73,10 @@ export const SEARCH_TTL_MS = 15 * 60_000;
 export const SEARCH_MAX_RESULTS = 20;
 export const SEARCH_KEEP = 200;
 export const WATCH_MAX = 500;
+/** ADR 91 point 13 (M3): own floor of the wishlist import, per store, in memory; apart from MANUAL_SYNC_FLOOR_MS. */
+export const WISHLIST_IMPORT_FLOOR_MS = 10 * 60_000;
+/** ADR 91: ids a store may return (the rest is cut and the list counts as partial). */
+export const WISHLIST_MAX_ENTRIES = 5000;
 /** Fixed order to pick the property to launch when none is given (ADR 72). */
 export const LAUNCH_ORDER: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
 
@@ -183,6 +188,11 @@ export interface LudiaryCore {
   /** Only a `resultId` from a recent search. `created: false` if it was already followed. */
   watchPrice(resultId: string): Promise<{ item: WatchItem; created: boolean }>;
   unwatchPrice(id: string): Promise<void>;
+  /**
+   * ADR 91. Reads the store's wishlist and follows it (see `PriceFeature.importWishlist`). `invalid-input` for a store without
+   * wishlist import. Counters only.
+   */
+  importWishlist(store: StoreId): Promise<WishlistImportResult>;
   /** ADR 80. Server shutdown: aborts the open login windows. */
   shutdown(): void;
 }
