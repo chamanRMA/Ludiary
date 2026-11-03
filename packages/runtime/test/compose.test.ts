@@ -257,6 +257,7 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
       "assets.isthereanydeal.com",
       "cdn1.epicgames.com",
       "cdn2.unrealengine.com",
+      "dbxce1spal1df.cloudfront.net",
       "drop-assets.ea.com",
       "images.gog.com",
       "shared.akamai.steamstatic.com",

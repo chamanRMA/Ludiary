@@ -353,6 +353,8 @@
   "prices.voucher": "· código {code}",
   "prices.until": "· hasta el {date}",
   "prices.openDeal": "Ir a la oferta de {shop}",
+  "prices.unfold": "Ver todas las tiendas ({count})",
+  "prices.fold": "Ocultar las tiendas",
   "prices.country": "Precios para {country}",
   "prices.fetched": "consultados el {date}",
   "prices.noData": "No hay precios de este juego en {country}.",

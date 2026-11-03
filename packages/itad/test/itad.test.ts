@@ -31,7 +31,7 @@ describe("manifest", () => {
     expect(svc.apiHosts).toEqual(["api.isthereanydeal.com"]);
     expect(svc.authHosts).toEqual(["isthereanydeal.com"]);
     expect(svc.linkHosts).toEqual(["itad.link", "isthereanydeal.com", "next.isthereanydeal.com"]);
-    expect(svc.mediaHosts).toEqual(["assets.isthereanydeal.com"]);
+    expect(svc.mediaHosts).toEqual(["assets.isthereanydeal.com", "dbxce1spal1df.cloudfront.net"]);
   });
   it("the store -> shop map matches the recorded service/shops/v1 answer", () => {
     const shops = JSON.parse(readFileSync(join(__dirname, "..", "fixtures", "shops-v1-ES.json"), "utf8")) as { id: number; title: string }[];

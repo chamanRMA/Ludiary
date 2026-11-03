@@ -347,6 +347,8 @@
   "prices.voucher": "· code {code}",
   "prices.until": "· until {date}",
   "prices.openDeal": "Go to the offer at {shop}",
+  "prices.unfold": "Show every shop ({count})",
+  "prices.fold": "Hide the shops",
   "prices.country": "Prices for {country}",
   "prices.fetched": "checked on {date}",
   "prices.noData": "There are no prices for this game in {country}.",

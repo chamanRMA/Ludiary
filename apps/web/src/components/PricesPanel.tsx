@@ -43,11 +43,14 @@ export function DealRow({ deal, locale }: { deal: DealDto; locale: string }) {
   );
 }
 
+/** The cheapest deal; ties keep the first. */
+export const bestDeal = (deals: readonly DealDto[]): DealDto | undefined => deals.reduce<DealDto | undefined>((a, b) => (!a || b.amountMinor < a.amountMinor ? b : a), undefined);
+
 /** Best price and historical low, then one row per shop. */
 export function PricesTable({ prices, locale }: { prices: PricesDto; locale: string }) {
   const { t, i18n } = useTranslation();
   if (prices.deals.length === 0) return <p className={ui.muted}>{t("prices.noData", { country: prices.country })}</p>;
-  const best = prices.deals.reduce((a, b) => (b.amountMinor < a.amountMinor ? b : a));
+  const best = bestDeal(prices.deals)!;
   return (
     <>
       <p>

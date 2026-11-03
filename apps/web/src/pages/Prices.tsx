@@ -6,7 +6,8 @@ import { Link } from "../app/Link";
 import { api } from "../data/api";
 import { mutate, useQuery, useQueryState } from "../data/hooks";
 import { cx, Cover, PageTitle } from "../components/bits";
-import { ExternalLink, ITAD_URL, PricesTable, ServiceNotice } from "../components/PricesPanel";
+import { bestDeal, ExternalLink, ITAD_URL, PricesTable, ServiceNotice } from "../components/PricesPanel";
+import { formatMoney } from "../data/prices";
 import ui from "../styles/ui.module.css";
 
 /** Wait after the last keystroke before searching (ADR 86 point 15, M6). */
@@ -24,6 +25,59 @@ function Thumb({ item }: { item: Pick<WatchItemDto, "title" | "coverUrl" | "cove
     <div style={{ width: 48, flex: "none" }}>
       <Cover game={item} height={64} bare />
     </div>
+  );
+}
+
+/** A followed game, folded: historical low, best price now and its deal; unfolded, the full table (ADR 86 point 9). */
+function WatchCard({ item, onUnfollow }: { item: WatchItemDto; onUnfollow(): void }) {
+  const { t, i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const locale = i18n.language;
+  const best = item.prices ? bestDeal(item.prices.deals) : undefined;
+  const low = item.prices?.historyLow;
+  return (
+    <article className={ui.row} style={{ alignItems: "flex-start" }} aria-label={item.title}>
+      <Thumb item={item} />
+      <div className={ui.stack} style={{ flex: 1, gap: 8 }}>
+        <div>
+          <b>{item.title}</b>
+          {item.ownedGameId && (
+            <small>
+              {t("prices.owned")} <Link to={`/game/${encodeURIComponent(item.ownedGameId)}`} className={ui.chipLink}>{t("prices.viewInLibrary")}</Link>
+            </small>
+          )}
+        </div>
+        {!item.prices && <p className={ui.muted}>{t("prices.noPricesYet")}</p>}
+        {item.prices && !open && (
+          <>
+            {best ? (
+              <p>
+                <b style={{ display: "inline" }}>{t("prices.best", { price: formatMoney(best.amountMinor, best.currency, locale), shop: best.shop.name })}</b>
+                {best.cut > 0 && ` · ${t("prices.cut", { cut: best.cut })}`}
+              </p>
+            ) : (
+              <p className={ui.muted}>{t("prices.noData", { country: item.prices.country })}</p>
+            )}
+            {low && <p className={ui.muted}>{t("prices.historyLow", { price: formatMoney(low.amountMinor, low.currency, locale) })}</p>}
+          </>
+        )}
+        {item.prices && open && <PricesTable prices={item.prices} locale={locale} />}
+        <span className={ui.chips}>
+          {!open && best?.url && <ExternalLink small href={best.url}>{t("prices.openDeal", { shop: best.shop.name })}</ExternalLink>}
+          {item.prices && item.prices.deals.length > 0 && (
+            <button type="button" className={cx(ui.btn, ui.small)} aria-expanded={open} onClick={() => setOpen(!open)}>
+              {t(open ? "prices.fold" : "prices.unfold", { count: item.prices.deals.length })}
+            </button>
+          )}
+        </span>
+      </div>
+      <span className={ui.chips}>
+        <TypeChip type={item.type} />
+        <button type="button" className={cx(ui.btn, ui.small)} onClick={onUnfollow}>
+          {t("prices.unfollow")}
+        </button>
+      </span>
+    </article>
   );
 }
 
@@ -165,26 +219,7 @@ export function Prices() {
         <h2 id="p-list">{t("prices.list", { count: board.items.length })}</h2>
         {board.items.length === 0 && <p className={ui.muted}>{t("prices.empty")}</p>}
         {board.items.map((item) => (
-          <article key={item.id} className={ui.stack} aria-label={item.title}>
-            <div className={ui.row}>
-              <Thumb item={item} />
-              <div style={{ flex: 1 }}>
-                <b>{item.title}</b>
-                {item.ownedGameId && (
-                  <small>
-                    {t("prices.owned")} <Link to={`/game/${encodeURIComponent(item.ownedGameId)}`} className={ui.chipLink}>{t("prices.viewInLibrary")}</Link>
-                  </small>
-                )}
-              </div>
-              <span className={ui.chips}>
-                <TypeChip type={item.type} />
-                <button type="button" className={cx(ui.btn, ui.small)} onClick={() => void unfollow(item)}>
-                  {t("prices.unfollow")}
-                </button>
-              </span>
-            </div>
-            {item.prices ? <PricesTable prices={item.prices} locale={i18n.language} /> : <p className={ui.muted}>{t("prices.noPricesYet")}</p>}
-          </article>
+          <WatchCard key={item.id} item={item} onUnfollow={() => void unfollow(item)} />
         ))}
         <div className={ui.chips}>
           {ready && board.items.length > 0 && (

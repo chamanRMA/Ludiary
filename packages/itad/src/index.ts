@@ -1,5 +1,5 @@
 import type { PriceService } from "@ludiary/contracts";
-import { ITAD_API_HOST, ITAD_MEDIA_HOST, itadLookupByStore, itadLookupByTitle, itadPrices, itadSearch } from "./client";
+import { ITAD_API_HOST, ITAD_MEDIA_HOSTS, itadLookupByStore, itadLookupByTitle, itadPrices, itadSearch } from "./client";
 import { itadConnection } from "./wizard";
 
 export { ITAD_SHOP_IDS } from "./shops";
@@ -13,7 +13,7 @@ export const itadService: PriceService = {
   // ITAD12: the host of the deal links is unverified; offers on other hosts are shown without a link.
   linkHosts: ["itad.link", "isthereanydeal.com", "next.isthereanydeal.com"],
   // ITAD14: the host of the images is unverified; the manual test confirms it.
-  mediaHosts: [ITAD_MEDIA_HOST],
+  mediaHosts: ITAD_MEDIA_HOSTS,
   connection: itadConnection,
   lookupByStore: itadLookupByStore,
   lookupByTitle: itadLookupByTitle,

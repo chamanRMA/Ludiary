@@ -4,7 +4,8 @@ import { ConnectorError, type EntryMedia, type I18nKey, type Secret, type StoreI
 import { ITAD_SHOP_IDS, storeIdOf } from "./shops";
 
 export const ITAD_API_HOST = "api.isthereanydeal.com";
-export const ITAD_MEDIA_HOST = "assets.isthereanydeal.com";
+/** ITAD14: the docs show both the own host and a CloudFront one in their examples; which one answers is checked by hand. */
+export const ITAD_MEDIA_HOSTS: readonly string[] = ["assets.isthereanydeal.com", "dbxce1spal1df.cloudfront.net"];
 const BASE = `https://${ITAD_API_HOST}`;
 export const MAX_IDS = 200;
 export const MAX_IDS_ALL_SHOPS = 50;
@@ -118,7 +119,7 @@ function mediaUrl(raw: unknown, dropped: Set<string>): string | undefined {
   }
   if (u.protocol !== "https:" || u.username !== "" || u.password !== "" || u.port !== "") return undefined;
   const host = u.hostname.toLowerCase();
-  if (host === ITAD_MEDIA_HOST) return raw;
+  if (ITAD_MEDIA_HOSTS.includes(host)) return raw;
   if (/^[a-z0-9][a-z0-9.-]{0,252}$/.test(host) && dropped.size < 8) dropped.add(host);
   return undefined;
 }
