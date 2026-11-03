@@ -117,6 +117,10 @@ This guide does not need the reply from `api@isthereanydeal.com` (point 13). Tha
 
 **Note (ITAD13):** which kinds appeared in the results: normal game (no label), "DLC", "Paquete", and any result that came with no label although it looks like a DLC (that would be a `type` value Ludiary stores as `null`). Do not write anything beyond the kinds.
 
+**Expect (covers, ADR 86 point 17):** each result and each followed game shows a small cover on the left. The owned game shows the same cover as in the library. A game you do not own shows the image from IsThereAnyDeal, or a plain gradient if it has none.
+
+**Note (ITAD14):** if the games you do not own show only gradients, open the browser developer tools (F12) > Console and copy the host of any blocked image (for example `Refused to load the image 'https://<host>/...'`). Write down only the host, not the path.
+
 ## Step 10. Disconnect
 
 **Do:** Settings > Services > IsThereAnyDeal > "Desconectar". Then open a game and the Comparador.
