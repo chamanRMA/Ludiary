@@ -13,6 +13,7 @@ import { cx, StepText } from "./bits";
 import { Icon } from "./Icon";
 import { SecretField } from "./SecretField";
 import styles from "./wizard.module.css";
+import itadApiKey from "../assets/itad-api-key.png";
 
 interface Props {
   target: WizardTarget;
@@ -23,6 +24,8 @@ interface Props {
 }
 
 const targetId = (t: WizardTarget): string => (t.kind === "store" ? t.store : t.service);
+/** Screenshots that show where to copy a value, by `${target}:${step}`; the alt text is `connectors.<target>.<step>.imageAlt`. */
+const STEP_IMAGES: Readonly<Record<string, string>> = { "itad:apikey": itadApiKey };
 /** Server and transport errors are always translation keys (invariant 6). */
 interface Rejected {
   key: string;
@@ -135,6 +138,7 @@ export function ConnectWizard({ target, resume, onDone, onCancel }: Props) {
       <div>
         <StepText text={t(step.bodyKey)} />
       </div>
+      {STEP_IMAGES[`${id}:${step.id}`] && <img className={styles.shot} src={STEP_IMAGES[`${id}:${step.id}`]} alt={t(`connectors.${id}.${step.id}.imageAlt`)} />}
 
       {step.kind === "open-external" && step.awaits === "input" && (
         url ? (
