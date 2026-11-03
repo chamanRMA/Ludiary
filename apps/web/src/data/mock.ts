@@ -17,6 +17,7 @@ import type {
 } from "@ludiary/api-contract";
 import type { GeneralSettings, LudiaryApi, MaintenanceDto } from "./api";
 import { ApiError } from "./http";
+import { createMockPrices } from "./mockPrices";
 import { validateField } from "./validate";
 
 /** Where the simulator keeps the few non-secret values ADR 69 allows (first run, language). */
@@ -97,6 +98,18 @@ const STEPS: Record<string, readonly WizardStepDto[]> = {
   ],
   ea: [
     { kind: "embedded-login", id: "login", titleKey: "connectors.ea.login.title", bodyKey: "connectors.ea.login.body" },
+  ],
+  itad: [
+    { kind: "info", id: "intro", titleKey: "connectors.itad.intro.title", bodyKey: "connectors.itad.intro.body" },
+    {
+      kind: "open-external",
+      id: "apikey",
+      titleKey: "connectors.itad.apikey.title",
+      bodyKey: "connectors.itad.apikey.body",
+      url: "https://isthereanydeal.com/apps/my/",
+      awaits: "input",
+      fields: [field("apiKey", "connectors.itad.apikey.field", "^[A-Za-z0-9_-]{16,128}$", 128)],
+    },
   ],
   rawg: [
     {
@@ -215,7 +228,7 @@ const notFound = () => new ApiError(404, "not-found", "core.errors.not-found");
 const SERVICE_META: Record<ServiceId, Pick<ServiceStatusDto, "purpose" | "available">> = {
   rawg: { purpose: "metadata", available: true },
   igdb: { purpose: "metadata", available: true },
-  itad: { purpose: "prices", available: false }, // phase 3 (ADR 69)
+  itad: { purpose: "prices", available: true }, // ADR 86
 };
 
 const STORE_META: Record<StoreId, Pick<StoreStatusDto, "access" | "connection" | "mode">> = {
@@ -246,7 +259,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     ]),
   );
   const services = new Map<ServiceId, ServiceStatusDto>(
-    (Object.keys(SERVICE_META) as ServiceId[]).map((service) => [service, { service, ...SERVICE_META[service], configured: false }]),
+    (Object.keys(SERVICE_META) as ServiceId[]).map((service) => [service, { service, ...SERVICE_META[service], configured: false, status: "disconnected" as const }]),
   );
   const sessions = new Map<string, number>(); // wizard target -> step index. Never holds values.
   const maintenance: MaintenanceDto = { lastBackupAt: null, lastScanAt: now() - HOUR, lastSyncAt: now() - 5 * 60_000 };
@@ -258,6 +271,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     autoUpdate: true,
     autostart: false,
     syncOnStart: true,
+    prices: { country: null, shops: "ludiary" },
     storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
   };
   let onboarding: OnboardingDto = (() => {
@@ -292,7 +306,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       if (store && (installedOnly || !label)) delete store.accountLabel;
     } else {
       const current = services.get(target.service);
-      if (current) services.set(target.service, { ...current, configured: true });
+      if (current) services.set(target.service, { ...current, configured: true, status: "connected" });
     }
     return { kind: "done", ...(label && !installedOnly ? { accountLabel: label } : {}) };
   }
@@ -319,7 +333,15 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     };
   }
 
+  const priceApi = createMockPrices({
+    library: () => library,
+    service: () => services.get("itad")?.status ?? "disconnected",
+    prices: () => settings.prices ?? { country: null, shops: "ludiary" },
+    now,
+  });
+
   return {
+    ...priceApi,
     getStores: async () => [...stores.values()],
     getServices: async () => [...services.values()],
 
@@ -361,7 +383,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
         stores.set(target.store, { store: target.store, ...meta, sync: [] });
       } else {
         const current = services.get(target.service);
-        if (current) services.set(target.service, { ...current, configured: false });
+        if (current) services.set(target.service, { ...current, configured: false, status: "disconnected" });
       }
     },
 
@@ -391,8 +413,9 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       settings = { ...settings, scanRoots: settings.scanRoots.filter((r) => r.id !== id || r.origin !== "user") };
     },
     updateSettings: async (patch) => {
-      const { storeCollections, ...plain } = patch;
+      const { storeCollections, prices, ...plain } = patch;
       settings = { ...settings, ...plain };
+      if (prices) settings = { ...settings, prices: { country: prices.country ?? settings.prices?.country ?? null, shops: prices.shops ?? settings.prices?.shops ?? "ludiary" } };
       for (const [store, v] of Object.entries(storeCollections ?? {}) as [StoreId, { enabled?: boolean; unverifiedFavorites?: boolean }][]) {
         const prev = settings.storeCollections[store];
         if (!prev) continue;

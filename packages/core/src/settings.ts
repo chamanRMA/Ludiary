@@ -2,7 +2,7 @@
 import type { Env } from "./env";
 import { CoreError } from "./errors";
 import type { StoreId } from "@ludiary/contracts";
-import type { DetectionMode, Onboarding, ScanRootRecord, Settings, SettingsPatch, StoreCollectionsSettings } from "./model";
+import type { DetectionMode, Onboarding, PriceShops, PricesSettings, ScanRootRecord, Settings, SettingsPatch, StoreCollectionsSettings } from "./model";
 
 const K_LOCALE = "ui.locale";
 const K_DETECTION = "detection.mode";
@@ -14,6 +14,16 @@ const isMode = (v: unknown): v is DetectionMode => typeof v === "string" && (MOD
 
 /** ADR 88. Settings key of a store's collections step: enabled, unverifiedFavorites, favoritesSeen, mirrorAccountSource. */
 export const collectionsKey = (store: StoreId, name: "enabled" | "unverifiedFavorites" | "favoritesSeen" | "mirrorAccountSource"): string => `collections.${store}.${name}`;
+
+const K_PRICES_COUNTRY = "prices.country";
+const K_PRICES_SHOPS = "prices.shops";
+const COUNTRY = /^[A-Z]{2}$/;
+
+/** ADR 86. Country is null until the user (or the browser's region, via the web) sets it: never a default. */
+export async function readPriceSettings(env: Env): Promise<PricesSettings> {
+  const [country, shops] = await Promise.all([env.deps.settings.get(K_PRICES_COUNTRY), env.deps.settings.get(K_PRICES_SHOPS)]);
+  return { country: typeof country === "string" && COUNTRY.test(country) ? country : null, shops: shops === "all" ? "all" : "ludiary" };
+}
 
 /** Stores that have the operation, in registration order. */
 const mirrored = (env: Env): StoreId[] => [...env.connectors.values()].filter((c) => c.importCollections !== undefined).map((c) => c.id);
@@ -31,6 +41,7 @@ export async function readSettings(env: Env): Promise<Settings> {
     locale: (LOCALES as readonly unknown[]).includes(locale) ? (locale as Settings["locale"]) : "system",
     detection: isMode(mode) ? mode : null,
     storeCollections,
+    ...(env.services.size > 0 ? { prices: await readPriceSettings(env) } : {}),
   };
 }
 
@@ -55,7 +66,15 @@ export async function writeSettings(
       if (v[k] !== undefined && typeof v[k] !== "boolean") throw new CoreError("invalid-input", `${k} must be a boolean`);
     }
   }
+  if (patch.prices !== undefined) {
+    const pr = patch.prices as { country?: unknown; shops?: unknown } | null;
+    if (env.services.size === 0 || pr === null || typeof pr !== "object") throw new CoreError("invalid-input", "Prices settings are not available");
+    if (pr.country !== undefined && !(typeof pr.country === "string" && COUNTRY.test(pr.country))) throw new CoreError("invalid-input", "Invalid country");
+    if (pr.shops !== undefined && pr.shops !== "ludiary" && pr.shops !== "all") throw new CoreError("invalid-input", "Invalid shops value");
+  }
   const before = await readSettings(env);
+  if (patch.prices?.country !== undefined) await env.deps.settings.set(K_PRICES_COUNTRY, patch.prices.country);
+  if (patch.prices?.shops !== undefined) await env.deps.settings.set(K_PRICES_SHOPS, patch.prices.shops);
   if (patch.locale !== undefined) await env.deps.settings.set(K_LOCALE, patch.locale);
   if (patch.detection !== undefined) {
     if (patch.detection === null) await env.deps.settings.delete(K_DETECTION);

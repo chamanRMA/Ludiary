@@ -19,8 +19,9 @@ import styles from "./settings.module.css";
 
 const ALL_SECTIONS = ["general", "stores", "services", "folders", "backups", "privacy", "about"] as const;
 export type SettingsSection = (typeof ALL_SECTIONS)[number];
-// Services and backups only exist in the simulator for now: the real app must not suggest them (ADR 57).
-export const SETTINGS_SECTIONS: readonly SettingsSection[] = isSimulated ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s !== "services" && s !== "backups");
+// Backups only exist in the simulator for now: the real app must not suggest them (ADR 57). Services appear in the real app
+// only when the server has one (IsThereAnyDeal, ADR 86): the nav hides the entry while the list is empty.
+export const SETTINGS_SECTIONS: readonly SettingsSection[] = isSimulated ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s !== "backups");
 const isSection = (v: string): v is SettingsSection => (SETTINGS_SECTIONS as readonly string[]).includes(v);
 
 function Switch({ checked, onChange, label }: { checked: boolean; onChange(v: boolean): void; label: string }) {
@@ -61,6 +62,8 @@ function Row({ title, hint, children }: { title: string; hint?: string; children
 export function Settings({ section: raw }: { section: string }) {
   const { t } = useTranslation();
   const section: SettingsSection = isSection(raw) ? raw : "general";
+  const services = useQuery(() => api.getServices());
+  const sections = SETTINGS_SECTIONS.filter((s) => s !== "services" || (services?.length ?? 0) > 0);
   return (
     <>
       <header>
@@ -69,7 +72,7 @@ export function Settings({ section: raw }: { section: string }) {
       </header>
       <div className={styles.cols}>
         <nav className={styles.nav} aria-label={t("settings.sections")}>
-          {SETTINGS_SECTIONS.map((s) => (
+          {sections.map((s) => (
             <Link key={s} to={`/settings/${s}`}>
               {t(`settings.${s}.title`)}
             </Link>
@@ -202,16 +205,71 @@ function Services() {
   const { t } = useTranslation();
   const services = useQuery(() => api.getServices());
   const order = ["rawg", "igdb", "itad"] as const;
+  // RAWG and IGDB are hidden until their cut (ADR 86 point 9): without them, their texts would only confuse.
+  const metadata = services?.some((s) => s.purpose === "metadata") ?? false;
   return (
     <>
-      <p className={ui.muted}>{t("settings.services.intro")}</p>
+      <p className={ui.muted}>{t(metadata ? "settings.services.intro" : "settings.services.introPrices")}</p>
       <div>
         {order.map((id) => {
           const s = services?.find((x) => x.service === id);
           return s ? <TargetRow key={id} service={s} /> : null;
         })}
       </div>
-      <p className={ui.muted}>{t("settings.services.attribution")}</p>
+      {services?.some((s) => s.service === "itad" && s.configured) && <PriceSettings />}
+      {metadata && <p className={ui.muted}>{t("settings.services.attribution")}</p>}
+    </>
+  );
+}
+
+/** ADR 86 point 9: country of the prices and which shops to compare. */
+function PriceSettings() {
+  const { t } = useTranslation();
+  const [settings, update] = useSettings();
+  const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const prices = settings?.prices;
+  if (!prices) return null;
+  const country = draft ?? prices.country ?? "";
+  const valid = /^[A-Z]{2}$/.test(country);
+  const save = async (patch: NonNullable<SettingsUpdate["prices"]>): Promise<void> => {
+    try {
+      await update({ prices: patch });
+      setDraft(null);
+      setError(null);
+    } catch (e) {
+      setError(errorText(t, e));
+    }
+  };
+  return (
+    <>
+      <Row title={t("settings.prices.country")} hint={prices.country === null ? t("settings.prices.countryNeeded") : t("settings.prices.countryHint")}>
+        <form
+          className={ui.chips}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid) void save({ country });
+          }}
+        >
+          <input className={ui.field} value={country} maxLength={2} size={3} autoCapitalize="characters" aria-label={t("settings.prices.country")} onChange={(e) => setDraft(e.target.value.toUpperCase())} />
+          <button type="submit" className={cx(ui.btn, ui.small)} disabled={!valid || country === prices.country}>
+            {t("common.save")}
+          </button>
+        </form>
+      </Row>
+      <Row title={t("settings.prices.shops")}>
+        <Segmented
+          name="price-shops"
+          legend={t("settings.prices.shops")}
+          value={prices.shops}
+          options={[
+            { value: "ludiary", label: t("settings.prices.shopsLudiary") },
+            { value: "all", label: t("settings.prices.shopsAll") },
+          ]}
+          onChange={(shops) => void save({ shops })}
+        />
+      </Row>
+      {error && <p role="alert" className={ui.error}>{error}</p>}
     </>
   );
 }

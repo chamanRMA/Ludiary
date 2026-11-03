@@ -1,5 +1,5 @@
 // Public facade types of the core (ADR 72, point 4) and the shared environment of its use-case modules.
-import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
+import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, PriceService, PriceServiceId, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
 import type {
   CoreErrorInfo,
   CoreLogger,
@@ -8,7 +8,12 @@ import type {
   CollectionRecord,
   GameDataPatch,
   GameSummary,
+  GamePrices,
   Onboarding,
+  PriceBoard,
+  PriceSearchResult,
+  ServiceStatus,
+  WatchItem,
   ScanRootRecord,
   Settings,
   SettingsPatch,
@@ -19,6 +24,7 @@ import type {
   ConnectionRepository,
   IdentityRepository,
   LibraryRepository,
+  PriceRepository,
   ScanRootRepository,
   SecretRepository,
   SettingsRepository,
@@ -51,6 +57,21 @@ export const WIZARD_CALL_MS = 30_000;
 export const MAX_WIZARDS = 4;
 /** ADR 80: longest wait for the embedded login window; it is aborted after this. */
 export const EMBEDDED_LOGIN_MS = 10 * 60_000;
+/** ADR 86 point 7 and 15: prices. */
+export const PRICE_TTL_MS = 6 * HOUR_MS;
+export const PRICE_CALL_MS = 15_000;
+/** Own budget: a fifth of the service's default limit, per user, in memory. Searches count. */
+export const PRICE_BUDGET = 200;
+export const PRICE_BUDGET_WINDOW_MS = 5 * 60_000;
+/** A game that was not found is looked up again after this long (a changed title or property looks it up at once). */
+export const PRICE_NOT_FOUND_RETRY_MS = 30 * 24 * HOUR_MS;
+export const PRICE_LOOKUP_BATCH = 200;
+export const PRICE_BATCH = 200;
+export const PRICE_BATCH_ALL = 50;
+export const SEARCH_TTL_MS = 15 * 60_000;
+export const SEARCH_MAX_RESULTS = 20;
+export const SEARCH_KEEP = 200;
+export const WATCH_MAX = 500;
 /** Fixed order to pick the property to launch when none is given (ADR 72). */
 export const LAUNCH_ORDER: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
 
@@ -62,6 +83,10 @@ export interface CoreDeps {
   syncState: SyncStateRepository;
   settings: SettingsRepository;
   identity: IdentityRepository;
+  /** ADR 86. Absent together with `priceServices`: the mode has no price comparison. */
+  prices?: PriceRepository;
+  /** ADR 86. Registered price services (IsThereAnyDeal). Empty or absent: Settings > Services and the comparator stay hidden. */
+  priceServices?: readonly PriceService[];
   files: LocalFiles;
   /** Absent: the mode cannot resolve locations, so it cannot auto-detect (ADR 22, 38). */
   locations?: LocationResolver;
@@ -141,6 +166,23 @@ export interface LudiaryCore {
   /** Idempotent. */
   cancelWizard(wizardId: string): Promise<void>;
   disconnect(store: StoreId): Promise<void>;
+  /** ADR 86. Registered price services with their state, derived without network. */
+  listServices(): Promise<readonly ServiceStatus[]>;
+  /** ADR 86. Same engine as startWizard; the key is stored by the core when the wizard ends. */
+  startServiceWizard(service: PriceServiceId, returnBase: string): Promise<{ wizardId: string; response: WizardResponse }>;
+  /** ADR 86 point 8: key, state, cache and links (not the excluded ones) go; the follow list stays. */
+  disconnectService(service: PriceServiceId): Promise<void>;
+  /** ADR 86. Cache only, never the network. `not-found` if the game is not shown. */
+  getGamePrices(canonicalId: string): Promise<GamePrices>;
+  getPriceBoard(): Promise<PriceBoard>;
+  /** ADR 86. Queries what is missing or older than the TTL (everything if `manual`, which has a floor of a minute). */
+  refreshPrices(req: { canonicalIds?: readonly string[]; watchIds?: readonly string[]; manual?: boolean }): Promise<void>;
+  /** "Not this game" and its undo ("Search again"). Idempotent. */
+  setPriceExclusion(canonicalId: string, excluded: boolean): Promise<void>;
+  searchPrices(title: string): Promise<readonly PriceSearchResult[]>;
+  /** Only a `resultId` from a recent search. `created: false` if it was already followed. */
+  watchPrice(resultId: string): Promise<{ item: WatchItem; created: boolean }>;
+  unwatchPrice(id: string): Promise<void>;
   /** ADR 80. Server shutdown: aborts the open login windows. */
   shutdown(): void;
 }
@@ -153,4 +195,8 @@ export interface Env {
   deviceId: string;
   /** ADR 74. The vault of scope `store:<id>`. */
   vaultFor(store: StoreId): SecretVault;
+  /** ADR 86. Registered price services. */
+  services: ReadonlyMap<PriceServiceId, PriceService>;
+  /** ADR 86. The vault of scope `service:<id>`. */
+  serviceVaultFor(service: PriceServiceId): SecretVault;
 }

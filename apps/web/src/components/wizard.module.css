@@ -15,6 +15,12 @@
 .wizard h4:focus {
   outline: none;
 }
+.shot {
+  max-width: 100%;
+  align-self: flex-start;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+}
 .field {
   display: flex;
   flex-direction: column;

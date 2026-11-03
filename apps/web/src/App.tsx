@@ -15,7 +15,8 @@ import { Library } from "./pages/Library";
 import { NotFound } from "./pages/NotFound";
 import { Settings } from "./pages/Settings";
 import { Store } from "./pages/Store";
-import { Collections, Local, Prices } from "./pages/Simple";
+import { Prices } from "./pages/Prices";
+import { Collections, Local } from "./pages/Simple";
 import { Welcome } from "./pages/Welcome";
 
 // ADR 68 routes. `/welcome` renders without the app frame.

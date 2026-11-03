@@ -18,6 +18,7 @@
     "@ludiary/core": "workspace:*",
     "@ludiary/db": "workspace:*",
     "@ludiary/i18n": "workspace:*",
+    "@ludiary/itad": "workspace:*",
     "@ludiary/platform-node": "workspace:*"
   }
 }

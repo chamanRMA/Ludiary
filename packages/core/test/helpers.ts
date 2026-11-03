@@ -116,7 +116,7 @@ export class FakeClock implements Clock {
 }
 
 export class MemoryStore implements LibraryRepository, IdentityRepository {
-  canonical = new Map<string, { id: string; title: string; media?: object }>();
+  canonical = new Map<string, { id: string; title: string; media?: EntryMedia }>();
   properties = new Map<string, PropertyRecord>();
   installs = new Map<string, InstallationRecord>();
   roots = new Map<string, ScanRootRecord>();
@@ -227,6 +227,8 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
       out.push({
         id: g.id,
         title: g.title,
+        ...(g.media?.coverUrl ? { coverUrl: g.media.coverUrl } : {}),
+        ...(g.media?.heroUrl ? { coverFallbackUrl: g.media.heroUrl } : {}),
         stores: ps.map((p) => p.store as StoreId),
         installed: ps.some((p) => [...this.installs.values()].some((i) => i.propertyId === p.id)),
         favorite: false,
@@ -549,6 +551,9 @@ export async function harness(
     cipher?: SecretCipher;
     /** Stores that start with a 'connected' row (ADR 74). */
     connected?: StoreId[];
+    /** ADR 86. */
+    prices?: CoreDeps["prices"];
+    priceServices?: CoreDeps["priceServices"];
   } = {},
 ): Promise<Harness> {
   const store = new MemoryStore();
@@ -621,6 +626,8 @@ export async function harness(
     ...(launcher ? { launcher } : {}),
     ...(opts.picker ? { folderPicker: opts.picker } : {}),
     ...(opts.http ? { http: opts.http } : {}),
+    ...(opts.prices ? { prices: opts.prices } : {}),
+    ...(opts.priceServices ? { priceServices: opts.priceServices } : {}),
     cipher: opts.cipher ?? fakeCipher(),
     clock,
     newId: ids,

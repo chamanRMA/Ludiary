@@ -4,15 +4,20 @@ import type {
   Epoch,
   GameDetailDto,
   GamePatchDto,
+  GamePricesDto,
   GameSummaryDto,
   LaunchResponseDto,
   OnboardingDto,
+  PriceBoardDto,
+  PriceRefreshDto,
+  PriceSearchResultDto,
   ScanRootDto,
   ServiceStatusDto,
   SettingsDto,
   SettingsPatchDto,
   StoreId,
   StoreStatusDto,
+  WatchItemDto,
   WizardInputDto,
   WizardResponseDto,
   WizardTarget,
@@ -38,6 +43,8 @@ export type SettingsUpdate = Partial<Pick<GeneralSettings, "locale" | "backups" 
   detection?: DetectionMode;
   /** ADR 88. Per store with collections: the mirror switch and the unverified-favorites switch. */
   storeCollections?: SettingsPatchDto["storeCollections"];
+  /** ADR 86. Country (two capital letters) and which shops to compare. */
+  prices?: SettingsPatchDto["prices"];
 };
 
 export type SyncTrigger = "open" | "manual";
@@ -92,6 +99,16 @@ export interface LudiaryApi {
   revokeSessions(): Promise<void>;
   createBackup(): Promise<void>;
   exportLogs(): Promise<void>;
+  // ---- ADR 86. The GET-like ones read the server cache; only `refreshPrices` and `searchPrices` reach IsThereAnyDeal.
+  getGamePrices(id: string): Promise<GamePricesDto>;
+  getPriceBoard(): Promise<PriceBoardDto>;
+  /** Resolves when the server finished (it answers 204); read again afterwards. */
+  refreshPrices(req: PriceRefreshDto): Promise<void>;
+  /** "Not this game" (true) and its undo, "Search again" (false). */
+  setPriceExclusion(id: string, excluded: boolean): Promise<void>;
+  searchPrices(title: string): Promise<readonly PriceSearchResultDto[]>;
+  watchPrice(resultId: string): Promise<WatchItemDto>;
+  unwatchPrice(id: string): Promise<void>;
   /** Simulator only: lets the Epic "expired session" screens be reached. Goes away with the real API. */
   simulateExpiredSession(store: StoreId): Promise<void>;
 }

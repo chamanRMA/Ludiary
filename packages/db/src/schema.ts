@@ -1,6 +1,7 @@
-// Drizzle schema of migrations 0001_library_scan to 0005_user_data (ADR 47, 72, 74, 85).
+// Drizzle schema of migrations 0001_library_scan to 0007_prices (ADR 47, 72, 74, 85, 86).
 import { sql } from "drizzle-orm";
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import type { PriceSnapshotData } from "@ludiary/core";
 
 export interface MediaJson {
   coverUrl?: string;
@@ -247,4 +248,68 @@ export const collectionGames = sqliteTable(
     addedAt: integer("added_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.collectionId, t.canonicalGameId] }), index("collection_games_game_idx").on(t.canonicalGameId)],
+);
+
+// ---- ADR 86. Prices: links and cache are not user data (only `excluded` links are kept on disconnect); the watch list is.
+export const priceLinks = sqliteTable(
+  "price_links",
+  {
+    userId: text("user_id").notNull().references(() => users.id),
+    canonicalGameId: text("canonical_game_id").notNull().references(() => canonicalGames.id, { onDelete: "cascade" }),
+    service: text("service").notNull(),
+    serviceGameId: text("service_game_id"),
+    status: text("status").notNull(),
+    source: text("source"),
+    inputsHash: text("inputs_hash").notNull(),
+    lookedUpAt: integer("looked_up_at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.canonicalGameId, t.service] }),
+    index("price_links_service_game_idx").on(t.userId, t.service, t.serviceGameId),
+    check("price_links_service_check", sql`${t.service} IN ('itad')`),
+    check("price_links_status_check", sql`${t.status} IN ('found', 'not-found', 'conflict', 'excluded')`),
+    check("price_links_source_check", sql`${t.source} IS NULL OR ${t.source} IN ('steam', 'gog', 'title')`),
+  ],
+);
+
+export const priceSnapshots = sqliteTable(
+  "price_snapshots",
+  {
+    userId: text("user_id").notNull().references(() => users.id),
+    service: text("service").notNull(),
+    serviceGameId: text("service_game_id").notNull(),
+    country: text("country").notNull(),
+    shops: text("shops").notNull(),
+    data: text("data", { mode: "json" }).$type<PriceSnapshotData>().notNull(),
+    fetchedAt: integer("fetched_at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.service, t.serviceGameId, t.country, t.shops] }),
+    check("price_snapshots_service_check", sql`${t.service} IN ('itad')`),
+    check("price_snapshots_country_check", sql`length(${t.country}) = 2`),
+    check("price_snapshots_shops_check", sql`${t.shops} IN ('ludiary', 'all')`),
+  ],
+);
+
+export const priceWatch = sqliteTable(
+  "price_watch",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    service: text("service").notNull(),
+    serviceGameId: text("service_game_id").notNull(),
+    title: text("title").notNull(),
+    type: text("type"),
+    addedAt: integer("added_at").notNull(),
+    // ADR 86 point 17. Null for games of the library and for items followed before 0008_watch_media.
+    coverUrl: text("cover_url"),
+    coverFallbackUrl: text("cover_fallback_url"),
+  },
+  (t) => [
+    uniqueIndex("price_watch_game_uq").on(t.userId, t.service, t.serviceGameId),
+    check("price_watch_service_check", sql`${t.service} IN ('itad')`),
+    check("price_watch_type_check", sql`${t.type} IS NULL OR ${t.type} IN ('game', 'dlc', 'package')`),
+    check("price_watch_cover_check", sql`${t.coverUrl} IS NULL OR length(${t.coverUrl}) <= 2048`),
+    check("price_watch_cover_fallback_check", sql`${t.coverFallbackUrl} IS NULL OR length(${t.coverFallbackUrl}) <= 2048`),
+  ],
 );

@@ -31,7 +31,7 @@ export function validateMedia(media: unknown, hosts: readonly string[]): EntryMe
     } catch {
       continue;
     }
-    if (u.protocol !== "https:" || u.username !== "" || u.password !== "" || !hosts.includes(u.hostname.toLowerCase())) continue;
+    if (u.protocol !== "https:" || u.username !== "" || u.password !== "" || u.port !== "" || !hosts.includes(u.hostname.toLowerCase()) || u.href.length > MAX_URL) continue;
     out[key] = u.href;
   }
   return Object.keys(out).length > 0 ? out : undefined;

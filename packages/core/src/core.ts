@@ -16,7 +16,10 @@ import {
   writeSettings,
 } from "./settings";
 import { createSyncService } from "./sync";
-import { storeScope, createVaultFactory } from "./vault";
+import { storeScope, createServiceVaultFactory, createVaultFactory } from "./vault";
+import { checkPriceServiceManifest } from "@ludiary/contracts";
+import type { PriceService, PriceServiceId } from "@ludiary/contracts";
+import { createPriceFeature, createPriceGate } from "./prices";
 import { createWizardEngine } from "./wizards";
 import { createCollectionMirror } from "./collection-mirror";
 import { bumpEpoch, syncContext } from "./contexts";
@@ -48,19 +51,44 @@ function registerConnectors(deps: CoreDeps): Map<StoreId, StoreConnector> {
   return map;
 }
 
+function registerPriceServices(deps: CoreDeps): Map<PriceServiceId, PriceService> {
+  const map = new Map<PriceServiceId, PriceService>();
+  for (const svc of deps.priceServices ?? []) {
+    const problems = [...checkPriceServiceManifest(svc)];
+    if (map.has(svc.id)) problems.push("duplicate service id");
+    if (!deps.prices) problems.push("a price service needs a PriceRepository");
+    if (problems.length > 0) throw new ConnectorRegistrationError(String(svc.id), problems);
+    map.set(svc.id, svc);
+  }
+  return map;
+}
+
 export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
   const connectors = registerConnectors(deps);
   const { userId, deviceId } = await deps.identity.ensure(deps.newId, deps.clock.now());
   const reset = await deps.syncState.resetRunning();
   if (reset > 0) deps.log.warn("Reset interrupted syncs to idle", { count: reset });
 
-  const env: Env = { deps, connectors, userId, deviceId, vaultFor: () => {
-    throw new Error("vault factory not ready");
-  } };
+  const env: Env = {
+    deps,
+    connectors,
+    services: registerPriceServices(deps),
+    userId,
+    deviceId,
+    vaultFor: () => {
+      throw new Error("vault factory not ready");
+    },
+    serviceVaultFor: () => {
+      throw new Error("vault factory not ready");
+    },
+  };
   env.vaultFor = createVaultFactory(env);
+  env.serviceVaultFor = createServiceVaultFactory(env);
   const mirror = createCollectionMirror(env);
   const sync = createSyncService(env, mirror);
-  const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }));
+  const gate = createPriceGate(env);
+  const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }), gate);
+  const prices = createPriceFeature(env, gate, (key) => wizards.cancelTarget(key));
   const launch = createLaunchService(env);
   const capabilities: CoreCapabilities = {
     canScan: true,
@@ -144,7 +172,17 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     },
     deleteCollection: (id) => deps.userData.deleteCollection(id),
     launch: (canonicalId, propertyId, action) => launch.launch(canonicalId, propertyId, action),
-    startWizard: (store, returnBase) => wizards.start(store, returnBase),
+    startWizard: (store, returnBase) => wizards.start({ kind: "store", store }, returnBase),
+    startServiceWizard: (service, returnBase) => wizards.start({ kind: "service", service }, returnBase),
+    listServices: () => prices.listServices(),
+    disconnectService: (service) => prices.disconnect(service),
+    getGamePrices: (id) => prices.gamePrices(id),
+    getPriceBoard: () => prices.board(),
+    refreshPrices: (req) => prices.refresh(req),
+    setPriceExclusion: (id, excluded) => prices.setExclusion(id, excluded),
+    searchPrices: (title) => prices.search(title),
+    watchPrice: (resultId) => prices.watch(resultId),
+    unwatchPrice: (id) => prices.unwatch(id),
     submitWizard: (wizardId, stepId, input) => wizards.submit(wizardId, stepId, input),
     wizardCallback: (wizardId, query) => wizards.callback(wizardId, query),
     cancelWizard: async (wizardId) => wizards.cancel(wizardId),
@@ -157,7 +195,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
      */
     async disconnect(store) {
       const c = connectorOf(store);
-      wizards.cancelStore(store);
+      wizards.cancelTarget(store);
       bumpEpoch(env, store); // a library operation in flight can no longer store a refreshed token (ADR 77)
       const signal = deps.clock.timeout(30_000);
       try {

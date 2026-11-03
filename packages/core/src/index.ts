@@ -8,3 +8,4 @@ export type { MatchCandidate, MatchVerdict, TitleVerdict } from "./normalize";
 export { planCollectionMirror, emptyMirrorCounts, type MirrorState, type CollectionMirrorPlan } from "./collection-mirror";
 export { collectionsKey } from "./settings";
 export { normalizeLabel, TAG_MAX_LENGTH, COLLECTION_MAX_LENGTH, LIMITS, type Label } from "./labels";
+export { WATCH_MAX } from "./env";

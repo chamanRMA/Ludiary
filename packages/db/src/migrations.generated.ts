@@ -71,5 +71,27 @@ export const MIGRATIONS: readonly EmbeddedMigration[] = [
       "CREATE UNIQUE INDEX `collections_source_uq` ON `collections` (`user_id`,`source_store`,`source_id`) WHERE \"collections\".\"source_store\" IS NOT NULL;",
       "CREATE UNIQUE INDEX `collections_user_key_uq` ON `collections` (`user_id`,`name_key`) WHERE \"collections\".\"source_store\" IS NULL;"
     ]
+  },
+  {
+    "id": "0007_prices",
+    "statements": [
+      "CREATE TABLE `price_links` (\n\t`user_id` text NOT NULL,\n\t`canonical_game_id` text NOT NULL,\n\t`service` text NOT NULL,\n\t`service_game_id` text,\n\t`status` text NOT NULL,\n\t`source` text,\n\t`inputs_hash` text NOT NULL,\n\t`looked_up_at` integer NOT NULL,\n\tPRIMARY KEY(`user_id`, `canonical_game_id`, `service`),\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,\n\tFOREIGN KEY (`canonical_game_id`) REFERENCES `canonical_games`(`id`) ON UPDATE no action ON DELETE cascade,\n\tCONSTRAINT \"price_links_service_check\" CHECK(\"price_links\".\"service\" IN ('itad')),\n\tCONSTRAINT \"price_links_status_check\" CHECK(\"price_links\".\"status\" IN ('found', 'not-found', 'conflict', 'excluded')),\n\tCONSTRAINT \"price_links_source_check\" CHECK(\"price_links\".\"source\" IS NULL OR \"price_links\".\"source\" IN ('steam', 'gog', 'title'))\n);",
+      "CREATE INDEX `price_links_service_game_idx` ON `price_links` (`user_id`,`service`,`service_game_id`);",
+      "CREATE TABLE `price_snapshots` (\n\t`user_id` text NOT NULL,\n\t`service` text NOT NULL,\n\t`service_game_id` text NOT NULL,\n\t`country` text NOT NULL,\n\t`shops` text NOT NULL,\n\t`data` text NOT NULL,\n\t`fetched_at` integer NOT NULL,\n\tPRIMARY KEY(`user_id`, `service`, `service_game_id`, `country`, `shops`),\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,\n\tCONSTRAINT \"price_snapshots_service_check\" CHECK(\"price_snapshots\".\"service\" IN ('itad')),\n\tCONSTRAINT \"price_snapshots_country_check\" CHECK(length(\"price_snapshots\".\"country\") = 2),\n\tCONSTRAINT \"price_snapshots_shops_check\" CHECK(\"price_snapshots\".\"shops\" IN ('ludiary', 'all'))\n);",
+      "CREATE TABLE `price_watch` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`user_id` text NOT NULL,\n\t`service` text NOT NULL,\n\t`service_game_id` text NOT NULL,\n\t`title` text NOT NULL,\n\t`type` text,\n\t`added_at` integer NOT NULL,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,\n\tCONSTRAINT \"price_watch_service_check\" CHECK(\"price_watch\".\"service\" IN ('itad')),\n\tCONSTRAINT \"price_watch_type_check\" CHECK(\"price_watch\".\"type\" IS NULL OR \"price_watch\".\"type\" IN ('game', 'dlc', 'package'))\n);",
+      "CREATE UNIQUE INDEX `price_watch_game_uq` ON `price_watch` (`user_id`,`service`,`service_game_id`);"
+    ]
+  },
+  {
+    "id": "0008_watch_media",
+    "statements": [
+      "-- drizzle-kit selected the new columns from the old table; fixed by hand: they start null (ADR 86 point 17).\nPRAGMA foreign_keys=OFF;",
+      "CREATE TABLE `__new_price_watch` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`user_id` text NOT NULL,\n\t`service` text NOT NULL,\n\t`service_game_id` text NOT NULL,\n\t`title` text NOT NULL,\n\t`type` text,\n\t`added_at` integer NOT NULL,\n\t`cover_url` text,\n\t`cover_fallback_url` text,\n\tFOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action,\n\tCONSTRAINT \"price_watch_service_check\" CHECK(\"__new_price_watch\".\"service\" IN ('itad')),\n\tCONSTRAINT \"price_watch_type_check\" CHECK(\"__new_price_watch\".\"type\" IS NULL OR \"__new_price_watch\".\"type\" IN ('game', 'dlc', 'package')),\n\tCONSTRAINT \"price_watch_cover_check\" CHECK(\"__new_price_watch\".\"cover_url\" IS NULL OR length(\"__new_price_watch\".\"cover_url\") <= 2048),\n\tCONSTRAINT \"price_watch_cover_fallback_check\" CHECK(\"__new_price_watch\".\"cover_fallback_url\" IS NULL OR length(\"__new_price_watch\".\"cover_fallback_url\") <= 2048)\n);",
+      "INSERT INTO `__new_price_watch`(\"id\", \"user_id\", \"service\", \"service_game_id\", \"title\", \"type\", \"added_at\") SELECT \"id\", \"user_id\", \"service\", \"service_game_id\", \"title\", \"type\", \"added_at\" FROM `price_watch`;",
+      "DROP TABLE `price_watch`;",
+      "ALTER TABLE `__new_price_watch` RENAME TO `price_watch`;",
+      "PRAGMA foreign_keys=ON;",
+      "CREATE UNIQUE INDEX `price_watch_game_uq` ON `price_watch` (`user_id`,`service`,`service_game_id`);"
+    ]
   }
 ];

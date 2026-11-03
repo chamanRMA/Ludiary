@@ -64,9 +64,9 @@ export function Home() {
         <GameGrid games={recent.slice(0, 5)} />
       </section>
       <section className={cx(ui.panel, ui.dashed)}>
-        <span className={ui.chip} style={{ alignSelf: "flex-start" }}>{t("common.comingSoon")}</span>
         <h3>{t("home.pricesTitle")}</h3>
         <p className={ui.muted}>{t("home.pricesBody")}</p>
+        <Link to="/prices" className={ui.btn} style={{ alignSelf: "flex-start" }}>{t("nav.prices")}</Link>
       </section>
     </div>
   );

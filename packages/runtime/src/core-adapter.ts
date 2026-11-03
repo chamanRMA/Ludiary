@@ -152,7 +152,13 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
   };
   const settingsDto = async (): Promise<SettingsDto> => {
     const [settings, roots] = await Promise.all([core.getSettings(), core.listScanRoots()]);
-    return { locale: settings.locale, detection: settings.detection, scanRoots: roots.map(scanRootDto), storeCollections: structuredClone(settings.storeCollections) };
+    return {
+      locale: settings.locale,
+      detection: settings.detection,
+      scanRoots: roots.map(scanRootDto),
+      storeCollections: structuredClone(settings.storeCollections),
+      ...(settings.prices ? { prices: { ...settings.prices } } : {}),
+    };
   };
 
   return {
@@ -187,6 +193,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
           ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
           ...(patch.detection !== undefined ? { detection: patch.detection } : {}),
           ...(patch.storeCollections !== undefined ? { storeCollections: patch.storeCollections } : {}),
+          ...(patch.prices !== undefined ? { prices: patch.prices } : {}),
         });
         return settingsDto();
       }),
@@ -213,5 +220,26 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
       }),
     cancelWizard: (wizardId) => guard(() => core.cancelWizard(wizardId)),
     disconnect: (store) => guard(() => core.disconnect(store)),
+    listServices: () => guard(async () => (await core.listServices()).map((x) => ({ ...x }))),
+    startServiceWizard: (service, returnBase) =>
+      guard(async () => {
+        const { wizardId, response } = await core.startServiceWizard(service, returnBase);
+        return { wizardId, response: wizardResponseDto(response) };
+      }),
+    disconnectService: (service) => guard(() => core.disconnectService(service)),
+    getGamePrices: (id) => guard(() => core.getGamePrices(id)),
+    getPriceBoard: () => guard(() => core.getPriceBoard()),
+    refreshPrices: (req) =>
+      guard(() =>
+        core.refreshPrices({
+          ...(req.canonicalIds ? { canonicalIds: req.canonicalIds } : {}),
+          ...(req.watchIds ? { watchIds: req.watchIds } : {}),
+          ...(req.manual !== undefined ? { manual: req.manual } : {}),
+        }),
+      ),
+    setPriceExclusion: (id, excluded) => guard(() => core.setPriceExclusion(id, excluded)),
+    searchPrices: (title) => guard(() => core.searchPrices(title)),
+    watchPrice: (resultId) => guard(() => core.watchPrice(resultId)),
+    unwatchPrice: (id) => guard(() => core.unwatchPrice(id)),
   };
 }

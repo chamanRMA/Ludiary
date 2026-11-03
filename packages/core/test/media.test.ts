@@ -1,5 +1,6 @@
 import { ConnectorError, type EntryMedia, type StoreConnector } from "@ludiary/contracts";
 import { describe, expect, it, vi } from "vitest";
+import { validateMedia } from "../src/validate";
 import { addUserRoot, entry, harness, makeConnector, scanNow, type Harness } from "./helpers";
 
 const LIB = "D:/Games";
@@ -162,5 +163,20 @@ describe("media step (ADR 73)", () => {
     await scanNow(noResolve);
     expect(resolve).not.toHaveBeenCalled();
     expect(syncOf(noHttp).status).toBe("idle");
+  });
+});
+
+describe("validateMedia port (ADR 86 point 18)", () => {
+  it("drops a URL with a port, for the price service and for a connector host alike, and keeps the same URL without one", () => {
+    const hosts = ["assets.isthereanydeal.com", "shared.akamai.steamstatic.com"];
+    expect(validateMedia({ coverUrl: "https://assets.isthereanydeal.com:8443/a.jpg", heroUrl: "https://shared.akamai.steamstatic.com:444/h.jpg" }, hosts)).toBeUndefined();
+    expect(validateMedia({ coverUrl: "https://assets.isthereanydeal.com:443/a.jpg", heroUrl: "https://shared.akamai.steamstatic.com/h.jpg" }, hosts)).toEqual({ coverUrl: "https://assets.isthereanydeal.com/a.jpg", heroUrl: "https://shared.akamai.steamstatic.com/h.jpg" });
+  });
+
+  it("drops a URL that passes 2048 characters only once percent-encoded, so the stored value fits its CHECK", () => {
+    const base = "https://assets.isthereanydeal.com/";
+    const long = base + "é".repeat(2040 - base.length);
+    expect(long.length).toBeLessThanOrEqual(2048);
+    expect(validateMedia({ coverUrl: long }, ["assets.isthereanydeal.com"])).toBeUndefined();
   });
 });

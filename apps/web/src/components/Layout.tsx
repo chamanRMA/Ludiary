@@ -47,7 +47,7 @@ export function Layout({ children }: { children: ReactNode }) {
     { to: "/", icon: "home", label: t("nav.home") },
     { to: "/library", icon: "library", label: t("nav.library"), count: library?.length ?? 0 },
     { to: "/collections", icon: "collections", label: t("nav.collections") },
-    { to: "/prices", icon: "prices", label: t("nav.prices"), soon: true },
+    { to: "/prices", icon: "prices", label: t("nav.prices") },
     { to: "/settings/general", icon: "settings", label: t("nav.settings"), prefix: "/settings" },
   ];
   const expired = stores?.filter((s) => s.connection === "expired") ?? [];

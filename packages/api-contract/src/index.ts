@@ -105,13 +105,107 @@ export const StoreStatusSchema = Type.Object(
 );
 export type StoreStatusDto = RO<Static<typeof StoreStatusSchema>>;
 
-export interface ServiceStatusDto {
-  service: ServiceId;
-  purpose: "metadata" | "prices";
-  configured: boolean;
-  /** false while the feature that uses it does not exist (IsThereAnyDeal until phase 3). */
-  available: boolean;
-}
+// ---- Services (ADR 86, point 15, A2)
+export const ServiceIdSchema = Type.Union([Type.Literal("igdb"), Type.Literal("rawg"), Type.Literal("itad")]);
+export const ServiceStatusSchema = Type.Object(
+  {
+    service: ServiceIdSchema,
+    purpose: Type.Union([Type.Literal("metadata"), Type.Literal("prices")]),
+    /** false while the feature that uses it is not implemented (RAWG and IGDB hide in real mode). */
+    available: Type.Boolean(),
+    /** status !== 'disconnected'. */
+    configured: Type.Boolean(),
+    status: Type.Union([Type.Literal("disconnected"), Type.Literal("connected"), Type.Literal("invalid"), Type.Literal("expired")]),
+  },
+  strict,
+);
+export type ServiceStatusDto = RO<Static<typeof ServiceStatusSchema>>;
+/** Only the implemented services have routes. */
+export const ServiceParamsSchema = Type.Object({ service: Type.Literal("itad") }, strict);
+export type ServiceParams = Static<typeof ServiceParamsSchema>;
+
+// ---- Prices (ADR 86, point 15, A2). Shown as received: no rounding, no currency conversion (ITAD9).
+const Minor = Type.Integer({ minimum: 0, maximum: 1_000_000_000 });
+const Currency = Type.String({ pattern: "^[A-Z]{3}$" });
+const Country = Type.String({ pattern: "^[A-Z]{2}$" });
+const Text300 = Type.String({ maxLength: 300 });
+const Url2048 = Type.String({ maxLength: 2048 });
+const PriceKind = Type.Union([Type.Literal("game"), Type.Literal("dlc"), Type.Literal("package"), Type.Null()]);
+
+export const DealSchema = Type.Object(
+  {
+    shop: Type.Object({ storeId: Type.Union([StoreIdSchema, Type.Null()]), name: Text300 }, strict),
+    amountMinor: Minor,
+    regularMinor: Minor,
+    currency: Currency,
+    cut: Type.Integer({ minimum: 0, maximum: 100 }),
+    voucher: Type.Union([Text300, Type.Null()]),
+    /** Absent when the host is not in the service's linkHosts (point 15, M1). */
+    url: Type.Optional(Type.String({ maxLength: 2048 })),
+    expiresAt: Type.Optional(EpochSchema),
+  },
+  strict,
+);
+export type DealDto = RO<Static<typeof DealSchema>>;
+
+export const PricesSchema = Type.Object(
+  {
+    country: Country,
+    fetchedAt: EpochSchema,
+    stale: Type.Boolean(),
+    deals: Type.Array(DealSchema, { maxItems: 100 }),
+    historyLow: Type.Union([Type.Object({ amountMinor: Minor, currency: Currency }, strict), Type.Null()]),
+  },
+  strict,
+);
+export type PricesDto = RO<Static<typeof PricesSchema>>;
+
+const BoardState = {
+  service: ServiceStatusSchema.properties.status,
+  needsCountry: Type.Boolean(),
+  limitedUntil: Type.Optional(EpochSchema),
+};
+export const GamePricesSchema = Type.Object(
+  {
+    ...BoardState,
+    link: Type.Union([Type.Literal("pending"), Type.Literal("found"), Type.Literal("not-found"), Type.Literal("conflict"), Type.Literal("excluded")]),
+    prices: Type.Union([PricesSchema, Type.Null()]),
+  },
+  strict,
+);
+export type GamePricesDto = RO<Static<typeof GamePricesSchema>>;
+
+export const WatchItemSchema = Type.Object(
+  { id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), prices: Type.Union([PricesSchema, Type.Null()]) },
+  strict,
+);
+export type WatchItemDto = RO<Static<typeof WatchItemSchema>>;
+
+export const PriceBoardSchema = Type.Object({ ...BoardState, items: Type.Array(WatchItemSchema, { maxItems: 500 }) }, strict);
+export type PriceBoardDto = RO<Static<typeof PriceBoardSchema>>;
+
+export const PriceSearchResultSchema = Type.Object(
+  { resultId: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), watched: Type.Boolean() },
+  strict,
+);
+export type PriceSearchResultDto = Static<typeof PriceSearchResultSchema>;
+
+/** POST /api/prices/refresh -> 204. `manual` applies the 1 minute floor and skips the TTL. */
+export const PriceRefreshSchema = Type.Object(
+  {
+    canonicalIds: Type.Optional(Type.Array(Id, { maxItems: 200, uniqueItems: true })),
+    watchIds: Type.Optional(Type.Array(Id, { maxItems: 200, uniqueItems: true })),
+    manual: Type.Optional(Type.Boolean()),
+  },
+  { ...strict, minProperties: 1 },
+);
+export type PriceRefreshDto = Static<typeof PriceRefreshSchema>;
+/** POST /api/prices/search -> 200 PriceSearchResultDto[] (at most 20). POST so the title stays out of the URL and the request log. */
+export const PriceSearchSchema = Type.Object({ title: Type.String({ minLength: 2, maxLength: 100 }) }, strict);
+export type PriceSearchDto = Static<typeof PriceSearchSchema>;
+/** POST /api/prices/watch -> 201 WatchItemDto (200 if already followed). resultId must come from a recent search. */
+export const PriceWatchSchema = Type.Object({ resultId: Id }, strict);
+export type PriceWatchDto = Static<typeof PriceWatchSchema>;
 
 // ---- Wizard (ADR 74, point 5). Responses are plain types; requests are validated with TypeBox.
 export type WizardTarget = { kind: "store"; store: StoreId } | { kind: "service"; service: ServiceId };
@@ -188,6 +282,7 @@ export const LocaleSchema = Type.Union([Type.Literal("system"), Type.Literal("es
 /** An object with an optional entry per store and no other keys. */
 const perStore = <T extends TSchema>(s: T) =>
   Type.Object({ steam: Type.Optional(s), gog: Type.Optional(s), epic: Type.Optional(s), ubisoft: Type.Optional(s), ea: Type.Optional(s) }, strict);
+const PriceShopsSchema = Type.Union([Type.Literal("ludiary"), Type.Literal("all")]);
 const StoreCollectionsSettingsSchema = Type.Object({ enabled: Type.Boolean(), unverifiedFavorites: Type.Boolean() }, strict);
 
 export const SettingsSchema = Type.Object(
@@ -200,6 +295,8 @@ export const SettingsSchema = Type.Object(
     autoUpdate: Type.Optional(Type.Boolean()), // ADR 32
     /** ADR 88. Only the stores that mirror collections. */
     storeCollections: perStore(StoreCollectionsSettingsSchema),
+    /** ADR 86. Absent: the feature is not available. country null: not chosen yet. */
+    prices: Type.Optional(Type.Object({ country: Type.Union([Country, Type.Null()]), shops: PriceShopsSchema }, strict)),
   },
   strict,
 );
@@ -210,6 +307,7 @@ export const SettingsPatchSchema = Type.Object(
     locale: Type.Optional(LocaleSchema),
     detection: Type.Optional(DetectionModeSchema),
     storeCollections: Type.Optional(perStore(Type.Object({ enabled: Type.Optional(Type.Boolean()), unverifiedFavorites: Type.Optional(Type.Boolean()) }, strict))),
+    prices: Type.Optional(Type.Object({ country: Type.Optional(Country), shops: Type.Optional(PriceShopsSchema) }, strict)),
   },
   strict,
 );

@@ -50,7 +50,7 @@ describe("mock API: secrets are validated and discarded (ADR 68)", () => {
     expect((await api.getStores()).find((s) => s.store === "steam")).toMatchObject({ connection: "connected", mode: "installed-only" });
   });
 
-  it("configures RAWG with one field and keeps IsThereAnyDeal unavailable", async () => {
+  it("configures RAWG with one field and leaves IsThereAnyDeal alone", async () => {
     const api = createMockApi(memoryStorage());
     const rawg: WizardTarget = { kind: "service", service: "rawg" };
     await api.startWizard(rawg);
@@ -58,7 +58,7 @@ describe("mock API: secrets are validated and discarded (ADR 68)", () => {
     expect((await api.submitWizard(rawg, { kind: "fields", values: { apiKey: "abcdef0123456789abcdef" } })).kind).toBe("done");
     const services = await api.getServices();
     expect(services.find((s) => s.service === "rawg")?.configured).toBe(true);
-    expect(services.find((s) => s.service === "itad")).toMatchObject({ available: false, configured: false });
+    expect(services.find((s) => s.service === "itad")).toMatchObject({ available: true, configured: false, status: "disconnected" });
   });
 
   it("keeps first-run state and language only in its storage (ADR 69)", async () => {
