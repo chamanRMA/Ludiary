@@ -69,7 +69,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63; segundo factor y cookie de la dirección alternativa en la 67 |
 | 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
 | 56 | Tiempo de juego propio y tiempo informado por las tiendas | Vigente (confirmada por el usuario) |
-| 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18) |
+| 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18); concretada en la 89 |
 | 58 | Actualización y firma de las versiones | Vigente (confirmada por el usuario); hereda de la 45 el requisito de validar la actualización con vuelta atrás |
 | 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario); ampliada en la 70 |
@@ -100,6 +100,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 85 | Favoritos, etiquetas y colecciones | Propuesta (encargada el 2-11-2026; concreta las 36 y 47, revisa la M1 de la 83 y fija la regla de datos del usuario de las futuras fusiones y separaciones de las 20 y 51; migración 0004 con cascada, `PATCH /api/games/:id` y CRUD de colecciones `session+key`, `normalizeLabel` con límites; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 12, sin críticos (migrador con claves ajenas desactivadas fuera de la transacción y `foreign_key_check`, sin Playwright, `\p{Cf}`); falta la del código y la prueba manual); importación de colecciones de Steam en la 87; unicidad de `name_key` solo entre propias y espejos de solo lectura en la 88 |
 | 87 | Importar las colecciones de Steam | Propuesta (encargada el 2-11-2026; amplía las 40, 72 y 85; operación opcional `importCollections` del conector, aditiva, `contractVersion` 1, sin migración; lee `userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json` bajo `steam-root` solo a petición del usuario y con autodetección; bajo demanda con resumen previo (`dryRun`), solo aditiva y por `name_key`; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 13, sin críticos: errores sin texto del fichero, cuenta sin verificar sin favoritos, plan dentro de la transacción, lector estrechado a `userdata`; falta la del código y la prueba manual). La 86 (precios) se escribe en otra rama. **Revisada en la 88**: deja de ser bajo demanda y aditiva |
 | 88 | Colecciones de Steam que se cargan y se refrescan solas al sincronizar | Propuesta (encargada por el usuario el 2-11-2026; revisa las 85 y 87, amplía las 40 y 50; paso al final del bucle de sincronización de cada tienda con `importCollections`; espejo de solo lectura por `source_id` con la migración 0005 e índice único parcial de `name_key` solo entre propias; favoritos solo añadidos y solo los nuevos en Steam; ajustes persistentes `collections.<store>.enabled` y `unverifiedFavorites`; `sourceId` aditivo, `contractVersion` 1; se retiran la ruta de importación y su diálogo; punto 14 aplicado por defecto con (a) salvo 14.3 (b); revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 15, que prevalece: sin adopción, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, guardián de borrado explícito, cambio de cuenta, 200 propias + 200 espejos, migración `0005_collection_source` con id `0006`; falta el código, su revisión y la prueba manual) |
+| 89 | Copias de seguridad periódicas, manuales y restauración | Propuesta (encargada por el usuario el 3-11-2026 para la 0.1; concreta la 57 y amplía la 62; copia completa de la base con `db.backup()`, sin la clave; puerto `BackupStore` en `db` y `UserFolders` en `platform-windows`; restauración preparada en caliente y aplicada al rearrancar, con copia previa y vuelta atrás; validación con esquema idéntico al de sus migraciones; sin migración; punto 12 aplicado por defecto con (a) en todo; falta la revisión del `auditor`, el código y la prueba manual) |
 
 ## Decisiones
 
@@ -1203,7 +1204,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** el tiempo de Steam ya incluye las sesiones lanzadas desde la aplicación; sumar ambos lo contaría dos veces, y quedarse con el mayor por propiedad lo evita. Alternativa descartada: sumar siempre (cuenta doble); usar solo el de la tienda (Ubisoft y EA no informan).
 
-### 57. Copias de seguridad: frecuencia y retención
+### 57. Copias de seguridad: frecuencia y retención (concretada en la decisión 89)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -6245,6 +6246,226 @@ Sin críticos. Decisiones de la coordinación sobre los hallazgos. **Lo que sigu
 - Riesgos: SC10; las colecciones importadas con la 87 conviven con sus espejos como propias (el usuario borra las que sobren); colecciones de otra persona del mismo PC con cuenta sin verificar (marcadas, de solo lectura y sin favoritos); un cambio de formato de Steam deja los espejos congelados, no los borra.
 - El `auditor` revisa el diseño y el código (escritura automática sin confirmación, guardián de borrado, guardas de espejos en el repositorio, registros); el diseño ya está revisado (punto 15). El `tester` prepara la prueba del punto 12. El `documentalista` cambia en la guía de usuario «importar colecciones» por «colecciones de Steam» (se traen solas, son de solo lectura, cómo apagarlo, que hace falta la autodetección y que conviene cerrar Steam para ver los cambios al momento).
 
+### 89. Copias de seguridad periódicas, manuales y restauración (concreta la decisión 57; amplía la 62)
+
+Encargo (3-11-2026, rama `feature/copias-seguridad`): lo siguiente que falta para la 0.1 del MVP. Hoy en `main` solo existe la copia previa a una migración (`packages/db/src/migrator.ts`, `db.backup()` en `%LOCALAPPDATA%\Ludiary\backups`, conserva 3). La sección Ajustes > Copias de seguridad está oculta fuera del simulador (`SETTINGS_SECTIONS` en `Settings.tsx`), `createBackup` de `real.ts` es `unavailable`, `getMaintenance` devuelve `lastBackupAt: null` y `SettingsDto.backups` no viene del servidor. Las sesiones del navegador viven en memoria (`SessionStore`), no en la base.
+
+#### 1. Lo que ya está decidido y se reutiliza
+
+- **57:** periódicas desactivadas por defecto; al activarlas, copia al arrancar si la última tiene más de 24 h y cada 24 h en marcha; se conservan 7 diarias y 4 semanales; carpeta por defecto `Documentos\Ludiary\Copias`, configurable, creada solo al activarlas; copia interna previa a migraciones; restauración validada con `PRAGMA integrity_check`, con el servidor parado y con copia previa de la base actual; desinstalar no toca la carpeta del usuario.
+- **41:** `db.backup()` de `better-sqlite3`. **46 y 64:** un secreto que no descifra o es de otro compartimento pone su tienda en «hay que volver a conectar» sin tocar la biblioteca (`packages/core/src/vault.ts`, ya implementado). **62:** cerrojo de instancia y orden de arranque. **67:** acciones que cambian datos o exportan ficheros con `session+key` (el nivel por defecto de `server.ts`). **72:** el núcleo trata las rutas como texto opaco y una carpeta solo entra por el selector nativo (`FolderPicker`), nunca como ruta escrita en la API.
+
+#### 2. Qué se copia
+
+- **La base entera** (`ludiary.db`), en un solo fichero SQLite: biblioteca, datos del usuario (36, 85, 88), carpetas de escaneo, decisiones de emparejamiento, tiempo de juego, ajustes (tabla `settings`) y la tabla `secrets` **cifrada**.
+- **No se copia:** la clave maestra ni el token de instalación (Administrador de credenciales, 46 y 63), `runtime.json` (puerto, 53), registros, `instance.lock` ni las portadas (caché del navegador, 75).
+- **Consecuencia (invariante 5):** la copia nunca lleva un secreto legible. Restaurada **en el mismo equipo y usuario de Windows**, las tiendas siguen conectadas. En **otro equipo** (u otra clave), los secretos no descifran: `vault.ts` los borra o los deja como compartimento y la tienda pasa a `expired`; se reconecta con el asistente y la biblioteca y los datos del usuario se conservan. Es lo que ya dice el texto `settings.backups.noKey`.
+- Alternativa descartada: copiar solo los datos del usuario (exportación JSON). Es otro formato que mantener y versionar con cada migración; la base entera ya lo contiene y el migrador ya sabe subirla de versión.
+
+#### 3. Cómo se hace la copia en caliente
+
+- `db.backup(destino)` sobre la conexión del servidor (API de copia en línea de SQLite). Según la documentación de SQLite (`sqlite3_backup_step`, comprobado el 3-11-2026), si la base cambia **por la misma conexión** la copia se actualiza a la vez, y si cambia por otra conexión la copia vuelve a empezar. El servidor tiene una sola conexión, así que la copia es una instantánea coherente aunque haya una sincronización en curso. Es asíncrona por bloques de páginas y no bloquea el bucle de eventos.
+- Se escribe en `<nombre>.partial` y se renombra al terminar: una copia cortada (apagón, disco lleno) nunca aparece en la lista. Los `.partial` que queden se borran antes de la siguiente copia.
+- Alternativa descartada: `VACUUM INTO` (compacta, pero es síncrona y bloquea el servidor mientras dura).
+- Una sola operación de copia o restauración a la vez (cerrojo en memoria en el núcleo): la segunda petición recibe `backup.busy`.
+
+#### 4. Dónde, nombres y retención
+
+| Tipo | Carpeta | Nombre | Retención |
+|---|---|---|---|
+| `auto` (periódica) | Carpeta del usuario (`backups.folder`, o `Documentos\Ludiary\Copias` si es nula) | `ludiary-<AAAAMMDDTHHmmssSSS>Z-auto.sqlite` (UTC) | 7 más recientes + la más reciente de cada una de las 4 semanas anteriores (semana ISO en UTC). |
+| `manual` | La misma | `ludiary-<…>Z-manual.sqlite` | Nunca se borran solas (punto 12.1). |
+| `pre-migration` | `%LOCALAPPDATA%\Ludiary\backups` | La de hoy: `pre-migration-<ms con 15 cifras>-<última migración>.sqlite` | 3 (sin cambios, la poda del migrador). |
+| `pre-restore` | `%LOCALAPPDATA%\Ludiary\backups` | `pre-restore-<ms con 15 cifras>.sqlite` | 3, con su propia poda por prefijo. |
+
+- **Identificador de una copia en la API = su nombre de fichero**, validado con estas expresiones antes de nada (los prefijos distintos dicen en qué carpeta está):
+  - `^ludiary-\d{8}T\d{9}Z-(auto|manual)\.sqlite$`
+  - `^pre-migration-\d{15}-[0-9a-z_]{1,64}\.sqlite$`
+  - `^pre-restore-\d{15}\.sqlite$`
+  El servidor solo abre un nombre que valida **y** que aparece en el listado de su carpeta. Nunca recibe una ruta.
+- **Carpeta de Documentos:** puerto nuevo `UserFolders` en `contracts`, implementado en `platform-windows` con el auxiliar de registro que ya existe (`HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders`, valor `Personal`, expandiendo `%VAR%` con el entorno; sigue a OneDrive si Documentos está redirigida). Supuesto BK3. Si no resuelve, devuelve `null` y activar las copias pide elegir una carpeta.
+- **Carpeta configurable:** solo con el selector nativo (`FolderPicker`, ruta `POST /api/backups/folder/pick`), como las carpetas de escaneo. Se admite una carpeta UNC o de otra unidad elegida por el usuario (72). Se guarda en `settings` como `backups.folder`.
+- **Retención:** función pura `planBackupPrune(copias, now)` en el núcleo; el `BackupStore` borra lo que devuelve. Se poda después de cada copia `auto`, nunca antes.
+- **Registros (59):** solo el nombre de la copia, su tamaño y si la carpeta es la predeterminada o elegida; nunca la ruta.
+
+#### 5. Frecuencia y copia manual
+
+- Ajuste `backups.periodic` (booleano, `false` si no existe). `PATCH /api/settings` acepta `backups: { periodic }`; la carpeta nunca va en ese cuerpo.
+- **Al activarlas** se hace la primera copia en ese momento. Si no hay carpeta (Documentos sin resolver y ninguna elegida), responde `backup.no-folder` y la web abre el selector.
+- **Programación:** el núcleo no usa temporizadores (38). `runtime` llama a `core.backupTick()` al terminar el arranque y cada hora (`setInterval(...).unref()`). El núcleo copia si las periódicas están activas y la copia más reciente de la carpeta (`auto` o `manual`) tiene 24 h o más. Así se cubre «al arrancar» y «cada 24 h», y también el equipo que vuelve de suspensión.
+- **Fallo** (carpeta desconectada, disco lleno, sin permisos): se registra, se guarda en memoria `lastError` (`backup.folder-unavailable` o `backup.write-failed`) y se reintenta en el siguiente tic. La web lo muestra en la sección.
+- **Copia manual:** botón «Crear copia» (`POST /api/backups`), funciona con las periódicas activadas o no, en la misma carpeta, con tipo `manual`.
+
+#### 6. Restauración: preparar en caliente, aplicar al rearrancar
+
+Opciones:
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| **A. Preparar y rearrancar** (recomendada) | El cambio de fichero ocurre en el arranque, con el cerrojo de la 62 y antes de abrir la base: no hay conexiones abiertas, ni escaneos, ni estado del núcleo que rehacer. El migrador sube la copia de versión por el camino ya probado. | Se pierde la sesión del navegador (vive en memoria): el lanzador abre una pestaña nueva con un enlace de un solo uso. |
+| B. Cambiar la base sin parar el servidor | La pestaña sigue abierta. | Hay que poder cerrar y recomponer el núcleo, los conectores y la fachada que tiene Fastify, con peticiones en vuelo. Mucho código nuevo y frágil para una acción rara. |
+
+Se aplica **A**:
+
+1. `POST /api/backups/restore` con `{ id }`. El núcleo toma el cerrojo de copias y pide al `BackupStore` que **prepare** la copia:
+   1. el nombre valida (punto 4) y está en el listado; es un fichero normal de 512 MiB como mucho (supuesto BK5) y empieza por `SQLite format 3\0`;
+   2. se copia a `%LOCALAPPDATA%\Ludiary\restore-pending.sqlite.partial` y **todo lo demás se comprueba sobre esa copia**, no sobre el original (puede estar en un USB o cambiar entre la comprobación y el uso);
+   3. se abre con `better-sqlite3`, `PRAGMA trusted_schema = OFF`, y solo se ejecutan `PRAGMA` y `SELECT` (ninguna escritura, así que ningún disparador corre);
+   4. `PRAGMA integrity_check` = `ok` y `PRAGMA foreign_key_check` vacío; si no, `backup.corrupt`;
+   5. `schema_migrations` existe y sus ID son un **prefijo** de las migraciones embebidas, con el mismo hash (`hashMigration`). Sin tabla: `backup.not-ludiary`; con ID desconocidos: `backup.too-new` (copia de una versión más nueva de Ludiary); hash distinto: `backup.not-ludiary`;
+   6. **esquema idéntico:** se aplica ese mismo prefijo de migraciones a una base en memoria y se compara el conjunto `(type, name, tbl_name, sql)` de `sqlite_master` (sin `sqlite_%`). Cualquier diferencia (una vista, un disparador o un índice de más) es `backup.not-ludiary`. Así una copia manipulada no mete SQL que corra después en el servidor;
+   7. se cierra, se renombra a `restore-pending.sqlite` y se escribe `restore-pending.json` con `{ id, requestedAt }`.
+2. Responde **202** `{ restarting: true }`. Después de enviar la respuesta, el núcleo llama a `AppLifecycle.restart()` (puerto nuevo del núcleo, implementado en `runtime`): el `shutdown()` de hoy y, tras liberar el cerrojo, un `spawn` desacoplado del propio ejecutable en el papel de lanzador (`deps.selfCommand`, sin `--server`), que arranca el servidor y abre la web con un enlace nuevo (26, 29). En Docker (fase 2) será salir con un código y dejar que la política de reinicio lo levante.
+3. **En el arranque** (amplía el orden de la 62): cerrojo → credenciales → **restauración pendiente** → base → migraciones → resto. Si existe `restore-pending.sqlite`, `applyPendingRestore` (en `db`):
+   1. abre la base actual, lee `backups.periodic` y `backups.folder`, hace `db.backup()` a `backups\pre-restore-<ms>.sqlite`, poda a 3 y la cierra (al cerrar, SQLite pasa el WAL a la base);
+   2. borra `ludiary.db-wal` y `ludiary.db-shm` si quedaran y renombra `restore-pending.sqlite` sobre `ludiary.db` (supuesto BK2);
+   3. el arranque sigue: abre la base y migra (con su copia previa si la restaurada es de una versión anterior);
+   4. ajustes posteriores, en una transacción: se borran todas las filas de `installations` (pueden ser de otro equipo o de otra época; el escaneo al abrir la web, 12, las rehace, y así un `launch_data` de la copia nunca se usa para lanzar), `sync_state.next_allowed_at` pasa a nulo (que la primera sincronización no espere el intervalo mínimo, 50), se escriben los `backups.periodic` y `backups.folder` **actuales** (no los de la copia: la carpeta de la copia puede no existir en este equipo) y `backups.lastRestore = { id, at, outcome: 'ok' }`;
+   5. se borra `restore-pending.json`.
+4. **Vuelta atrás:** si falla cualquier paso desde 3.2 (abrir, migrar, ajustar), se cierra la base, se copia `pre-restore-<ms>.sqlite` sobre `ludiary.db` (el fichero de la copia previa se queda), se escribe `backups.lastRestore = { id, at, outcome: 'rolled-back' }` y el arranque sigue con los datos de antes. Si falla también la vuelta atrás, `FatalError(12)` como hoy (64), y la copia previa sigue en `backups`. Si falla 3.1 (no se pudo hacer la copia previa), no se toca nada, se borra el fichero pendiente y se anota `rolled-back`.
+5. La pestaña antigua muestra «Ludiary se está reiniciando; se abrirá en una pestaña nueva. Puedes cerrar esta» y deja de consultar el servidor. En la nueva, Ajustes muestra el resultado de `lastRestore` una vez.
+
+#### 7. Importar una copia de otro sitio
+
+Con el punto 12.3 (a): no hay subida ni selector de ficheros. Para restaurar una copia de otro equipo o de un USB, el usuario elige con «Cambiar carpeta» la carpeta donde está el fichero (o lo copia a su carpeta de copias); la lista la muestra si su nombre sigue el formato. Exportar es lo mismo: elegir como carpeta un USB o una carpeta sincronizada. Cero puertos y rutas nuevos para esto.
+
+#### 8. Contratos
+
+Núcleo (`packages/core/src/ports.ts`), implementados en `db` y `runtime`:
+
+```ts
+/** ADR 89. Paths are opaque to the core; the store joins names to its own folders and never accepts a path from the API. */
+export type BackupKind = 'auto' | 'manual' | 'pre-migration' | 'pre-restore';
+export interface BackupInfo { id: string; kind: BackupKind; createdAt: number; sizeBytes: number }
+export interface BackupStore {
+  /** Online copy to `<folder>/<name>.partial`, then rename. Creates the folder. */
+  create(folder: string, kind: 'auto' | 'manual', now: number): Promise<BackupInfo>;
+  /** User folder (valid names only) plus the internal folder. Missing folder → only internal ones. */
+  list(folder: string | null): Promise<BackupInfo[]>;
+  delete(folder: string, id: string): Promise<void>;
+  /** Point 6.1. Throws BackupError with the key of point 9. */
+  prepareRestore(folder: string | null, id: string, now: number): Promise<void>;
+}
+export interface AppLifecycle { restart(): void }
+```
+
+`contracts` (implementado en `platform-windows`; en Docker, `null`):
+
+```ts
+/** ADR 89. Resolved once at startup. null if the OS does not say. */
+export interface UserFolders { documents(): Promise<string | null> }
+```
+
+`db`: `applyPendingRestore(dataDir, addon, log): Promise<'none' | 'ok' | 'rolled-back'>`, llamado desde `server-role.ts` antes de `openDatabase`, y el ajuste posterior del punto 6.3.4 dentro de `migrateDatabase` o justo después.
+
+API (`packages/api-contract`, TypeBox con `strict`; todas `session+key`, el nivel por defecto):
+
+```ts
+const BackupId = Type.String({ maxLength: 120, pattern: '^(ludiary-\\d{8}T\\d{9}Z-(auto|manual)|pre-migration-\\d{15}-[0-9a-z_]{1,64}|pre-restore-\\d{15})\\.sqlite$' });
+export const BackupSchema = Type.Object({ id: BackupId, kind: BackupKindSchema, createdAt: Type.Integer(), sizeBytes: Type.Integer({ minimum: 0 }) }, strict);
+export const BackupsSchema = Type.Object({
+  periodic: Type.Boolean(),
+  folder: Type.Union([Type.String(), Type.Null()]),   // resolved path shown to the user; null = none available
+  folderIsDefault: Type.Boolean(),
+  lastBackupAt: Type.Union([Type.Integer(), Type.Null()]),
+  lastError: Type.Union([Type.Object({ key: Type.String() }, strict), Type.Null()]),
+  lastRestore: Type.Union([Type.Object({ id: BackupId, at: Type.Integer(), outcome: Type.Union([Type.Literal('ok'), Type.Literal('rolled-back')]) }, strict), Type.Null()]),
+  copies: Type.Array(BackupSchema, { maxItems: 500 }),
+}, strict);
+export const RestoreBodySchema = Type.Object({ id: BackupId }, strict);
+```
+
+| Ruta | Cuerpo | Respuesta |
+|---|---|---|
+| `GET /api/backups` | — | 200 `BackupsSchema` (copias más nuevas primero) |
+| `POST /api/backups` | `{}` | 201 `BackupSchema` (manual) |
+| `POST /api/backups/folder/pick` | `{}` | 200 `{ cancelled: true }` o 200 `BackupsSchema` |
+| `POST /api/backups/restore` | `RestoreBodySchema` | 202 `{ restarting: true }` |
+| `PATCH /api/settings` | `backups: { periodic }` (añadido a `SettingsPatchSchema`) | 200 `SettingsSchema`, ahora siempre con `backups` |
+
+`lastRestore` se muestra una vez: el servidor lo devuelve en el primer `GET /api/backups` tras el arranque y lo borra de `settings` en ese momento (sin ruta extra para descartarlo).
+
+#### 9. Errores (claves traducibles, sin rutas ni texto del fichero)
+
+| Clave | HTTP | Cuándo |
+|---|---|---|
+| `backup.busy` | 409 | Otra copia o restauración en curso. |
+| `backup.no-folder` | 422 | Sin carpeta resoluble. |
+| `backup.folder-unavailable` | 503 | La carpeta no existe ni se puede crear (unidad desconectada). |
+| `backup.write-failed` | 500 | Disco lleno, permisos. |
+| `backup.not-found` | 404 | Nombre válido que no está en el listado. |
+| `backup.too-large` | 422 | Más de 512 MiB. |
+| `backup.corrupt` | 422 | No es SQLite o falla la comprobación de integridad o de claves foráneas. |
+| `backup.not-ludiary` | 422 | Sin `schema_migrations`, hash distinto o esquema distinto. |
+| `backup.too-new` | 422 | Copia de una versión más nueva. |
+
+#### 10. Web
+
+- `Settings.tsx`: la sección `backups` deja de estar oculta fuera del simulador. Contenido:
+  - el texto `intro` y el aviso de la 57 (lo que se pierde sin copias);
+  - interruptor de copias automáticas;
+  - fila de carpeta con la ruta (o «Documentos\Ludiary\Copias (predeterminada)») y botón «Cambiar…»;
+  - «Crear copia» con la hora de la última y, si existe, el último error;
+  - lista de copias (fecha local, tipo: «Automática», «Manual», «Antes de actualizar», «Antes de restaurar», tamaño) con «Restaurar» en cada una;
+  - diálogo de confirmación: «Se guardará antes una copia de tus datos actuales. Ludiary se reiniciará y se abrirá en una pestaña nueva. Si la copia es de otro equipo, tendrás que volver a conectar las tiendas»;
+  - pantalla de reinicio del punto 6.5 y aviso del resultado de `lastRestore`.
+- `api.ts`: `getBackups()`, `pickBackupFolder()`, `restoreBackup(id)`; `createBackup()` real. `real.ts`: `getMaintenance().lastBackupAt` sale de `getBackups()`; el simulador implementa lo mismo. **Corrección:** `mock.ts` tiene `backups.periodic: true` por defecto; pasa a `false` (57).
+- Todos los textos nuevos en `locales/web/{es,en}.json` (invariante 6); fechas con `relativeTime` y la fecha local.
+
+#### 11. Pruebas y prueba manual
+
+Automáticas (Vitest):
+
+- **Núcleo:** `planBackupPrune` (7 diarias, 4 semanales, cambio de semana ISO, `manual` y copias internas nunca podadas); `backupTick` (desactivadas, sin copias, 23 h, 24 h, copia manual reciente cuenta, fallo deja `lastError` y el siguiente tic reintenta); cerrojo `backup.busy`; restaurar llama a `restart()` solo si la preparación sale bien.
+- **`db`:** `create` con escrituras simultáneas por la misma conexión (la copia abre y tiene el estado final); `.partial` ni se lista ni sobrevive; `list` ignora nombres fuera del formato y `..\`; `prepareRestore` rechaza: no SQLite, truncado, `integrity_check` fallido, sin `schema_migrations`, ID desconocido (`too-new`), hash cambiado, disparador o vista de más, fichero de más de 512 MiB (simulado), nombre válido ausente; acepta una copia de cada nivel de migración desde `0001`. `applyPendingRestore`: intercambio con WAL presente, copia previa hecha y podada a 3, `installations` vacía, `next_allowed_at` nulo, ajustes `backups.*` actuales conservados, `lastRestore` escrito; vuelta atrás si la migración falla (copia previa intacta y base anterior en uso); sin fichero pendiente no hace nada. Secretos de otra clave tras restaurar: la tienda queda `expired` y la biblioteca intacta.
+- **API:** las cinco rutas sin cookie (401), sin clave de origen (403), con `id` que no casa con el patrón (400) o con propiedades de más (400); 202 seguido de `restart()` después de la respuesta.
+- **`runtime`:** orden de arranque con fichero pendiente; `restart()` libera el cerrojo antes de lanzar el lanzador.
+- **Web:** `real.test.ts` (sección visible, `lastBackupAt` real, errores traducidos); simulador con `periodic: false`.
+
+Prueba manual (la prepara el `tester`; la hace el usuario, en Windows 11 con el instalador):
+
+1. Activar las copias automáticas: aparece `Documentos\Ludiary\Copias` (si Documentos está en OneDrive, ahí) con una copia `auto`.
+2. «Crear copia» durante una sincronización de todas las tiendas: la copia se lista y se restaura bien.
+3. Marcar un favorito, restaurar una copia anterior: se abre una pestaña nueva, el favorito no está, las tiendas siguen conectadas, los instalados reaparecen tras el escaneo y en `%LOCALAPPDATA%\Ludiary\backups` hay un `pre-restore-…`.
+4. Restaurar ese `pre-restore-…`: vuelve el favorito.
+5. Elegir como carpeta un USB, crear copia, desenchufarlo: la sección muestra el error y no se rompe nada; al enchufarlo, el siguiente tic copia.
+6. Llevar una copia a otra cuenta de Windows (u otro equipo) con Ludiary, elegir su carpeta y restaurar: biblioteca y datos del usuario presentes, tiendas en «hay que volver a conectar».
+7. Restaurar un fichero `.sqlite` cualquiera renombrado con el formato: mensaje «no es una copia de Ludiary» y nada cambia.
+
+#### 12. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
+
+1. **Copias manuales:** (a) **nunca se borran solas** (recomendado: el usuario las hizo a propósito; ocupan poco); (b) cuentan en la retención de 7 + 4.
+2. **Copias internas en la lista de restaurar** («Antes de actualizar», «Antes de restaurar»): (a) **se muestran, marcadas** (recomendado: deshacer una restauración o una actualización sin buscar carpetas ocultas); (b) solo las de la carpeta del usuario.
+3. **Restaurar una copia que está en otro sitio:** (a) **eligiendo su carpeta con «Cambiar…»** (recomendado: sin código nuevo y vale también para exportar); (b) botón «Restaurar desde un fichero…» con un selector de ficheros nativo (modo nuevo del auxiliar de Go, `empaquetador`); (c) subir el fichero desde el navegador (sirve también en Docker, pero es una ruta que acepta ficheros grandes).
+
+#### 13. Supuestos
+
+- **BK1** (comprobado en la documentación de SQLite, 3-11-2026): la copia en línea por la misma conexión es coherente con escrituras simultáneas. Falta comprobarlo con la prueba del punto 11.
+- **BK2:** `fs.renameSync` de Node sustituye un fichero existente en Windows si nadie lo tiene abierto. Un antivirus puede tenerlo abierto un momento: tres reintentos de 200 ms antes de dar el paso por fallido (y volver atrás).
+- **BK3:** `User Shell Folders\Personal` da la carpeta Documentos real, también redirigida a OneDrive, y el auxiliar de registro devuelve `REG_EXPAND_SZ` sin expandir. Alternativa si falla: `SHGetKnownFolderPath(FOLDERID_Documents)` en el auxiliar de Go.
+- **BK4:** con `trusted_schema = OFF` y sin escrituras, abrir una base ajena con `better-sqlite3` no ejecuta SQL de la copia; `better-sqlite3` no carga extensiones si no se llama a `loadExtension`.
+- **BK5:** 512 MiB sobra (una biblioteca de miles de juegos ocupa pocos MB).
+- **BK6:** una copia hecha por `db.backup()` de una base en WAL conserva el modo WAL en su cabecera; por eso nunca se abre en la carpeta del usuario (crearía `-wal` y `-shm` allí), solo su copia en `restore-pending`.
+
+#### 14. Coste, alcance y riesgos
+
+- **Coste:** medio-bajo. Sin migración (los ajustes van en `settings`). Lo más largo: `prepareRestore` con la comparación de esquema, `applyPendingRestore` con la vuelta atrás y sus pruebas.
+- **Fuera:** borrar copias desde la web, copias cifradas con contraseña, restaurar solo una parte, subir ficheros, el volumen de Docker (fase 2, ya en la 18).
+- **Riesgos:** una carpeta sincronizada con la nube saca la copia del equipo (decisión del usuario; la guía lo explica: lleva la biblioteca y rutas, pero ningún secreto legible); restaurar una copia antigua deshace lo hecho después (la copia previa lo cubre).
+
+#### 15. Orden de implementación
+
+1. `auditor`: revisa este diseño (validación de la copia ajena, rutas, reinicio) antes del código.
+2. `programador`, en este orden y en la misma rama:
+   1. `contracts` (`UserFolders`) y `core` (`BackupStore`, `AppLifecycle`, `planBackupPrune`, `backupTick`, cerrojo, ajustes `backups.*`, errores);
+   2. `db`: `createBackupStore`, `prepareRestore`, `applyPendingRestore`, reutilizando `hashMigration` y `MIGRATIONS`;
+   3. `runtime`: paso de restauración en `server-role.ts`, tic horario, `AppLifecycle.restart()` con `selfCommand`;
+   4. `api-contract` y `api`: esquemas y rutas;
+   5. `web`: sección real, cliente y simulador, textos.
+3. `empaquetador`: `UserFolders` en `platform-windows` con el auxiliar de registro (sin cambios en Go salvo que BK3 falle) y comprobar que el ejecutable empaquetado se relanza a sí mismo como lanzador.
+4. `tester`: pruebas del punto 11 y guía de la prueba manual.
+5. `auditor`: revisión del código. `documentalista`: el «punto de restauración documentado» de la 18 (guía de usuario: activar, cambiar carpeta, restaurar, llevar a otro equipo, qué no incluye) y el aviso sobre carpetas en la nube.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -6302,6 +6523,7 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
+- Decisión 89 (copias de seguridad y restauración, para la 0.1): punto 12 aplicado por defecto con (a) en todo (copias manuales sin borrado automático, copias internas en la lista de restaurar, copias de otro sitio eligiendo su carpeta); el usuario puede cambiarlo. Falta la revisión del `auditor` sobre el diseño, el código, su revisión y la prueba manual (punto 11) para cerrar BK1 a BK6. Al cerrarla, el `documentalista` escribe el punto de restauración documentado que pide la 18.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
 - Verificar los supuestos marcados en las decisiones 39 a 82 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
