@@ -3,6 +3,7 @@ import { resolveGogAction } from "./launch";
 import { GOG_GALAXY_CLIENT, GOG_LOCATIONS, GOG_NAME_KEY } from "./manifest";
 import { listGogLibrary } from "./library";
 import { gogConnection } from "./wizard";
+import { describeGogWishlistItems, readGogWishlist } from "./wishlist";
 import { GOG_API_HOSTS, GOG_MEDIA_HOSTS, resolveGogMedia } from "./media";
 import { discoverGogRoots, scanGogInstalled } from "./scan";
 
@@ -34,6 +35,8 @@ export function createGogConnector(): StoreConnector {
     scanInstalled: scanGogInstalled,
     discoverRoots: discoverGogRoots,
     resolveMedia: resolveGogMedia,
+    readWishlist: readGogWishlist,
+    describeWishlistItems: describeGogWishlistItems,
     resolveAction: resolveGogAction,
   };
 }

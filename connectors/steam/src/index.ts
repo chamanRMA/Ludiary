@@ -6,6 +6,7 @@ import { STEAM_LOCATIONS, STEAM_NAME_KEY } from "./manifest";
 import { resolveSteamMedia, resolveSteamTitles, STEAM_API_HOSTS, STEAM_MEDIA_HOSTS } from "./media";
 import { discoverSteamRoots, scanSteamInstalled } from "./scan";
 import { steamConnection } from "./wizard";
+import { describeSteamWishlistItems, readSteamWishlist } from "./wishlist";
 
 /** Steam connector: installed games (ADR 72) and the account cut (ADR 74): wizard and GetOwnedGames. */
 export function createSteamConnector(): StoreConnector {
@@ -36,6 +37,8 @@ export function createSteamConnector(): StoreConnector {
     discoverRoots: discoverSteamRoots,
     resolveMedia: resolveSteamMedia,
     resolveTitles: resolveSteamTitles,
+    readWishlist: readSteamWishlist,
+    describeWishlistItems: describeSteamWishlistItems,
     resolveAction: resolveSteamAction,
     importCollections: importSteamCollections,
     importCollectionsRoot: COLLECTIONS_ROOT,
