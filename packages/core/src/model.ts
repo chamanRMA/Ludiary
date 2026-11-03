@@ -391,6 +391,9 @@ export interface PriceWatchRecord {
   serviceGameId: string;
   title: string;
   type: PriceKind | null;
+  /** ADR 86 point 17: the images of the search result, copied when followed. Absent for games of the library and for older items. */
+  coverUrl?: string;
+  coverFallbackUrl?: string;
   addedAt: number;
 }
 
@@ -426,6 +429,8 @@ export interface WatchItem {
   title: string;
   type: PriceKind | null;
   ownedGameId?: string;
+  coverUrl?: string;
+  coverFallbackUrl?: string;
   prices: PricesView | null;
 }
 export interface PriceBoard extends PriceBoardState {
@@ -436,6 +441,8 @@ export interface PriceSearchResult {
   title: string;
   type: PriceKind | null;
   ownedGameId?: string;
+  coverUrl?: string;
+  coverFallbackUrl?: string;
   watched: boolean;
 }
 

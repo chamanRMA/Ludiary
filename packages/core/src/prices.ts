@@ -1,7 +1,7 @@
 // Price comparison (ADR 86, points 7 and 15). The service describes and fetches; the core matches games, validates
 // everything it returns as untrusted, caches, spends a budget and decides what the user sees.
 import { ConnectorError } from "@ludiary/contracts";
-import type { HttpClient, PriceService, PriceServiceId, PriceSnapshot, StoreId, SyncContext } from "@ludiary/contracts";
+import type { EntryMedia, HttpClient, PriceService, PriceServiceId, PriceSnapshot, StoreId, SyncContext } from "@ludiary/contracts";
 import { epochOf, bumpEpoch, serviceContext, serviceKey } from "./contexts";
 import {
   PRICE_BATCH,
@@ -41,7 +41,7 @@ import type {
 import { readPriceSettings } from "./settings";
 import { MANUAL_SYNC_FLOOR_MS } from "./sync";
 import { withTimeout } from "./timeout";
-import { isNonEmptyText } from "./validate";
+import { isNonEmptyText, validateMedia } from "./validate";
 import { serviceScope, serviceStatusKey } from "./vault";
 
 const ID: PriceServiceId = "itad";
@@ -155,6 +155,8 @@ interface SearchEntry {
   serviceGameId: string;
   title: string;
   type: PriceKind | null;
+  /** Validated against the service's mediaHosts; copied to the follow list from here and never from the web (point 17.5). */
+  media?: EntryMedia;
   at: number;
 }
 
@@ -385,10 +387,30 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
     return [...new Set(v as string[])];
   };
 
-  async function itemOf(w: PriceWatchRecord, snaps: ReadonlyMap<string, PriceSnapshotRecord>, owned: ReadonlyMap<string, string>): Promise<WatchItem> {
+  /** ADR 86 point 17: a game of the library shows its own cover; otherwise the saved one, if its host is still allowed by img-src. */
+  async function coversOf(
+    ownedId: string | undefined,
+    saved: { coverUrl?: string | undefined; coverFallbackUrl?: string | undefined },
+    library?: ReadonlyMap<string, { coverUrl?: string; coverFallbackUrl?: string }>,
+  ): Promise<{ coverUrl?: string; coverFallbackUrl?: string }> {
+    if (ownedId) {
+      const g = library ? library.get(ownedId) : await deps.library.getGame(ownedId);
+      return { ...(g?.coverUrl ? { coverUrl: g.coverUrl } : {}), ...(g?.coverFallbackUrl ? { coverFallbackUrl: g.coverFallbackUrl } : {}) };
+    }
+    const hosts = [...env.connectors.values(), ...env.services.values()].flatMap((c) => c.mediaHosts);
+    const m = validateMedia({ coverUrl: saved.coverUrl, heroUrl: saved.coverFallbackUrl }, hosts);
+    return { ...(m?.coverUrl ? { coverUrl: m.coverUrl } : {}), ...(m?.heroUrl ? { coverFallbackUrl: m.heroUrl } : {}) };
+  }
+
+  async function itemOf(
+    w: PriceWatchRecord,
+    snaps: ReadonlyMap<string, PriceSnapshotRecord>,
+    owned: ReadonlyMap<string, string>,
+    library?: ReadonlyMap<string, { coverUrl?: string; coverFallbackUrl?: string }>,
+  ): Promise<WatchItem> {
     const snap = snaps.get(w.serviceGameId);
     const ownedId = owned.get(w.serviceGameId);
-    return { id: w.id, title: w.title, type: w.type, ...(ownedId ? { ownedGameId: ownedId } : {}), prices: snap ? view(snap) : null };
+    return { id: w.id, title: w.title, type: w.type, ...(ownedId ? { ownedGameId: ownedId } : {}), ...(await coversOf(ownedId, w, library)), prices: snap ? view(snap) : null };
   }
 
   return {
@@ -441,7 +463,9 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
       const watch = await store.listWatch(ID);
       const ids = watch.map((w) => w.serviceGameId);
       const [snaps, owned] = await Promise.all([st.country ? store.getSnapshots(ID, ids, st.country, st.shops) : new Map<string, PriceSnapshotRecord>(), store.findOwned(ID, ids)]);
-      const items = await Promise.all(watch.map((w) => itemOf(w, snaps, owned)));
+      // One library read for the whole board instead of one getGame per owned game.
+      const library = owned.size > 0 ? new Map((await deps.library.listLibrary()).map((g) => [g.id, g])) : undefined;
+      const items = await Promise.all(watch.map((w) => itemOf(w, snaps, owned, library)));
       const best = (i: WatchItem) => Math.max(-1, ...(i.prices?.deals.map((d) => d.cut) ?? []));
       // Largest discount first; Array.sort is stable, so equal ones keep the order they were added.
       return { ...publicState(st), items: items.sort((a, b) => best(b) - best(a)) };
@@ -516,14 +540,15 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
       }
       if (!Array.isArray(raw)) throw new ConnectorError("store.unexpected-response", "search did not return a list");
       const seen = new Set<string>();
-      const good: { id: string; title: string; type: PriceKind | null }[] = [];
+      const good: { id: string; title: string; type: PriceKind | null; media?: EntryMedia }[] = [];
       for (const r of raw) {
         if (good.length >= SEARCH_MAX_RESULTS) break;
         if (!r || typeof r.id !== "string" || !UUID.test(r.id) || !isNonEmptyText(r.title, 300)) continue;
         const id = r.id.toLowerCase();
         if (seen.has(id)) continue;
         seen.add(id);
-        good.push({ id, title: r.title, type: KINDS.includes(r.type as string) ? (r.type as PriceKind) : null });
+        const media = validateMedia(r.media, svc.mediaHosts);
+        good.push({ id, title: r.title, type: KINDS.includes(r.type as string) ? (r.type as PriceKind) : null, ...(media ? { media } : {}) });
       }
       const mine = searches.get(env.userId) ?? new Map<string, SearchEntry>();
       searches.set(env.userId, mine);
@@ -532,12 +557,15 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
       const store = repo()!;
       const [owned, watch] = await Promise.all([store.findOwned(ID, good.map((g) => g.id)), store.listWatch(ID)]);
       const watched = new Set(watch.map((w) => w.serviceGameId));
-      const out = good.map((g): PriceSearchResult => {
+      const out = await Promise.all(good.map(async (g): Promise<PriceSearchResult> => {
         const resultId = deps.newId();
-        mine.set(resultId, { serviceGameId: g.id, title: g.title, type: g.type, at: now });
         const ownedId = owned.get(g.id);
-        return { resultId, title: g.title, type: g.type, ...(ownedId ? { ownedGameId: ownedId } : {}), watched: watched.has(g.id) };
-      });
+        // A game of the library neither asks for nor saves the service's image (point 17.1).
+        const media = ownedId ? undefined : g.media;
+        mine.set(resultId, { serviceGameId: g.id, title: g.title, type: g.type, ...(media ? { media } : {}), at: now });
+        const covers = await coversOf(ownedId, { coverUrl: media?.coverUrl, coverFallbackUrl: media?.heroUrl });
+        return { resultId, title: g.title, type: g.type, ...(ownedId ? { ownedGameId: ownedId } : {}), ...covers, watched: watched.has(g.id) };
+      }));
       while (mine.size > SEARCH_KEEP) mine.delete(mine.keys().next().value!);
       return out;
     },
@@ -547,7 +575,7 @@ export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (ke
       const entry = typeof resultId === "string" ? searches.get(env.userId)?.get(resultId) : undefined;
       if (!entry || deps.clock.now() - entry.at >= SEARCH_TTL_MS) throw new CoreError("not-found", "Unknown or expired search result");
       const store = repo()!;
-      const { record, created } = await store.addWatch({ id: deps.newId(), service: ID, serviceGameId: entry.serviceGameId, title: entry.title, type: entry.type, addedAt: deps.clock.now() }, WATCH_MAX);
+      const { record, created } = await store.addWatch({ id: deps.newId(), service: ID, serviceGameId: entry.serviceGameId, title: entry.title, type: entry.type, ...(entry.media?.coverUrl ? { coverUrl: entry.media.coverUrl } : {}), ...(entry.media?.heroUrl ? { coverFallbackUrl: entry.media.heroUrl } : {}), addedAt: deps.clock.now() }, WATCH_MAX);
       const { country, shops } = await readPriceSettings(env);
       const snaps = country ? await store.getSnapshots(ID, [record.serviceGameId], country, shops) : new Map<string, PriceSnapshotRecord>();
       return { item: await itemOf(record, snaps, await store.findOwned(ID, [record.serviceGameId])), created };

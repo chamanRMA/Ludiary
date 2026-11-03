@@ -31,6 +31,7 @@ describe("manifest", () => {
     expect(svc.apiHosts).toEqual(["api.isthereanydeal.com"]);
     expect(svc.authHosts).toEqual(["isthereanydeal.com"]);
     expect(svc.linkHosts).toEqual(["itad.link", "isthereanydeal.com", "next.isthereanydeal.com"]);
+    expect(svc.mediaHosts).toEqual(["assets.isthereanydeal.com"]);
   });
   it("the store -> shop map matches the recorded service/shops/v1 answer", () => {
     const shops = JSON.parse(readFileSync(join(__dirname, "..", "fixtures", "shops-v1-ES.json"), "utf8")) as { id: number; title: string }[];
@@ -114,6 +115,30 @@ describe("lookupByTitle and search", () => {
     expect(out.map((r) => [r.title, r.type])).toEqual([["A", "game"], ["B", "dlc"], ["C", null], ["P", "package"]]);
     expect(http.requests[0]!.method).toBe("GET");
     expect(sentQuery(http.requests[0]!)["title"]).toBe("a title");
+  });
+  it("search media (ADR 86 point 17): boxart -> coverUrl, banner400 -> heroUrl; other sizes, hosts, schemes, ports and long URLs are dropped and counted", async () => {
+    const A = "https://assets.isthereanydeal.com";
+    const { ctx } = ctxWith(() => ({
+      status: 200,
+      body: [
+        { id: U1, title: "A", type: "game", assets: { boxart: `${A}/a/boxart.jpg?t=1`, banner145: `${A}/a/145.jpg`, banner400: `${A}/a/400.jpg?t=1` } },
+        { id: U2, title: "B", type: "game", assets: { banner400: `${A}/b/400.jpg` } },
+        { id: "018d0000-0000-7000-8000-000000000003", title: "C", type: "game" },
+        { id: "018d0000-0000-7000-8000-000000000004", title: "D", type: "game", assets: { boxart: "https://evil.example/x.jpg", banner400: `http://assets.isthereanydeal.com/d.jpg` } },
+        { id: "018d0000-0000-7000-8000-000000000005", title: "E", type: "game", assets: { boxart: "https://assets.isthereanydeal.com:8443/e.jpg", banner400: `${A}/${"x".repeat(2100)}` } },
+      ],
+    }));
+    const out = await svc.search("a", ctx);
+    expect(out.map((r) => r.media)).toEqual([
+      { coverUrl: `${A}/a/boxart.jpg?t=1`, heroUrl: `${A}/a/400.jpg?t=1` },
+      { heroUrl: `${A}/b/400.jpg` },
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    const logs = JSON.stringify(ctx.logs);
+    expect(logs).toContain('"mediaDropped":4');
+    expect(logs).toContain("evil.example");
   });
   it("search with a non-array answer is unexpected", async () => {
     const { ctx } = ctxWith(() => ({ status: 200, body: { x: 1 } }));

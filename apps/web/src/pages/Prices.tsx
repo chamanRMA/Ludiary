@@ -5,7 +5,7 @@ import { errorText } from "../app/errors";
 import { Link } from "../app/Link";
 import { api } from "../data/api";
 import { mutate, useQuery, useQueryState } from "../data/hooks";
-import { cx, PageTitle } from "../components/bits";
+import { cx, Cover, PageTitle } from "../components/bits";
 import { ExternalLink, ITAD_URL, PricesTable, ServiceNotice } from "../components/PricesPanel";
 import ui from "../styles/ui.module.css";
 
@@ -16,6 +16,15 @@ const MIN_SEARCH = 2;
 function TypeChip({ type }: { type: WatchItemDto["type"] }) {
   const { t } = useTranslation();
   return type === "dlc" || type === "package" ? <span className={ui.chip}>{t(type === "dlc" ? "prices.type.dlc" : "prices.type.package")}</span> : null;
+}
+
+/** Thumbnail of the game (ADR 86 point 17): the same Cover, with the gradient when there is no image. The title is next to it, so no alt. */
+function Thumb({ item }: { item: Pick<WatchItemDto, "title" | "coverUrl" | "coverFallbackUrl"> }) {
+  return (
+    <div style={{ width: 48, flex: "none" }}>
+      <Cover game={item} height={64} bare />
+    </div>
+  );
 }
 
 function Search() {
@@ -65,7 +74,8 @@ function Search() {
       {results && results.length === 0 && <p className={ui.muted} role="status">{t("prices.search.none")}</p>}
       {results?.map((r) => (
         <div key={r.resultId} className={ui.row}>
-          <div>
+          <Thumb item={r} />
+          <div style={{ flex: 1 }}>
             <b>{r.title}</b>
             {r.ownedGameId && <small>{t("prices.owned")}</small>}
           </div>
@@ -157,7 +167,8 @@ export function Prices() {
         {board.items.map((item) => (
           <article key={item.id} className={ui.stack} aria-label={item.title}>
             <div className={ui.row}>
-              <div>
+              <Thumb item={item} />
+              <div style={{ flex: 1 }}>
                 <b>{item.title}</b>
                 {item.ownedGameId && (
                   <small>

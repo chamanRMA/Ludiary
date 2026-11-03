@@ -111,9 +111,9 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       dbOpen = false;
     };
     await migrateDatabase(db, join(platform.dataDir, "backups"), log); // FatalError(12) on failure or newer database
-    const { core, facade, connectors } = await composeCore(deps, db, log, masterKey);
+    const { core, facade, connectors, services } = await composeCore(deps, db, log, masterKey);
     waitForScans = () => core.whenIdle();
-    const mediaHosts = unionMediaHosts(connectors);
+    const mediaHosts = unionMediaHosts(connectors, services);
     const webAssets = loadWebAssets(deps.webDir, log); // once, at startup (ADR 72 point 6)
 
     const locale = localeOf(deps);

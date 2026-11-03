@@ -50,6 +50,13 @@
       "when": 1793700628015,
       "tag": "0006_prices",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793733660628,
+      "tag": "0007_watch_media",
+      "breakpoints": true
     }
   ]
 }

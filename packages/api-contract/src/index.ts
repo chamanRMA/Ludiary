@@ -129,6 +129,7 @@ const Minor = Type.Integer({ minimum: 0, maximum: 1_000_000_000 });
 const Currency = Type.String({ pattern: "^[A-Z]{3}$" });
 const Country = Type.String({ pattern: "^[A-Z]{2}$" });
 const Text300 = Type.String({ maxLength: 300 });
+const Url2048 = Type.String({ maxLength: 2048 });
 const PriceKind = Type.Union([Type.Literal("game"), Type.Literal("dlc"), Type.Literal("package"), Type.Null()]);
 
 export const DealSchema = Type.Object(
@@ -175,7 +176,7 @@ export const GamePricesSchema = Type.Object(
 export type GamePricesDto = RO<Static<typeof GamePricesSchema>>;
 
 export const WatchItemSchema = Type.Object(
-  { id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), prices: Type.Union([PricesSchema, Type.Null()]) },
+  { id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), prices: Type.Union([PricesSchema, Type.Null()]) },
   strict,
 );
 export type WatchItemDto = RO<Static<typeof WatchItemSchema>>;
@@ -184,7 +185,7 @@ export const PriceBoardSchema = Type.Object({ ...BoardState, items: Type.Array(W
 export type PriceBoardDto = RO<Static<typeof PriceBoardSchema>>;
 
 export const PriceSearchResultSchema = Type.Object(
-  { resultId: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), watched: Type.Boolean() },
+  { resultId: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), watched: Type.Boolean() },
   strict,
 );
 export type PriceSearchResultDto = Static<typeof PriceSearchResultSchema>;

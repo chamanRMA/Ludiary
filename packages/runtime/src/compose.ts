@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { LudiaryCoreFacade } from "@ludiary/api";
-import type { StoreConnector } from "@ludiary/contracts";
+import type { PriceService, StoreConnector } from "@ludiary/contracts";
 import { ConnectorRegistrationError, createCore, type CoreLogger, type LudiaryCore } from "@ludiary/core";
 import { createRepositories, DatabaseTooNewError, migrate } from "@ludiary/db";
 import { translate, type ConnectorMessageKey, type MessageKey } from "@ludiary/i18n";
@@ -58,6 +58,7 @@ export interface ComposedCore {
   core: LudiaryCore;
   facade: LudiaryCoreFacade;
   connectors: readonly StoreConnector[];
+  services: readonly PriceService[];
 }
 
 /**
@@ -80,6 +81,7 @@ export async function composeCore(
   const launcher = deps.createProcessLauncher?.(unionUriSchemes(connectors));
   try {
     await repos.identity.ensure(randomUUID, systemClock.now()); // before using any repository (ADR 47)
+    const services = deps.priceServices ?? createPriceServices();
     const core = await createCore({
       connectors,
       library: repos.library,
@@ -91,7 +93,7 @@ export async function composeCore(
       secrets: repos.secrets,
       connections: repos.connections,
       prices: repos.prices,
-      priceServices: deps.priceServices ?? createPriceServices(),
+      priceServices: services,
       cipher: createSecretCipher(masterKey),
       files,
       ...(locations ? { locations } : {}),
@@ -105,7 +107,7 @@ export async function composeCore(
       t: (key) => translate(locale, key as MessageKey | ConnectorMessageKey),
       systemLocale: deps.platform.systemLocale,
     });
-    return { core, facade: createCoreFacade(core), connectors };
+    return { core, facade: createCoreFacade(core), connectors, services };
   } catch (e) {
     if (e instanceof ConnectorRegistrationError) {
       throw new FatalError(EXIT.error, `connector '${e.connectorId}' refused at startup: ${e.problems.join("; ")}`);

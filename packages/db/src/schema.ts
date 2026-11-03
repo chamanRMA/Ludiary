@@ -301,10 +301,15 @@ export const priceWatch = sqliteTable(
     title: text("title").notNull(),
     type: text("type"),
     addedAt: integer("added_at").notNull(),
+    // ADR 86 point 17. Null for games of the library and for items followed before 0008_watch_media.
+    coverUrl: text("cover_url"),
+    coverFallbackUrl: text("cover_fallback_url"),
   },
   (t) => [
     uniqueIndex("price_watch_game_uq").on(t.userId, t.service, t.serviceGameId),
     check("price_watch_service_check", sql`${t.service} IN ('itad')`),
     check("price_watch_type_check", sql`${t.type} IS NULL OR ${t.type} IN ('game', 'dlc', 'package')`),
+    check("price_watch_cover_check", sql`${t.coverUrl} IS NULL OR length(${t.coverUrl}) <= 2048`),
+    check("price_watch_cover_fallback_check", sql`${t.coverFallbackUrl} IS NULL OR length(${t.coverFallbackUrl}) <= 2048`),
   ],
 );

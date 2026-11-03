@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spaCsp } from "@ludiary/api";
 import { expect, it } from "vitest";
-import { createConnectors, unionMediaHosts } from "../src/connectors";
+import { createConnectors, createPriceServices, unionMediaHosts } from "../src/connectors";
 
 const viteConfig = join(dirname(fileURLToPath(import.meta.url)), "../../../apps/web/vite.config.ts");
 
@@ -29,6 +29,6 @@ function viteCsp(): string {
   return (JSON.parse(`[${items}]`) as string[]).join("; ");
 }
 
-it("the CSP of apps/web/vite.config.ts (preview) equals the one the server builds from the connectors' mediaHosts (ADR 71)", () => {
-  expect(directives(spaCsp(unionMediaHosts(createConnectors())))).toEqual(directives(viteCsp()));
+it("the CSP of apps/web/vite.config.ts (preview) equals the one the server builds from the mediaHosts of connectors and price services (ADR 71, ADR 86 point 17)", () => {
+  expect(directives(spaCsp(unionMediaHosts(createConnectors(), createPriceServices())))).toEqual(directives(viteCsp()));
 });

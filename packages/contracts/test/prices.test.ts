@@ -7,6 +7,7 @@ const good = {
   apiHosts: ["api.isthereanydeal.com"],
   authHosts: ["isthereanydeal.com"],
   linkHosts: ["itad.link", "isthereanydeal.com"],
+  mediaHosts: ["assets.isthereanydeal.com"],
   connection: { steps: [] },
 } as unknown as PriceService;
 
@@ -18,6 +19,12 @@ describe("checkPriceServiceManifest (ADR 86)", () => {
     expect(checkPriceServiceManifest({ ...good, [field]: [] })).toEqual([`${field} must not be empty`]);
     for (const bad of ["https://x.com", "X.com", "x.com:443", "localhost"]) {
       expect(checkPriceServiceManifest({ ...good, [field]: [bad] })).toHaveLength(1);
+    }
+  });
+  it("accepts empty mediaHosts and rejects malformed ones (ADR 86 point 17)", () => {
+    expect(checkPriceServiceManifest({ ...good, mediaHosts: [] })).toEqual([]);
+    for (const bad of ["https://x.com", "X.com", "x.com:443", "localhost"]) {
+      expect(checkPriceServiceManifest({ ...good, mediaHosts: [bad] })).toHaveLength(1);
     }
   });
   it("rejects a missing connection, an empty nameKey and an unknown id", () => {

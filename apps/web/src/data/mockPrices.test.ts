@@ -101,3 +101,21 @@ describe("price formatting", () => {
     expect(browserCountry(undefined)).toBeNull();
   });
 });
+
+describe("price simulator: images (ADR 86 point 17)", () => {
+  it("search and list carry images on an allowed host for some games and none for others; a game of the library shows its own cover", async () => {
+    const api = await connected();
+    const found = await api.searchPrices("hollow");
+    const withImg = found.filter((r) => r.coverUrl);
+    expect(withImg.length).toBeGreaterThan(0);
+    expect(found.some((r) => !r.coverUrl)).toBe(true); // the gradient case
+    for (const u of withImg.flatMap((r) => [r.coverUrl, r.coverFallbackUrl])) expect(new URL(u!).origin).toBe("https://shared.akamai.steamstatic.com");
+    for (const r of found) await api.watchPrice(r.resultId);
+    const items = (await api.getPriceBoard()).items;
+    expect(items.some((i) => i.coverUrl)).toBe(true);
+    expect(items.some((i) => !i.coverUrl)).toBe(true);
+    const hades = (await api.searchPrices("hades")).find((r) => r.title === "Hades")!;
+    expect(hades.ownedGameId).toBeTruthy();
+    expect(hades.coverUrl).toBe((await api.getLibrary()).find((g) => g.id === hades.ownedGameId)!.coverUrl);
+  });
+});

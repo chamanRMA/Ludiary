@@ -76,6 +76,7 @@ function double(over: Partial<PriceService> = {}, answers: { store?: Record<stri
     apiHosts: ["api.example.com"],
     authHosts: ["itad.example.com"],
     linkHosts: ["itad.link"],
+    mediaHosts: ["img.example.com"],
     connection: wizard,
     lookupByStore: async (store, ids, ctx) => {
       calls.store.push([store, ids]);
@@ -535,5 +536,47 @@ describe("review of the code (ADR 86 low findings)", () => {
     game(h, "c1", "A", [["steam", "10"]]);
     await h.core.refreshPrices({ canonicalIds: ["c1"] });
     expect((await h.core.getGamePrices("c1")).prices!.deals[0]!.url).toBe(url);
+  });
+});
+
+describe("images in the comparator (ADR 86 point 17)", () => {
+  const IMG = "https://img.example.com";
+  const search = (media: unknown): Partial<PriceService> => ({ search: async () => [{ id: U1, title: "Found One", type: "game", media: media as never }] });
+
+  it("shows the image of the result, validated against the service's mediaHosts, and copies it to the list from the server's memory", async () => {
+    const { h, mem } = await setup({ over: search({ coverUrl: `${IMG}/c.jpg?t=1`, heroUrl: "https://evil.example/h.jpg" }) });
+    const [r] = await h.core.searchPrices("found");
+    expect(r).toMatchObject({ coverUrl: `${IMG}/c.jpg?t=1` });
+    expect(r!.coverFallbackUrl).toBeUndefined(); // other host: dropped
+    const { item } = await h.core.watchPrice(r!.resultId);
+    expect(mem.watch[0]).toMatchObject({ coverUrl: `${IMG}/c.jpg?t=1` });
+    expect(mem.watch[0]!.coverFallbackUrl).toBeUndefined();
+    expect(item.coverUrl).toBe(`${IMG}/c.jpg?t=1`);
+    expect((await h.core.getPriceBoard()).items[0]!.coverUrl).toBe(`${IMG}/c.jpg?t=1`);
+  });
+
+  it("a port in the URL is dropped", async () => {
+    const { h } = await setup({ over: search({ coverUrl: "https://img.example.com:8443/c.jpg" }) });
+    expect((await h.core.searchPrices("found"))[0]!.coverUrl).toBeUndefined();
+  });
+
+  it("a game of the library shows its own cover and the service's image is neither shown nor saved", async () => {
+    const { h, mem } = await setup({ answers: { store: { "steam:10": U1 } }, over: search({ coverUrl: `${IMG}/c.jpg` }) });
+    game(h, "c1", "Mine", [["steam", "10"]]);
+    h.store.canonical.set("c1", { id: "c1", title: "Mine", media: { coverUrl: "https://shared.akamai.steamstatic.com/own.jpg", heroUrl: "https://shared.akamai.steamstatic.com/own-h.jpg" } });
+    await h.core.refreshPrices({ canonicalIds: ["c1"] });
+    const [r] = await h.core.searchPrices("found");
+    expect(r).toMatchObject({ ownedGameId: "c1", coverUrl: "https://shared.akamai.steamstatic.com/own.jpg", coverFallbackUrl: "https://shared.akamai.steamstatic.com/own-h.jpg" });
+    await h.core.watchPrice(r!.resultId);
+    expect(mem.watch[0]!.coverUrl).toBeUndefined();
+    expect((await h.core.getPriceBoard()).items[0]!.coverUrl).toBe("https://shared.akamai.steamstatic.com/own.jpg");
+  });
+
+  it("an image whose host is no longer allowed is omitted when read", async () => {
+    const { h, mem } = await setup();
+    mem.watch.push({ id: "w1", service: "itad", serviceGameId: U1, title: "Old", type: null, coverUrl: "https://gone.example/c.jpg", coverFallbackUrl: `${IMG}/h.jpg`, addedAt: 1 });
+    const [item] = (await h.core.getPriceBoard()).items;
+    expect(item!.coverUrl).toBeUndefined();
+    expect(item!.coverFallbackUrl).toBe(`${IMG}/h.jpg`);
   });
 });

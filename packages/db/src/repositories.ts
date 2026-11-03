@@ -823,6 +823,8 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
     serviceGameId: r.serviceGameId,
     title: r.title,
     type: r.type as PriceKind | null,
+    ...(r.coverUrl ? { coverUrl: r.coverUrl } : {}),
+    ...(r.coverFallbackUrl ? { coverFallbackUrl: r.coverFallbackUrl } : {}),
     addedAt: r.addedAt,
   });
   // ADR 86 point 8. Links and cache are rebuildable; the watch list is the user's.
@@ -908,7 +910,7 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
         const old = tx.select().from(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.service, rec.service), eq(priceWatch.serviceGameId, rec.serviceGameId))).get();
         if (old) return { record: toWatch(old), created: false };
         if (countOf(tx, priceWatch, s.userId) >= max) throw limitReached(max, "watch");
-        tx.insert(priceWatch).values({ id: rec.id, userId: s.userId, service: rec.service, serviceGameId: rec.serviceGameId, title: rec.title, type: rec.type, addedAt: rec.addedAt }).run();
+        tx.insert(priceWatch).values({ id: rec.id, userId: s.userId, service: rec.service, serviceGameId: rec.serviceGameId, title: rec.title, type: rec.type, coverUrl: rec.coverUrl ?? null, coverFallbackUrl: rec.coverFallbackUrl ?? null, addedAt: rec.addedAt }).run();
         return { record: rec, created: true };
       });
     },

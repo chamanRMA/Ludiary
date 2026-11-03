@@ -13,6 +13,13 @@ export interface MockPricesDeps {
 }
 
 const CATALOG = ["Hades II", "Hades", "Celeste", "Hollow Knight: Silksong", "Stardew Valley", "Portal 2", "Disco Elysium", "Elden Ring", "Dead Cells", "Balatro", "Hollow Knight"];
+// Steam AppIDs for the images: that CDN is in the simulator's CSP too. Entries without one show the gradient (ADR 86 point 17).
+const APPS: Record<string, number> = { "Hades II": 1145350, Hades: 1145360, Celeste: 504230, "Stardew Valley": 413150, "Portal 2": 620, "Disco Elysium": 632470, "Elden Ring": 1245620, Balatro: 2379780, "Hollow Knight": 367520 };
+const imagesOf = (title: string): { coverUrl?: string; coverFallbackUrl?: string } => {
+  const app = APPS[title];
+  const base = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${app}`;
+  return app === undefined ? {} : { coverUrl: `${base}/library_600x900.jpg`, coverFallbackUrl: `${base}/header.jpg` };
+};
 const SHOPS: { storeId: StoreId | null; name: string }[] = [
   { storeId: "steam", name: "Steam" },
   { storeId: "gog", name: "GOG" },
@@ -51,6 +58,11 @@ export function createMockPrices(d: MockPricesDeps): PricesApi {
   const fkey = (id: string) => `${id}|${d.prices().country}|${d.prices().shops}`;
   const state = () => ({ service: d.service(), needsCountry: d.prices().country === null });
   const ownedOf = (title: string): string | undefined => d.library().find((g) => g.title.toLowerCase() === title.toLowerCase())?.id;
+  /** A game of the library shows its own cover; otherwise the one of the search result (point 17). */
+  const coversOf = (title: string): { coverUrl?: string; coverFallbackUrl?: string } => {
+    const g = d.library().find((x) => x.title.toLowerCase() === title.toLowerCase());
+    return g ? { ...(g.coverUrl ? { coverUrl: g.coverUrl } : {}), ...(g.coverFallbackUrl ? { coverFallbackUrl: g.coverFallbackUrl } : {}) } : imagesOf(title);
+  };
 
   function view(seed: string): PricesDto | null {
     const at = fetched.get(fkey(seed));
@@ -69,7 +81,7 @@ export function createMockPrices(d: MockPricesDeps): PricesApi {
     async getPriceBoard(): Promise<PriceBoardDto> {
       const items: WatchItemDto[] = watch.map((w) => {
         const owned = ownedOf(w.title);
-        return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), prices: view(w.id) };
+        return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), ...coversOf(w.title), prices: view(w.id) };
       });
       const best = (i: WatchItemDto) => Math.max(-1, ...(i.prices?.deals.map((x) => x.cut) ?? []));
       return { ...state(), items: items.sort((a, b) => best(b) - best(a)) };
@@ -99,7 +111,7 @@ export function createMockPrices(d: MockPricesDeps): PricesApi {
           const type = c.includes("Silksong") ? ("dlc" as const) : ("game" as const);
           results.set(resultId, { title: c, type });
           const owned = ownedOf(c);
-          return { resultId, title: c, type, ...(owned ? { ownedGameId: owned } : {}), watched: watch.some((w) => w.title === c) };
+          return { resultId, title: c, type, ...(owned ? { ownedGameId: owned } : {}), ...coversOf(c), watched: watch.some((w) => w.title === c) };
         });
     },
     async watchPrice(resultId) {
@@ -112,7 +124,7 @@ export function createMockPrices(d: MockPricesDeps): PricesApi {
         watch.push(w);
       }
       const owned = ownedOf(w.title);
-      return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), prices: view(w.id) };
+      return { id: w.id, title: w.title, type: w.type, ...(owned ? { ownedGameId: owned } : {}), ...coversOf(w.title), prices: view(w.id) };
     },
     async unwatchPrice(id) {
       const i = watch.findIndex((w) => w.id === id);

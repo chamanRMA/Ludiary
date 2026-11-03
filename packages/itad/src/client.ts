@@ -1,9 +1,10 @@
 // IsThereAnyDeal HTTP calls (ADR 86, point 6). The key goes in a header as a Secret, never in the query.
 // Errors carry a fixed English message and connectors.itad.errors.* keys: no piece of the answer, no cause (point 15, B2, B6).
-import { ConnectorError, type I18nKey, type Secret, type StoreId, type SyncContext } from "@ludiary/contracts";
+import { ConnectorError, type EntryMedia, type I18nKey, type Secret, type StoreId, type SyncContext } from "@ludiary/contracts";
 import { ITAD_SHOP_IDS, storeIdOf } from "./shops";
 
 export const ITAD_API_HOST = "api.isthereanydeal.com";
+export const ITAD_MEDIA_HOST = "assets.isthereanydeal.com";
 const BASE = `https://${ITAD_API_HOST}`;
 export const MAX_IDS = 200;
 export const MAX_IDS_ALL_SHOPS = 50;
@@ -106,16 +107,44 @@ export async function itadLookupByTitle(titles: readonly string[], ctx: SyncCont
   return out;
 }
 
+/** ADR 86 point 17: the rule of ADR 71 (https, host in mediaHosts, no credentials, default port, 2048 characters at most). The URL goes as received (ITAD9). */
+function mediaUrl(raw: unknown, dropped: Set<string>): string | undefined {
+  if (typeof raw !== "string" || raw.length === 0 || raw.length > 2048 || /[\p{Cc}\s]/u.test(raw)) return undefined;
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return undefined;
+  }
+  if (u.protocol !== "https:" || u.username !== "" || u.password !== "" || u.port !== "") return undefined;
+  const host = u.hostname.toLowerCase();
+  if (host === ITAD_MEDIA_HOST) return raw;
+  if (/^[a-z0-9][a-z0-9.-]{0,252}$/.test(host) && dropped.size < 8) dropped.add(host);
+  return undefined;
+}
+
 export async function itadSearch(title: string, ctx: SyncContext) {
   const body = await itadRequest(ctx, await storedKey(ctx), { method: "GET", path: "/games/search/v1", query: { title, results: 20 } });
   if (!Array.isArray(body)) throw unexpected("search");
-  const out: { id: string; title: string; type: "game" | "dlc" | "package" | null }[] = [];
+  const out: { id: string; title: string; type: "game" | "dlc" | "package" | null; media?: EntryMedia }[] = [];
+  const dropped = new Set<string>();
+  let mediaDropped = 0;
   for (const r of body) {
     if (!isObject(r) || typeof r["id"] !== "string" || !UUID_RE.test(r["id"]) || typeof r["title"] !== "string") continue;
     const t = r["type"];
-    out.push({ id: r["id"], title: r["title"], type: t === "game" || t === "dlc" || t === "package" ? t : null });
+    const assets = isObject(r["assets"]) ? r["assets"] : {};
+    // Only boxart (vertical) and banner400 (horizontal, the fallback) are used.
+    const coverUrl = mediaUrl(assets["boxart"], dropped);
+    const heroUrl = mediaUrl(assets["banner400"], dropped);
+    mediaDropped += (assets["boxart"] !== undefined && coverUrl === undefined ? 1 : 0) + (assets["banner400"] !== undefined && heroUrl === undefined ? 1 : 0);
+    out.push({
+      id: r["id"],
+      title: r["title"],
+      type: t === "game" || t === "dlc" || t === "package" ? t : null,
+      ...(coverUrl || heroUrl ? { media: { ...(coverUrl ? { coverUrl } : {}), ...(heroUrl ? { heroUrl } : {}) } } : {}),
+    });
   }
-  ctx.log.info("ITAD search", { found: out.length });
+  ctx.log.info("ITAD search", { found: out.length, ...(mediaDropped > 0 ? { mediaDropped, droppedMediaHosts: [...dropped].join(",") } : {}) });
   return out;
 }
 

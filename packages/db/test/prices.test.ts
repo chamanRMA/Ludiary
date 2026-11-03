@@ -37,7 +37,7 @@ describe("migration 0007_prices", () => {
     old.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
     old.exec("INSERT INTO canonical_games (id, user_id, title, normalized_title, created_at, updated_at) VALUES ('c', 'u', 'T', 't', 1, 1)");
     const res = await migrate(old, { backupDir: join(dir, "b") });
-    expect(res.applied).toEqual(["0007_prices"]);
+    expect(res.applied).toEqual(["0007_prices", "0008_watch_media"]);
     expect(res.backupFile).toBeTruthy();
     expect(old.prepare("SELECT id FROM canonical_games").all()).toEqual([{ id: "c" }]);
     expect(old.pragma("foreign_key_check")).toEqual([]);
@@ -46,6 +46,32 @@ describe("migration 0007_prices", () => {
       expect(fks.some((f) => f.table === "users"), t).toBe(true);
     }
     old.close();
+  });
+});
+
+describe("migration 0008_watch_media (ADR 86 point 17)", () => {
+  it("keeps the follow list of 0007_prices, leaves the new columns null and limits their length", async () => {
+    const old = openDatabase(join(dir, "old2.sqlite"), undefined);
+    await migrate(old, { backupDir: join(dir, "b2"), migrations: MIGRATIONS.slice(0, 7) });
+    old.exec("INSERT INTO users (id, created_at) VALUES ('u', 1)");
+    old.exec("INSERT INTO price_watch (id, user_id, service, service_game_id, title, type, added_at) VALUES ('w', 'u', 'itad', 'g', 'T', NULL, 1)");
+    expect((await migrate(old, { backupDir: join(dir, "b2") })).applied).toEqual(["0008_watch_media"]);
+    expect(old.prepare("SELECT id, title, cover_url, cover_fallback_url FROM price_watch").all()).toEqual([{ id: "w", title: "T", cover_url: null, cover_fallback_url: null }]);
+    expect(old.pragma("foreign_key_check")).toEqual([]);
+    const put = (col: string, len: number) => old.prepare(`INSERT INTO price_watch (id, user_id, service, service_game_id, title, added_at, ${col}) VALUES (?, 'u', 'itad', ?, 'T', 1, ?)`).run(`x${col}${len}`, `g${col}${len}`, "h".repeat(len));
+    put("cover_url", 2048);
+    put("cover_fallback_url", 2048);
+    expect(() => put("cover_url", 2049)).toThrow(/CHECK/);
+    expect(() => put("cover_fallback_url", 2049)).toThrow(/CHECK/);
+    old.close();
+  });
+  it("saves and reads the covers of a followed item", async () => {
+    await repos.prices.addWatch({ id: "w1", service: "itad", serviceGameId: "g1", title: "T", type: null, coverUrl: "https://a.example/c", coverFallbackUrl: "https://a.example/h", addedAt: 1 }, 5);
+    await repos.prices.addWatch({ id: "w2", service: "itad", serviceGameId: "g2", title: "T", type: null, addedAt: 2 }, 5);
+    expect(await repos.prices.listWatch("itad")).toEqual([
+      { id: "w1", service: "itad", serviceGameId: "g1", title: "T", type: null, coverUrl: "https://a.example/c", coverFallbackUrl: "https://a.example/h", addedAt: 1 },
+      { id: "w2", service: "itad", serviceGameId: "g2", title: "T", type: null, addedAt: 2 },
+    ]);
   });
 });
 

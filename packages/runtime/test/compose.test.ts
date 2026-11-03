@@ -9,7 +9,7 @@ import { createSqliteInstanceLock, DatabaseTooNewError, MIGRATIONS, migrate, ope
 import { translate } from "@ludiary/i18n";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { composeCore, FatalError, migrateDatabase } from "../src/compose";
-import { createConnectors, unionMediaHosts, unionUriSchemes } from "../src/connectors";
+import { createConnectors, createPriceServices, unionMediaHosts, unionUriSchemes } from "../src/connectors";
 import { EXIT, type RuntimeDeps } from "../src/deps";
 import { loadWebAssets } from "../src/web-assets";
 
@@ -252,8 +252,9 @@ describe("connector registration (ADR 40 rule 11, ADR 72)", () => {
     const connectors = createConnectors();
     expect(unionUriSchemes(connectors)).toEqual(["com.epicgames.launcher", "goggalaxy", "origin2", "steam", "uplay"]); // ADR 77: GOG declares goggalaxy for install; ADR 78: Epic; ADR 79: Ubisoft; ADR 81: EA
     expect(connectors.map((c) => c.id)).toEqual(["steam", "gog", "epic", "ubisoft", "ea"]);
-    expect(unionMediaHosts(connectors)).toEqual([
+    expect(unionMediaHosts(connectors, createPriceServices())).toEqual([
       "app-images.ea.com",
+      "assets.isthereanydeal.com",
       "cdn1.epicgames.com",
       "cdn2.unrealengine.com",
       "drop-assets.ea.com",
