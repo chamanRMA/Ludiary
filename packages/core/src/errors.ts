@@ -17,6 +17,15 @@ const CORE_CODES: readonly string[] = [
   "collection-managed",
   "limit-reached",
   "picker-unavailable",
+  "backup.busy",
+  "backup.no-folder",
+  "backup.folder-unavailable",
+  "backup.write-failed",
+  "backup.not-found",
+  "backup.too-large",
+  "backup.corrupt",
+  "backup.not-ludiary",
+  "backup.too-new",
 ];
 
 /** Default translation key of an error code: core codes under `core.errors.*`, connector codes under `connectors.common.errors.*`. */
@@ -79,3 +88,6 @@ const STORE_NAMES: Record<StoreId, string> = { steam: "Steam", gog: "GOG", epic:
 export const collectionManaged = (store: StoreId): CoreError =>
   new CoreError("collection-managed", "This collection comes from a store and is read-only", { key: asKey("core.errors.collectionManaged"), params: { store: STORE_NAMES[store] } });
 export const nameTaken = (): CoreError => new CoreError("name-taken", "Another collection already has this name");
+
+/** ADR 89 point 9. The message is fixed English: it never quotes a path or text of the file. */
+export const backupError = (code: Extract<CoreErrorCode, `backup.${string}`>): CoreError => new CoreError(code, `Backup error: ${code}`);

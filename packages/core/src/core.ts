@@ -19,6 +19,7 @@ import { createSyncService } from "./sync";
 import { storeScope, createVaultFactory } from "./vault";
 import { createWizardEngine } from "./wizards";
 import { createCollectionMirror } from "./collection-mirror";
+import { createBackupService } from "./backups";
 import { bumpEpoch, syncContext } from "./contexts";
 
 /** A connector was refused at startup (ADR 40 rule 11, ADR 72). `problems` are English, for developers. */
@@ -62,10 +63,12 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
   const sync = createSyncService(env, mirror);
   const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }));
   const launch = createLaunchService(env);
+  const backups = createBackupService(env, () => deps.lastRestore?.() ?? null);
   const capabilities: CoreCapabilities = {
     canScan: true,
     canLaunch: deps.launcher !== undefined,
     canPickFolder: deps.folderPicker !== undefined,
+    canBackup: deps.backups !== undefined,
   };
   let picking = false;
 
@@ -179,11 +182,15 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
       }
       await sync.schedule({ force: false, trigger: req.trigger, operations: req.operations ?? ["library", "scan"] });
     },
-    whenIdle: () => sync.whenIdle(),
+    whenIdle: async () => {
+      await Promise.all([sync.whenIdle(), backups.whenIdle()]);
+    },
     storeStatus: () => sync.storeStatus(),
 
     getSettings: () => readSettings(env),
     async updateSettings(patch) {
+      // ADR 89: first, so that a refusal (no folder) saves nothing of the rest.
+      if (patch !== null && typeof patch === "object" && patch.backups?.periodic !== undefined) await backups.setPeriodic(patch.backups.periodic);
       const { settings, detectionChanged, collections } = await writeSettings(env, patch);
       // ADR 88: off deletes the mirrors (the setting is already stored, so a pass in flight finds it off); on, or the favorites setting, runs a pass.
       const again: StoreId[] = [];
@@ -195,6 +202,28 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
       else if (again.length > 0) await rescan(again);
       return settings;
     },
+    getBackups: () => backups.state(),
+    createBackup: () => backups.createManual(),
+    async pickBackupFolder() {
+      const picker = deps.folderPicker;
+      if (!picker) throw new CoreError("picker-unavailable", "This mode has no folder dialog");
+      if (picking) throw new CoreError("busy", "A folder dialog is already open");
+      picking = true;
+      let chosen: string | null;
+      try {
+        chosen = await picker.pick({ title: deps.t("core.pickFolder.title") });
+      } finally {
+        picking = false;
+      }
+      if (chosen === null) return null;
+      if (typeof chosen !== "string" || !deps.files.isAbsolute(chosen)) throw new CoreError("invalid-input", "The chosen path is not absolute");
+      const path = deps.files.normalize(chosen);
+      if (!(await deps.files.isDirectory(path))) throw new CoreError("invalid-input", "The chosen path is not a folder");
+      await backups.setFolder(path);
+      return backups.state();
+    },
+    restoreBackup: (id) => backups.restore(id),
+    backupTick: () => backups.tick(),
     getOnboarding: () => readOnboarding(env),
     async completeOnboarding(mode) {
       await completeOnboarding(env, mode);

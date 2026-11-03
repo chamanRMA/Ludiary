@@ -1,9 +1,14 @@
 import type { GameDetailDto } from "@ludiary/api-contract";
+import { webCatalogs } from "@ludiary/i18n/web";
+import i18next from "i18next";
 import { describe, expect, it, vi } from "vitest";
 import type { LudiaryApi } from "./api";
+import { errorText } from "../app/errors";
 import { ApiError, type Http } from "./http";
 import { createMockApi, type KeyValueStorage } from "./mock";
 import { createRealApi } from "./real";
+
+const es: Record<string, string> = webCatalogs.es;
 
 const memory = (): KeyValueStorage => {
   const m = new Map<string, string>();
@@ -34,6 +39,7 @@ const serverSettings = {
   locale: "es",
   detection: "auto-and-manual",
   scanRoots: [{ id: "a", origin: "discovered", path: "C:\\Steam", enabled: true, store: "steam" }],
+  backups: { periodic: false, folder: null },
   storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
 };
 
@@ -165,6 +171,58 @@ describe("real client: what the server serves", () => {
   });
 });
 
+describe("real client: backups (ADR 89)", () => {
+  const state = { periodic: true, folder: "C:\\Docs\\Ludiary\\Copias", folderIsDefault: true, lastBackupAt: 4242, lastError: null, lastRestore: null, copies: [] };
+  const ID = "ludiary-20261103T123456789Z-0a1b2c3d-manual.sqlite";
+
+  it("talks to the routes; the folder only changes through the dialog and a cancelled dialog is null", async () => {
+    let reply: unknown = { cancelled: true };
+    const { http, log } = fakeHttp((_m, p) => (p === "/api/backups/folder/pick" ? reply : p === "/api/backups" ? state : undefined));
+    const api = createRealApi(http, createMockApi(memory()));
+    await expect(api.getBackups()).resolves.toEqual(state);
+    await api.createBackup();
+    await expect(api.pickBackupFolder()).resolves.toBeNull();
+    reply = state;
+    await expect(api.pickBackupFolder()).resolves.toEqual(state);
+    await api.restoreBackup(ID);
+    expect(log).toEqual([
+      "GET /api/backups",
+      "POST /api/backups {}",
+      "POST /api/backups/folder/pick {}",
+      "POST /api/backups/folder/pick {}",
+      `POST /api/backups/restore {"id":"${ID}"}`,
+    ]);
+  });
+
+  it("the periodic switch goes to the server without any folder, and the last backup time is the real one", async () => {
+    const { http, log } = fakeHttp((_m, p) => (p === "/api/backups" ? state : p === "/api/settings" ? serverSettings : []));
+    const api = createRealApi(http, createMockApi(memory()));
+    await api.updateSettings({ backups: { periodic: true } });
+    expect(log[0]).toBe('PATCH /api/settings {"backups":{"periodic":true}}');
+    expect((await api.getMaintenance()).lastBackupAt).toBe(4242);
+  });
+
+  it("the server errors of the section have a translated text", async () => {
+    await i18next.init({ lng: "es", resources: { es: { translation: es } }, keySeparator: false, nsSeparator: false, interpolation: { prefix: "{", suffix: "}" } });
+    for (const code of ["busy", "no-folder", "folder-unavailable", "write-failed", "not-found", "too-large", "corrupt", "not-ludiary", "too-new"]) {
+      const text = errorText(i18next.t, new ApiError(422, `backup.${code}`, `core.errors.backup.${code}`));
+      expect(text, code).not.toBe(es["errors.generic"]);
+      expect(text, code).toBeTruthy();
+    }
+  });
+});
+
+describe("mock API: backups (ADR 89)", () => {
+  it("the simulator starts with the periodic copies off and lists the manual copies it makes", async () => {
+    const api = createMockApi(memory());
+    expect((await api.getSettings()).backups.periodic).toBe(false);
+    await api.createBackup();
+    const state = await api.getBackups();
+    expect(state.copies).toHaveLength(1);
+    expect(state.lastBackupAt).not.toBeNull();
+  });
+});
+
 describe("real client: point B, the rest comes from the simulator", () => {
   it("delegates other stores' wizards without touching the server; services are empty and simulated-only actions are refused", async () => {
     const { http, log } = fakeHttp(() => []);
@@ -178,7 +236,6 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await api.submitWizard(epic, { kind: "continue" });
     await api.cancelWizard(epic);
     await api.disconnect(epic);
-    await expect(api.createBackup()).rejects.toBeInstanceOf(ApiError);
     await expect(api.exportLogs()).rejects.toBeInstanceOf(ApiError);
     await expect(api.simulateExpiredSession("ubisoft")).rejects.toBeInstanceOf(ApiError);
     await api.revokeSessions();
@@ -192,7 +249,7 @@ describe("real client: point B, the rest comes from the simulator", () => {
     const api = createRealApi(http, sim);
 
     const first = await api.getSettings();
-    expect(first).toMatchObject({ locale: "es", detection: "auto-and-manual", autostart: false, syncOnStart: true, autoUpdate: true, backups: { periodic: true, folder: null } });
+    expect(first).toMatchObject({ locale: "es", detection: "auto-and-manual", autostart: false, syncOnStart: true, autoUpdate: true, backups: { periodic: false, folder: null } });
     expect(first.scanRoots).toEqual(serverSettings.scanRoots); // never the simulator's sample roots
 
     log.length = 0;

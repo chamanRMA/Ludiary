@@ -18,7 +18,16 @@ export type CoreErrorCode =
   | "name-taken"
   | "collection-managed"
   | "limit-reached"
-  | "picker-unavailable";
+  | "picker-unavailable"
+  | "backup.busy"
+  | "backup.no-folder"
+  | "backup.folder-unavailable"
+  | "backup.write-failed"
+  | "backup.not-found"
+  | "backup.too-large"
+  | "backup.corrupt"
+  | "backup.not-ludiary"
+  | "backup.too-new";
 
 export interface CoreErrorInfo {
   code: ConnectorErrorCode | CoreErrorCode;
@@ -57,11 +66,15 @@ export interface Settings {
   detection: DetectionMode | null;
   /** ADR 88. Only the stores that have the operation. */
   storeCollections: Partial<Record<StoreId, StoreCollectionsSettings>>;
+  /** ADR 89. */
+  backups: { periodic: boolean };
 }
 export interface SettingsPatch {
   locale?: Settings["locale"];
   detection?: DetectionMode | null;
   storeCollections?: Partial<Record<StoreId, Partial<StoreCollectionsSettings>>>;
+  /** ADR 89. The folder never travels here. */
+  backups?: { periodic?: boolean };
 }
 
 export interface Onboarding {

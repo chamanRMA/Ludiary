@@ -196,7 +196,7 @@ export const SettingsSchema = Type.Object(
     detection: Type.Union([DetectionModeSchema, Type.Null()]),
     scanRoots: Type.Array(ScanRootSchema),
     /** Absent: the feature is not available (ADR 72). */
-    backups: Type.Optional(Type.Object({ periodic: Type.Boolean(), folder: Type.Union([Type.String(), Type.Null()]) }, strict)), // ADR 57
+    backups: Type.Optional(Type.Object({ periodic: Type.Boolean(), folder: Type.Union([Type.String(), Type.Null()]) }, strict)), // ADR 57, 89: the server always sends it
     autoUpdate: Type.Optional(Type.Boolean()), // ADR 32
     /** ADR 88. Only the stores that mirror collections. */
     storeCollections: perStore(StoreCollectionsSettingsSchema),
@@ -209,6 +209,8 @@ export const SettingsPatchSchema = Type.Object(
   {
     locale: Type.Optional(LocaleSchema),
     detection: Type.Optional(DetectionModeSchema),
+    /** ADR 89. The folder never travels here: it only changes through the native dialog. */
+    backups: Type.Optional(Type.Object({ periodic: Type.Boolean() }, strict)),
     storeCollections: Type.Optional(perStore(Type.Object({ enabled: Type.Optional(Type.Boolean()), unverifiedFavorites: Type.Optional(Type.Boolean()) }, strict))),
   },
   strict,
@@ -361,3 +363,31 @@ export interface WizardCallbackResponseDto {
   response: WizardResponseDto;
 }
 // DELETE /api/wizards/:wizardId and DELETE /api/stores/:store/connection answer 204 with no body.
+
+// ---- Backups (ADR 89)
+export const BackupKindSchema = Type.Union([Type.Literal("auto"), Type.Literal("manual"), Type.Literal("pre-migration"), Type.Literal("pre-restore")]);
+const BackupId = Type.String({
+  maxLength: 120,
+  pattern: "^(ludiary-\\d{8}T\\d{9}Z-[0-9a-f]{8}-(auto|manual)|pre-migration-\\d{15}-[0-9a-z_]{1,64}|pre-restore-\\d{15}(-origin)?)\\.sqlite$",
+});
+export const BackupSchema = Type.Object({ id: BackupId, kind: BackupKindSchema, createdAt: Type.Integer(), sizeBytes: Type.Integer({ minimum: 0 }), foreign: Type.Boolean() }, strict);
+export type BackupDto = Static<typeof BackupSchema>;
+export const BackupsSchema = Type.Object(
+  {
+    periodic: Type.Boolean(),
+    folder: Type.Union([Type.String(), Type.Null()]),
+    folderIsDefault: Type.Boolean(),
+    lastBackupAt: Type.Union([Type.Integer(), Type.Null()]),
+    lastError: Type.Union([Type.Object({ key: Type.String() }, strict), Type.Null()]),
+    lastRestore: Type.Union([
+      Type.Object({ id: BackupId, at: Type.Integer(), outcome: Type.Union([Type.Literal("ok"), Type.Literal("rolled-back")]), disabledRoots: Type.Integer({ minimum: 0 }) }, strict),
+      Type.Null(),
+    ]),
+    copies: Type.Array(BackupSchema, { maxItems: 500 }),
+  },
+  strict,
+);
+export type BackupsDto = RO<Static<typeof BackupsSchema>>;
+export const RestoreBodySchema = Type.Object({ id: BackupId }, strict);
+export type RestoreBodyDto = Static<typeof RestoreBodySchema>;
+export const RestoreResponseSchema = Type.Object({ restarting: Type.Literal(true) }, strict);

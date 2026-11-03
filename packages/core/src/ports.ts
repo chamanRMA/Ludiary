@@ -129,3 +129,25 @@ export interface UserDataRepository {
   /** Copies the user data of `from` onto `to` (favorite, tags, collections; lower position wins). `from` is left for the caller to delete. */
   mergeUserData(from: string, to: string, at: number): Promise<void>;
 }
+
+/** ADR 89. Paths are opaque to the core; the store joins names to its own folders and never accepts a path from the API. */
+export type BackupKind = "auto" | "manual" | "pre-migration" | "pre-restore";
+export interface BackupInfo {
+  id: string;
+  kind: BackupKind;
+  createdAt: number;
+  sizeBytes: number;
+  foreign: boolean;
+}
+export interface BackupStore {
+  /** `<Documents>\Ludiary\Copias` (Windows), composed by the store (ADR 89 point 4). */
+  defaultFolder(documents: string): string;
+  /** Online copy to `<folder>/<name>.partial`, then rename. Creates the folder. `installId`: 8 lower-case hex. */
+  create(folder: string, kind: "auto" | "manual", installId: string, now: number): Promise<BackupInfo>;
+  /** User folder (valid names, regular files only) plus the internal folder, newest first, at most 500. Missing folder: only internal ones. */
+  list(folder: string | null, installId: string): Promise<BackupInfo[]>;
+  /** Only an own `auto` copy that validates and is in the listing (ADR 89 point 16, M5). */
+  delete(folder: string, id: string, installId: string): Promise<void>;
+  /** Point 6.1. Throws a CoreError with the key of point 9. */
+  prepareRestore(folder: string | null, id: string, now: number): Promise<void>;
+}

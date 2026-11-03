@@ -1,5 +1,5 @@
 // Public facade types of the core (ADR 72, point 4) and the shared environment of its use-case modules.
-import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
+import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, UserFolders, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
 import type {
   CoreErrorInfo,
   CoreLogger,
@@ -15,7 +15,10 @@ import type {
   StoreStatus,
   SyncOperation,
 } from "./model";
+import type { BackupInfo } from "./ports";
+import type { BackupsState, LastRestore } from "./backups";
 import type {
+  BackupStore,
   ConnectionRepository,
   IdentityRepository,
   LibraryRepository,
@@ -73,6 +76,12 @@ export interface CoreDeps {
   http?: (hosts: readonly string[], signal: AbortSignal, log: ConnectorLogger, opts?: { maxBytes?: number }) => HttpClient;
   /** ADR 80. Absent (Docker, Linux, tests): the embedded-login step is rejected as unavailable. */
   embeddedLogin?: EmbeddedLogin;
+  /** ADR 89. Absent: the mode has no backups. */
+  backups?: BackupStore;
+  /** ADR 89. Absent or null Documents: activating backups asks for a folder. */
+  userFolders?: UserFolders;
+  /** ADR 89. Result of a restoration applied at startup; lives in the memory of this process. */
+  lastRestore?: () => LastRestore | null;
   /** ADR 46, 74. */
   cipher: SecretCipher;
   secrets: SecretRepository;
@@ -90,6 +99,8 @@ export interface CoreCapabilities {
   canScan: boolean;
   canLaunch: boolean;
   canPickFolder: boolean;
+  /** ADR 89. */
+  canBackup: boolean;
 }
 
 export interface SyncRequest {
@@ -141,6 +152,15 @@ export interface LudiaryCore {
   /** Idempotent. */
   cancelWizard(wizardId: string): Promise<void>;
   disconnect(store: StoreId): Promise<void>;
+  /** ADR 89. */
+  getBackups(): Promise<BackupsState>;
+  createBackup(): Promise<BackupInfo>;
+  /** null when the user cancelled the dialog. */
+  pickBackupFolder(): Promise<BackupsState | null>;
+  /** Prepares the restoration (point 6.1); the caller then restarts the server. */
+  restoreBackup(id: string): Promise<void>;
+  /** Called by the runtime after startup and every hour. Never throws. */
+  backupTick(): Promise<void>;
   /** ADR 80. Server shutdown: aborts the open login windows. */
   shutdown(): void;
 }

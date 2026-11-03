@@ -1,4 +1,6 @@
 import type {
+  BackupDto,
+  BackupsDto,
   CollectionDto,
   DetectionMode,
   GameDetailDto,
@@ -249,12 +251,13 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     (Object.keys(SERVICE_META) as ServiceId[]).map((service) => [service, { service, ...SERVICE_META[service], configured: false }]),
   );
   const sessions = new Map<string, number>(); // wizard target -> step index. Never holds values.
+  const backupCopies: BackupDto[] = [];
   const maintenance: MaintenanceDto = { lastBackupAt: null, lastScanAt: now() - HOUR, lastSyncAt: now() - 5 * 60_000 };
   let settings: GeneralSettings = {
     locale: ((v) => (v === "es" || v === "en" ? v : "system"))(storage.getItem("ludiary.locale")),
     detection: null,
     scanRoots: ROOTS.map((r) => ({ ...r })),
-    backups: { periodic: true, folder: null },
+    backups: { periodic: false, folder: null },
     autoUpdate: true,
     autostart: false,
     syncOnStart: true,
@@ -391,8 +394,8 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       settings = { ...settings, scanRoots: settings.scanRoots.filter((r) => r.id !== id || r.origin !== "user") };
     },
     updateSettings: async (patch) => {
-      const { storeCollections, ...plain } = patch;
-      settings = { ...settings, ...plain };
+      const { storeCollections, backups, ...plain } = patch;
+      settings = { ...settings, ...plain, ...(backups ? { backups: { ...settings.backups, periodic: backups.periodic } } : {}) };
       for (const [store, v] of Object.entries(storeCollections ?? {}) as [StoreId, { enabled?: boolean; unverifiedFavorites?: boolean }][]) {
         const prev = settings.storeCollections[store];
         if (!prev) continue;
@@ -471,7 +474,20 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     revokeSessions: async () => undefined, // the simulator has no sessions
     createBackup: async () => {
       maintenance.lastBackupAt = now();
+      const at = now();
+      backupCopies.unshift({ id: `ludiary-${new Date(at).toISOString().replace(/[-:.]/g, "")}-0a1b2c3d-manual.sqlite`, kind: "manual", createdAt: at, sizeBytes: 3_200_000, foreign: false });
     },
+    getBackups: async (): Promise<BackupsDto> => ({
+      periodic: settings.backups.periodic,
+      folder: "C:\\Users\\you\\Documents\\Ludiary\\Copias",
+      folderIsDefault: true,
+      lastBackupAt: maintenance.lastBackupAt,
+      lastError: null,
+      lastRestore: null,
+      copies: backupCopies.map((c) => ({ ...c })),
+    }),
+    pickBackupFolder: async () => null, // the simulator has no native dialog
+    restoreBackup: async () => undefined,
     exportLogs: async () => undefined,
     simulateExpiredSession: async (store) => {
       setStore(store, {

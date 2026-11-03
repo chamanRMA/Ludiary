@@ -122,15 +122,52 @@ async function startServer(deps: RuntimeDeps, log: Logger): Promise<{ url: strin
   }
 }
 
+/** ADR 89 point 6.2. Starts the launcher of the new process, independent of us, before the server shuts down. */
+export function spawnAfterRestartLauncher(deps: RuntimeDeps, log: Logger): void {
+  try {
+    const child = spawn(deps.selfCommand.command, [...deps.selfCommand.args, "--after-restart"], { detached: true, stdio: "ignore", windowsHide: true, env: deps.env });
+    child.once("error", (e) => log("error", `could not start the launcher: ${e.message}`));
+    child.unref();
+  } catch (e) {
+    log("error", `could not start the launcher: ${(e as Error).message}`);
+  }
+}
+
+/** ADR 89 point 6.2: the launcher goes first, so the new process never depends on the server that is closing. */
+export function restartSequence(spawnLauncher: () => void, shutdown: () => void): void {
+  spawnLauncher();
+  shutdown();
+}
+
+/** ADR 89 point 6.2. After a restoration the old server may still answer: wait until it released the instance lock. */
+export async function waitForLockRelease(isHeld: () => Promise<boolean>, timeoutMs: number, pollMs = 200): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (await isHeld()) {
+    if (Date.now() >= deadline) return false;
+    await sleep(pollMs);
+  }
+  return true;
+}
+
+export const AFTER_RESTART_WAIT_MS = 20_000;
+
 /**
  * Shortcut role (ADR 26): reuse the live server or start one in the background, then open the browser
  * with a one-use link. Exit code 0 on success.
  */
-export async function runLauncher(deps: RuntimeDeps): Promise<number> {
+export async function runLauncher(deps: RuntimeDeps, opts: { afterRestart?: boolean } = {}): Promise<number> {
   const { platform } = deps;
   mkdirSync(platform.dataDir, { recursive: true });
   const log = createFileLogger(platform.dataDir, "launcher");
   try {
+    if (opts.afterRestart) {
+      const lock = createSqliteInstanceLock(join(platform.dataDir, "instance.lock"), deps.sqliteAddon);
+      if (!(await waitForLockRelease(() => lock.isHeld(), AFTER_RESTART_WAIT_MS))) {
+        log("error", "the previous server did not release the instance lock in time");
+        await showFatal(deps, "fatal.timeout", log);
+        return EXIT.error;
+      }
+    }
     let url = await requestOpenUrl(deps, log);
     if (url) log("info", "server already running");
     else {

@@ -44,6 +44,8 @@ export interface MigrateOptions {
   now?: () => number;
   /** Copies kept (ADR 57: 3). */
   keepBackups?: number;
+  /** ADR 89 point 6.3: a database just restored has its original in the user's folder, so no pre-migration copy. */
+  skipBackup?: boolean;
 }
 
 export interface MigrateResult {
@@ -53,6 +55,9 @@ export interface MigrateResult {
 
 export const BACKUP_PREFIX = "pre-migration-";
 
+/** Exact SQL of the control table; the restore check (ADR 89) compares against what this creates. */
+export const SCHEMA_MIGRATIONS_DDL = "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY NOT NULL, hash TEXT NOT NULL, applied_at INTEGER NOT NULL)";
+
 export function hashMigration(m: EmbeddedMigration): string {
   return createHash("sha256").update(m.statements.join("\n--> statement-breakpoint\n")).digest("hex");
 }
@@ -60,7 +65,7 @@ export function hashMigration(m: EmbeddedMigration): string {
 export async function migrate(db: Database.Database, opts: MigrateOptions): Promise<MigrateResult> {
   const migrations = opts.migrations ?? MIGRATIONS;
   const now = opts.now ?? Date.now;
-  db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY NOT NULL, hash TEXT NOT NULL, applied_at INTEGER NOT NULL)");
+  db.exec(SCHEMA_MIGRATIONS_DDL);
   const appliedRows = db.prepare("SELECT id, hash FROM schema_migrations ORDER BY id").all() as { id: string; hash: string }[];
   const known = new Map(migrations.map((m) => [m.id, m]));
 
@@ -76,7 +81,7 @@ export async function migrate(db: Database.Database, opts: MigrateOptions): Prom
   if (pending.length === 0) return { applied: [], backupFile: null };
 
   let backupFile: string | null = null;
-  if (appliedRows.length > 0) {
+  if (appliedRows.length > 0 && !opts.skipBackup) {
     mkdirSync(opts.backupDir, { recursive: true });
     const last = appliedRows[appliedRows.length - 1]?.id ?? "none";
     backupFile = join(opts.backupDir, `${BACKUP_PREFIX}${String(now()).padStart(15, "0")}-${last}.sqlite`);

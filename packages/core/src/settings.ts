@@ -31,6 +31,7 @@ export async function readSettings(env: Env): Promise<Settings> {
     locale: (LOCALES as readonly unknown[]).includes(locale) ? (locale as Settings["locale"]) : "system",
     detection: isMode(mode) ? mode : null,
     storeCollections,
+    backups: { periodic: (await env.deps.settings.get("backups.periodic")) === true },
   };
 }
 

@@ -8,6 +8,7 @@ import { isCoreError, statusForCoreError, type LudiaryCoreFacade } from "./core"
 import { OPEN_CSP, openScript, spaCsp, type WebAssets } from "./web";
 import {
   CollectionCreateSchema, CollectionPatchSchema, CollectionSchema, GamePatchSchema, type CollectionCreateDto, type CollectionPatchDto, type GamePatchDto,
+  BackupSchema, BackupsSchema, RestoreBodySchema, RestoreResponseSchema, type RestoreBodyDto,
   EmptyObjectSchema, GameDetailSchema, GameSummarySchema, IdParamsSchema, LaunchRequestSchema,
   LaunchResponseSchema, OnboardingCompleteSchema, OnboardingSchema, PickCancelledSchema, ScanRootPatchSchema,
   ScanRootSchema, SettingsPatchSchema, SettingsSchema, StoreParamsSchema, StoreStatusSchema, SyncRequestSchema,
@@ -50,6 +51,8 @@ export interface LocalServerDeps {
   getStatus: () => Record<string, unknown>;
   /** Called by the launcher's shutdown action after the response is sent. */
   onShutdownRequested: () => void;
+  /** ADR 89 point 6.2. Called after the response of a prepared restoration has been sent (`onResponse`). */
+  onRestartRequested?: () => void;
   sessions: SessionStore;
   /** Facade over the core (ADR 72). */
   core: LudiaryCoreFacade;
@@ -345,6 +348,34 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     "/api/settings",
     { schema: { querystring: noQuery, body: SettingsPatchSchema, response: { 200: SettingsSchema } } },
     async (req) => core.updateSettings(req.body),
+  );
+
+  // ---- ADR 89. All 'session+key'. The restart is triggered by this layer, after the 202 has been sent.
+  app.get("/api/backups", { schema: { querystring: noQuery, response: { 200: BackupsSchema } } }, async () => core.getBackups());
+
+  app.post("/api/backups", { schema: { querystring: noQuery, body: EmptyObjectSchema, response: { 201: BackupSchema } } }, async (_req, reply) =>
+    reply.code(201).send(await core.createBackup()),
+  );
+
+  app.post(
+    "/api/backups/folder/pick",
+    { schema: { querystring: noQuery, body: EmptyObjectSchema, response: { 200: { anyOf: [PickCancelledSchema, BackupsSchema] } } } },
+    async () => (await core.pickBackupFolder()) ?? { cancelled: true },
+  );
+
+  app.post<{ Body: RestoreBodyDto }>(
+    "/api/backups/restore",
+    {
+      schema: { querystring: noQuery, body: RestoreBodySchema, response: { 202: RestoreResponseSchema } },
+      onResponse: (_req, reply, done) => {
+        if (reply.statusCode === 202) deps.onRestartRequested?.();
+        done();
+      },
+    },
+    async (req, reply) => {
+      await core.restoreBackup(req.body.id);
+      return reply.code(202).send({ restarting: true });
+    },
   );
 
   app.patch<{ Params: IdParams; Body: ScanRootPatchDto }>(
