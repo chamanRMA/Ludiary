@@ -166,6 +166,7 @@
   "settings.stores.collections.unverified": "Importar los favoritos aunque la cuenta no esté verificada",
   "settings.stores.collections.unverifiedHint": "Actívalo solo si la cuenta de {store} de este equipo es tuya. Un favorito importado por error no se distingue de uno tuyo.",
   "settings.services.intro": "Servicios opcionales para carátulas, datos y precios. Para los datos usa solo uno: RAWG o IGDB.",
+  "settings.services.introPrices": "Servicios opcionales que usan tu propia clave. Hoy: precios con IsThereAnyDeal.",
   "settings.services.attribution": "Si usas RAWG, la ficha y la biblioteca mostrarán «Datos de RAWG» con un enlace, como exige su licencia.",
   "settings.folders.mode": "Cómo se detectan los juegos instalados",
   "settings.folders.list": "Ubicaciones",

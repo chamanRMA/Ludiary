@@ -205,9 +205,11 @@ function Services() {
   const { t } = useTranslation();
   const services = useQuery(() => api.getServices());
   const order = ["rawg", "igdb", "itad"] as const;
+  // RAWG and IGDB are hidden until their cut (ADR 86 point 9): without them, their texts would only confuse.
+  const metadata = services?.some((s) => s.purpose === "metadata") ?? false;
   return (
     <>
-      <p className={ui.muted}>{t("settings.services.intro")}</p>
+      <p className={ui.muted}>{t(metadata ? "settings.services.intro" : "settings.services.introPrices")}</p>
       <div>
         {order.map((id) => {
           const s = services?.find((x) => x.service === id);
@@ -215,7 +217,7 @@ function Services() {
         })}
       </div>
       {services?.some((s) => s.service === "itad" && s.configured) && <PriceSettings />}
-      <p className={ui.muted}>{t("settings.services.attribution")}</p>
+      {metadata && <p className={ui.muted}>{t("settings.services.attribution")}</p>}
     </>
   );
 }

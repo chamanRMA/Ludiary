@@ -163,6 +163,7 @@
   "settings.stores.collections.unverified": "Import the favorites even if the account is not confirmed",
   "settings.stores.collections.unverifiedHint": "Only turn it on if the {store} account on this computer is yours. A favorite imported by mistake cannot be told apart from your own.",
   "settings.services.intro": "Optional services for covers, details and prices. For details use only one: RAWG or IGDB.",
+  "settings.services.introPrices": "Optional services that use your own key. For now: prices with IsThereAnyDeal.",
   "settings.services.attribution": "If you use RAWG, the details page and the library will show “Data from RAWG” with a link, as its license requires.",
   "settings.folders.mode": "How installed games are detected",
   "settings.folders.list": "Locations",
