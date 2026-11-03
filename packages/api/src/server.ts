@@ -373,6 +373,8 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
       },
     },
     async (req, reply) => {
+      // Without a way to restart, nothing is prepared: a prepared copy would be applied by a later, unrelated start.
+      if (!deps.onRestartRequested) throw Object.assign(new Error("restart unavailable"), { code: "action-unavailable", key: "core.errors.action-unavailable" });
       await core.restoreBackup(req.body.id);
       return reply.code(202).send({ restarting: true });
     },

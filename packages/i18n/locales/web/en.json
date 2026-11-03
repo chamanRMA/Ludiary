@@ -193,6 +193,7 @@
   "settings.backups.confirm.no": "Cancel",
   "settings.backups.restarting": "Ludiary is restarting; it will open in a new tab. You can close this one.",
   "settings.backups.restored": "The backup from {when} was restored.",
+  "settings.backups.noFolder": "Choose a folder for the backups",
   "settings.backups.rolledBack": "The backup could not be restored. Your previous data was kept.",
   "settings.folders.restoredDisabled_one": "{count} folder that came from the backup was switched off. Review it and switch it on if it is yours.",
   "settings.folders.restoredDisabled_other": "{count} folders that came from the backup were switched off. Review them and switch them on if they are yours.",

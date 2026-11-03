@@ -96,7 +96,8 @@ const rowKey = (r: SchemaRow) => JSON.stringify([r.type, r.name, r.tbl_name, r.s
 function checkSchema(db: Database.Database, addon: SqliteAddon | undefined, migrations: readonly EmbeddedMigration[]): void {
   const rows = db.prepare("SELECT type, name, tbl_name, sql FROM sqlite_master").all() as SchemaRow[];
   const control = rows.find((r) => r.type === "table" && r.name === "schema_migrations");
-  if (!control) throw backupError("backup.not-ludiary");
+  // The control table must be exactly ours before anything is read from it (SQLite stores the statement without IF NOT EXISTS).
+  if (!control || control.sql !== SCHEMA_MIGRATIONS_DDL.replace("IF NOT EXISTS ", "")) throw backupError("backup.not-ludiary");
   let applied: { id: string; hash: string }[];
   try {
     applied = db.prepare("SELECT id, hash FROM schema_migrations ORDER BY id").all() as { id: string; hash: string }[];

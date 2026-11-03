@@ -151,15 +151,14 @@
     flex-wrap: wrap;
   }
 }
-.restarting {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: var(--bg);
+.dialog {
+  max-width: 480px;
+  padding: 20px;
+  border: 1px solid var(--ln);
+  border-radius: 14px;
+  background: var(--sf);
   color: var(--tx);
-  font-size: 18px;
-  text-align: center;
+}
+.dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
 }

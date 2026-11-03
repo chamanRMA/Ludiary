@@ -14,7 +14,7 @@ afterEach(async () => {
   server = null;
 });
 
-async function start(over: Parameters<typeof fakeCore>[0] = {}) {
+async function start(over: Parameters<typeof fakeCore>[0] = {}, withRestart = true) {
   const core = fakeCore({
     getBackups: async () => state,
     createBackup: async () => ({ id: ID, kind: "manual", createdAt: 1, sizeBytes: 5, foreign: false }),
@@ -25,7 +25,7 @@ async function start(over: Parameters<typeof fakeCore>[0] = {}) {
   const restarts: string[] = [];
   server = createLocalServer({
     appId: "Ludiary", version: "test", launcherKey: randomBytes(32), sessions: new SessionStore(), t: (k) => k, getStatus: () => ({}),
-    onShutdownRequested: () => {}, onRestartRequested: () => void restarts.push("restart"), core, webAssets: new Map(), mediaHosts: [],
+    onShutdownRequested: () => {}, ...(withRestart ? { onRestartRequested: () => void restarts.push("restart") } : {}), core, webAssets: new Map(), mediaHosts: [],
   });
   const port = await server.listen(0);
   const url = new URL(server.createOpenUrl());
@@ -83,6 +83,15 @@ describe("backup routes (ADR 89 point 8)", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(restarts).toEqual(["restart"]);
     expect(prepared).toEqual([ID]);
+  });
+
+  it("without a way to restart it answers action-unavailable and prepares nothing", async () => {
+    const prepared: string[] = [];
+    const { port, auth } = await start({ restoreBackup: async (id) => void prepared.push(id) }, false);
+    const res = await send(port, "/api/backups/restore", { method: "POST", headers: auth, body: { id: ID } });
+    expect(res.status).toBe(422);
+    expect(res.json()).toMatchObject({ error: "action-unavailable" });
+    expect(prepared).toEqual([]);
   });
 
   it("does not restart when the preparation fails, and maps the errors to their HTTP status", async () => {

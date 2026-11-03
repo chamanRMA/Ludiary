@@ -119,8 +119,30 @@ function readKept(db: Database.Database): { kept: KeptValues; chained: boolean }
 
 /** Step B, repeatable: wal/shm out of the way, then the restored file over the database. */
 function swapFiles(dataDir: string): void {
+  // Nothing to swap (already done, or the file was never there): touch nothing, the database in use may be the restored one.
+  if (!existsSync(join(dataDir, PENDING_SQLITE))) return;
   for (const f of [`${DB_FILE}-wal`, `${DB_FILE}-shm`, `${PENDING_SQLITE}-wal`, `${PENDING_SQLITE}-shm`]) rmSync(join(dataDir, f), { force: true });
-  if (existsSync(join(dataDir, PENDING_SQLITE))) renameWithRetries(join(dataDir, PENDING_SQLITE), join(dataDir, DB_FILE));
+  renameWithRetries(join(dataDir, PENDING_SQLITE), join(dataDir, DB_FILE));
+}
+
+/** Order matters: the database file is the last to move out and the first to come back (see rollBackRestore). */
+const RAW_FILES = [DB_FILE, `${DB_FILE}-wal`, `${DB_FILE}-shm`] as const;
+
+/** Moves what is still in dataDir into the raw folder. If one move fails, what was moved comes back. */
+function moveRaw(dataDir: string, raw: string): void {
+  const to = join(dataDir, "backups", raw);
+  mkdirSync(to, { recursive: true });
+  const moved: string[] = [];
+  try {
+    for (const f of [...RAW_FILES].reverse()) {
+      if (!existsSync(join(dataDir, f))) continue;
+      renameSync(join(dataDir, f), join(to, f));
+      moved.push(f);
+    }
+  } catch (e) {
+    for (const f of moved.reverse()) renameSync(join(to, f), join(dataDir, f));
+    throw e;
+  }
 }
 
 /**
@@ -140,9 +162,17 @@ export async function applyPendingRestoreSwap(
   }
   const backupDir = join(dataDir, "backups");
   const dbFile = join(dataDir, DB_FILE);
-  let kept: KeptValues = { nextAllowedAt: [], activeUserRoots: [] };
-  let preRestore: string | null = null;
-  if (existsSync(dbFile)) {
+  const defaults: KeptValues = { nextAllowedAt: [], activeUserRoots: [] };
+  let kept: KeptValues = defaults;
+  let preRestore: string | null = state.preRestore ?? null; // a retry of a raw move already knows its folder
+  if (preRestore?.endsWith("-raw")) {
+    try {
+      moveRaw(dataDir, preRestore);
+    } catch {
+      removePending(dataDir);
+      return null;
+    }
+  } else if (existsSync(dbFile)) {
     let db: Database.Database | null = null;
     try {
       db = openDatabase(dbFile, addon);
@@ -164,9 +194,9 @@ export async function applyPendingRestoreSwap(
       }
       const raw = `pre-restore-${String(now).padStart(15, "0")}-raw`;
       try {
-        mkdirSync(join(backupDir, raw), { recursive: true });
-        for (const f of [DB_FILE, `${DB_FILE}-wal`, `${DB_FILE}-shm`]) if (existsSync(join(dataDir, f))) renameSync(join(dataDir, f), join(backupDir, raw, f));
-        kept = { nextAllowedAt: [], activeUserRoots: [] };
+        // The state is written BEFORE moving, so a cut in the middle is finished (or undone) by the next start.
+        writeState(dataDir, { ...state, preRestore: raw, kept: defaults });
+        moveRaw(dataDir, raw);
         preRestore = raw;
         log("current database unreadable; moved aside");
       } catch {
@@ -176,10 +206,11 @@ export async function applyPendingRestoreSwap(
     }
   }
   const swapped: PendingRestore = { phase: "swapped", id: state.id, requestedAt: state.requestedAt, preRestore, kept };
-  writeState(dataDir, swapped);
   try {
+    writeState(dataDir, swapped);
     swapFiles(dataDir);
   } catch (e) {
+    // Whatever was written, the caller rolls back with the copy we know about (a raw folder is moved back).
     throw new SwapError(swapped, e);
   }
   return swapped;
@@ -240,19 +271,21 @@ export function rollBackRestore(dataDir: string, state: PendingRestore): void {
     return;
   }
   writeState(dataDir, { ...state, phase: "rolling-back" });
-  for (const f of [`${DB_FILE}-wal`, `${DB_FILE}-shm`]) rmSync(join(dataDir, f), { force: true });
-  if (state.preRestore) {
+  if (state.preRestore?.endsWith("-raw")) {
+    // Repeatable at any cut: the database file goes back first, so "ludiary.db is still in the raw folder" means that what
+    // sits in dataDir belongs to the restored database and may go; once it is back, nothing in dataDir is touched.
     const from = join(dataDir, "backups", state.preRestore);
-    if (state.preRestore.endsWith("-raw")) {
-      rmSync(join(dataDir, DB_FILE), { force: true });
-      for (const f of readdirSync(from)) renameWithRetries(join(from, f), join(dataDir, f));
-    } else {
-      // The copy stays in place; the database is rebuilt from a private copy of it.
-      const partial = join(dataDir, `${DB_FILE}.partial`);
-      writeFileSync(partial, readFileSync(from));
-      renameWithRetries(partial, join(dataDir, DB_FILE));
-    }
+    if (existsSync(join(from, DB_FILE))) for (const f of RAW_FILES) rmSync(join(dataDir, f), { force: true });
+    for (const f of RAW_FILES) if (existsSync(join(from, f))) renameWithRetries(join(from, f), join(dataDir, f));
   } else {
+    for (const f of [`${DB_FILE}-wal`, `${DB_FILE}-shm`]) rmSync(join(dataDir, f), { force: true });
+  }
+  if (state.preRestore && !state.preRestore.endsWith("-raw")) {
+    // The copy stays in place; the database is rebuilt from a private copy of it.
+    const partial = join(dataDir, `${DB_FILE}.partial`);
+    writeFileSync(partial, readFileSync(join(dataDir, "backups", state.preRestore)));
+    renameWithRetries(partial, join(dataDir, DB_FILE));
+  } else if (!state.preRestore) {
     rmSync(join(dataDir, DB_FILE), { force: true }); // there was no database before
   }
   removePending(dataDir);

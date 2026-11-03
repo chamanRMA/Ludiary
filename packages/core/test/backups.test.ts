@@ -173,6 +173,14 @@ describe("backup service", () => {
     expect((await h.core.getSettings()).backups.periodic).toBe(false);
   });
 
+  it("an invalid field in the same patch refuses everything before the copies are switched on", async () => {
+    const t = await setup([], false);
+    await expect(t.h.core.updateSettings({ backups: { periodic: true }, locale: "fr" as never })).rejects.toMatchObject({ code: "invalid-input" });
+    expect(t.h.store.kv.has("backups.periodic")).toBe(false);
+    await t.h.core.whenIdle();
+    expect(t.s.created).toEqual([]);
+  });
+
   it("activating with a folder saves it and starts the first copy without waiting for it", async () => {
     const t = await setup([], false);
     const settings = await t.h.core.updateSettings({ backups: { periodic: true } });

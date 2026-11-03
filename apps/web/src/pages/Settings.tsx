@@ -1,6 +1,6 @@
 import type { BackupDto, DetectionMode, ScanRootDto } from "@ludiary/api-contract";
 import i18next from "i18next";
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { changeLocale } from "../app/i18n";
 import { Link } from "../app/Link";
@@ -10,7 +10,8 @@ import { errorText } from "../app/errors";
 import { STORE_BRAND } from "../app/stores";
 import { api, isSimulated } from "../data/api";
 import type { GeneralSettings, SettingsUpdate } from "../data/api";
-import { mutate, useQuery } from "../data/hooks";
+import { backupDate } from "../app/backups";
+import { mutate, setRestarting, useQuery } from "../data/hooks";
 import { ApiError } from "../data/http";
 import { cx, PageTitle, relativeTime, SimNote } from "../components/bits";
 import { CollectionsStatusLine, withCollections } from "../components/CollectionsStatus";
@@ -295,6 +296,31 @@ function Folders() {
   );
 }
 
+/** Native modal dialog: focus is trapped inside, Escape cancels and focus goes back to the button that opened it. */
+function ConfirmRestore({ onCancel, onConfirm }: { onCancel(): void; onConfirm(): void }) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => dialog?.close();
+  }, []);
+  return (
+    <dialog ref={ref} className={styles.dialog} aria-labelledby="backup-confirm-title" aria-describedby="backup-confirm-body" onCancel={(e) => { e.preventDefault(); onCancel(); }}>
+      <b id="backup-confirm-title">{t("settings.backups.confirm.title")}</b>
+      <p id="backup-confirm-body">{t("settings.backups.confirm.body")}</p>
+      <div className={ui.actions} style={{ justifyContent: "flex-start" }}>
+        <button type="button" className={ui.btn} autoFocus onClick={onCancel}>
+          {t("settings.backups.confirm.no")}
+        </button>
+        <button type="button" className={cx(ui.btn, ui.primary)} onClick={onConfirm}>
+          {t("settings.backups.confirm.yes")}
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 function formatSize(bytes: number, lang: string): string {
   return new Intl.NumberFormat(lang, { style: "unit", unit: "megabyte", maximumFractionDigits: 1 }).format(bytes / 1_048_576);
 }
@@ -305,7 +331,6 @@ function Backups() {
   const backups = useQuery(() => api.getBackups());
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<BackupDto | null>(null);
-  const [restarting, setRestarting] = useState(false);
   if (!settings || !backups) return null;
   const when = (epoch: number) => new Date(epoch).toLocaleString(i18n.language);
   const run = async (action: () => Promise<unknown>): Promise<void> => {
@@ -334,32 +359,28 @@ function Backups() {
   };
   const restore = async (copy: BackupDto): Promise<void> => {
     setConfirming(null);
+    setError(null);
     try {
-      await run(() => api.restoreBackup(copy.id));
-      setRestarting(true); // the server is shutting down: this tab stops using the API
-    } catch {
-      // `run` already showed the error
+      await api.restoreBackup(copy.id); // no refresh: the server is shutting down
+      setRestarting(); // the whole app is replaced by the restart screen and stops querying
+    } catch (e) {
+      setError(errorText(t, e));
     }
   };
   const lastRestore = backups.lastRestore;
   return (
     <>
-      {restarting && (
-        <div role="alert" className={styles.restarting}>
-          <p>{t("settings.backups.restarting")}</p>
-        </div>
-      )}
       <p className={ui.muted}>{t("settings.backups.intro")}</p>
       <p className={ui.muted}>{t("settings.backups.warning")}</p>
       {lastRestore && (
         <p className={lastRestore.outcome === "ok" ? styles.notice : ui.error} role="status">
-          {lastRestore.outcome === "ok" ? t("settings.backups.restored", { when: when(lastRestore.at) }) : t("settings.backups.rolledBack")}
+          {lastRestore.outcome === "ok" ? t("settings.backups.restored", { when: when(backupDate(lastRestore.id) ?? lastRestore.at) }) : t("settings.backups.rolledBack")}
         </p>
       )}
       <Row title={t("settings.backups.periodic")} hint={t("settings.backups.periodicHint")}>
         <Switch checked={backups.periodic} label={t("settings.backups.periodic")} onChange={(periodic) => void setPeriodic(periodic)} />
       </Row>
-      <Row title={t("settings.backups.folder")} hint={backups.folder ? `${backups.folder}${backups.folderIsDefault ? ` (${t("settings.backups.defaultFolder")})` : ""}` : t("settings.backups.defaultFolder")}>
+      <Row title={t("settings.backups.folder")} hint={backups.folder ? `${backups.folder}${backups.folderIsDefault ? ` (${t("settings.backups.defaultFolder")})` : ""}` : t("settings.backups.noFolder")}>
         <button type="button" className={cx(ui.btn, ui.small)} onClick={() => void pickFolder().catch(() => undefined)}>
           {t("settings.backups.changeFolder")}
         </button>
@@ -394,28 +415,7 @@ function Backups() {
           </button>
         </div>
       ))}
-      {confirming && (
-        <div
-          role="alertdialog"
-          aria-labelledby="backup-confirm-title"
-          aria-describedby="backup-confirm-body"
-          className={styles.notice}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setConfirming(null);
-          }}
-        >
-          <b id="backup-confirm-title">{t("settings.backups.confirm.title")}</b>
-          <p id="backup-confirm-body">{t("settings.backups.confirm.body")}</p>
-          <div className={ui.actions} style={{ justifyContent: "flex-start" }}>
-            <button type="button" className={ui.btn} autoFocus onClick={() => setConfirming(null)}>
-              {t("settings.backups.confirm.no")}
-            </button>
-            <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void restore(confirming)}>
-              {t("settings.backups.confirm.yes")}
-            </button>
-          </div>
-        </div>
-      )}
+      {confirming && <ConfirmRestore onCancel={() => setConfirming(null)} onConfirm={() => void restore(confirming)} />}
       <p className={ui.muted}>{t("settings.backups.noKey")}</p>
     </>
   );

@@ -193,6 +193,25 @@ describe("prepareRestore (ADR 89 point 6.1, 16 H2 M5 M6)", () => {
   it("rejects a SQLite file with no schema_migrations", () => reject((f) => void new Database(f).exec("CREATE TABLE t (a); PRAGMA journal_mode = DELETE").close(), "backup.not-ludiary"));
   it("rejects migrations this version does not know", () => reject(edit((db) => db.exec("INSERT INTO schema_migrations VALUES ('9999_future', 'x', 1)")), "backup.too-new"));
   it("rejects a changed hash", () => reject(edit((db) => db.exec("UPDATE schema_migrations SET hash = 'abc' WHERE id = '0002_store_account'")), "backup.not-ludiary"));
+  it("rejects a schema_migrations table that is not exactly ours", () =>
+    reject(edit((db) => db.exec("DROP TABLE schema_migrations; CREATE TABLE schema_migrations (id TEXT PRIMARY KEY NOT NULL, hash TEXT NOT NULL, applied_at INTEGER NOT NULL, extra TEXT)")), "backup.not-ludiary"));
+  it("rejects a valid SQLite file that fails the integrity check", () =>
+    reject(async (f) => {
+      await makeLudiaryDb(f, {});
+      const db = new Database(f);
+      db.pragma("journal_mode = DELETE");
+      for (let i = 0; i < 400; i++) db.prepare("INSERT INTO settings (user_id, key, value) VALUES (NULL, ?, ?)").run(`k${i}`, "x".repeat(1500));
+      db.close();
+      // Zero a page in the middle of the file: the first page (the schema) stays readable.
+      const bytes = readFileSync(f);
+      bytes.fill(0, Math.floor(bytes.length / 2 / 4096) * 4096, Math.floor(bytes.length / 2 / 4096) * 4096 + 4096);
+      writeFileSync(f, bytes);
+    }, "backup.corrupt"));
+  it("rejects a valid SQLite file with a broken foreign key", () =>
+    reject(edit((db) => {
+      db.pragma("foreign_keys = OFF");
+      db.exec("INSERT INTO devices (id, user_id, name, kind) VALUES ('d9', 'nobody', 'x', 'local')");
+    }), "backup.corrupt"));
   it("rejects a gap in the applied migrations", () => reject(edit((db) => db.exec("DELETE FROM schema_migrations WHERE id = '0002_store_account'")), "backup.not-ludiary"));
   it("rejects an extra trigger, view or index (also with names that a LIKE pattern would hide)", async () => {
     const extras = [

@@ -13,6 +13,7 @@ import {
   readSettings,
   requireRoot,
   resetOnboarding,
+  validatePatch,
   writeSettings,
 } from "./settings";
 import { createSyncService } from "./sync";
@@ -189,7 +190,8 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
 
     getSettings: () => readSettings(env),
     async updateSettings(patch) {
-      // ADR 89: first, so that a refusal (no folder) saves nothing of the rest.
+      // ADR 89: the whole patch is validated first, then the backup switch (it may refuse: no folder), then the rest.
+      validatePatch(env, patch);
       if (patch !== null && typeof patch === "object" && patch.backups?.periodic !== undefined) await backups.setPeriodic(patch.backups.periodic);
       const { settings, detectionChanged, collections } = await writeSettings(env, patch);
       // ADR 88: off deletes the mirrors (the setting is already stored, so a pass in flight finds it off); on, or the favorites setting, runs a pass.

@@ -35,11 +35,8 @@ export async function readSettings(env: Env): Promise<Settings> {
   };
 }
 
-/** Validates and stores a patch. Returns the settings, whether the detection mode changed and the stores whose collections settings changed. */
-export async function writeSettings(
-  env: Env,
-  patch: SettingsPatch,
-): Promise<{ settings: Settings; detectionChanged: boolean; collections: { store: StoreId; enabledChanged: boolean; unverifiedChanged: boolean }[] }> {
+/** Throws `invalid-input` for anything wrong in the patch, before anything is stored. Returns the per-store entries. */
+export function validatePatch(env: Env, patch: SettingsPatch): [StoreId, Partial<StoreCollectionsSettings>][] {
   if (patch === null || typeof patch !== "object") throw new CoreError("invalid-input", "Settings patch must be an object");
   if (patch.locale !== undefined && !(LOCALES as readonly unknown[]).includes(patch.locale)) {
     throw new CoreError("invalid-input", "Unknown locale");
@@ -56,6 +53,18 @@ export async function writeSettings(
       if (v[k] !== undefined && typeof v[k] !== "boolean") throw new CoreError("invalid-input", `${k} must be a boolean`);
     }
   }
+  if (patch.backups !== undefined && (patch.backups === null || typeof patch.backups !== "object" || (patch.backups.periodic !== undefined && typeof patch.backups.periodic !== "boolean"))) {
+    throw new CoreError("invalid-input", "backups.periodic must be a boolean");
+  }
+  return wanted;
+}
+
+/** Validates and stores a patch. Returns the settings, whether the detection mode changed and the stores whose collections settings changed. */
+export async function writeSettings(
+  env: Env,
+  patch: SettingsPatch,
+): Promise<{ settings: Settings; detectionChanged: boolean; collections: { store: StoreId; enabledChanged: boolean; unverifiedChanged: boolean }[] }> {
+  const wanted = validatePatch(env, patch);
   const before = await readSettings(env);
   if (patch.locale !== undefined) await env.deps.settings.set(K_LOCALE, patch.locale);
   if (patch.detection !== undefined) {
