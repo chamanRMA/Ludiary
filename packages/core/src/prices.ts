@@ -1,7 +1,7 @@
 // Price comparison (ADR 86, points 7 and 15). The service describes and fetches; the core matches games, validates
 // everything it returns as untrusted, caches, spends a budget and decides what the user sees.
 import { ConnectorError } from "@ludiary/contracts";
-import type { PriceService, PriceServiceId, PriceSnapshot, StoreId, SyncContext } from "@ludiary/contracts";
+import type { HttpClient, PriceService, PriceServiceId, PriceSnapshot, StoreId, SyncContext } from "@ludiary/contracts";
 import { epochOf, bumpEpoch, serviceContext, serviceKey } from "./contexts";
 import {
   PRICE_BATCH,
@@ -103,7 +103,7 @@ function checkLink(raw: unknown, hosts: readonly string[], dropped: Set<string>)
     if (HOST_SHAPE.test(host) && dropped.size < MAX_DROPPED_HOSTS) dropped.add(host);
     return undefined;
   }
-  return u.href;
+  return raw; // validated through URL, shown as received (ITAD9)
 }
 
 /** Point 7: everything the service returned is untrusted. A deal that does not comply is dropped; the data is never altered. */
@@ -170,37 +170,70 @@ export interface PriceFeature {
   unwatch(id: string): Promise<void>;
 }
 
-/** `cancelWizards` drops the open wizard of the service (disconnect). */
-export function createPriceFeature(env: Env, cancelWizards: (key: ReturnType<typeof serviceKey>) => void): PriceFeature {
+/** Budget and 429 wait of the service, shared by the queries and the key check of the wizard (ADR 86 point 7). */
+export interface PriceGate {
+  /** false while a 429 wait lasts or the budget is spent; otherwise counts one request. */
+  spend(): boolean;
+  limitedUntil(): number | undefined;
+  wait(until: number): void;
+  /** The wizard's HttpClient: every request spends budget, respects the wait and records a 429. */
+  guard(http: HttpClient): HttpClient;
+}
+
+export function createPriceGate(env: Env): PriceGate {
   const { deps } = env;
-  const key = serviceKey(ID);
-  const repo = () => deps.prices;
   /** Requests spent, per user, in memory (point 7). */
   const budgets = new Map<string, number[]>();
-  /** One wait for the service after a 429. */
+  /** One wait for the service after a 429. Kept across disconnects. */
   let waitUntil = 0;
-  let lastManualAt = -Infinity;
-  const inflight = new Map<string, Promise<void>>();
-  /** Recent search results, per user: resultId -> what the server saw (point 15, M6). */
-  const searches = new Map<string, Map<string, SearchEntry>>();
-
   const spent = (): number[] => {
     const now = deps.clock.now();
     const list = (budgets.get(env.userId) ?? []).filter((t) => now - t < PRICE_BUDGET_WINDOW_MS);
     budgets.set(env.userId, list);
     return list;
   };
-  const spend = (): boolean => {
-    const list = spent();
-    if (list.length >= PRICE_BUDGET) return false;
-    list.push(deps.clock.now());
-    return true;
-  };
   const limitedUntil = (): number | undefined => {
     const list = spent();
     const until = Math.max(waitUntil, list.length >= PRICE_BUDGET ? list[0]! + PRICE_BUDGET_WINDOW_MS : 0);
     return until > deps.clock.now() ? until : undefined;
   };
+  const gate: PriceGate = {
+    spend() {
+      if (waitUntil > deps.clock.now()) return false;
+      const list = spent();
+      if (list.length >= PRICE_BUDGET) return false;
+      list.push(deps.clock.now());
+      return true;
+    },
+    limitedUntil,
+    wait: (until) => void (waitUntil = until),
+    guard: (http) => ({
+      async request(req) {
+        if (!gate.spend()) {
+          throw new ConnectorError("store.rate-limited", "The price request limit is spent", { messageKey: asKey("prices.errors.limited"), retryAfterMs: Math.max(0, (limitedUntil() ?? deps.clock.now()) - deps.clock.now()) });
+        }
+        try {
+          return await http.request(req);
+        } catch (e) {
+          if (e instanceof ConnectorError && e.code === "store.rate-limited") gate.wait(deps.clock.now() + Math.min(e.details.retryAfterMs ?? PRICE_BUDGET_WINDOW_MS, MAX_MEDIA_RETRY_MS));
+          throw e;
+        }
+      },
+    }),
+  };
+  return gate;
+}
+
+/** `cancelWizards` drops the open wizard of the service (disconnect). */
+export function createPriceFeature(env: Env, gate: PriceGate, cancelWizards: (key: ReturnType<typeof serviceKey>) => void): PriceFeature {
+  const { deps } = env;
+  const key = serviceKey(ID);
+  const repo = () => deps.prices;
+  const limitedUntil = gate.limitedUntil;
+  let lastManualAt = -Infinity;
+  const inflight = new Map<string, Promise<void>>();
+  /** Recent search results, per user: resultId -> what the server saw (point 15, M6). */
+  const searches = new Map<string, Map<string, SearchEntry>>();
 
   async function state(): Promise<ServiceState> {
     if (!env.services.has(ID) || !(await deps.secrets.get(serviceScope(ID), "apiKey"))) return "disconnected";
@@ -221,7 +254,7 @@ export function createPriceFeature(env: Env, cancelWizards: (key: ReturnType<typ
   /** One request to the service: epoch, wait, budget, time limit and the error rules of point 15 (M2). */
   async function query<T>(epoch: number, svc: PriceService, maxBytes: number, work: (ctx: SyncContext) => Promise<T>): Promise<T> {
     if (epochOf(env, key) !== epoch) throw new Stop("gone");
-    if (waitUntil > deps.clock.now() || !spend()) throw new Stop("limited");
+    if (!gate.spend()) throw new Stop("limited");
     const signal = deps.clock.timeout(PRICE_CALL_MS);
     try {
       return await withTimeout(signal, async () => work(await serviceContext(env, svc, signal, { maxBytes })));
@@ -234,7 +267,7 @@ export function createPriceFeature(env: Env, cancelWizards: (key: ReturnType<typ
           throw new Stop("invalid");
         }
         if (e.code === "store.rate-limited") {
-          waitUntil = deps.clock.now() + Math.min(e.details.retryAfterMs ?? PRICE_BUDGET_WINDOW_MS, MAX_MEDIA_RETRY_MS);
+          gate.wait(deps.clock.now() + Math.min(e.details.retryAfterMs ?? PRICE_BUDGET_WINDOW_MS, MAX_MEDIA_RETRY_MS));
           throw new Stop("limited");
         }
       }
@@ -383,7 +416,6 @@ export function createPriceFeature(env: Env, cancelWizards: (key: ReturnType<typ
       await deps.settings.delete(serviceStatusKey(service));
       await repo()?.clearService(service);
       searches.delete(env.userId);
-      waitUntil = 0;
       bumpEpoch(env, key);
     },
 

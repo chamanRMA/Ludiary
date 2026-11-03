@@ -19,7 +19,7 @@ import { createSyncService } from "./sync";
 import { storeScope, createServiceVaultFactory, createVaultFactory } from "./vault";
 import { checkPriceServiceManifest } from "@ludiary/contracts";
 import type { PriceService, PriceServiceId } from "@ludiary/contracts";
-import { createPriceFeature } from "./prices";
+import { createPriceFeature, createPriceGate } from "./prices";
 import { createWizardEngine } from "./wizards";
 import { createCollectionMirror } from "./collection-mirror";
 import { bumpEpoch, syncContext } from "./contexts";
@@ -86,8 +86,9 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
   env.serviceVaultFor = createServiceVaultFactory(env);
   const mirror = createCollectionMirror(env);
   const sync = createSyncService(env, mirror);
-  const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }));
-  const prices = createPriceFeature(env, (key) => wizards.cancelTarget(key));
+  const gate = createPriceGate(env);
+  const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }), gate);
+  const prices = createPriceFeature(env, gate, (key) => wizards.cancelTarget(key));
   const launch = createLaunchService(env);
   const capabilities: CoreCapabilities = {
     canScan: true,

@@ -107,10 +107,10 @@ const prop = (id: string, canonical: string, store: StoreId, storeGameId: string
   id, canonicalGameId: canonical, store, storeGameId, kind: "game", baseStoreGameId: null, title: "T", normalizedTitle: "t", owned: true, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null, ...over,
 });
 
-async function setup(opts: { answers?: Parameters<typeof double>[1]; over?: Partial<PriceService>; key?: boolean; country?: string | null } = {}) {
+async function setup(opts: { answers?: Parameters<typeof double>[1]; over?: Partial<PriceService>; key?: boolean; country?: string | null; http?: Harness["deps"]["http"] } = {}) {
   const mem = memoryPrices();
   const d = double(opts.over, opts.answers);
-  const h = await harness({ prices: mem.repo, priceServices: [d.svc], http: () => ({ request: async () => { throw new Error("no network"); } }) });
+  const h = await harness({ prices: mem.repo, priceServices: [d.svc], http: opts.http ?? (() => ({ request: async () => { throw new Error("no network"); } })) });
   if (opts.key !== false) {
     await h.deps.secrets.put({ scope: "service:itad", name: "apiKey", ciphertext: h.deps.cipher.encrypt("KEY-0123456789abcdef", "user|service:itad|apiKey"), keyId: 1, updatedAt: 1 });
   }
@@ -464,5 +464,76 @@ describe("settings", () => {
     expect((await plain.core.getSettings()).prices).toBeUndefined();
     await expect(plain.core.updateSettings({ prices: { country: "ES" } })).rejects.toMatchObject({ code: "invalid-input" });
     expect(await plain.core.listServices()).toEqual([]);
+  });
+});
+
+describe("review of the code (ADR 86 low findings)", () => {
+  it("connecting a new key moves the epoch: a late 401 of a refresh begun before cannot mark it invalid", async () => {
+    let fail: () => void = () => undefined;
+    const gate = new Promise<void>((_, reject) => (fail = () => reject(new ConnectorError("auth.invalid", "late"))));
+    const { h } = await setup({ over: { prices: async () => { await gate; return []; } }, answers: { store: { "steam:10": U1 } } });
+    game(h, "c1", "A", [["steam", "10"]]);
+    const running = h.core.refreshPrices({ canonicalIds: ["c1"] });
+    await new Promise((r) => setTimeout(r, 5));
+    const w = await h.core.startServiceWizard("itad", BASE);
+    await h.core.submitWizard(w.wizardId, "intro", { kind: "continue" });
+    expect(await h.core.submitWizard(w.wizardId, "key", { kind: "fields", values: { apiKey: "KEY-NEW-0123456789abcdef" } })).toEqual({ kind: "done" });
+    fail();
+    await running;
+    expect(h.store.kv.has("services.itad.status")).toBe(false);
+    expect((await h.core.listServices())[0]!.status).toBe("connected");
+  });
+
+  const withHttp = (calls: string[]) => {
+    const { svc } = double();
+    const check: PriceService["connection"] = {
+      ...svc.connection,
+      submit: async (ctx, stepId, input) => {
+        if (stepId !== "key") return svc.connection.submit(ctx, stepId, input);
+        await ctx.http.request({ method: "GET", url: "https://api.example.com/check" });
+        await ctx.wizardState.set("apiKey", "KEY-NEW-0123456789abcdef");
+        return { kind: "done" };
+      },
+    };
+    return { over: { connection: check }, http: (() => ({ request: async (r: { url: string }) => (calls.push(r.url), { status: 200, headers: {}, json: async () => ({}), text: async () => "" }) })) as Harness["deps"]["http"] };
+  };
+  const connect = async (h: Harness) => {
+    const w = await h.core.startServiceWizard("itad", BASE);
+    await h.core.submitWizard(w.wizardId, "intro", { kind: "continue" });
+    return h.core.submitWizard(w.wizardId, "key", { kind: "fields", values: { apiKey: "KEY-NEW-0123456789abcdef" } });
+  };
+
+  it("the wait after a 429 survives a disconnect, and the key check of the wizard respects it", async () => {
+    const calls: string[] = [];
+    const { over, http } = withHttp(calls);
+    const { h } = await setup({ over: { ...over, prices: async () => { throw new ConnectorError("store.rate-limited", "slow", { retryAfterMs: 10 * 60_000 }); } }, answers: { store: { "steam:10": U1 } }, http });
+    game(h, "c1", "A", [["steam", "10"]]);
+    await h.core.refreshPrices({ canonicalIds: ["c1"] });
+    await h.core.disconnectService("itad");
+    expect(await connect(h)).toMatchObject({ kind: "rejected", error: { code: "store.rate-limited", key: "prices.errors.limited" } });
+    expect(calls).toEqual([]);
+    h.clock.time += 11 * 60_000;
+    expect(await connect(h)).toEqual({ kind: "done" });
+    expect(calls).toEqual(["https://api.example.com/check"]);
+  });
+
+  it("the key check of the wizard spends the budget like any request", async () => {
+    const calls: string[] = [];
+    const { over, http } = withHttp(calls);
+    const { h } = await setup({ over, http });
+    for (let i = 0; i < 200; i++) await h.core.searchPrices(`title ${i}`);
+    expect(await connect(h)).toMatchObject({ kind: "rejected", error: { code: "store.rate-limited" } });
+    expect(calls).toEqual([]);
+    h.clock.time += 5 * 60_000;
+    expect(await connect(h)).toEqual({ kind: "done" });
+    expect(calls.length).toBe(1);
+  });
+
+  it("a deal link is shown exactly as the service sent it", async () => {
+    const url = "https://ITAD.link/x?a=1&b=%7e#frag";
+    const { h } = await setup({ answers: { store: { "steam:10": U1 }, prices: [{ id: U1, deals: [deal({ url })], historyLow: null }] } });
+    game(h, "c1", "A", [["steam", "10"]]);
+    await h.core.refreshPrices({ canonicalIds: ["c1"] });
+    expect((await h.core.getGamePrices("c1")).prices!.deals[0]!.url).toBe(url);
   });
 });

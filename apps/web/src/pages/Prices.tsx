@@ -71,7 +71,7 @@ function Search() {
           </div>
           <span className={ui.chips}>
             <TypeChip type={r.type} />
-            <button type="button" className={cx(ui.btn, ui.small)} disabled={r.watched} onClick={() => void follow(r)}>
+            <button type="button" className={cx(ui.btn, ui.small)} disabled={r.watched} aria-label={t("prices.followLabel", { title: r.title })} onClick={() => void follow(r)}>
               {t(r.watched ? "prices.following" : "prices.follow")}
             </button>
           </span>
@@ -97,7 +97,11 @@ export function Prices() {
     if (ids.length === 0) return;
     setBusy(true);
     try {
-      await mutate(api.refreshPrices({ watchIds: ids.slice(0, 200), ...(manual ? { manual: true } : {}) }));
+      // Batches of 200, one after the other (the list holds up to 500). Only the first is manual: the server floor of a minute
+      // would skip the rest, which then refresh by the usual 6 hour rule.
+      for (let i = 0; i < ids.length; i += 200) {
+        await mutate(api.refreshPrices({ watchIds: ids.slice(i, i + 200), ...(manual && i === 0 ? { manual: true } : {}) }));
+      }
       setError(null);
     } catch (e) {
       setError(errorText(t, e));

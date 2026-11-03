@@ -38,7 +38,7 @@
   "core.errors.limit-reached.watch": "You can follow {max} games at most.",
   "prices.errors.notConnected": "Connect IsThereAnyDeal in Settings > Services to compare prices.",
   "prices.errors.countryMissing": "Choose your country in Settings > Services before looking up prices.",
-  "prices.errors.limited": "IsThereAnyDeal is asking us to wait. Showing the last saved prices; try again in a few minutes.",
+  "prices.errors.limited": "The limit of price requests has been reached. Try again later.",
   "core.errors.picker-unavailable": "This mode of Ludiary cannot open the folder picker.",
   "core.errors.timeout": "The operation took too long and was cancelled.",
   "core.errors.collectionManaged": "This collection comes from {store}. Change it in {store}.",

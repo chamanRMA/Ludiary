@@ -38,7 +38,7 @@
   "core.errors.limit-reached.watch": "Puedes seguir {max} juegos como máximo.",
   "prices.errors.notConnected": "Conecta IsThereAnyDeal en Ajustes > Servicios para comparar precios.",
   "prices.errors.countryMissing": "Elige tu país en Ajustes > Servicios antes de consultar precios.",
-  "prices.errors.limited": "IsThereAnyDeal nos pide esperar. Se muestran los últimos precios guardados; prueba de nuevo en unos minutos.",
+  "prices.errors.limited": "Se ha alcanzado el límite de consultas de precios. Vuelve a intentarlo más tarde.",
   "core.errors.picker-unavailable": "Este modo de Ludiary no puede abrir el selector de carpetas.",
   "core.errors.timeout": "La operación ha tardado demasiado y se ha cancelado.",
   "core.errors.collectionManaged": "Esta colección viene de {store}; cámbiala en {store}.",

@@ -8,6 +8,7 @@ import { EMBEDDED_LOGIN_MS, MAX_WIZARDS, WIZARD_CALL_MS, WIZARD_TTL_MS, type Env
 import { asKey, CoreError, defaultKey, toErrorInfo } from "./errors";
 import type { CoreErrorInfo } from "./model";
 import { withTimeout } from "./timeout";
+import type { PriceGate } from "./prices";
 import { serviceStatusKey, storeScope } from "./vault";
 
 const STEP_ID = /^[a-z][a-z0-9-]{0,31}$/;
@@ -236,7 +237,7 @@ function cleanField(f: WizardField, raw: string, hosts: readonly string[]): stri
   return value;
 }
 
-export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Promise<void>): WizardEngine {
+export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Promise<void>, gate: PriceGate): WizardEngine {
   const { deps } = env;
   const sessions = new Map<string, Session>();
 
@@ -314,12 +315,18 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
       connection: svc.connection,
       logFields: { service },
       interactive: false,
-      context: (signal) => serviceContext(env, svc, signal, { maxBytes: 1024 * 1024 }),
+      // The key check is a request like any other: it respects the wait after a 429 and spends budget (ADR 86 point 7).
+      context: async (signal) => {
+        const ctx = await serviceContext(env, svc, signal, { maxBytes: 1024 * 1024 });
+        return { ...ctx, http: gate.guard(ctx.http) };
+      },
       async onDone(s, stepId, done, live) {
         if (!live || epochOf(env, serviceKey(service)) !== s.epoch) return rejectedCode(stepId, "invalid-input");
         const apiKey = s.state.get("apiKey");
         if (apiKey === undefined || apiKey === "") return rejectedCode(stepId, "internal");
         await env.serviceVaultFor(service).set("apiKey", apiKey);
+        // Before and after: a late 401 of a refresh that began under the old key must not mark the new one invalid.
+        bumpEpoch(env, serviceKey(service));
         await deps.settings.delete(serviceStatusKey(service));
         bumpEpoch(env, serviceKey(service));
         sessions.delete(s.id);
