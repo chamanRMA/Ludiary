@@ -1,0 +1,147 @@
+# ADR 90 point 21: when a pull request with a release:patch / release:minor / release:major label is merged into main, build the
+# installer and make a DRAFT release. The maintainer signs it on their own machine (pnpm release:publish); no key lives here.
+# No secrets are used: only the GITHUB_TOKEN, with the least permission each job needs. Never add pull_request_target, workflow_run
+# or secrets.*. Nothing that comes from the pull request (title, body, branch) may be written inside a `run:` block.
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+env:
+  # Inno Setup is not on the runner image (assumption CI5). Version validated with the prototype; hash from the release
+  # page of github.com/jrsoftware/issrc (tag is-6_7_3) and checked again here. To update: change both and note it in docs/release.md.
+  INNO_VERSION: "6.7.3"
+  INNO_SHA256: "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732"
+
+jobs:
+  plan:
+    if: github.repository == 'chamanRMA/Ludiary'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      version: ${{ steps.plan.outputs.version }}
+      pr: ${{ steps.plan.outputs.pr }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - name: Find the pull request and the tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" > pulls.json
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v" --jq '.[].ref' > tags.txt
+      - name: Plan
+        id: plan
+        run: node apps/desktop/scripts/release-plan.mjs --pulls pulls.json --tags tags.txt --sha "$GITHUB_SHA" --out notes.md
+      - name: Keep the notes
+        if: steps.plan.outputs.release == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: notes
+          path: notes.md
+          retention-days: 7
+          if-no-files-found: error
+
+  build:
+    needs: plan
+    if: github.repository == 'chamanRMA/Ludiary' && needs.plan.outputs.release == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/desktop/launcher/go.mod
+      - name: Install pnpm and the dependencies
+        shell: bash
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Install Inno Setup (checked against its SHA-256)
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP "innosetup.exe"
+          Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/is-$($env:INNO_VERSION -replace '\.', '_')/innosetup-$($env:INNO_VERSION).exe" -OutFile $installer
+          $hash = (Get-FileHash -Algorithm SHA256 -Path $installer).Hash.ToLowerInvariant()
+          if ($hash -ne $env:INNO_SHA256) { throw "Inno Setup $($env:INNO_VERSION): SHA-256 is $hash, expected $($env:INNO_SHA256)" }
+          $run = Start-Process -FilePath $installer -ArgumentList "/VERYSILENT", "/CURRENTUSER", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+          if ($run.ExitCode -ne 0) { throw "Inno Setup installer exited with code $($run.ExitCode)" }
+          $iscc = Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc after installing Inno Setup" }
+      - name: Build the installer
+        shell: bash
+        env:
+          LUDIARY_VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          pnpm --filter @ludiary/desktop release:build || {
+            echo "::error::release:build failed. Without the two real public keys in apps/desktop/update-keys.json no release can be built (ADR 90 point 21.5). Add them in a normal PR first."
+            exit 1
+          }
+          pnpm --filter @ludiary/desktop release:manifest
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installer
+          path: |
+            apps/desktop/dist/installer/Ludiary-Setup-*.exe
+            apps/desktop/dist/installer/ludiary-update.json
+            apps/desktop/dist/installer/SHA256SUMS.txt
+          retention-days: 7
+          if-no-files-found: error
+
+  release:
+    needs: [plan, build]
+    if: github.repository == 'chamanRMA/Ludiary' && needs.plan.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Only one run may look for a pending draft and create the next one at a time.
+    concurrency:
+      group: release-draft
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: installer
+          path: dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: notes
+          path: notes
+      - name: Create the draft (only one pending at a time)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::the planned version is not x.y.z"
+            exit 1
+          fi
+          pending=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft --jq '[.[] | select(.isDraft) | .tagName] | join(", ")')
+          if [ -n "$pending" ]; then
+            echo "::error::there is a pending draft ($pending): publish it or delete it, then use \"Re-run all jobs\" on this run"
+            exit 1
+          fi
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${VERSION}" > /dev/null 2>&1 || gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::v${VERSION} already exists: use \"Re-run all jobs\" so the version is planned again"
+            exit 1
+          fi
+          gh release create "v${VERSION}" --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "Ludiary ${VERSION}" --notes-file notes/notes.md \
+            "dist/Ludiary-Setup-${VERSION}.exe" "dist/ludiary-update.json" "dist/SHA256SUMS.txt"
+          echo "Draft v${VERSION} created. Sign and publish it with: pnpm --filter @ludiary/desktop release:publish ${VERSION} <key file>" >> "$GITHUB_STEP_SUMMARY"

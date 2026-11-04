@@ -580,7 +580,7 @@ Además:
 **Consecuencias:**
 
 - La guía de contribución indica cómo instalar pnpm en Windows sin Corepack.
-- La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee).
+- La CI instala pnpm a partir de `packageManager` (supuesto: `pnpm/action-setup` lo lee). *Revisado en la decisión 90, punto 21: con `corepack enable`, sin acción de terceros.*
 - Cada dependencia con scripts de instalación necesita una entrada justificada en la lista de permitidos; el `auditor` la revisa.
 
 ### 40. Contrato de los conectores de tienda (ampliada en las decisiones 71, 72, 73, 74 y 76; fila de GOG de la tabla revisada en la 76; regla 7 revisada para GOG y regla 5 revisada en la decisión 77; regla 7 revisada para Epic y fila de Epic revisada en la decisión 78; `ResolvedLocation.subkey` añadido y fila de Ubisoft de la tabla revisada en la decisión 79; propósito `library`, `SyncContext.fs`, `ScopedFileReader.readBytes`, paso `embedded-login`, entrada `embedded` y puerto `EmbeddedLogin` añadidos, y fila de Ubisoft de la tabla revisada otra vez, en la decisión 80; fila de EA de la tabla y `readText` con UTF-16 revisados en la decisión 81; fila de EA revisada otra vez y `source` en la captura de `embedded-login` en la decisión 82)
@@ -6919,7 +6919,7 @@ Sin críticos; cuatro altos, seis medios y cuatro bajos. **Se aceptan todos.** E
 | **B3** | BK3 era falso; Documentos con `KnownFolderPath(FOLDERID_Documents)` en el auxiliar; el puerto devuelve Documentos y el `BackupStore` compone la subcarpeta. | 4, 13, 15 |
 | **B4** | Se conserva `next_allowed_at` de la base actual; se ignoran las copias con fecha futura; 500 más nuevas en el servidor; `PATCH periodic: true` sin carpeta no se guarda y con fallo se guarda y deja `lastError`; la web no manda `folder`; `whenIdle` incluye el cerrojo de copias. | 4, 5, 6.3 C, 10 |
 
-### 90. Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás (concreta las decisiones 32 y 58; amplía las 45, 57, 63, 64, 65 y 69; revisa la 62; se implementa después de la 89)
+### 90. Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás (concreta las decisiones 32 y 58; amplía las 45, 57, 63, 64, 65 y 69; revisa la 62; se implementa después de la 89; flujo de publicación semiautomático en el punto 21)
 
 *Revisión del auditor sobre el diseño en el punto 18, que prevalece sobre los puntos 1 a 17 donde no coincida.*
 
@@ -7087,7 +7087,7 @@ Casos límite:
 
 #### 11. Publicación (lado del proyecto)
 
-1. **Ficheros de cada versión `v<X.Y.Z>`** (la etiqueta coincide con `apps/desktop/package.json`): `Ludiary-Setup-X.Y.Z.exe`, `ludiary-update.json`, `ludiary-update.json.sig` y `SHA256SUMS.txt` (para personas). El código correspondiente (60) es el archivo de la etiqueta que genera GitHub.
+1. **Ficheros de cada versión `v<X.Y.Z>`** (la etiqueta coincide con `apps/desktop/package.json`; *revisado en el punto 21: la versión la fija la etiqueta y llega a la compilación por `LUDIARY_VERSION`; `package.json` se queda en `0.0.0`*): `Ludiary-Setup-X.Y.Z.exe`, `ludiary-update.json`, `ludiary-update.json.sig` y `SHA256SUMS.txt` (para personas). El código correspondiente (60) es el archivo de la etiqueta que genera GitHub.
 2. **Guiones** (nuevos, en `apps/desktop/scripts/`):
    - `release:build`: `build.mjs` con `LUDIARY_VERSION`, sin ganchos de prueba, con las claves públicas y el repositorio incrustados;
    - `release:manifest`: escribe el manifiesto con tamaño y hash;
@@ -7096,7 +7096,7 @@ Casos límite:
 3. **Publicar:** se crea la versión como **borrador**, se suben los cuatro ficheros, se revisan y se publica. Se activan las *immutable releases* en el repositorio (GH6): tras publicar, ni los recursos ni la etiqueta se pueden cambiar, y GitHub genera una atestación, comprobable con `gh release verify`.
 4. **Claves:** dos pares desde el principio, una principal y otra de reserva guardada en otro sitio, las dos incrustadas. Si se pierde o se compromete la principal, se firma con la de reserva y la versión siguiente retira la principal. Para rotar, una versión firmada con una clave aún válida incrusta el conjunto nuevo. Perder las dos obliga a reinstalar a mano (lo dice la guía).
 5. **Custodia de la clave privada (15.3, revisa la 58):** recomendado (a), fuera de línea con el mantenedor y cifrada, nunca en GitHub. (b): secreto de GitHub Actions en un entorno protegido con revisor obligatorio y etiquetas protegidas.
-6. **Cuando haya CI** (`.github/workflows/release.yml`, en Windows, al empujar una etiqueta `v*`): compila, genera el manifiesto y crea el borrador con el instalador y el manifiesto. Con (a), el mantenedor revisa la ejecución y el commit, descarga el manifiesto, lo firma en local, sube la `.sig` y publica. Hasta entonces, todo en local con los mismos guiones.
+6. **Cuando haya CI** (`.github/workflows/release.yml`, en Windows, al empujar una etiqueta `v*`; *revisado en el punto 21: se dispara al fusionar en `main` un PR con etiqueta `release:*`*): compila, genera el manifiesto y crea el borrador con el instalador y el manifiesto. Con (a), el mantenedor revisa la ejecución y el commit, descarga el manifiesto, lo firma en local, sube la `.sig` y publica. Hasta entonces, todo en local con los mismos guiones.
 7. **Con Authenticode (SignPath, 58):** se firman con Authenticode el lanzador estable, el `Ludiary.exe` interno, `ludiary-tray.exe`, el desinstalador (`SignTool` y `SignedUninstaller` de Inno) y el instalador, **antes** de calcular el hash del manifiesto. El lanzador estable añade entonces `WinVerifyTrust` con el sujeto esperado sobre el instalador descargado, obligatorio desde la primera versión firmada (constante de compilación). Ed25519 sigue siendo la raíz de confianza: clave fijada, sin depender de autoridades ni de renovaciones del certificado. Authenticode solo quita el aviso de SmartScreen en la descarga manual.
 
 #### 12. Interfaces (invariante 1) y ficheros de estado
@@ -7378,7 +7378,7 @@ Cambios respecto al texto de los puntos 1 a 18 (para que el arquitecto los confi
 
 **W4 (parcial).** Comprobado el 4-11-2026: la documentación de Inno (`SetupMutex`) dice que Setup crea el mutex al arrancar si no existe y que el ejemplo usa también la forma `Global\`; una prueba con un instalador sonda (Inno 6, por usuario, `Uninstallable=no`) confirmó que `OpenMutex` con el nombre simple lo ve desde otro proceso de la misma sesión mientras Setup trabaja y que desaparece al terminar. Observado: el mutex aparece **después** de `InitializeSetup`, no al principio. Sin verificar y pendiente de la prueba manual: que Inno sustituya `{app}\Ludiary.exe` recién salido (W3), el idioma que usa Inno en modo silencioso (la documentación no lo dice) y el comportamiento con dos clics durante la instalación sobre el instalador real.
 
-**Pendiente.** Exportación de registros (35): la web aún no la tiene (`exportLogs` no disponible), así que el registro de Inno (`updates/<v>/install.log`, M6) no entra todavía en ninguna exportación; el `install.log` se borra con la carpeta tras una prueba superada. Detección de partida en curso (55) para `update.game-running`. Flujo de CI (`release.yml`). Guía manual `docs/manual-tests/updater.md` y `docs/release.md`. Authenticode y `WinVerifyTrust` (punto 11.7). Prueba del ciclo completo con el instalador real de Inno y los dos clics (punto 16, 18).
+**Pendiente.** Exportación de registros (35): la web aún no la tiene (`exportLogs` no disponible), así que el registro de Inno (`updates/<v>/install.log`, M6) no entra todavía en ninguna exportación; el `install.log` se borra con la carpeta tras una prueba superada. Detección de partida en curso (55) para `update.game-running`. Flujo de CI (`release.yml`; diseñado en el punto 21). Guía manual `docs/manual-tests/updater.md` y `docs/release.md`. Authenticode y `WinVerifyTrust` (punto 11.7). Prueba del ciclo completo con el instalador real de Inno y los dos clics (punto 16, 18).
 
 #### 20. Avisar por defecto, aviso de versión firmada y banner tras actualizar (4 de noviembre de 2026; cierra 15.1 y 15.2; revisa M5 del punto 18 y los puntos 5 y 10)
 
@@ -7452,6 +7452,143 @@ Se reutilizan `updates.notes`, `updates.restartConfirm`, `updates.state.download
 - Ficheros: `packages/runtime/src/updates/service.ts` y `facade.ts`; `packages/api-contract/src/index.ts`; `apps/web/src/app/updates.ts`, `components/UpdatesNotice.tsx`, `components/UpdatesPanel.tsx` (comentario del selector), `pages/Welcome.tsx`, `data/mock.ts`; `es.json` y `en.json`; y sus pruebas.
 - `documentalista`: guía de privacidad (comprobación activa por defecto, qué sale, cómo desactivarla) y guía de actualizaciones (los tres botones y el banner).
 - Coste: bajo (unas 150 líneas con pruebas).
+
+#### 21. Publicación semiautomática: borrador desde la CI y firma en local (4 de noviembre de 2026; concreta 11.3 y 11.6 con 15.3 (a); revisa 11.1 y 11.6)
+
+Encargo del usuario (modo semiautomático): al fusionar un PR en `main`, GitHub Actions compila en `windows-latest`, genera el instalador y `ludiary-update.json` sin firmar y crea una versión en **borrador** `v<versión>` con la descripción del PR como notas. El mantenedor firma en su equipo con `release:sign`, sube la `.sig` y publica. La clave privada nunca va a GitHub. Versión según la etiqueta del PR (`release:patch`, `release:minor`, `release:major`); sin etiqueta, no hay versión.
+
+**Decisión.**
+
+1. **Disparador y permisos.**
+
+   | Opción | Ventajas | Costes |
+   |---|---|---|
+   | A. `pull_request` con `types: [closed]` y `merged == true` | Trae el PR en el evento. | En un PR desde un *fork*, el `GITHUB_TOKEN` es de solo lectura sea cual sea `permissions` (supuesto CI1), así que no podría crear el borrador. Es un proyecto abierto a contribuciones (60): fallaría justo en esos PR. |
+   | **B. `push` a `main` y buscar el PR del commit** (elegida) | Corre siempre en el contexto del repositorio, con el flujo ya fusionado (revisado en el PR) y el token que pida cada trabajo. Un `push` directo, sin PR, no genera versión. Si se olvidó la etiqueta, se pone y se relanza la ejecución. | Una llamada más: `GET /repos/{repo}/commits/{sha}/pulls`. |
+
+   - `on: push: branches: [main]`. `permissions: {}` en la raíz del flujo; cada trabajo pide lo suyo. Todos los trabajos con `if: github.repository == 'chamanRMA/Ludiary'` (un *fork* no publica nada).
+   - **Prohibidos:** `pull_request_target`, `workflow_run` y cualquier `secrets.*`. El flujo no tiene secretos: solo el `GITHUB_TOKEN`.
+   - Tres trabajos:
+
+     | Trabajo | Sistema | Permisos | Hace |
+     |---|---|---|---|
+     | `plan` | `ubuntu-latest` | `contents: read`, `pull-requests: read` | Busca el PR, lee la etiqueta, calcula la versión y escribe las notas (puntos 2 y 3). Sin `pnpm install`. |
+     | `build` | `windows-latest` | `contents: read` | `pnpm install --frozen-lockfile`, `release:build` y `release:manifest`. Sube los ficheros como artefacto. |
+     | `release` | `ubuntu-latest` | `contents: write` | Baja los artefactos y crea el borrador con `gh`. Sin `checkout` ni `pnpm`. |
+
+     Motivo de separar `build` y `release`: `pnpm install` ejecuta código de dependencias de terceros. Ese código no debe correr con un token que pueda escribir en el repositorio.
+
+2. **Versión.**
+
+   | Opción | Ventajas | Costes |
+   |---|---|---|
+   | **A. La última etiqueta `v*` más la subida; solo se etiqueta** (elegida) | Ningún commit del robot en `main`: sin choque con la protección de la rama, sin bucles de `push` y sin `contents: write` en `plan`. Los guiones ya aceptan `LUDIARY_VERSION` (`version()` de `release-lib.mjs`). | `package.json` no dice la versión publicada (la dice la etiqueta). |
+   | B. `version` de `apps/desktop/package.json`, subida con un commit | La versión está en el árbol. | El robot empuja a `main` (protección de rama, un `push` más que vuelve a disparar el flujo y permisos de escritura antes de compilar). |
+
+   - **Base:** la mayor versión entre las etiquetas `refs/tags/vX.Y.Z` del repositorio (`gh api --paginate repos/{repo}/git/matching-refs/tags/v`). Solo valen las que cumplen `^v\d+\.\d+\.\d+$`; el resto se ignoran. Sin ninguna, la base es `0.0.0`. La etiqueta de un borrador no existe hasta publicarlo (supuesto CI2), así que un borrador sin publicar no consume versión.
+   - **Subida:** `release:patch` da X.Y.(Z+1); `release:minor`, X.(Y+1).0; `release:major`, (X+1).0.0. Sin etiqueta `release:*`: `plan` termina en verde con «sin etiqueta release:*, no hay versión» en el resumen, y `build` y `release` se saltan. Con más de una: falla con un mensaje claro y nada más se ejecuta.
+   - **PR del commit:** de la respuesta de `commits/{sha}/pulls`, el único PR con `merged_at` no nulo, `base.ref == "main"` y `merge_commit_sha == GITHUB_SHA`. Vale para fusión, *squash* y *rebase*. Si no hay ninguno (`push` directo), no hay versión.
+   - **Sin commit:** `apps/desktop/package.json` se queda en `0.0.0`, la marca de las compilaciones de desarrollo (`0.0.0-proto`, `unsupported`, punto 19). La versión llega a `build` como salida de `plan`, ya validada con `^\d+\.\d+\.\d+$`, y se pasa en `env: LUDIARY_VERSION` (nunca escrita dentro de `run:`). `release-build.mjs` y `release-manifest.mjs` ya la leen de ahí. La etiqueta la crea GitHub al publicar, sobre `--target <GITHUB_SHA>`. Para una publicación a mano sin CI, el mantenedor pasa `LUDIARY_VERSION`.
+   - Lo hace un guion nuevo, `apps/desktop/scripts/release-plan.mjs` (solo `node:*`, sin dependencias). Lee los ficheros JSON que deja `gh` y escribe en `$GITHUB_OUTPUT` (`release`, `version` y `pr`) y en `notes.md`. La lógica va en una función pura exportada, `planRelease({ pulls, tags, sha })`, con pruebas.
+
+3. **Notas del PR sin inyección.**
+   - El cuerpo nunca se interpola en `run:`, ni con `${{ github.event.* }}` ni con ninguna salida que venga del PR. `gh api … > pulls.json` lo deja en un fichero. `release-plan.mjs` lo lee con `JSON.parse` y escribe `notes.md`, que viaja como artefacto. `release` lo pasa con `gh release create … --notes-file notes.md`. No pasa por ningún shell ni por `$GITHUB_OUTPUT` ni por `$GITHUB_ENV`.
+   - Las únicas salidas de `plan` que se usan en otros trabajos son `release` (`true` o `false`), `version` (validada con su expresión) y `pr` (entero). `plan` las valida antes de escribirlas.
+   - **Tope:** 30 000 caracteres, cortando en un límite de carácter y no de byte. Si se corta, se añade «… (notas recortadas, ver el PR #N)». Un cuerpo vacío o nulo se sustituye por el título del PR. Siempre se añade al final una línea con `PR #N` y el commit corto. El tope deja margen bajo el límite de GitHub para el cuerpo de una versión (supuesto CI3).
+   - Las notas solo se ven en GitHub, que limpia el Markdown. La SPA no pinta texto remoto (punto 20). El mantenedor las revisa en el borrador antes de publicar.
+
+4. **Acciones.** Solo las de GitHub (`actions/checkout`, `actions/setup-node` con `node-version-file: .node-version`, `actions/setup-go` con `go-version-file: apps/desktop/launcher/go.mod`, `actions/upload-artifact` y `actions/download-artifact`), cada una **fijada por el SHA completo del commit**, con la versión en un comentario. Ninguna acción de terceros. Todo lo demás, con `gh` y con lo que trae el runner.
+   - **pnpm:** `corepack enable`, que lee `packageManager` (Node 24 aún trae corepack; supuesto CI4). Sin `pnpm/action-setup`. Así queda revisado el supuesto de la línea «`pnpm/action-setup` lo lee» de la decisión 39.
+   - **Inno Setup:** no consta en la imagen `windows-2025` (supuesto CI5). Se baja el instalador oficial de `github.com/jrsoftware/issrc/releases` (jrsoftware.org ya no aloja los `.exe`) de la versión fijada (la 6.x con la que se validó el prototipo), se comprueba su SHA-256, escrito en el flujo, y se instala con `/VERYSILENT /CURRENTUSER /SUPPRESSMSGBOXES /NORESTART`. `build-installer.mjs` ya busca `ISCC.exe` en `%LOCALAPPDATA%\Programs\Inno Setup 6`. Sin Chocolatey ni winget.
+   - `checkout` con `persist-credentials: false` en `plan` y en `build`.
+   - Las actualizaciones de los SHA son a mano, en un PR normal. Dependabot queda fuera de este corte.
+
+5. **Qué sube cada uno y claves.**
+   - **El flujo sube** al borrador: `Ludiary-Setup-X.Y.Z.exe`, `ludiary-update.json` y `SHA256SUMS.txt` (los tres que deja `release:manifest` en `dist/installer`). El artefacto entre `build` y `release` dura 7 días.
+   - **El mantenedor añade** `ludiary-update.json.sig` y publica. Así quedan los cuatro ficheros del punto 11.1.
+   - **Antes de crear el borrador**, `release` comprueba con `gh release list --json tagName,isDraft` y `gh release view` que no hay ningún borrador pendiente y que `vX.Y.Z` no existe. Si falla alguna de las dos, para con un mensaje claro (punto 7).
+   - **Sin claves reales, el flujo falla y no crea el borrador** (elegido frente a generar el borrador igualmente). `release:build` ya rechaza `update-keys.json` con menos de dos claves o con claves de prueba (`build.mjs`, B4). Ese error, que sale al principio de `build`, es el mensaje claro: «a release needs the two public keys…». El paso lo repite como anotación `::error::`.
+   - Motivo: un borrador sin claves daría un instalador que nunca podría actualizarse (`unsupported`) y que `release:sign` no podría firmar (keyId desconocido). Publicarlo dejaría para siempre una versión sin salida: las *immutable releases* no dejan cambiarla.
+   - Hasta que el usuario genere las claves (punto 18, paso 6 del orden), un PR con etiqueta `release:*` deja la ejecución en rojo. Por eso no se etiqueta ninguno hasta entonces.
+   - La CI no usa `LUDIARY_UPDATE_KEYS_FILE` ni `--allow-test-keys`.
+
+6. **Guion de ayuda del mantenedor:** `release:publish <X.Y.Z> <ruta de la clave privada> [--id k1]` (`apps/desktop/scripts/release-publish.mjs`, nuevo; reutiliza `release-sign.mjs` y `release-lib.mjs`). Ejecuta `gh` y `git` con `execFileSync` y argumentos fijos, sin shell.
+   1. `gh release view vX.Y.Z --json isDraft,targetCommitish,assets`. Exige que sea borrador, que tenga exactamente los tres recursos del punto 5 y que no tenga `.sig`. Muestra el commit y el enlace a la ejecución para que el mantenedor los revise (11.6).
+   2. Comprueba que `apps/desktop/update-keys.json` de su copia local es idéntico byte a byte al del commit del borrador (`git show <sha>:apps/desktop/update-keys.json`, tras `git fetch`). Así la verificación de `release:sign` usa las mismas claves que lleva el instalador.
+   3. `gh release download` a una carpeta temporal nueva fuera del repositorio (`mkdtemp` en `os.tmpdir()`, comprobada con `insideRepo`).
+   4. Verifica:
+      - que `version` del manifiesto es X.Y.Z;
+      - que `files["windows-x64"]` tiene el nombre `Ludiary-Setup-X.Y.Z.exe` y el `size` y `sha256` del instalador bajado;
+      - que `SHA256SUMS.txt` coincide con los dos ficheros.
+      Si algo no coincide, para sin firmar.
+   5. Ejecuta `release-sign.mjs <clave> --id <id>` con `LUDIARY_INSTALLER_DIR=<temporal>` (la variable ya existe; su comentario pasa a decir «para las pruebas y para `release:publish`») y `stdio: "inherit"` para la frase de paso. Ese guion ya firma y verifica en el acto.
+   6. `gh release upload vX.Y.Z <temporal>/ludiary-update.json.sig`.
+   7. Pide confirmación escrita (`yes`) y ejecuta `gh release edit vX.Y.Z --draft=false --latest`.
+   8. Borra la carpeta temporal. Si `gh release verify` está disponible, sugiere ejecutarlo (GH6).
+   - No imprime la clave ni la frase de paso, y no guarda nada en el repositorio.
+   - **Revisado tras la auditoría del código:** antes del paso 1 de la lista comprueba con `gh api repos/chamanRMA/Ludiary/releases/<id>/assets` que el `uploader.login` de los tres recursos es `github-actions[bot]`; la confirmación `yes` se pide **antes** de subir la `.sig` (un «no» no deja nada subido); el manifiesto descargado debe tener exactamente las claves `schema`, `product`, `channel`, `version`, `publishedAt` y `files` (solo `windows-x64`), con `schema` 1, `product` «ludiary» y `channel` «stable». La atestación de procedencia (`gh attestation verify`) queda como posible mejora, sin implementar.
+   - `release-plan.mjs` exige un valor para `--pulls`, `--tags`, `--sha` y `--out` (que no empiece por `--`) y aborta si falta alguno; `pulls.json` se lee con `JSON.parse` directo y las etiquetas llegan una por línea (`gh api --paginate --jq '.[].ref'`), sin reconstruir JSON.
+
+7. **Dos fusiones seguidas.** Hay **un solo borrador pendiente cada vez**.
+   - El trabajo `release` lleva `concurrency: { group: release-draft, cancel-in-progress: false }`, para que dos ejecuciones no comprueben «no hay borrador» a la vez. `plan` y `build` corren en paralelo sin problema.
+   - Si al llegar a `release` ya hay un borrador, falla con «hay un borrador vA.B.C pendiente: publícalo o bórralo y relanza esta ejecución con "Re-run all jobs"». Al relanzar todo, `plan` recalcula la versión sobre la etiqueta ya publicada, o sobre la misma base si se borró el borrador. Relanzar solo el trabajo fallido usa la versión vieja: si esa etiqueta ya existe, `release` vuelve a fallar con el mismo aviso, así que nunca se pisa nada.
+   - Alternativa descartada: que el segundo borrador sustituya al primero. El robot tendría que borrar versiones y mezclar las notas de dos PR.
+   - GitHub solo mantiene una ejecución pendiente por grupo. Una tercera ejecución que llegue mientras la segunda espera cancela la segunda. Se ve como «cancelada» y se relanza igual. Es un caso raro, aceptado y anotado.
+
+8. **Guía `docs/release.md`** (la escribe el `documentalista`, en inglés). Contenido:
+   - **Preparación única:**
+     - generar las dos claves con `release:keygen` y guardarlas fuera del repositorio, la de reserva en otro sitio;
+     - añadir las públicas a `update-keys.json` en un PR;
+     - crear las tres etiquetas `release:*`;
+     - activar las *immutable releases*, el 2FA y «Workflow permissions: read» por defecto en el repositorio;
+     - proteger `main`.
+   - **Publicar una versión:**
+     1. poner la etiqueta al PR antes de fusionar (y las notas en su descripción);
+     2. comprobar que la ejecución está en verde;
+     3. revisar el borrador;
+     4. `pnpm --filter @ludiary/desktop release:publish X.Y.Z <clave>`.
+   - Qué hacer si falla:
+     - sin claves;
+     - más de una etiqueta;
+     - borrador pendiente y «Re-run all jobs»;
+     - ejecución cancelada;
+     - etiqueta olvidada: ponerla y relanzar todo.
+   - **Publicación a mano sin CI:** con `LUDIARY_VERSION`, `release:build`, `release:manifest`, `release:sign` y `gh release create --draft`.
+   - Respuesta a una clave comprometida (B7, punto 13) y pérdida de las dos claves (11.4).
+   - Cómo se actualizan los SHA de las acciones y la versión de Inno con su hash.
+   - Que la versión la marca la etiqueta, no `package.json`.
+
+**Motivo.** `push` a `main` es el único disparador que funciona también con PR desde *forks* sin recurrir a `pull_request_target`. Separar `build` (código de terceros, solo lectura) de `release` (escritura, sin código del repositorio) limita lo que puede hacer una dependencia maliciosa. Etiquetar sin commit evita que el robot escriba en `main`, y los guiones ya leen `LUDIARY_VERSION`. Fallar sin claves impide publicar una versión que nunca podría actualizarse. Un solo borrador pendiente hace imposible publicar fuera de orden (GH1) sin lógica de sustitución. El guion de ayuda reutiliza `release-sign.mjs` tal cual y añade solo las comprobaciones de que lo que se firma es lo que construyó la CI.
+
+**Consecuencias.**
+
+- Revisa el 11.1 (la versión la fija la etiqueta, no `package.json`) y el 11.6 (disparador). Con 15.3 (a), la cuenta de GitHub puede crear borradores pero no firmar: una versión sin `.sig` válida no la acepta ninguna instalación (punto 3.3).
+- Ficheros nuevos:
+  - `.github/workflows/release.yml`;
+  - `apps/desktop/scripts/release-plan.mjs` y `release-publish.mjs`;
+  - el guion `release:publish` en `apps/desktop/package.json`;
+  - casos en `packages/runtime/test/release-scripts.test.ts`, que son los de `planRelease`:
+    - sin PR, sin etiqueta y con dos etiquetas;
+    - cada subida, con la base `0.0.0` y etiquetas no semver ignoradas;
+    - `merge_commit_sha` distinto;
+    - cuerpo nulo, cuerpo largo cortado sin partir un carácter y el pie con el PR;
+    - una versión o un número de PR inválidos, que nunca llegan a la salida;
+  - y las comprobaciones de `release-publish` sobre el manifiesto con ficheros inventados: tamaño, hash, nombre, versión y `SHA256SUMS`.
+- Cambios pequeños en ficheros existentes:
+  - el comentario de `release-build.mjs` («version from package.json» pasa a «from `LUDIARY_VERSION`, set by CI from the tag»);
+  - el comentario de `LUDIARY_INSTALLER_DIR` en `release-lib.mjs`.
+- Ningún secreto en GitHub. Ningún cambio en el producto, en la API ni en el contrato.
+- `auditor`: revisa `release.yml` y `release-publish.mjs` antes del primer PR con etiqueta: permisos, ausencia de interpolaciones del PR en `run:`, SHA fijados y hash de Inno.
+- `documentalista`: `docs/release.md` (punto 8).
+- Coste: bajo-medio (flujo de unas 120 líneas, dos guiones de unas 150 líneas con pruebas).
+
+**Supuestos (4-11-2026):**
+
+- **CI1 (fuentes secundarias, sin verificar en la documentación oficial):** en un evento `pull_request` desde un *fork*, el `GITHUB_TOKEN` es de solo lectura aunque el flujo pida escritura. Fuentes: el changelog de GitHub de 2021 sobre `permissions` y guías de terceros. Si fuera falso, la opción A también valdría, pero B sigue siendo correcta.
+- **CI2 (fuentes de la comunidad, sin verificar):** crear un borrador no crea la etiqueta. Se crea al publicar, sobre `target_commitish`. Si no fuera así, la regla del punto 7 sigue evitando choques: `release` comprueba que la etiqueta no existe y que no hay borradores.
+- **CI3 (sin verificar):** el cuerpo de una versión de GitHub admite unos 125 000 caracteres. El tope de 30 000 deja margen de sobra.
+- **CI4 (sin verificar):** Node 24 incluye corepack y sabe activar `pnpm@11` desde `packageManager`. Si no, se instala con `npm i -g pnpm@<versión de packageManager>`, sin acción de terceros.
+- **CI5 (sin verificar en el README de la imagen):** `windows-latest` (`windows-2025`) no trae Inno Setup. Hay una petición abierta en `actions/runner-images` (#11644). Si lo trajera, se usa igualmente la versión fijada.
 
 ### 91. Importar las listas de deseos de Steam y GOG a la lista de seguimiento de precios (amplía las decisiones 40, 74, 77 y 86; resuelve la opción 12.1 (c) de la 86 para las tiendas; contrato, cerrojo, errores y volumen revisados por el auditor en su punto 13)
 

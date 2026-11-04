@@ -1,4 +1,4 @@
-// release:build (ADR 90 point 11.2): the published build. No test hooks, version from apps/desktop/package.json (the tag is v<it>),
+// release:build (ADR 90 point 11.2): the published build. No test hooks, version from LUDIARY_VERSION, set by the CI from the tag of the pull request (ADR 90 point 21); by hand, pass it yourself,
 // the public keys and the repository embedded. build.mjs refuses test keys, fewer than two keys, or a version that is not x.y.z.
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { installerDir, version } from "./release-lib.mjs";
 
 const v = version();
-if (!/^\d+\.\d+\.\d+$/.test(v)) throw new Error(`apps/desktop/package.json version ${v} is not x.y.z`);
+if (!/^\d+\.\d+\.\d+$/.test(v)) throw new Error(`LUDIARY_VERSION ${v} is not x.y.z`);
 const name = `Ludiary-Setup-${v}.exe`;
 const file = join(installerDir, name);
 const bytes = readFileSync(file);

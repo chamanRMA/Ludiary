@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 
 export const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const repoRoot = resolve(desktop, "../..");
-// The two overrides exist for the tests of these scripts; they run on the maintainer machine, not in the product.
+// LUDIARY_INSTALLER_DIR exists for the tests of these scripts and for release:publish (which signs in a temporary folder); they run on
+// the maintainer machine or the CI, never in the product.
 export const installerDir = process.env.LUDIARY_INSTALLER_DIR ?? join(desktop, "dist/installer");
 export const SIGNATURE_CONTEXT = "ludiary-update-v1\n";
 
@@ -55,7 +56,12 @@ export function readPublicKeys() {
   if (bad) throw new Error(`key ${bad} belongs to the tests; it cannot be used to sign a release`);
   return keys;
 }
-export const version = () => process.env.LUDIARY_VERSION ?? JSON.parse(readFileSync(join(desktop, "package.json"), "utf8")).version;
+/** The version comes from the tag (ADR 90 point 21), never from package.json, which stays at 0.0.0 as the mark of development builds. */
+export const version = () => {
+  const v = process.env.LUDIARY_VERSION;
+  if (!v) throw new Error("set LUDIARY_VERSION=X.Y.Z (the CI sets it from the tag of the pull request)");
+  return v;
+};
 
 export const arg = (name, fallback) => {
   const i = process.argv.indexOf(name);
