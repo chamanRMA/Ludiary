@@ -1,4 +1,7 @@
 {
-  "note": "ADR 90 point 18, B4. Public keys only (raw 32 bytes in base64) that Ludiary.exe and the stable launcher trust to verify updates. Empty until the maintainer generates the two key pairs with `pnpm --filter @ludiary/desktop release:keygen`: with no keys no update is ever applied. Never put a private key here.",
-  "keys": {}
+  "note": "ADR 90 point 18, B4. Public keys only (raw 32 bytes in base64) that Ludiary.exe and the stable launcher trust to verify updates. Empty until the maintainer generates the two key pairs with `corepack pnpm --filter @ludiary/desktop release:keygen`: with no keys no update is ever applied. Never put a private key here.",
+  "keys": {
+    "k1":"RLIdp3g6dYXAAGaWajiMsNCcEg86dRhiy7i5ta+sYgc=",
+    "k2":"WRmY8kW3Izfpt83wZKpCjv5lW8Ro1IWRYVUU3UBMmaQ="
+  }
 }

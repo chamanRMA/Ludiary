@@ -13,8 +13,8 @@ Contents: [One-time setup](#one-time-setup) · [Publish a version](#publish-a-ve
 You need two Ed25519 key pairs: a main one and a spare. Run this twice, with a passphrase of at least 12 characters each time:
 
 ```
-pnpm --filter @ludiary/desktop release:keygen --id k1 --out <path outside the repository>\k1.pem
-pnpm --filter @ludiary/desktop release:keygen --id k2 --out <path outside the repository>\k2.pem
+corepack pnpm --filter @ludiary/desktop release:keygen --id k1 --out <path outside the repository>\k1.pem
+corepack pnpm --filter @ludiary/desktop release:keygen --id k2 --out <path outside the repository>\k2.pem
 ```
 
 - The script refuses a path inside the repository and never overwrites a file.
@@ -54,7 +54,7 @@ Never put a private key here. Until two real keys are in this file, `release:bui
 5. In your copy, check out that commit (`git fetch`, then the commit shown by the script) and run:
 
    ```
-   pnpm --filter @ludiary/desktop release:publish X.Y.Z <path>\k1.pem
+   corepack pnpm --filter @ludiary/desktop release:publish X.Y.Z <path>\k1.pem
    ```
 
    Add `--id k2` if you sign with the spare key. It needs `gh` logged in and `git`. The script:
@@ -91,9 +91,9 @@ For when the CI is not available. Pass the version yourself (PowerShell):
 
 ```
 $env:LUDIARY_VERSION = "X.Y.Z"
-pnpm --filter @ludiary/desktop release:build
-pnpm --filter @ludiary/desktop release:manifest
-pnpm --filter @ludiary/desktop release:sign <path>\k1.pem --id k1
+corepack pnpm --filter @ludiary/desktop release:build
+corepack pnpm --filter @ludiary/desktop release:manifest
+corepack pnpm --filter @ludiary/desktop release:sign <path>\k1.pem --id k1
 gh release create vX.Y.Z --draft --title "Ludiary X.Y.Z" --notes-file <notes file> apps/desktop/dist/installer/Ludiary-Setup-X.Y.Z.exe apps/desktop/dist/installer/ludiary-update.json apps/desktop/dist/installer/SHA256SUMS.txt apps/desktop/dist/installer/ludiary-update.json.sig
 ```
 
