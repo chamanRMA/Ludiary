@@ -24,3 +24,4 @@ export {
   type EmbeddedLoginSpawn,
   type HelperEmbeddedLoginOptions,
 } from "./embedded-login";
+export { createWindowsUpdatePlatform, type WindowsUpdatePlatform } from "./update-platform";

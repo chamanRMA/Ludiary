@@ -108,7 +108,8 @@ export async function migrate(db: Database.Database, opts: MigrateOptions): Prom
   return { applied: pending.map((m) => m.id), backupFile };
 }
 
-function pruneBackups(dir: string, keep: number): void {
+/** One prune for every copy taken before a change (ADR 90 point 18, M7): migrations and updates share the 3 of ADR 57. */
+export function pruneBackups(dir: string, keep: number): void {
   const files = readdirSync(dir)
     .filter((f) => f.startsWith(BACKUP_PREFIX) && f.endsWith(".sqlite"))
     .sort(); // the zero-padded timestamp makes the name order the age order

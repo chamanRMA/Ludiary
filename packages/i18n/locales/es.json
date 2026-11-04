@@ -66,5 +66,19 @@
   "connectors.common.errors.launch.launcher-missing": "No se ha encontrado el programa de la tienda en este equipo.",
   "connectors.common.errors.launch.not-installed": "Este juego no está instalado en este equipo.",
   "connectors.common.errors.action.unsupported": "Esta tienda no admite esa acción.",
-  "connectors.common.errors.internal": "Ha ocurrido un error inesperado en el conector de esta tienda."
+  "connectors.common.errors.internal": "Ha ocurrido un error inesperado en el conector de esta tienda.",
+  "tray.updateReady": "Actualización {version} lista: reiniciar",
+  "tray.updateAvailable": "Hay una versión nueva de Ludiary",
+  "core.errors.update.unsupported": "Esta instalación no se actualiza sola (versión de desarrollo o sin carpeta de versiones).",
+  "core.errors.update.nothing-new": "No hay ninguna versión nueva que descargar.",
+  "core.errors.update.bad-version": "Esa versión ya falló al arrancar en este equipo. Usa «Buscar ahora» para volver a intentarlo.",
+  "core.errors.update.not-writable": "No se puede escribir en la carpeta de instalación. Descarga el instalador a mano desde la página de versiones.",
+  "core.errors.update.not-ready": "Todavía no hay una actualización lista para instalar.",
+  "core.errors.update.too-soon": "Acabas de buscar actualizaciones. Espera un minuto.",
+  "core.errors.update.no-space": "No hay espacio libre suficiente para descargar la actualización.",
+  "core.errors.update.check-failed": "No se pudo comprobar si hay una versión nueva.",
+  "core.errors.update.manifest-invalid": "La actualización no pasó la comprobación de firma y no se ha descargado.",
+  "core.errors.update.manual-required": "Esta versión necesita instalarse a mano desde la página de versiones.",
+  "core.errors.update.hash-mismatch": "El instalador descargado no coincide con lo firmado y se ha descartado.",
+  "core.errors.update.download-failed": "No se pudo descargar la actualización."
 }

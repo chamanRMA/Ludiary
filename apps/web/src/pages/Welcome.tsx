@@ -1,3 +1,4 @@
+import { UpdateModePicker } from "../components/UpdatesPanel";
 import type { DetectionMode, ServiceId, StoreId } from "@ludiary/api-contract";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,7 @@ export function Welcome() {
   const stores = useQuery(() => api.getStores());
   const services = useQuery(() => api.getServices());
   const settings = useQuery(() => api.getSettings());
+  const updates = useQuery(() => api.getUpdates());
   const step: StepName = STEPS[index] ?? "done";
 
   useEffect(() => heading.current?.focus(), [index]);
@@ -96,6 +98,15 @@ export function Welcome() {
                 </label>
               ))}
             </fieldset>
+          )}
+
+          {step === "language" && updates && updates.state !== "unsupported" && (
+            <>
+              <h2>{t("updates.wizard.title")}</h2>
+              <p className={ui.muted}>{t("updates.wizard.body")}</p>
+              <UpdateModePicker name="wizard-update-mode" value={updates.mode} onPick={(mode) => void mutate(api.updateUpdateSettings({ mode, noticeSeen: true }))} />
+              <p className={ui.muted}>{t("updates.privacy")}</p>
+            </>
           )}
 
           {step === "detection" && (

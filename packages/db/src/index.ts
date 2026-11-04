@@ -10,6 +10,7 @@ export {
   type MigrateOptions,
   type MigrateResult,
 } from "./migrator";
+export { createUpdateCopy, findUpdateCopy } from "./update-copy";
 export { MIGRATIONS, type EmbeddedMigration } from "./migrations.generated";
 export { createRepositories, type Repositories } from "./repositories";
 export { createBackupStore, parseBackupName, userBackupName, MAX_RESTORE_BYTES, type BackupStoreOptions } from "./backup-store";

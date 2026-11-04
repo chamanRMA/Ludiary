@@ -17,6 +17,9 @@ import type {
   SettingsDto,
   SettingsPatchDto,
   StoreId,
+  UpdateDownloadDto,
+  UpdateSettingsDto,
+  UpdateStatusDto,
   StoreStatusDto,
   WatchItemDto,
   WizardInputDto,
@@ -108,6 +111,14 @@ export interface LudiaryApi {
   /** The server prepares the restoration and restarts: after this resolves the page must stop using the API. */
   restoreBackup(id: string): Promise<void>;
   exportLogs(): Promise<void>;
+  // ---- ADR 90. The status is read from the server; only `checkUpdates` (and the automatic cycle) reach GitHub.
+  getUpdates(): Promise<UpdateStatusDto>;
+  updateUpdateSettings(patch: UpdateSettingsDto): Promise<UpdateStatusDto>;
+  checkUpdates(): Promise<UpdateStatusDto>;
+  /** Starts the download in the background; the status moves to `downloading`. */
+  downloadUpdate(retryBad?: boolean): Promise<UpdateStatusDto>;
+  /** The server hands over to the launcher and stops: after this resolves the page must stop using the API. */
+  restartForUpdate(): Promise<void>;
   // ---- ADR 86. The GET-like ones read the server cache; only `refreshPrices` and `searchPrices` reach IsThereAnyDeal.
   getGamePrices(id: string): Promise<GamePricesDto>;
   getPriceBoard(): Promise<PriceBoardDto>;

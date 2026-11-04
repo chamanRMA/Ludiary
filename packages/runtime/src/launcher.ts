@@ -7,9 +7,13 @@ import { APP_ID, EXIT, INSTALL_TOKEN_NAME, MAX_MASTER_KEY_ID, localeOf, masterKe
 import { createFileLogger, type Logger } from "./files";
 import { findRunningServer } from "./health";
 import { createSqliteInstanceLock } from "@ludiary/db";
+import { maybeApplyUpdate } from "./updates/apply";
+import { reconcileState } from "./updates/state";
 
 /** How long the shortcut waits for a server it started (ADR 64: Defender may scan the exe for a while). */
-const START_TIMEOUT_MS = 60_000;
+export const START_TIMEOUT_MS = 60_000;
+/** ADR 90 point 18, M4: the start of the trial period, with 60 s of margin. The stable launcher (Go) enforces the same figure. */
+export const TRIAL_TIMEOUT_MS = START_TIMEOUT_MS * 2;
 const STOP_TIMEOUT_MS = 15_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const NONCE = /^[A-Za-z0-9_-]{43}$/;
@@ -90,7 +94,7 @@ async function showFatal(deps: RuntimeDeps, key: MessageKey, log: Logger): Promi
 }
 
 /** Starts the server in the background and waits for it, unless it exits with an error first (ADR 64). */
-async function startServer(deps: RuntimeDeps, log: Logger): Promise<{ url: string } | { failed: MessageKey }> {
+async function startServer(deps: RuntimeDeps, log: Logger): Promise<{ url: string } | { failed: MessageKey; exitCode: number }> {
   const child = spawn(deps.selfCommand.command, [...deps.selfCommand.args, "--server"], {
     detached: true,
     stdio: "ignore",
@@ -109,14 +113,14 @@ async function startServer(deps: RuntimeDeps, log: Logger): Promise<{ url: strin
       // Exit code 3: another instance won the lock and is starting; keep waiting for it.
       if (exitCode !== null && exitCode !== EXIT.alreadyRunning) {
         log("error", `server exited with code ${exitCode}`);
-        return { failed: FATAL_MESSAGES[exitCode] ?? "fatal.unexpected" };
+        return { failed: FATAL_MESSAGES[exitCode] ?? "fatal.unexpected", exitCode };
       }
       const url = await requestOpenUrl(deps, log);
       if (url) return { url };
       await sleep(250);
     }
     log("error", "server did not become ready in time");
-    return { failed: "fatal.timeout" };
+    return { failed: "fatal.timeout", exitCode: EXIT.error };
   } finally {
     child.unref(); // the server keeps running after the shortcut exits
   }
@@ -151,46 +155,78 @@ export async function waitForLockRelease(isHeld: () => Promise<boolean>, timeout
 
 export const AFTER_RESTART_WAIT_MS = 20_000;
 
+export interface LauncherOptions {
+  afterRestart?: boolean;
+  /** Added by the stable launcher (ADR 90 point 18, B6): only then may this process ask to apply an update (exit 20). */
+  fromLauncher?: boolean;
+  /** First start of a new version (point 7.5, A3): no error dialogs, and it only succeeds if it started its own server. */
+  trial?: boolean;
+  /** Installation by hand (M8): confirm the folder, but do not open the browser. */
+  noOpen?: boolean;
+}
+
 /**
  * Shortcut role (ADR 26): reuse the live server or start one in the background, then open the browser
  * with a one-use link. Exit code 0 on success.
  */
-export async function runLauncher(deps: RuntimeDeps, opts: { afterRestart?: boolean } = {}): Promise<number> {
+export async function runLauncher(deps: RuntimeDeps, opts: LauncherOptions = {}): Promise<number> {
   const { platform } = deps;
   mkdirSync(platform.dataDir, { recursive: true });
   const log = createFileLogger(platform.dataDir, "launcher");
+  /** A trial returns the code instead of showing a dialog: the stable launcher decides what to do (point 7.5). */
+  const fatal = async (key: MessageKey) => {
+    if (!opts.trial) await showFatal(deps, key, log);
+  };
   try {
+    if (deps.updates?.platform.installRoot) reconcileState(platform.dataDir, deps.updates.platform.installRoot, deps.version, log);
     if (opts.afterRestart) {
       const lock = createSqliteInstanceLock(join(platform.dataDir, "instance.lock"), deps.sqliteAddon);
       if (!(await waitForLockRelease(() => lock.isHeld(), AFTER_RESTART_WAIT_MS))) {
         log("error", "the previous server did not release the instance lock in time");
-        await showFatal(deps, "fatal.timeout", log);
+        await fatal("fatal.timeout");
         return EXIT.error;
       }
     }
     let url = await requestOpenUrl(deps, log);
+    if (url && opts.trial) {
+      log("error", "trial: a server was already answering; this start proves nothing");
+      return EXIT.error;
+    }
     if (url) log("info", "server already running");
     else {
+      // No server of ours is running: the only moment an update may be applied (point 7.2).
+      if (opts.fromLauncher && !opts.trial && (await maybeApplyUpdate(deps, log))) return EXIT.applyUpdate;
       log("info", "no server of ours is answering; starting one in the background");
       const started = await startServer(deps, log);
       if ("failed" in started) {
-        await showFatal(deps, started.failed, log);
-        return EXIT.error;
+        await fatal(started.failed);
+        return opts.trial ? started.exitCode : EXIT.error;
       }
       url = started.url;
     }
+    if (opts.trial && !(await serverIsThisVersion(deps, log))) return EXIT.error;
 
     // Test hook (removed from release builds, ADR 65): write the URL instead of launching a browser.
     const sink = deps.env["LUDIARY_OPEN_URL_FILE"];
-    if (sink) writeFileSync(sink, url);
+    if (opts.noOpen) log("info", "browser not opened (--no-open)");
+    else if (sink) writeFileSync(sink, url);
     else await platform.openUrl(url);
-    log("info", "browser opened");
+    if (!opts.noOpen) log("info", "browser opened");
     return EXIT.ok;
   } catch (e) {
     log("error", `fatal: ${(e as Error).stack ?? String(e)}`);
-    await showFatal(deps, "fatal.unexpected", log);
+    await fatal("fatal.unexpected");
     return EXIT.error;
   }
+}
+
+/** ADR 90 point 18, A3: the server that answers must prove it is ours and must report this very version. */
+async function serverIsThisVersion(deps: RuntimeDeps, log: Logger): Promise<boolean> {
+  const server = await findRunningServer(deps.platform.dataDir, APP_ID);
+  const key = await launcherKey(deps);
+  const version = server && key ? await callServer(server.port, key, "version") : null;
+  if (version !== deps.version) log("error", "trial: the server did not report this version");
+  return version === deps.version;
 }
 
 /** Asks a live server to stop (used by the installer before upgrading or uninstalling). 0 = no server left. */

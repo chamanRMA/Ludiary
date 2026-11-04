@@ -14,6 +14,8 @@ import type {
 import type { CoreDeps } from "@ludiary/core";
 import type { SqliteAddon } from "@ludiary/db";
 import { pickLocale, type Locale } from "@ludiary/i18n";
+import type { UpdateKeys } from "./updates/manifest";
+import type { UpdateDownloader } from "@ludiary/platform-node";
 
 /** Technical identifier (ADR 44): data folder, credential service, cookie and health response derive from it. */
 export const APP_ID = "Ludiary";
@@ -34,7 +36,32 @@ export const EXIT = {
   noPort: 13,
   /** The database was written by a newer version of Ludiary (ADR 72). */
   databaseTooNew: 14,
+  /** ADR 90: the inner launcher asks the stable launcher to run the installer of a downloaded update. */
+  applyUpdate: 20,
 } as const;
+
+/** ADR 90 point 12. Optional port: without it the updater reports `unsupported` (e.g. Docker). */
+export interface UpdatePlatform {
+  /** Key of manifest.files, e.g. "windows-x64". */
+  readonly target: string;
+  /** Folder managed by the stable launcher; null when this build does not run from an app-<version> folder. */
+  readonly installRoot: string | null;
+  freeBytes(dir: string): Promise<number>;
+  /** Starts `<installRoot>\Ludiary.exe --after-stop` detached; the caller then stops the server. */
+  restartIntoLauncher(): Promise<void>;
+}
+
+/** Build-time constants plus the platform port of the updater (ADR 90). */
+export interface UpdateConfig {
+  platform: UpdatePlatform;
+  /** Public keys embedded at build time. Empty: nothing is ever applied and the log says so (fails closed). */
+  keys: UpdateKeys;
+  /** "owner/name" of the GitHub repository, a build constant (point 3.2), never a setting. */
+  repo: string;
+  /** Only tests and the test variant (ADR 65, LUDIARY_UPDATE_FEED). */
+  downloader?: UpdateDownloader;
+  feed?: { releaseUrl: string; downloadBase: string };
+}
 
 /** Everything OS-specific or build-specific enters the runtime through this object (ADR 38). */
 export interface RuntimeDeps {
@@ -72,6 +99,8 @@ export interface RuntimeDeps {
   connectors?: readonly StoreConnector[];
   /** Price services to register. Defaults to the static list of `connectors.ts` (ADR 86); only tests override it. */
   priceServices?: CoreDeps["priceServices"];
+  /** ADR 90. Absent: the updater is `unsupported` and never makes a request. */
+  updates?: UpdateConfig;
   /** Releases what the platform keeps open (helper processes, e.g. a folder dialog) when the server shuts down. */
   dispose?: () => void;
 }

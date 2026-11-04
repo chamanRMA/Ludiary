@@ -1,0 +1,4 @@
+{
+  "note": "ADR 90 point 18, B4. Public keys only (raw 32 bytes in base64) that Ludiary.exe and the stable launcher trust to verify updates. Empty until the maintainer generates the two key pairs with `pnpm --filter @ludiary/desktop release:keygen`: with no keys no update is ever applied. Never put a private key here.",
+  "keys": {}
+}

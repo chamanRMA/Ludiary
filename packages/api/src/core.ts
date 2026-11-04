@@ -17,6 +17,8 @@ import type {
   ScanRootDto,
   SettingsDto,
   SettingsPatchDto,
+  UpdateSettingsDto,
+  UpdateStatusDto,
   StoreId,
   StoreStatusDto,
   WizardCallbackResponseDto,
@@ -76,6 +78,16 @@ export interface LudiaryCoreFacade {
   unwatchPrice(id: string): Promise<void>;
 }
 
+/** ADR 90 point 10. Lives in the runtime (it is not part of the core); the HTTP layer only needs this shape. */
+export interface UpdatesFacade {
+  status(): Promise<UpdateStatusDto>;
+  /** Sets the mode, marks the one-time card seen, or acknowledges the notices of the last update. */
+  setSettings(patch: UpdateSettingsDto): Promise<UpdateStatusDto>;
+  checkNow(): Promise<void>;
+  download(retryBad: boolean): Promise<void>;
+  restart(): Promise<void>;
+}
+
 export interface FacadeError {
   code: string;
   key: string;
@@ -92,6 +104,9 @@ export function statusForCoreError(code: string): number {
   if (code === "invalid-input") return 400;
   if (code === "busy" || code === "backup.busy") return 409;
   if (code === "backup.not-found") return 404;
+  if (code === "update.too-soon") return 429;
+  if (code === "update.no-space") return 507;
+  if (code.startsWith("update.")) return ["update.unsupported", "update.nothing-new", "update.bad-version", "update.not-writable", "update.not-ready"].includes(code) ? 409 : 502;
   if (code === "backup.folder-unavailable") return 503;
   if (code === "backup.write-failed") return 500;
   if (code === "internal") return 500;

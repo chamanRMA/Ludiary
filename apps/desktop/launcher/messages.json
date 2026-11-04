@@ -1,0 +1,12 @@
+{
+  "es": {
+    "title": "Ludiary",
+    "damaged": "Ludiary está dañado. Vuelve a instalarlo con el instalador; tus datos no se han tocado.",
+    "rollbackFailed": "No se pudo volver a la versión anterior de Ludiary. Vuelve a instalarlo con el instalador; tus datos y tus copias de seguridad no se han borrado."
+  },
+  "en": {
+    "title": "Ludiary",
+    "damaged": "Ludiary is damaged. Reinstall it with the installer; your data has not been touched.",
+    "rollbackFailed": "Ludiary could not go back to the previous version. Reinstall it with the installer; your data and your backups have not been deleted."
+  }
+}

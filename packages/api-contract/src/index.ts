@@ -489,3 +489,45 @@ export type BackupsDto = RO<Static<typeof BackupsSchema>>;
 export const RestoreBodySchema = Type.Object({ id: BackupId }, strict);
 export type RestoreBodyDto = Static<typeof RestoreBodySchema>;
 export const RestoreResponseSchema = Type.Object({ restarting: Type.Literal(true) }, strict);
+
+// ---- Updates (ADR 90 point 10)
+export const UpdateModeSchema = Type.Union([Type.Literal("auto"), Type.Literal("notify"), Type.Literal("off")]);
+export type UpdateModeDto = Static<typeof UpdateModeSchema>;
+const Version = Type.String({ pattern: "^\\d+\\.\\d+\\.\\d+$", maxLength: 32 });
+export const UpdateStatusSchema = Type.Object(
+  {
+    /** null: the user has not chosen yet; nothing is requested from GitHub until they do (point 18, M5). */
+    mode: Type.Union([UpdateModeSchema, Type.Null()]),
+    current: Type.String({ maxLength: 64 }),
+    latest: Type.Optional(Version),
+    state: Type.Union([
+      Type.Literal("unsupported"),
+      Type.Literal("idle"),
+      Type.Literal("checking"),
+      Type.Literal("up-to-date"),
+      Type.Literal("available"),
+      Type.Literal("downloading"),
+      Type.Literal("ready"),
+      Type.Literal("failed"),
+      Type.Literal("rolled-back"),
+    ]),
+    progress: Type.Optional(Type.Integer({ minimum: 0, maximum: 100 })),
+    lastCheckAt: Type.Optional(EpochSchema),
+    /** A code such as `check-failed` or `hash-mismatch`; the web turns it into text. */
+    error: Type.Optional(Type.String({ maxLength: 64 })),
+    noticeSeen: Type.Boolean(),
+    latestFailedBefore: Type.Optional(Type.Boolean()),
+    updated: Type.Optional(Version),
+    rolledBack: Type.Optional(Type.Object({ from: Version, to: Version, code: Type.String({ maxLength: 64 }) }, strict)),
+    downgraded: Type.Optional(Type.Boolean()),
+  },
+  strict,
+);
+export type UpdateStatusDto = RO<Static<typeof UpdateStatusSchema>>;
+export const UpdateSettingsSchema = Type.Object(
+  { mode: Type.Optional(UpdateModeSchema), noticeSeen: Type.Optional(Type.Literal(true)), ack: Type.Optional(Type.Literal(true)) },
+  { ...strict, minProperties: 1 },
+);
+export type UpdateSettingsDto = Static<typeof UpdateSettingsSchema>;
+export const UpdateDownloadSchema = Type.Object({ retryBad: Type.Optional(Type.Boolean()) }, strict);
+export type UpdateDownloadDto = Static<typeof UpdateDownloadSchema>;

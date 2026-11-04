@@ -1,8 +1,12 @@
-﻿; Ludiary installer (ADR 45): per-user, no administrator, %LOCALAPPDATA%\Programs\Ludiary.
-; Compile with apps/desktop/scripts/build-installer.mjs (passes AppVersion, SourceDir, OutputDir).
+﻿; Ludiary installer (ADR 45, 90): per-user, no administrator, %LOCALAPPDATA%\Programs\Ludiary.
+; Layout: Ludiary.exe (stable launcher, Go) + app-<version>\ (the program) + versions.json (written by the launcher, never here).
+; Compile with apps/desktop/scripts/build-installer.mjs (passes AppVersion, AppFolderVersion, SourceDir, OutputDir).
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
+#endif
+#ifndef AppFolderVersion
+  #define AppFolderVersion AppVersion
 #endif
 #ifndef SourceDir
   #error SourceDir must point to apps/desktop/dist/app
@@ -35,6 +39,9 @@ WizardStyle=modern
 ; The running server is stopped in [Code]; do not rely on the Restart Manager for a hidden background app.
 CloseApplications=no
 RestartApplications=no
+; ADR 90 point 18, A3: the stable launcher waits for this mutex to disappear (it means "the installer is still working").
+; W4: the name and its visibility to OpenMutex from another process are to be confirmed on a real install (see the ADR).
+SetupMutex=Ludiary-Setup
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -46,27 +53,53 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:DesktopIcon}"; Flags: unchecked
 
 [Files]
+; The stable launcher: the shortcut and the uninstaller open it. The program itself goes in its own versioned folder.
 Source: "{#SourceDir}\Ludiary.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDir}\version.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDir}\native\*"; DestDir: "{app}\native"; Flags: ignoreversion
-Source: "{#SourceDir}\bin\*"; DestDir: "{app}\bin"; Flags: ignoreversion
-Source: "{#SourceDir}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
-Source: "{#SourceDir}\web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\app-{#AppFolderVersion}\*"; DestDir: "{app}\app-{#AppFolderVersion}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [InstallDelete]
-; Hashed asset names change between versions: remove the old web folder before copying the new one.
+; Installations from before ADR 90 had everything flat next to Ludiary.exe (which was the program itself, now replaced by the launcher).
+Type: filesandordirs; Name: "{app}\native"
 Type: filesandordirs; Name: "{app}\web"
+Type: filesandordirs; Name: "{app}\bin"
+Type: filesandordirs; Name: "{app}\licenses"
+Type: files; Name: "{app}\version.txt"
+; Reinstalling the same version: the folder is complete again only when the marker is written, as the last file.
+Type: files; Name: "{app}\app-{#AppFolderVersion}\.complete"
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}\app-*"
+Type: files; Name: "{app}\versions.json"
+Type: files; Name: "{app}\versions.json.tmp"
 
 [Icons]
 Name: "{autoprograms}\Ludiary"; Filename: "{app}\Ludiary.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\Ludiary"; Filename: "{app}\Ludiary.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Ludiary.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent
+; The launcher makes the new folder the active one and starts the trial (ADR 90 point 18, M2/M8). nowait: it waits for
+; this installer to leave (SetupMutex), so waiting for it here would be a deadlock. By hand it does not open the browser:
+; the optional entry below does, if the user leaves it ticked.
+Filename: "{app}\Ludiary.exe"; Parameters: "--commit-update {#AppFolderVersion}"; Flags: nowait runhidden; Check: IsUpdate
+Filename: "{app}\Ludiary.exe"; Parameters: "--commit-update {#AppFolderVersion} --no-open"; Flags: nowait runhidden; Check: not IsUpdate
+Filename: "{app}\Ludiary.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent; Check: not IsUpdate
 
 [Code]
 var
   PurgeData: Boolean;
+
+{ /UPDATE=1: started by the stable launcher after an update was downloaded and verified (ADR 90). }
+function IsUpdate(): Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
+
+{ The folder app-<version> counts as complete when this marker exists; it is the very last file written (M2). }
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    SaveStringToFile(ExpandConstant('{app}\app-{#AppFolderVersion}\.complete'), '', False);
+end;
 
 { Returns the exit code of Ludiary.exe, or 0 when it is not installed yet. }
 function RunLudiary(const Params: String): Integer;

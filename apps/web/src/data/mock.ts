@@ -1,6 +1,8 @@
 import type {
   BackupDto,
   BackupsDto,
+  UpdateModeDto,
+  UpdateStatusDto,
   CollectionDto,
   DetectionMode,
   GameDetailDto,
@@ -265,6 +267,8 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
   );
   const sessions = new Map<string, number>(); // wizard target -> step index. Never holds values.
   const backupCopies: BackupDto[] = [];
+  let updateMode: UpdateModeDto | null = null;
+  let updateNoticeSeen = false;
   const maintenance: MaintenanceDto = { lastBackupAt: null, lastScanAt: now() - HOUR, lastSyncAt: now() - 5 * 60_000 };
   let settings: GeneralSettings = {
     locale: ((v) => (v === "es" || v === "en" ? v : "system"))(storage.getItem("ludiary.locale")),
@@ -512,6 +516,16 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     pickBackupFolder: async () => null, // the simulator has no native dialog
     restoreBackup: async () => undefined,
     exportLogs: async () => undefined,
+    // The simulator has no installed version to update: it behaves like a development build.
+    getUpdates: async (): Promise<UpdateStatusDto> => ({ mode: updateMode, current: "0.0.0-proto", state: "unsupported", noticeSeen: updateNoticeSeen }),
+    updateUpdateSettings: async (patch) => {
+      if (patch.mode) updateMode = patch.mode;
+      if (patch.noticeSeen) updateNoticeSeen = true;
+      return { mode: updateMode, current: "0.0.0-proto", state: "unsupported", noticeSeen: updateNoticeSeen };
+    },
+    checkUpdates: async () => ({ mode: updateMode, current: "0.0.0-proto", state: "unsupported", noticeSeen: updateNoticeSeen }),
+    downloadUpdate: async () => ({ mode: updateMode, current: "0.0.0-proto", state: "unsupported", noticeSeen: updateNoticeSeen }),
+    restartForUpdate: async () => undefined,
     simulateExpiredSession: async (store) => {
       setStore(store, {
         connection: "expired",

@@ -1,5 +1,6 @@
 import type {
   BackupsDto,
+  UpdateStatusDto,
   CollectionCreateDto,
   CollectionDto,
   CollectionPatchDto,
@@ -338,6 +339,11 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     },
     restoreBackup: async (id) => void (await http.post("/api/backups/restore", { id })),
     exportLogs: unavailable,
+    getUpdates: () => http.get<UpdateStatusDto>("/api/updates"),
+    updateUpdateSettings: (patch) => http.put<UpdateStatusDto>("/api/updates/settings", patch),
+    checkUpdates: () => http.post<UpdateStatusDto>("/api/updates/check", {}),
+    downloadUpdate: (retryBad) => http.post<UpdateStatusDto>("/api/updates/download", retryBad ? { retryBad: true } : {}),
+    restartForUpdate: async () => void (await http.post("/api/updates/restart", {})),
     simulateExpiredSession: unavailable,
   };
   return api;

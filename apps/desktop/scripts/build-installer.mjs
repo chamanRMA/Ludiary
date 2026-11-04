@@ -9,6 +9,8 @@ const desktop = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = join(desktop, "dist/app");
 const outputDir = join(desktop, "dist/installer");
 if (!existsSync(join(sourceDir, "Ludiary.exe"))) throw new Error("dist/app is missing: run `pnpm build:desktop` first");
+const folderVersion = readFileSync(join(sourceDir, "version.txt"), "utf8").trim().replace(/-proto$/, ""); // same rule as build.mjs
+if (!existsSync(join(sourceDir, `app-${folderVersion}`, "Ludiary.exe"))) throw new Error(`dist/app/app-${folderVersion} is missing: run \`pnpm build:desktop\` again`);
 
 const candidates = [
   process.env.ISCC_PATH,
@@ -33,7 +35,7 @@ const iscc = candidates.find((p) => existsSync(p)) ?? "ISCC.exe";
 
 const version = readFileSync(join(sourceDir, "version.txt"), "utf8").trim();
 mkdirSync(outputDir, { recursive: true });
-execFileSync(iscc, [`/DAppVersion=${version}`, `/DSourceDir=${sourceDir}`, `/DOutputDir=${outputDir}`, join(desktop, "installer/ludiary.iss")], {
+execFileSync(iscc, [`/DAppVersion=${version}`, `/DAppFolderVersion=${folderVersion}`, `/DSourceDir=${sourceDir}`, `/DOutputDir=${outputDir}`, join(desktop, "installer/ludiary.iss")], {
   stdio: "inherit",
 });
 console.log("installer in", outputDir);

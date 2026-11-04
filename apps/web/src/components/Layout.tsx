@@ -10,6 +10,7 @@ import { api } from "../data/api";
 import { mutate, refresh, useQuery } from "../data/hooks";
 import { cx, relativeTime, StoreBadge } from "./bits";
 import { Icon } from "./Icon";
+import { UpdatesNotice } from "./UpdatesNotice";
 import ui from "../styles/ui.module.css";
 import styles from "./layout.module.css";
 
@@ -167,6 +168,7 @@ export function Layout({ children }: { children: ReactNode }) {
             ))}
           </div>
         )}
+        <UpdatesNotice />
         {children}
       </main>
     </div>

@@ -16,6 +16,7 @@ import {
   HelperProcessEmbeddedLogin,
   createWindowsPlatformInfo,
   createWindowsProcessLauncher,
+  createWindowsUpdatePlatform,
   type KeyringBinding,
 } from "@ludiary/platform-windows";
 import { APP_ID, createFileLogger, main, type RuntimeDeps, type SqliteAddon } from "@ludiary/runtime";
@@ -23,12 +24,16 @@ import { APP_ID, createFileLogger, main, type RuntimeDeps, type SqliteAddon } fr
 declare const __LUDIARY_VERSION__: string;
 /** False in release builds: esbuild then drops the test-hook branches and they do not exist in the binary (ADR 65). */
 declare const __LUDIARY_TEST_HOOKS__: boolean;
+/** ADR 90, B4: keyId -> raw Ed25519 public key in base64, from apps/desktop/update-keys.json. Empty: nothing is ever applied. */
+declare const __LUDIARY_UPDATE_KEYS__: Record<string, string>;
+/** ADR 90 point 3.2: "owner/name" of the GitHub repository, a build constant and not a setting. */
+declare const __LUDIARY_UPDATE_REPO__: string;
 
 /**
  * Test hooks let tests redirect native addons, the tray helper, the data folder, the browser and the dialogs.
  * In a signed release they would let anyone who controls the environment run code as Ludiary.exe, so they are removed.
  */
-const TEST_HOOK_VARS = ["LUDIARY_NATIVE_DIR", "LUDIARY_TRAY_HELPER", "LUDIARY_DATA_DIR", "LUDIARY_OPEN_URL_FILE", "LUDIARY_DIALOG_FILE", "LUDIARY_WEB_DIR"];
+const TEST_HOOK_VARS = ["LUDIARY_NATIVE_DIR", "LUDIARY_TRAY_HELPER", "LUDIARY_DATA_DIR", "LUDIARY_OPEN_URL_FILE", "LUDIARY_DIALOG_FILE", "LUDIARY_WEB_DIR", "LUDIARY_UPDATE_FEED"];
 /** Node variables that change how a release behaves (TLS checks off, preloaded code); never inherited (ADR 65). */
 const UNSAFE_NODE_VARS = ["NODE_OPTIONS", "NODE_TLS_REJECT_UNAUTHORIZED"];
 
@@ -91,9 +96,18 @@ function compose(serverRole: boolean): RuntimeDeps {
       : undefined;
   // Only the server role sweeps leftover login profiles: the launcher must never touch one that is in use.
   if (serverRole) embeddedLogin?.start();
+  // ADR 90. LUDIARY_UPDATE_FEED (test variant only) replaces the releases/latest URL with a local feed.
+  const feed = __LUDIARY_TEST_HOOKS__ ? env["LUDIARY_UPDATE_FEED"] : undefined;
+  const updates: RuntimeDeps["updates"] = {
+    platform: createWindowsUpdatePlatform({ installDir: platform.installDir, version: __LUDIARY_VERSION__ }),
+    keys: __LUDIARY_UPDATE_KEYS__,
+    repo: __LUDIARY_UPDATE_REPO__,
+    ...(feed ? { feed: { releaseUrl: feed, downloadBase: `${new URL(feed).origin}/download` } } : {}),
+  };
   let sqlite: SqliteAddon | undefined;
   const deps: RuntimeDeps = {
     version: __LUDIARY_VERSION__,
+    updates,
     platform,
     env,
     createKeyStore,
