@@ -1,0 +1,363 @@
+{
+  "keys": {
+    "test-1": "uZ5wGUP3ZuRL9nSFiIVg27O/8dECL+D+jGAuYSKfVdo="
+  },
+  "context": "ludiary-update-v1\n",
+  "cases": [
+    {
+      "name": "valid",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "ok"
+    },
+    {
+      "name": "signature of another key",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 mDFl6DbPM8jTEyNm93TO1fdvYT6iRMJdjSuOybJQPY8BcvN8PPpfkfJmOHxfsn5PKmSND7VM0Wam012UIh1xDA==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "signature"
+    },
+    {
+      "name": "one byte changed",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.1\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "signature"
+    },
+    {
+      "name": "unknown keyId",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 other EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "key"
+    },
+    {
+      "name": "no context prefix",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 rEkbi+RJAzr4mtPYNnQRwH40DWwDaHWjJQ2FQW154hB0ID9Njy6xCs4q+tl51Lk+yYz6D5XVKH2Tb5UTsaTYDA==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "signature"
+    },
+    {
+      "name": "signature line malformed",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 AAAA\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "signature"
+    },
+    {
+      "name": "schema 2",
+      "manifest": "{\"schema\":2,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 mIYYOUNpneoHKvOo8x3nKEVDyD5TNk+7RubiJ4p4mLG8YmF9rEukx/UG0ju7vVydNy7JgGgeDZJf/7WrOiQjBQ==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "schema"
+    },
+    {
+      "name": "other product",
+      "manifest": "{\"schema\":1,\"product\":\"other\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 7V/SrcZHSx5UgL+vKPmG9NvUvTQ3BD0j4hq4NzNQ5cd1ylgoiVNpfqp6/N5oYTq/9pbJAjNUOfCpV/MmsVLwDQ==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "format"
+    },
+    {
+      "name": "other channel",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"beta\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 SPZ1Dz+M2OcwrL/Lq1ezvN+88yYPjMYIKg8XIiDE75426PEaTXIGgmNcCNuXrbSBqBzbHT460mkyIwgTdOjzAQ==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "format"
+    },
+    {
+      "name": "tag differs",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.1",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "version"
+    },
+    {
+      "name": "same version as current",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.3.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "not-newer"
+    },
+    {
+      "name": "lower than current",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.10.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "not-newer"
+    },
+    {
+      "name": "listed as bad",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [
+        "0.3.0"
+      ],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "bad-version"
+    },
+    {
+      "name": "no target",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "linux-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "target"
+    },
+    {
+      "name": "name incoherent",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.2.9.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 4X4470uqx/u9s3V79KKD1L1gb4qkQPlb8o5jm3vXVAXy2q0JWola8Im8ynlylUUcUSX133hi2QFaP9/M8QVmCw==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "file"
+    },
+    {
+      "name": "size too small",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":1000,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 d1Wwe7cg8+ys5Y5LOQhaHopemMNX87cBexVkC9irhZ9AGNhdy4E+Q/BQhCDXWngrIt5YDo1kxDOPbP2bzAoXBQ==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 1000
+        }
+      ],
+      "expect": "file"
+    },
+    {
+      "name": "size too big",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":314572800,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 xdHXbZkzT05uBtdpUCDah1ku8tRm+jkNJGZJM3Rtka2VhPtGiIB5hv9iKD6AQbxSlNGvWzdC7ObJ6km21mVqCQ==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "file"
+    },
+    {
+      "name": "hash not hex",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"XYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXYXY\"}}}",
+      "signature": "ludiary-sig-v1 test-1 655aTRAISetIsZvQWLawe4kRDosozAu3yepIqKzEyI386t3xVpQO/VTf68u+yEWgDeAcUiCqxbP4ru0qGXIHCQ==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "file"
+    },
+    {
+      "name": "asset size differs",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EDJ1E4jZDyWf4P2hxqbRyFMLohOoyWxsInze9G6HRiLGHhMqlMPjNdrhVQPt3uOPM2sEr6WiEewAZFFL2BInBg==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 5242880
+        }
+      ],
+      "expect": "asset",
+      "nodeOnly": true
+    },
+    {
+      "name": "key differing only in case",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}},\"Version\":\"0.9.9\"}",
+      "signature": "ludiary-sig-v1 test-1 UiUaT1mqfxH30CkO40en59sU0ekL5ypZuDai5gx5/LvnWLOXo60kYcm298K7kVDUPpI34M1G2xYzf/5cgDwPAQ==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "format"
+    },
+    {
+      "name": "file key differing only in case",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\",\"Name\":\"Ludiary-Setup-0.9.9.exe\"}}}",
+      "signature": "ludiary-sig-v1 test-1 EB3hQ3GNyyI7wYnsT7IdISTVIHi+jvhoFuzJsQrE960JZ/GvdbpDmRr71NUTKSkajwTVjYf/+Js68DVIBGN+Cg==\n",
+      "tag": "0.3.0",
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "format"
+    },
+    {
+      "name": "version with path",
+      "manifest": "{\"schema\":1,\"product\":\"ludiary\",\"channel\":\"stable\",\"version\":\"0.3.0/../x\",\"publishedAt\":\"2026-11-20T10:00:00Z\",\"files\":{\"windows-x64\":{\"name\":\"Ludiary-Setup-0.3.0.exe\",\"size\":28311552,\"sha256\":\"abababababababababababababababababababababababababababababababab\"}}}",
+      "signature": "ludiary-sig-v1 test-1 LtrKPALeyOuQncXflwKPoXD4Q4R2P2oz7QjEIzLAtmmISBZ5jrNm1R4FmS26qlTrA9TWeZP0gl1/z3vZioVnCA==\n",
+      "tag": null,
+      "current": "0.2.0",
+      "badVersions": [],
+      "target": "windows-x64",
+      "assets": [
+        {
+          "name": "Ludiary-Setup-0.3.0.exe",
+          "size": 28311552
+        }
+      ],
+      "expect": "format"
+    }
+  ]
+}

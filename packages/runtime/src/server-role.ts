@@ -13,6 +13,8 @@ import { restartSequence, spawnAfterRestartLauncher } from "./launcher";
 import { startDatabase } from "./restore-startup";
 import { createFileLogger, readRuntimeInfo, writeRuntimeInfo, type Logger } from "./files";
 import { candidatePorts } from "./ports";
+import { createUpdatesFacade } from "./updates/facade";
+import { createUpdateService, type UpdateService } from "./updates/service";
 import { loadWebAssets } from "./web-assets";
 
 const KEY_BYTES = 32;
@@ -129,7 +131,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       if (dbOpen) db.close();
       dbOpen = false;
     };
-    const { core, facade, connectors, services } = composed;
+    const { core, facade, connectors, services, settings } = composed;
     waitForScans = () => core.whenIdle();
     const mediaHosts = unionMediaHosts(connectors, services);
     const webAssets = loadWebAssets(deps.webDir, log); // once, at startup (ADR 72 point 6)
@@ -138,6 +140,41 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     let exitResolve: (code: number) => void = () => {};
     const exited = new Promise<number>((resolve) => (exitResolve = resolve));
     let tray: TrayHost | null = null;
+    let trayItems: () => TrayState = () => ({ tooltip: "", items: [] });
+    let updateEntry: { id: string; label: string } | null = null;
+    // ADR 90: the updater only exists when the build provides its port; without it the API answers `update.unsupported`.
+    let updates: UpdateService | undefined;
+    if (deps.updates) {
+      const cfg = deps.updates;
+      updates = createUpdateService({
+        version: deps.version,
+        dataDir: platform.dataDir,
+        config: cfg,
+        settings,
+        log,
+        onChange: () => void refreshUpdateEntry(),
+        restart: async () => {
+          await cfg.platform.restartIntoLauncher();
+          await shutdown();
+        },
+      });
+    }
+    /** Entry of the tray menu for a ready or available update (point 10). */
+    async function refreshUpdateEntry(): Promise<void> {
+      if (!updates) return;
+      try {
+        const s = await updates.status();
+        updateEntry =
+          s.state === "ready" && s.latest
+            ? { id: "update-restart", label: translate(locale, "tray.updateReady", { version: s.latest }) }
+            : s.state === "available" && s.mode === "notify" && !s.snoozed
+              ? { id: "update-available", label: translate(locale, "tray.updateAvailable") }
+              : null;
+        tray?.update(trayItems());
+      } catch (e) {
+        log("warn", `tray update entry failed: ${(e as Error).name}`);
+      }
+    }
     let backupTimer: NodeJS.Timeout | undefined;
     let stopping = false;
 
@@ -159,6 +196,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         // ADR 89 point 6.2: the launcher goes first and is independent of us; only then does this server shut down.
         onRestartRequested: () => restartSequence(() => spawnAfterRestartLauncher(deps, log), () => void shutdown()),
         core: facade,
+        ...(updates ? { updates: createUpdatesFacade(updates) } : {}),
         webAssets,
         mediaHosts,
         // Name and stack frames only: the message of an unknown exception may quote store data (ADR 87 point 13).
@@ -179,6 +217,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       // Safety net: a stuck step must never leave a zombie server. The OS releases the instance lock on exit.
       setTimeout(() => process.exit(EXIT.ok), 5_000).unref();
       clearInterval(backupTimer);
+      updates?.stop();
       await tray?.stop().catch(() => {});
       core.shutdown(); // closes any open login window before the server waits for its pending request (ADR 80)
       await server.close().catch(() => {});
@@ -197,16 +236,19 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         tooltip: translate(locale, "tray.tooltip"),
         items: [
           { id: "status", label: translate(locale, "tray.status", { port }), enabled: false },
+          ...(updateEntry ? [{ id: updateEntry.id, label: updateEntry.label }] : []),
           { id: "open", label: translate(locale, "tray.open") },
           // Plan B of ADR 66 for a browser that does not resolve ludiary.localhost.
           { id: "open-alt", label: translate(locale, "tray.openAlt") },
           { id: "quit", label: translate(locale, "tray.quit") },
         ],
       });
+      trayItems = trayState;
       const host = deps.createTray();
       host.onClick((id) => {
         if (id === "quit") void shutdown();
-        else if (id === "open" || id === "@default" || id === "open-alt") {
+        else if (id === "update-restart") void updates?.restart().catch((e: Error) => log("warn", `update restart refused: ${e.message}`));
+        else if (id === "open" || id === "@default" || id === "open-alt" || id === "update-available") {
           const url = server.createOpenUrl(id === "open-alt" ? "ip" : "name");
           platform.openUrl(url).catch((e: Error) => log("error", `open failed: ${e.message}`));
         }
@@ -221,6 +263,9 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         log("error", `tray failed: ${(e as Error).message}`);
       }
     }
+
+    await updates?.start().catch((e: Error) => log("error", `updater did not start (${e.name})`)); // never stops the server
+    void refreshUpdateEntry();
 
     // ADR 89 point 5: the core has no timers. Once at the end of startup and then every hour.
     void core.backupTick();

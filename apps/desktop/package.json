@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "build:installer": "node scripts/build-installer.mjs"
+    "build:installer": "node scripts/build-installer.mjs",
+    "release:build": "node scripts/release-build.mjs",
+    "release:manifest": "node scripts/release-manifest.mjs",
+    "release:sign": "node scripts/release-sign.mjs",
+    "release:keygen": "node scripts/release-keygen.mjs",
+    "release:publish": "node scripts/release-publish.mjs"
   },
   "dependencies": {
     "@ludiary/contracts": "workspace:*",

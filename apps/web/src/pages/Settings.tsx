@@ -16,6 +16,7 @@ import { ApiError } from "../data/http";
 import { cx, PageTitle, relativeTime, SimNote } from "../components/bits";
 import { CollectionsStatusLine, withCollections } from "../components/CollectionsStatus";
 import { TargetRow } from "../components/TargetRow";
+import { UpdatesPanel } from "../components/UpdatesPanel";
 import ui from "../styles/ui.module.css";
 import styles from "./settings.module.css";
 
@@ -508,17 +509,12 @@ function Privacy() {
 
 function About() {
   const { t } = useTranslation();
-  const [settings, update] = useSettings();
   return (
     <>
       <p>{t("settings.about.what")}</p>
       <p className={ui.muted}>{t("settings.about.license")}</p>
       <p className={ui.muted}>{t("settings.about.affiliation")}</p>
-      {isSimulated && settings && (
-        <Row title={t("settings.about.autoUpdate")} hint={t("settings.about.autoUpdateHint")}>
-          <Switch checked={settings.autoUpdate} label={t("settings.about.autoUpdate")} onChange={(autoUpdate) => void update({ autoUpdate })} />
-        </Row>
-      )}
+      <UpdatesPanel />
     </>
   );
 }

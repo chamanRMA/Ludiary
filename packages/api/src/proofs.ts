@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** Actions the launcher may ask for (ADR 63). Nothing else is reachable through the launcher protocol. */
-export type LauncherAction = "open-link" | "shutdown";
-export const LAUNCHER_ACTIONS: readonly LauncherAction[] = ["open-link", "shutdown"];
+export type LauncherAction = "open-link" | "shutdown" | "version";
+export const LAUNCHER_ACTIONS: readonly LauncherAction[] = ["open-link", "shutdown", "version"];
 
 const mac = (key: Uint8Array, text: string) => createHmac("sha256", key).update(text, "utf8").digest("base64url");
 

@@ -67,5 +67,19 @@
   "connectors.common.errors.launch.launcher-missing": "The store's program was not found on this computer.",
   "connectors.common.errors.launch.not-installed": "This game is not installed on this computer.",
   "connectors.common.errors.action.unsupported": "This store does not support that action.",
-  "connectors.common.errors.internal": "An unexpected error happened in this store's connector."
+  "connectors.common.errors.internal": "An unexpected error happened in this store's connector.",
+  "tray.updateReady": "Update {version} ready: restart",
+  "tray.updateAvailable": "A new version of Ludiary is available",
+  "core.errors.update.unsupported": "This installation does not update itself (development build, or no versions folder).",
+  "core.errors.update.nothing-new": "There is no new version to download.",
+  "core.errors.update.bad-version": "That version already failed to start on this PC. Use \"Check now\" to try it again.",
+  "core.errors.update.not-writable": "The installation folder cannot be written to. Download the installer by hand from the releases page.",
+  "core.errors.update.not-ready": "No update is ready to install yet.",
+  "core.errors.update.too-soon": "You just checked for updates. Wait a minute.",
+  "core.errors.update.no-space": "There is not enough free space to download the update.",
+  "core.errors.update.check-failed": "Could not check whether a new version exists.",
+  "core.errors.update.manifest-invalid": "The update did not pass the signature check and was not downloaded.",
+  "core.errors.update.manual-required": "This version has to be installed by hand from the releases page.",
+  "core.errors.update.hash-mismatch": "The downloaded installer does not match what was signed and was discarded.",
+  "core.errors.update.download-failed": "The update could not be downloaded."
 }

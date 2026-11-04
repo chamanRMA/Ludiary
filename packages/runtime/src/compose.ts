@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { LudiaryCoreFacade } from "@ludiary/api";
 import type { PriceService, StoreConnector } from "@ludiary/contracts";
-import { ConnectorRegistrationError, createCore, type BackupStore, type CoreLogger, type LastRestore, type LudiaryCore } from "@ludiary/core";
+import { ConnectorRegistrationError, createCore, type BackupStore, type CoreLogger, type LastRestore, type LudiaryCore, type SettingsRepository } from "@ludiary/core";
 import { createRepositories, DatabaseTooNewError, migrate } from "@ludiary/db";
 import { translate, type ConnectorMessageKey, type MessageKey } from "@ludiary/i18n";
 import { createHttpClient, createNodeLocalFiles, createSecretCipher, systemClock } from "@ludiary/platform-node";
@@ -59,6 +59,8 @@ export interface ComposedCore {
   facade: LudiaryCoreFacade;
   connectors: readonly StoreConnector[];
   services: readonly PriceService[];
+  /** User settings (key-value), for the updater of ADR 90, which lives in the runtime and not in the core. */
+  settings: SettingsRepository;
 }
 
 /**
@@ -111,7 +113,7 @@ export async function composeCore(
       t: (key) => translate(locale, key as MessageKey | ConnectorMessageKey),
       systemLocale: deps.platform.systemLocale,
     });
-    return { core, facade: createCoreFacade(core), connectors, services };
+    return { core, facade: createCoreFacade(core), connectors, services, settings: repos.settings };
   } catch (e) {
     if (e instanceof ConnectorRegistrationError) {
       throw new FatalError(EXIT.error, `connector '${e.connectorId}' refused at startup: ${e.problems.join("; ")}`);

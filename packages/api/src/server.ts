@@ -4,10 +4,11 @@ import type { AddressInfo } from "node:net";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { LAUNCHER_ACTIONS, launcherProof, proofsEqual, serverProof, type LauncherAction } from "./proofs";
 import { SESSION_ABSOLUTE_MS, type SessionStore } from "./sessions";
-import { isCoreError, statusForCoreError, type LudiaryCoreFacade } from "./core";
+import { isCoreError, statusForCoreError, type LudiaryCoreFacade, type UpdatesFacade } from "./core";
 import { OPEN_CSP, openScript, spaCsp, type WebAssets } from "./web";
 import {
   CollectionCreateSchema, CollectionPatchSchema, CollectionSchema, GamePatchSchema, type CollectionCreateDto, type CollectionPatchDto, type GamePatchDto,
+  UpdateDownloadSchema, UpdateSettingsSchema, UpdateStatusSchema, type UpdateDownloadDto, type UpdateSettingsDto,
   BackupSchema, BackupsSchema, RestoreBodySchema, RestoreResponseSchema, type RestoreBodyDto,
   EmptyObjectSchema, GameDetailSchema, GameSummarySchema, IdParamsSchema, LaunchRequestSchema,
   LaunchResponseSchema, OnboardingCompleteSchema, OnboardingSchema, PickCancelledSchema, ScanRootPatchSchema,
@@ -58,6 +59,8 @@ export interface LocalServerDeps {
   sessions: SessionStore;
   /** Facade over the core (ADR 72). */
   core: LudiaryCoreFacade;
+  /** ADR 90. Absent (Docker): the routes answer 409 `update.unsupported`. */
+  updates?: UpdatesFacade;
   /** SPA files by absolute URL path ('/index.html', '/assets/x.js'), read once by the runtime. May be empty. */
   webAssets: WebAssets;
   /** Union of the connectors' mediaHosts (ADR 71): bare host names, they become img-src entries. */
@@ -211,7 +214,7 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
       proofsEqual(body.proof, launcherProof(deps.launcherKey, action, currentPort, nonce));
     if (!valid) return deny(reply, 401, "unauthorized"); // same answer for every failure
 
-    const result = action === "open-link" ? openUrl("name") : "ok";
+    const result = action === "open-link" ? openUrl("name") : action === "version" ? deps.version : "ok"; // "version": ADR 90, A3
     if (action === "shutdown") setImmediate(deps.onShutdownRequested);
     return { result, proof: serverProof(deps.launcherKey, action, currentPort, nonce, result) };
   });
@@ -381,6 +384,33 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
       return reply.code(202).send({ restarting: true });
     },
   );
+
+  // ---- ADR 90 point 10. Reading is 'session'; everything that writes is 'session+key' (ADR 67).
+  const noUpdates = () => Object.assign(new Error("updates unsupported"), { code: "update.unsupported", key: "core.errors.update.unsupported" });
+  const updates = deps.updates;
+  app.get("/api/updates", { config: { access: "session" }, schema: { querystring: noQuery, response: { 200: UpdateStatusSchema } } }, async () => {
+    if (!updates) throw noUpdates();
+    return updates.status();
+  });
+  app.put<{ Body: UpdateSettingsDto }>("/api/updates/settings", { schema: { querystring: noQuery, body: UpdateSettingsSchema, response: { 200: UpdateStatusSchema } } }, async (req) => {
+    if (!updates) throw noUpdates();
+    return updates.setSettings(req.body);
+  });
+  app.post("/api/updates/check", { schema: { querystring: noQuery, body: EmptyObjectSchema, response: { 200: UpdateStatusSchema } } }, async () => {
+    if (!updates) throw noUpdates();
+    await updates.checkNow();
+    return updates.status();
+  });
+  app.post<{ Body: UpdateDownloadDto }>("/api/updates/download", { schema: { querystring: noQuery, body: UpdateDownloadSchema, response: { 202: UpdateStatusSchema } } }, async (req, reply) => {
+    if (!updates) throw noUpdates();
+    await updates.download(req.body.retryBad === true); // answers once the checks pass; the download goes on in the background
+    return reply.code(202).send(await updates.status());
+  });
+  app.post("/api/updates/restart", { schema: { querystring: noQuery, body: EmptyObjectSchema, response: { 202: RestoreResponseSchema } } }, async (_req, reply) => {
+    if (!updates) throw noUpdates();
+    await updates.restart();
+    return reply.code(202).send({ restarting: true });
+  });
 
   app.patch<{ Params: IdParams; Body: ScanRootPatchDto }>(
     "/api/scan-roots/:id",
