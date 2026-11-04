@@ -9,7 +9,7 @@ import { SessionStore } from "../src/sessions";
 import { FakeCoreError, fakeCore, send } from "./helpers";
 
 const HEADER = "x-ludiary-origin-key";
-const status: UpdateStatusDto = { mode: "notify", current: "0.2.0", state: "up-to-date", noticeSeen: true, lastCheckAt: 5 };
+const status: UpdateStatusDto = { mode: "notify", current: "0.2.0", state: "up-to-date", lastCheckAt: 5 };
 
 let server: LocalServer | null = null;
 afterEach(async () => {
@@ -32,6 +32,7 @@ async function start(updates?: UpdatesFacade) {
 
 const WRITES: [string, string, unknown][] = [
   ["PUT", "/api/updates/settings", { mode: "off" }],
+  ["PUT", "/api/updates/settings", { later: true }],
   ["POST", "/api/updates/check", {}],
   ["POST", "/api/updates/download", {}],
   ["POST", "/api/updates/restart", {}],
@@ -64,7 +65,7 @@ describe("update routes", () => {
     }
     expect(f.calls).toEqual([]);
     for (const [method, path, body] of WRITES) expect([200, 202]).toContain((await send(port, path, { method, headers: auth, body })).status);
-    expect(f.calls).toEqual(['settings {"mode":"off"}', "check", "download false", "restart"]);
+    expect(f.calls).toEqual(['settings {"mode":"off"}', 'settings {"later":true}', "check", "download false", "restart"]);
   });
 
   it("passes retryBad and rejects unknown fields and modes", async () => {
@@ -75,6 +76,8 @@ describe("update routes", () => {
     for (const [path, method, body] of [
       ["/api/updates/settings", "PUT", { mode: "sometimes" }],
       ["/api/updates/settings", "PUT", {}],
+      ["/api/updates/settings", "PUT", { noticeSeen: true }], // gone with the one-time card (ADR 90 point 20)
+      ["/api/updates/settings", "PUT", { later: false }],
       ["/api/updates/settings", "PUT", { mode: "auto", url: "https://evil.example" }],
       ["/api/updates/download", "POST", { url: "https://evil.example" }],
       ["/api/updates/check", "POST", { x: 1 }],

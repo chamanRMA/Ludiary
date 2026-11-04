@@ -167,7 +167,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         updateEntry =
           s.state === "ready" && s.latest
             ? { id: "update-restart", label: translate(locale, "tray.updateReady", { version: s.latest }) }
-            : s.state === "available" && s.mode === "notify"
+            : s.state === "available" && s.mode === "notify" && !s.snoozed
               ? { id: "update-available", label: translate(locale, "tray.updateAvailable") }
               : null;
         tray?.update(trayItems());

@@ -90,10 +90,9 @@ function make(over: { version?: string; installRoot?: string | null; keys?: Reco
   service = createUpdateService({ version: over.version ?? current, dataDir, config, settings, log: () => {}, restart: async () => void restarted++ });
   return service;
 }
-const choose = (mode: UpdateMode | null, seen = true) => {
-  if (mode) settingsMap.set("updates.mode", mode);
-  if (seen) settingsMap.set("updates.noticeSeen", true);
-};
+const choose = (mode: UpdateMode) => void settingsMap.set("updates.mode", mode);
+const apiCalls = () => requests.filter((u) => u === API);
+const MANIFEST_URL = (v: string) => `https://github.com/${REPO}/releases/download/v${v}/ludiary-update.json`;
 const publish = (version: string, over?: Parameters<typeof release>[1]) => {
   const r = release(version, over);
   files = r.files;
@@ -141,42 +140,136 @@ describe("a build that cannot update", () => {
   });
 });
 
-describe("no request before the user chooses (ADR 90 point 18, M5)", () => {
-  it("with no mode chosen: nothing in three days; Check now makes exactly one request", async () => {
+describe("the default mode is notify and only `off` is silent (ADR 90 point 20)", () => {
+  it("with nothing stored the mode is notify and the first request goes out after 60 s, with no wizard and no card", async () => {
+    publish("0.3.0");
     const svc = make();
     await svc.start();
-    await vi.advanceTimersByTimeAsync(3 * 24 * 3_600_000);
+    expect((await svc.status()).mode).toBe("notify");
+    await vi.advanceTimersByTimeAsync(59_000);
     expect(requests).toEqual([]);
-    expect((await svc.status()).mode).toBeNull();
-    await svc.checkNow();
-    expect(requests).toEqual([API]);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(apiCalls()).toHaveLength(1);
   });
 
-  it("mode off: nothing automatic, Check now still works", async () => {
+  it("mode off: nothing automatic in two days (a double that fails if called); Check now still works", async () => {
     choose("off");
+    const first = net.get;
+    net.get = async () => {
+      throw new Error("off must not call the network");
+    };
     const svc = make();
     await svc.start();
     await vi.advanceTimersByTimeAsync(2 * 24 * 3_600_000);
     expect(requests).toEqual([]);
+    net.get = first;
     await svc.checkNow();
-    expect(requests).toHaveLength(1);
+    expect(apiCalls()).toHaveLength(1);
   });
 
-  it("a mode with neither the wizard completed nor the card seen still asks nothing", async () => {
-    choose("auto", false);
+  it("choosing off in the wizard before the first check cancels it", async () => {
     const svc = make();
     await svc.start();
-    await vi.advanceTimersByTimeAsync(2 * 24 * 3_600_000);
+    await svc.setMode("off");
+    await vi.advanceTimersByTimeAsync(24 * 3_600_000);
     expect(requests).toEqual([]);
   });
+});
 
-  it("the wizard being completed is as good as the card", async () => {
-    choose("notify", false);
-    settingsMap.set("onboarding.completedAt", 1);
+describe("a new version is announced only after its signature verifies (point 20)", () => {
+  it("good signature: available, with latest", async () => {
+    publish("0.3.0");
+    const svc = make();
+    await svc.checkNow();
+    expect(await svc.status()).toMatchObject({ state: "available", latest: "0.3.0" });
+    expect(requests.filter((u) => u.endsWith(".exe"))).toEqual([]);
+  });
+
+  it("signature of another key: failed with manifest-invalid, no latest, nothing announced", async () => {
+    publish("0.3.0", { signWith: generateKeyPairSync("ed25519").privateKey });
+    const svc = make();
+    await svc.checkNow();
+    const st = await svc.status();
+    expect(st).toMatchObject({ state: "failed", error: "manifest-invalid" });
+    expect(st.latest).toBeUndefined();
+  });
+
+  it("a network failure while fetching the manifest is check-failed", async () => {
+    publish("0.3.0");
+    const first = net.get;
+    net.get = async (u, o) => {
+      if (u.endsWith("ludiary-update.json")) throw new UpdateNetError("network");
+      return first(u, o);
+    };
+    const svc = make();
+    await expect(svc.checkNow()).rejects.toMatchObject({ code: "update.check-failed" });
+    net.get = first;
+  });
+
+  it("an already verified version is not downloaded again by the next cycle (304)", async () => {
+    choose("notify");
+    publish("0.3.0");
     const svc = make();
     await svc.start();
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(requests).toEqual([API]);
+    await vi.advanceTimersByTimeAsync(61_000);
+    expect(requests.filter((u) => u === MANIFEST_URL("0.3.0"))).toHaveLength(1);
+    apiReply = () => ({ status: 304 });
+    await vi.advanceTimersByTimeAsync(24 * 3_600_000);
+    expect(apiCalls()).toHaveLength(2);
+    expect(requests.filter((u) => u === MANIFEST_URL("0.3.0"))).toHaveLength(1);
+    expect((await svc.status()).state).toBe("available");
+  });
+
+  it("a version in badVersions is verified like any other and reports latestFailedBefore", async () => {
+    publish("0.3.0");
+    writeFileSync(join(root, "versions.json"), JSON.stringify({ active: "0.2.0", previous: null, trial: false, trials: 0, badVersions: ["0.3.0"] }));
+    const svc = make();
+    await svc.checkNow();
+    expect(await svc.status()).toMatchObject({ state: "available", latestFailedBefore: true });
+  });
+
+  it("a stored verifiedVersion that does not match the stored release is dropped", async () => {
+    publish("0.3.0");
+    const svc = make();
+    await svc.checkNow();
+    const cache = settingsMap.get("updates.cache") as { verifiedVersion?: string };
+    settingsMap.set("updates.cache", { ...cache, verifiedVersion: "0.9.9" });
+    expect((await svc.status()).state).not.toBe("available");
+  });
+});
+
+describe("Later (point 20)", () => {
+  async function announced() {
+    publish("0.3.0");
+    const svc = make();
+    await svc.checkNow();
+    return svc;
+  }
+
+  it("snoozes the version for 24 h, in memory", async () => {
+    const svc = await announced();
+    await svc.later();
+    expect((await svc.status()).snoozed).toBe(true);
+    await vi.advanceTimersByTimeAsync(24 * 3_600_000 - 1000);
+    expect((await svc.status()).snoozed).toBe(true);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect((await svc.status()).snoozed).toBeUndefined();
+  });
+
+  it("a newer version, and a new instance of the service, are announced again", async () => {
+    const svc = await announced();
+    await svc.later();
+    expect(await make().status()).not.toHaveProperty("snoozed");
+    await vi.advanceTimersByTimeAsync(61_000);
+    publish("0.4.0");
+    apiReply = () => ({ status: 200, body: release("0.4.0").body, headers: { etag: '"e-0.4.0"' } });
+    await svc.checkNow();
+    expect(await svc.status()).toMatchObject({ latest: "0.4.0" });
+    expect((await svc.status()).snoozed).toBeUndefined();
+  });
+
+  it("needs something announced", async () => {
+    await expect(make().later()).rejects.toMatchObject({ code: "update.nothing-new" });
   });
 });
 
@@ -201,7 +294,7 @@ describe("checking (point 3)", () => {
     const svc = make();
     await svc.start();
     await vi.advanceTimersByTimeAsync(61_000);
-    expect(requests).toEqual([API]);
+    expect(apiCalls()).toHaveLength(1);
     const sent: (string | undefined)[] = [];
     const first = net.get;
     net.get = async (u, o) => (sent.push(o.headers?.["If-None-Match"]), first(u, o));
@@ -281,12 +374,12 @@ describe("checking (point 3)", () => {
 
   it("choosing a mode for the first time starts checking within seconds", async () => {
     publish("0.3.0");
+    choose("off");
     const svc = make();
     await svc.start();
-    settingsMap.set("updates.noticeSeen", true);
     await svc.setMode("notify");
     await vi.advanceTimersByTimeAsync(6_000);
-    expect(requests).toEqual([API]);
+    expect(apiCalls()).toHaveLength(1);
   });
 });
 
@@ -317,8 +410,9 @@ describe("downloading (point 6)", () => {
   it("an installer whose size differs from the manifest in the release listing is rejected", async () => {
     publish("0.3.0", { size: 5 * 1024 * 1024 });
     const svc = make();
-    await svc.checkNow();
-    await expect(svc.download()).rejects.toMatchObject({ code: "update.manifest-invalid" });
+    await svc.checkNow(); // the check already refuses it: it is never announced
+    expect(await svc.status()).toMatchObject({ state: "failed", error: "manifest-invalid" });
+    await expect(svc.download()).rejects.toMatchObject({ code: "update.nothing-new" });
   });
 
   it("needs size + 300 MB free", async () => {
@@ -400,15 +494,32 @@ describe("what must not happen (audit)", () => {
     }
   });
 
-  it("an asset that answers something other than 200 is a failed download, not an invalid manifest", async () => {
-    const r = publish("0.3.0");
-    files.set(r.url("ludiary-update.json"), Buffer.from("x"));
+  it("an asset that answers something other than 200 is a failed check or download, not an invalid manifest", async () => {
+    publish("0.3.0");
     const first = net.get;
-    net.get = async (u, o) => (u.endsWith("ludiary-update.json") ? { status: 404, headers: { get: () => null }, body: Buffer.from("") } : first(u, o));
+    try {
+      const svc = make();
+      await svc.checkNow(); // verified while the asset is fine
+      net.get = async (u, o) => (u.endsWith("ludiary-update.json") ? { status: 404, headers: { get: () => null }, body: Buffer.from("") } : first(u, o));
+      await expect(svc.download()).rejects.toMatchObject({ code: "update.download-failed" });
+      const other = make();
+      settingsMap.delete("updates.cache");
+      await expect(other.checkNow()).rejects.toMatchObject({ code: "update.check-failed" });
+    } finally {
+      net.get = first;
+    }
+  });
+
+  it("the banner of the last update survives a download that starts before it is closed (point 20)", async () => {
+    publish("0.3.0");
+    writeState(dataDir, { state: "idle", updated: "0.2.0" });
     const svc = make();
     await svc.checkNow();
-    await expect(svc.download()).rejects.toMatchObject({ code: "update.download-failed" });
-    net.get = first;
+    await svc.download();
+    expect(readState(dataDir)).toMatchObject({ state: "ready", updated: "0.2.0" });
+    expect((await svc.status()).updated).toBe("0.2.0");
+    await svc.acknowledge();
+    expect((await svc.status()).updated).toBeUndefined();
   });
 
   it("the folder of an update being applied survives the sweep at start", async () => {
@@ -420,6 +531,55 @@ describe("what must not happen (audit)", () => {
     await make().start();
     expect(existsSync(updateFolder(dataDir, "0.3.0"))).toBe(true);
     expect(existsSync(updateFolder(dataDir, "0.1.0"))).toBe(false);
+  });
+});
+
+describe("audit of point 20", () => {
+  it("acknowledging the banner keeps retryBad and the ready update", async () => {
+    writeState(dataDir, { state: "ready", version: "0.3.0", retryBad: "0.3.0", updated: "0.2.0" });
+    const svc = make();
+    await svc.acknowledge();
+    expect(readState(dataDir)).toEqual({ state: "ready", version: "0.3.0", retryBad: "0.3.0" });
+  });
+
+  it("two restart calls in a row restart once", async () => {
+    publish("0.3.0");
+    const svc = make();
+    await svc.checkNow();
+    await svc.download();
+    await svc.restart();
+    await svc.restart();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(restarted).toBe(1);
+  });
+
+  it("switching to off in the middle of a check makes no further request", async () => {
+    choose("notify");
+    publish("0.3.0");
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const first = net.get;
+    net.get = async (u, o) => {
+      const res = await first(u, o);
+      if (u === API) await gate;
+      return res;
+    };
+    const svc = make();
+    await svc.start();
+    await vi.advanceTimersByTimeAsync(61_000); // the check is now waiting on the gate
+    await svc.setMode("off");
+    release();
+    await vi.advanceTimersByTimeAsync(1000);
+    net.get = first;
+    expect(requests).toEqual([API]);
+    expect((await svc.status()).error).toBeUndefined();
+  });
+
+  it("only an announced (verified) version can be downloaded", async () => {
+    publish("0.3.0", { signWith: generateKeyPairSync("ed25519").privateKey });
+    const svc = make();
+    await svc.checkNow();
+    await expect(svc.download()).rejects.toMatchObject({ code: "update.nothing-new" });
   });
 });
 

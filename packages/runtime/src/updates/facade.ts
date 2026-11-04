@@ -11,7 +11,7 @@ export function createUpdatesFacade(svc: UpdateService): UpdatesFacade {
     async setSettings(patch) {
       supported();
       if (patch.mode !== undefined) await svc.setMode(patch.mode);
-      if (patch.noticeSeen) await svc.markNoticeSeen();
+      if (patch.later) await svc.later();
       if (patch.ack) await svc.acknowledge();
       return svc.status();
     },

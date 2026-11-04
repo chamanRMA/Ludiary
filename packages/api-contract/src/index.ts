@@ -509,8 +509,8 @@ export type UpdateModeDto = Static<typeof UpdateModeSchema>;
 const Version = Type.String({ pattern: "^\\d+\\.\\d+\\.\\d+$", maxLength: 32 });
 export const UpdateStatusSchema = Type.Object(
   {
-    /** null: the user has not chosen yet; nothing is requested from GitHub until they do (point 18, M5). */
-    mode: Type.Union([UpdateModeSchema, Type.Null()]),
+    /** `notify` until the user changes it (ADR 90 point 20). */
+    mode: UpdateModeSchema,
     current: Type.String({ maxLength: 64 }),
     latest: Type.Optional(Version),
     state: Type.Union([
@@ -528,7 +528,8 @@ export const UpdateStatusSchema = Type.Object(
     lastCheckAt: Type.Optional(EpochSchema),
     /** A code such as `check-failed` or `hash-mismatch`; the web turns it into text. */
     error: Type.Optional(Type.String({ maxLength: 64 })),
-    noticeSeen: Type.Boolean(),
+    /** "Later" was pressed for `latest` less than 24 hours ago (kept in memory by the server). */
+    snoozed: Type.Optional(Type.Literal(true)),
     latestFailedBefore: Type.Optional(Type.Boolean()),
     updated: Type.Optional(Version),
     rolledBack: Type.Optional(Type.Object({ from: Version, to: Version, code: Type.String({ maxLength: 64 }) }, strict)),
@@ -538,7 +539,7 @@ export const UpdateStatusSchema = Type.Object(
 );
 export type UpdateStatusDto = RO<Static<typeof UpdateStatusSchema>>;
 export const UpdateSettingsSchema = Type.Object(
-  { mode: Type.Optional(UpdateModeSchema), noticeSeen: Type.Optional(Type.Literal(true)), ack: Type.Optional(Type.Literal(true)) },
+  { mode: Type.Optional(UpdateModeSchema), ack: Type.Optional(Type.Literal(true)), later: Type.Optional(Type.Literal(true)) },
   { ...strict, minProperties: 1 },
 );
 export type UpdateSettingsDto = Static<typeof UpdateSettingsSchema>;

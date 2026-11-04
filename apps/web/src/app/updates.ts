@@ -37,8 +37,12 @@ export function statusLine(s: UpdateStatusDto, time: string): StatusLine {
 /** Text key for an error code of the status, falling back to the generic one. */
 export const errorKey = (code: string | undefined, exists: (key: string) => boolean): string => (code && exists(`updates.error.${code}`) ? `updates.error.${code}` : "updates.error.unknown");
 
-/** The notice card (one time): asks for a mode when the user has not chosen one and never saw the card (point 5). */
-export const needsChoice = (s: UpdateStatusDto): boolean => s.state !== "unsupported" && s.mode === null && !s.noticeSeen;
+/**
+ * The notice of a new signed version (point 20): only in `notify`, not snoozed, for a verified version that is available or
+ * ready. A version that already failed here is retried from Settings, not announced. In `auto` there is no notice.
+ */
+export const showPrompt = (s: UpdateStatusDto): boolean =>
+  s.mode === "notify" && s.snoozed !== true && ((s.state === "available" && s.latestFailedBefore !== true) || s.state === "ready");
 
 /** Notices of the last update, shown once until acknowledged (point 10). */
 export function updateNotices(s: UpdateStatusDto): { kind: "updated" | "rolledBack" | "downgraded"; params: Record<string, string> }[] {

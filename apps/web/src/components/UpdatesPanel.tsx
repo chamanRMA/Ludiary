@@ -10,8 +10,8 @@ import ui from "../styles/ui.module.css";
 import styles from "../pages/settings.module.css";
 import { relativeTime } from "./bits";
 
-/** The three modes as radio buttons. `value` null: nothing is selected, because there is no default (ADR 90 point 18, M5). */
-export function UpdateModePicker({ value, onPick, name }: { value: UpdateModeDto | null; onPick(m: UpdateModeDto): void; name: string }) {
+/** The three modes as radio buttons; `notify` is the default and is marked as recommended (ADR 90 point 20). */
+export function UpdateModePicker({ value, onPick, name }: { value: UpdateModeDto; onPick(m: UpdateModeDto): void; name: string }) {
   const { t } = useTranslation();
   return (
     <fieldset className={styles.seg}>

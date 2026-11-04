@@ -104,7 +104,7 @@ export function Welcome() {
             <>
               <h2>{t("updates.wizard.title")}</h2>
               <p className={ui.muted}>{t("updates.wizard.body")}</p>
-              <UpdateModePicker name="wizard-update-mode" value={updates.mode} onPick={(mode) => void mutate(api.updateUpdateSettings({ mode, noticeSeen: true }))} />
+              <UpdateModePicker name="wizard-update-mode" value={updates.mode} onPick={(mode) => void mutate(api.updateUpdateSettings({ mode }))} />
               <p className={ui.muted}>{t("updates.privacy")}</p>
             </>
           )}

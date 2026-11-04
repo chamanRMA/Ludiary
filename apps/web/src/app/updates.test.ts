@@ -1,15 +1,19 @@
 import type { UpdateStatusDto } from "@ludiary/api-contract";
 import { describe, expect, it } from "vitest";
-import { errorKey, isBusy, needsChoice, releaseNotesUrl, statusLine, updateNotices } from "./updates";
+import { errorKey, isBusy, releaseNotesUrl, showPrompt, statusLine, updateNotices } from "./updates";
 
-const base: UpdateStatusDto = { mode: null, current: "0.2.0", state: "idle", noticeSeen: false };
+const base: UpdateStatusDto = { mode: "notify", current: "0.2.0", state: "idle" };
 
 describe("updates texts", () => {
-  it("the card is for supported installs that have neither a mode nor a seen card (ADR 90 point 18, M5)", () => {
-    expect(needsChoice(base)).toBe(true);
-    expect(needsChoice({ ...base, state: "unsupported" })).toBe(false);
-    expect(needsChoice({ ...base, noticeSeen: true })).toBe(false);
-    expect(needsChoice({ ...base, mode: "off" })).toBe(false);
+  it("the notice shows only in notify, for a verified available or ready version, not snoozed and not failed before (point 20)", () => {
+    const avail: UpdateStatusDto = { ...base, state: "available", latest: "0.3.0" };
+    expect(showPrompt(avail)).toBe(true);
+    expect(showPrompt({ ...avail, state: "ready" })).toBe(true);
+    expect(showPrompt({ ...avail, mode: "auto" })).toBe(false);
+    expect(showPrompt({ ...avail, mode: "off" })).toBe(false);
+    expect(showPrompt({ ...avail, snoozed: true })).toBe(false);
+    expect(showPrompt({ ...avail, latestFailedBefore: true })).toBe(false);
+    for (const state of ["idle", "checking", "up-to-date", "downloading", "failed", "unsupported", "rolled-back"] as const) expect(showPrompt({ ...avail, state }), state).toBe(false);
   });
 
   it("one status line per state, with the numbers the line shows", () => {

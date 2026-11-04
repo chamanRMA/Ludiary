@@ -24,7 +24,7 @@ No se rompen sin pasar por el arquitecto y sin dejar una decisión nueva en el A
 6. Ningún texto de la interfaz va escrito en el código: todo pasa por ficheros de traducción (español e inglés).
 7. El modelo de datos lleva `user_id` desde el principio. Un juego canónico agrupa varias propiedades (una por tienda o manual). Los datos del usuario (favoritos, etiquetas, colecciones, tiempo de juego) cuelgan del juego canónico.
 8. Se usan las vías oficiales de las tiendas siempre que existan. El proyecto no está afiliado a ninguna tienda.
-9. Sin telemetría ni servidor propio. Nada sale del equipo del usuario salvo las llamadas a las tiendas y a los servicios que él configure.
+9. Sin telemetría ni servidor propio. Nada sale del equipo del usuario salvo las llamadas a las tiendas, a los servicios que él configure y la comprobación de nuevas versiones en GitHub, activa por defecto y desactivable en Ajustes (ADR 90).
 10. No se improvisa sobre una decisión abierta: se para y se escala al arquitecto.
 
 ## Equipo de agentes

@@ -452,20 +452,20 @@ describe("real client: point B, the rest comes from the simulator", () => {
 });
 
 describe("real client: updates (ADR 90)", () => {
-  const status = { mode: null, current: "0.2.0", state: "idle", noticeSeen: false };
+  const status = { mode: "notify", current: "0.2.0", state: "idle" };
 
   it("talks to the five routes", async () => {
     const { http, log } = fakeHttp(() => status);
     const api = createRealApi(http, createMockApi(memory()));
     await expect(api.getUpdates()).resolves.toEqual(status);
-    await api.updateUpdateSettings({ mode: "notify", noticeSeen: true });
+    await api.updateUpdateSettings({ mode: "notify", later: true });
     await api.checkUpdates();
     await api.downloadUpdate();
     await api.downloadUpdate(true);
     await api.restartForUpdate();
     expect(log).toEqual([
       "GET /api/updates",
-      'PUT /api/updates/settings {"mode":"notify","noticeSeen":true}',
+      'PUT /api/updates/settings {"mode":"notify","later":true}',
       "POST /api/updates/check {}",
       "POST /api/updates/download {}",
       'POST /api/updates/download {"retryBad":true}',
