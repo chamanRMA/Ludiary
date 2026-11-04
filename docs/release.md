@@ -62,11 +62,9 @@ Never put a private key here. Until two real keys are in this file, `release:bui
    - checks that your `update-keys.json` is identical to the one in the draft commit;
    - downloads the files and checks version, name, size and SHA-256 of the installer and `SHA256SUMS.txt`;
    - asks for your passphrase, signs, and verifies the signature with the public key in the repository;
-   - uploads `ludiary-update.json.sig`;
-   - asks you to type `yes` to publish.
-6. Optionally check the attestation: `gh release verify vX.Y.Z`.
+   - asks you to type `yes`, then uploads `ludiary-update.json.sig` and publishes.
 
-If you answer anything other than `yes`, the `.sig` stays uploaded but the draft is not published. Run the command again or publish from GitHub.
+If you answer anything other than `yes`, nothing is uploaded or published. Run the command again when ready.
 
 There is only **one pending draft at a time**. Publish (or delete) it before the next merge can create another.
 
