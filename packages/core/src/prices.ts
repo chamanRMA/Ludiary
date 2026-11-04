@@ -552,6 +552,8 @@ export function createPriceFeature(
         if (e instanceof Stop) throw e.reason === "limited" ? limited() : e.reason === "invalid" ? invalidKey() : notConnected();
         // Point 13 M2: a failure never touches the connection, but a rejected GOG renewal is an expired session, as in the sync (ADR 77).
         if (e instanceof ConnectorError && e.code === "auth.expired" && epochOf(env, c.id) === storeEpoch) await deps.connections.setStatus(c.id, "expired");
+        // Audit of ADR 91: no answer from the store (network or timeout) does not spend the floor; anything else does.
+        if (e instanceof ConnectorError && (e.code === "network.unavailable" || e.code === "network.timeout") && lastImport.get(c.id) === now) lastImport.delete(c.id);
         deps.log.warn("Wishlist import failed", { store: origin, code: e instanceof ConnectorError || e instanceof CoreError ? e.code : "internal" });
         throw toCoreError(e);
       }

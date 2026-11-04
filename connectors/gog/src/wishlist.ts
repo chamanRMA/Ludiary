@@ -1,7 +1,7 @@
 // GOG wishlist import (ADR 91, points 3 and 13). embed.gog.com/user/wishlist.json is unofficial (GW1).
 // Errors: fixed English text, never part of the response, no cause.
-import { ConnectorError, type EntryMedia, type SyncContext, type WishlistItemInfo, type WishlistSnapshot } from "@ludiary/contracts";
-import { bearer, expiredError, refreshSession, throwForStatus } from "./auth";
+import { ConnectorError, type EntryMedia, type I18nKey, type SyncContext, type WishlistItemInfo, type WishlistSnapshot } from "@ludiary/contracts";
+import { bearer, refreshSession, throwForStatus } from "./auth";
 import { PRODUCT_ID_RE } from "./info";
 
 const WISHLIST_URL = "https://embed.gog.com/user/wishlist.json";
@@ -18,7 +18,8 @@ const unexpected = (why: string): ConnectorError => new ConnectorError("store.un
 export async function readGogWishlist(ctx: SyncContext): Promise<WishlistSnapshot> {
   const access = await refreshSession(ctx);
   const res = await ctx.http.request({ method: "GET", url: WISHLIST_URL, headers: { authorization: bearer(access) } });
-  if (res.status === 401 || res.status === 403) throw expiredError("GOG user/wishlist.json");
+  // Point 13 M2: the renewal above already worked, so a refusal here is the unofficial endpoint, not an expired session.
+  if (res.status === 401 || res.status === 403) throw new ConnectorError("store.unexpected-response", "GOG user/wishlist.json refused the session", { messageKey: "connectors.gog.error.wishlist" as I18nKey });
   if (res.status !== 200) throwForStatus(res, "GOG user/wishlist.json");
   let body: unknown;
   try {

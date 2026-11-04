@@ -40,9 +40,9 @@ describe("readWishlist (ADR 91, GOG)", () => {
     expect(await c.readWishlist!(ctxOf(http))).toEqual({ complete: true, entries: [] });
   });
 
-  it.each([401, 403])("%i is auth.expired", async (status) => {
+  it.each([401, 403])("%i is unexpected-response with its own text, never auth.expired (point 13 M2)", async (status) => {
     const e = await failure(c.readWishlist!(ctxOf(gog({ wishlist: { status } }))));
-    expect(e.code).toBe("auth.expired");
+    expect([e.code, e.details.messageKey]).toEqual(["store.unexpected-response", "connectors.gog.error.wishlist"]);
   });
 
   it("429 keeps Retry-After; 5xx is unexpected-response", async () => {

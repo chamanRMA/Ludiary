@@ -924,7 +924,7 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
       const s = need();
       return db.transaction((tx) => {
         let removed = 0;
-        for (const id of plan.remove) removed += tx.delete(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, id))).run().changes;
+        for (const id of plan.remove) removed += tx.delete(priceWatch).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, id), ne(priceWatch.origin, "manual"))).run().changes;
         for (const r of plan.rekey) tx.update(priceWatch).set({ originStoreGameId: r.originStoreGameId }).where(and(eq(priceWatch.userId, s.userId), eq(priceWatch.id, r.id), ne(priceWatch.origin, "manual"))).run();
         let added = 0;
         for (const rec of plan.add) {

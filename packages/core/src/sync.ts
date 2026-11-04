@@ -57,6 +57,8 @@ export function createSyncService(env: Env, mirror: CollectionMirrorService): Sy
   const queued = new Map<StoreId, Set<SyncOperation>>();
   /** Stores whose slot is held by `exclusive`: a pass asked then is queued even if not forced. */
   const held = new Set<StoreId>();
+  /** What the passes queued while held asked for: forced if any was, 'manual' if any was (audit of ADR 91). */
+  const heldAsk = new Map<StoreId, { force: boolean; trigger: "open" | "manual" }>();
 
   const connectorLog = (id: StoreId): ConnectorLogger => connectorLogger(env, id);
 
@@ -79,6 +81,10 @@ export function createSyncService(env: Env, mirror: CollectionMirrorService): Sy
       if (mine.size === 0) continue;
       if (inFlight.has(c.id)) {
         if (opts.force || held.has(c.id)) queued.set(c.id, new Set([...(queued.get(c.id) ?? []), ...mine]));
+        if (held.has(c.id)) {
+          const prev = heldAsk.get(c.id);
+          heldAsk.set(c.id, { force: (prev?.force ?? false) || opts.force === true, trigger: prev?.trigger === "manual" || trigger === "manual" ? "manual" : "open" });
+        }
         continue;
       }
       let markAccepted: () => void = () => undefined;
@@ -465,7 +471,9 @@ export function createSyncService(env: Env, mirror: CollectionMirrorService): Sy
           held.delete(store);
           const c = env.connectors.get(store);
           const ops = queued.get(store);
-          if (c && ops && ops.size > 0) await runLoop(c, ops, true, "manual", () => undefined);
+          const ask = heldAsk.get(store) ?? { force: true, trigger: "manual" as const };
+          heldAsk.delete(store);
+          if (c && ops && ops.size > 0) await runLoop(c, ops, ask.force, ask.trigger, () => undefined);
         })
         .catch(() => undefined)
         .finally(() => {

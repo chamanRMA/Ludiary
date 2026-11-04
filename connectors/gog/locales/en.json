@@ -10,6 +10,7 @@
   "connectors.gog.login.field": "Address of the final page",
   "connectors.gog.error.code": "The code has expired or was already used. Sign in again and paste the new address.",
   "connectors.gog.error.expired": "GOG has signed you out. Reconnect the account.",
+  "connectors.gog.error.wishlist": "GOG did not let Ludiary read your wishlist. Try again later; your GOG connection is still active.",
   "connectors.gog.errors.galaxyMissing": "GOG Galaxy is needed to install this game. Install it from gog.com or download the installer from your gog.com library.",
   "connectors.gog.disconnect.hint": "Ludiary deletes its GOG session from this computer. To sign out everywhere, change your password at gog.com."
 }

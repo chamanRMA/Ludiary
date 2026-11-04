@@ -111,7 +111,7 @@ describe("applyWishlistImport (ADR 91 point 5 and 13 c)", () => {
 
   it("never touches a manual row, even if asked", async () => {
     await repos.prices.addWatch(w("m", "g0", "manual"), 10);
-    await repos.prices.applyWishlistImport({ remove: [], rekey: [{ id: "m", originStoreGameId: "x" }], add: [] }, 10);
+    await repos.prices.applyWishlistImport({ remove: ["m"], rekey: [{ id: "m", originStoreGameId: "x" }], add: [] }, 10);
     expect(await repos.prices.getWatch("m")).toMatchObject({ origin: "manual", originStoreGameId: null });
   });
 

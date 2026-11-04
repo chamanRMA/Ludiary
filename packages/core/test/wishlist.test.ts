@@ -231,6 +231,17 @@ describe("requirements and floor", () => {
     await h.core.importWishlist("steam");
     expect(calls.read).toBe(2);
   });
+
+  it("a failure with no answer from the store (network, timeout) does not spend the floor; another failure does", async () => {
+    for (const [code, again] of [["network.unavailable", true], ["network.timeout", true], ["store.unexpected-response", false]] as const) {
+      let fail = true;
+      const { h } = await setup({ read: async () => { if (fail) throw new ConnectorError(code, "fixed"); return { complete: true, entries: [] }; }, found: everyone });
+      await expect(h.core.importWishlist("steam")).rejects.toMatchObject({ code: code === "store.unexpected-response" ? code : expect.any(String) });
+      fail = false;
+      if (again) await h.core.importWishlist("steam");
+      else await expect(h.core.importWishlist("steam")).rejects.toMatchObject({ key: "prices.errors.wishlistFloor" });
+    }
+  });
 });
 
 describe("connection state (point 13, M2)", () => {
@@ -325,6 +336,25 @@ describe("lock with the sync (point 13, M1)", () => {
       await h.core.whenIdle();
       expect(libraryRuns).toBe(1); // and not lost
     }
+  });
+
+  it("a pass on opening the web, queued during an import, still respects the sync interval (it is not forced)", async () => {
+    const gate = deferred();
+    let libraryRuns = 0;
+    const { h } = await setup({
+      library: async () => { libraryRuns++; return { complete: true, entries: [owned("1", "One")] }; },
+      read: async () => { await gate.promise; return { complete: true, entries: [] }; },
+    });
+    await h.core.requestSync({ trigger: "manual", operations: ["library"] });
+    await h.core.whenIdle();
+    expect(libraryRuns).toBe(1);
+    const run = h.core.importWishlist("steam");
+    await new Promise((r) => setTimeout(r, 5));
+    await h.core.requestSync({ trigger: "open", operations: ["library"] });
+    gate.resolve();
+    await run;
+    await h.core.whenIdle();
+    expect(libraryRuns).toBe(1); // just synced: the opening pass skips it, as outside an import
   });
 
   it("two imports one after the other are chained", async () => {
