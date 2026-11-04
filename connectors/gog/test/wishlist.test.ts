@@ -38,6 +38,8 @@ describe("readWishlist (ADR 91, GOG)", () => {
   it("empty list is complete with no entries", async () => {
     const http = gog({ wishlist: { status: 200, body: { wishlist: {}, checksum: "0" } } });
     expect(await c.readWishlist!(ctxOf(http))).toEqual({ complete: true, entries: [] });
+    const php = gog({ wishlist: { status: 200, body: { wishlist: [], checksum: "" } } });
+    expect(await c.readWishlist!(ctxOf(php))).toEqual({ complete: true, entries: [] });
   });
 
   it.each([401, 403])("%i is unexpected-response with its own text, never auth.expired (point 13 M2)", async (status) => {

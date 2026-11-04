@@ -20,15 +20,24 @@ export async function readGogWishlist(ctx: SyncContext): Promise<WishlistSnapsho
   const res = await ctx.http.request({ method: "GET", url: WISHLIST_URL, headers: { authorization: bearer(access) } });
   // Point 13 M2: the renewal above already worked, so a refusal here is the unofficial endpoint, not an expired session.
   if (res.status === 401 || res.status === 403) throw new ConnectorError("store.unexpected-response", "GOG user/wishlist.json refused the session", { messageKey: "connectors.gog.error.wishlist" as I18nKey });
-  if (res.status !== 200) throwForStatus(res, "GOG user/wishlist.json");
+  if (res.status !== 200) {
+    ctx.log.warn("GOG wishlist answered an unexpected status", { status: res.status });
+    throwForStatus(res, "GOG user/wishlist.json");
+  }
   let body: unknown;
   try {
     body = await res.json();
   } catch {
+    ctx.log.warn("GOG wishlist answer is not JSON");
     throw unexpected("GOG user/wishlist.json answer is not JSON");
   }
-  const wishlist = isObject(body) ? body["wishlist"] : undefined;
-  if (!isObject(wishlist)) throw unexpected("GOG user/wishlist.json has no wishlist object");
+  const raw = isObject(body) ? body["wishlist"] : undefined;
+  // An empty PHP map is serialised as [] (GW1).
+  const wishlist = Array.isArray(raw) && raw.length === 0 ? {} : raw;
+  if (!isObject(wishlist)) {
+    ctx.log.warn("GOG wishlist answer has no wishlist object", { shape: Array.isArray(raw) ? "array" : typeof raw });
+    throw unexpected("GOG user/wishlist.json has no wishlist object");
+  }
 
   // shortcut: JSON.parse orders integer-like keys numerically, so the store's order is not recoverable; revisit if the manual test shows one.
   const entries: { storeGameId: string }[] = [];
@@ -53,7 +62,10 @@ export async function describeGogWishlistItems(
     const asked = new Set(ids.slice(i, i + BATCH));
     // No token: the catalog is public (ADR 77, point 6).
     const r = await ctx.http.request({ method: "GET", url: PRODUCTS_URL, query: { ids: [...asked].join(",") } });
-    if (r.status !== 200) throwForStatus(r, "GOG products");
+    if (r.status !== 200) {
+      ctx.log.warn("GOG products answered an unexpected status", { status: r.status });
+      throwForStatus(r, "GOG products");
+    }
     let list: unknown;
     try {
       list = await r.json();
