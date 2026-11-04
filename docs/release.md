@@ -35,6 +35,8 @@ Add both public keys to `apps/desktop/update-keys.json`, under `keys`, in a norm
 }
 ```
 
+Before merging, check each private key against the file: `corepack pnpm --filter @ludiary/desktop release:pubkey <path>\k1.pem` prints its public key and the id it matches (do the same for `k2.pem`). A key that matches no id cannot sign.
+
 Never put a private key here. Until two real keys are in this file, `release:build` refuses to build and the CI run stays red. Do not label any pull request `release:*` before this is merged.
 
 ### 3. Repository settings (GitHub)
