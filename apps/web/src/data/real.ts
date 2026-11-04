@@ -6,18 +6,24 @@ import type {
   GamePatchDto,
   StoreId,
   GameDetailDto,
+  GamePricesDto,
   GameSummaryDto,
   LaunchRequestDto,
   LaunchResponseDto,
   OnboardingCompleteDto,
   OnboardingDto,
   PickCancelledDto,
+  PriceBoardDto,
+  PriceRefreshDto,
+  PriceSearchResultDto,
   ScanRootDto,
   ScanRootPatchDto,
+  ServiceStatusDto,
   SettingsDto,
   SettingsPatchDto,
   StoreStatusDto,
   SyncRequestDto,
+  WatchItemDto,
   WizardCallbackDto,
   WizardCallbackResponseDto,
   WizardResponseDto,
@@ -42,6 +48,9 @@ import { ApiError, type Http } from "./http";
  * server does not have (`autostart`, `syncOnStart`, and `backups`/`autoUpdate` while the server
  * leaves them out of SettingsDto).
  *
+ * Services (ADR 86): the IsThereAnyDeal key wizard, its disconnection, the prices and the follow list are served by the server;
+ * RAWG and IGDB stay simulated and hidden.
+ *
  * Mixed methods: `getStores`, `getSettings`, `updateSettings` and `getMaintenance` (see each one).
  */
 /** sessionStorage key of the open Steam wizard id: it must survive the trip to steamcommunity.com (ADR 74). */
@@ -65,6 +74,7 @@ function sessionStore(): WizardIdStorage | null {
 /** Stores whose wizard is served by the real server (ADR 77 point 8). */
 export const REAL_WIZARD_STORES: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
 const realStore = (t: WizardTarget): StoreId | null => (t.kind === "store" && REAL_WIZARD_STORES.includes(t.store) ? t.store : null);
+const realService = (t: WizardTarget): boolean => t.kind === "service" && t.service === "itad";
 const unavailable = (): Promise<never> => Promise.reject(new ApiError(501, "not-implemented", "errors.generic"));
 const expired = (): ApiError => new ApiError(404, "not-found", "wizard.expired");
 
@@ -114,6 +124,14 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     }
   }
 
+  // Service wizard (ADR 86): memory only, no trip outside Ludiary that has to come back.
+  let svcWizard: { id: string; stepId: string | null } | null = null;
+  const trackService = (res: WizardResponseDto): WizardResponseDto => {
+    if (res.kind === "done") svcWizard = null;
+    else if (res.kind !== "rejected" && svcWizard) svcWizard.stepId = res.id;
+    return res;
+  };
+
   async function getStores(): Promise<readonly StoreStatusDto[]> {
     const real = await http.get<readonly StoreStatusDto[]>("/api/stores");
     // A simulated wizard can leave a store "connected" or "expired" in the simulator. Show that on top of the
@@ -140,6 +158,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       detection: server.detection,
       scanRoots: server.scanRoots,
       storeCollections: server.storeCollections,
+      ...(server.prices ? { prices: server.prices } : {}),
       // Present in the server answer: use it. Absent (feature not available yet): the simulator's value.
       backups: server.backups ?? local.backups, // the server always sends it (ADR 89)
       autoUpdate: server.autoUpdate ?? local.autoUpdate,
@@ -149,12 +168,13 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
   }
 
   async function updateSettings(patch: SettingsUpdate): Promise<GeneralSettings> {
-    const { locale, detection, storeCollections, backups, ...rest } = patch;
+    const { locale, detection, storeCollections, backups, prices, ...rest } = patch;
     const serverPatch: SettingsPatchDto = {
       ...(locale === undefined ? {} : { locale }),
       ...(detection === undefined ? {} : { detection }),
       ...(storeCollections === undefined ? {} : { storeCollections }),
       ...(backups === undefined ? {} : { backups }),
+      ...(prices === undefined ? {} : { prices }),
     };
     if (Object.keys(serverPatch).length > 0) await http.patch<SettingsDto>("/api/settings", serverPatch);
     // The server has no field for the rest, so those changes live in the simulator only.
@@ -226,6 +246,11 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     // ---- Store accounts (ADR 74, 77): wizard and disconnect go to the server; other stores and services stay simulated.
     // Only Steam keeps the id in sessionStorage (its wizard leaves Ludiary and comes back); GOG's lives in memory.
     startWizard: async (t) => {
+      if (realService(t)) {
+        const res = await http.post<WizardStartDto>("/api/services/itad/wizard", {});
+        svcWizard = { id: res.wizardId, stepId: null };
+        return trackService(res.response);
+      }
       const store = realStore(t);
       if (!store) return sim.startWizard(t);
       const res = await http.post<WizardStartDto>(`/api/stores/${store}/wizard`, {});
@@ -241,6 +266,20 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       return track(res.response);
     },
     submitWizard: async (t, input) => {
+      if (realService(t)) {
+        if (!svcWizard?.stepId || input.kind === "callback") throw expired();
+        const { id } = svcWizard;
+        const body: WizardSubmitDto = { stepId: svcWizard.stepId, input };
+        try {
+          return trackService(await http.post<WizardResponseDto>(`/api/wizards/${enc(id)}/submit`, body));
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 404) {
+            svcWizard = null;
+            throw expired();
+          }
+          throw e;
+        }
+      }
       const store = realStore(t);
       if (!store) return sim.submitWizard(t, input);
       const id = store === "steam" ? currentId() : wizardStore === store ? wizardId : null;
@@ -250,6 +289,12 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       return track(await guard(() => http.post<WizardResponseDto>(`/api/wizards/${enc(id)}/submit`, body)));
     },
     cancelWizard: async (t) => {
+      if (realService(t)) {
+        const id = svcWizard?.id;
+        svcWizard = null;
+        if (id) await http.delete(`/api/wizards/${enc(id)}`).catch(() => undefined);
+        return;
+      }
       const store = realStore(t);
       if (!store) return sim.cancelWizard(t);
       const id = store === "steam" ? currentId() : wizardStore === store ? wizardId : null;
@@ -257,6 +302,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       if (id) await http.delete(`/api/wizards/${enc(id)}`).catch(() => undefined); // 204 even when gone; best effort
     },
     disconnect: async (t) => {
+      if (realService(t)) return http.delete("/api/services/itad/connection");
       const store = realStore(t);
       if (!store) return sim.disconnect(t);
       await http.delete(`/api/stores/${store}/connection`);
@@ -269,9 +315,20 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       return track(res.response);
     },
 
+    // ---- Services and prices (ADR 86). Only IsThereAnyDeal is real; RAWG and IGDB stay out of the list.
+    getServices: () => http.get<readonly ServiceStatusDto[]>("/api/services"),
+    getGamePrices: (id) => http.get<GamePricesDto>(`/api/prices/games/${enc(id)}`),
+    getPriceBoard: () => http.get<PriceBoardDto>("/api/prices"),
+    refreshPrices: async (req) => void (await http.post("/api/prices/refresh", req satisfies PriceRefreshDto)),
+    setPriceExclusion: async (id, excluded) => {
+      if (excluded) await http.put(`/api/prices/games/${enc(id)}/exclusion`, {});
+      else await http.delete(`/api/prices/games/${enc(id)}/exclusion`);
+    },
+    searchPrices: (title) => http.post<readonly PriceSearchResultDto[]>("/api/prices/search", { title }),
+    watchPrice: (resultId) => http.post<WatchItemDto>("/api/prices/watch", { resultId }),
+    unwatchPrice: (id) => http.delete(`/api/prices/watch/${enc(id)}`),
+
     // ---- Not available yet: the screens hide these in the real app, so nothing is simulated here.
-    // shortcut: no services on the server yet (ADR 72 point B); an empty list, not the simulator's sample states.
-    getServices: async () => [],
     revokeSessions: async () => void (await http.post("/api/sessions/revoke", {})),
     getBackups,
     createBackup: async () => void (await http.post("/api/backups", {})),

@@ -10,6 +10,7 @@ import { api, isSimulated } from "../data/api";
 import { mutate, useQuery, useQueryState } from "../data/hooks";
 import { isUnsynced, primaryAction } from "../data/library";
 import { CollectionMenu } from "../components/CollectionMenu";
+import { PricesPanel } from "../components/PricesPanel";
 import { FromStore } from "../components/CollectionsStatus";
 import { Icon } from "../components/Icon";
 import { cx, Cover, formatHours, LoadError, PageTitle, relativeTime } from "../components/bits";
@@ -140,6 +141,8 @@ export function Game({ id }: { id: string }) {
           </ul>
         </section>
       )}
+
+      <PricesPanel game={game} />
 
       <Organize game={game} busy={busy} error={pickerOpen ? null : saveError} save={save} />
     </div>

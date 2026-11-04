@@ -78,6 +78,7 @@ export interface Http {
   /** `body` undefined sends no body and no Content-Type (needed by POST /api/onboarding/reset). Schema routes want at least `{}`. */
   post<T>(path: string, body?: unknown): Promise<T>;
   patch<T>(path: string, body: unknown): Promise<T>;
+  put<T>(path: string, body: unknown): Promise<T>;
   delete(path: string): Promise<void>;
 }
 
@@ -158,6 +159,7 @@ export function createHttp(options: HttpOptions = {}): Http {
     get: (path) => request("GET", path) as Promise<never>,
     post: (path, body) => request("POST", path, body) as Promise<never>,
     patch: (path, body) => request("PATCH", path, body) as Promise<never>,
+    put: (path, body) => request("PUT", path, body) as Promise<never>,
     delete: async (path) => void (await request("DELETE", path)),
   };
 }

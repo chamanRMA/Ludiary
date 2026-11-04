@@ -38,9 +38,9 @@ describe("embedded migrations", () => {
 describe("migrate", () => {
   it("builds the schema from an empty database without a safety copy", async () => {
     const res = await migrate(db, { backupDir: backupDir() });
-    expect(res).toEqual({ applied: ["0001_library_scan", "0002_store_account", "0003_recheck_steam_media", "0004_dlc", "0005_user_data", "0006_collection_source"], backupFile: null });
+    expect(res).toEqual({ applied: ["0001_library_scan", "0002_store_account", "0003_recheck_steam_media", "0004_dlc", "0005_user_data", "0006_collection_source", "0007_prices", "0008_watch_media"], backupFile: null });
     expect(existsSync(backupDir())).toBe(false);
-    expect(tables()).toEqual(["canonical_games", "collection_games", "collections", "devices", "game_properties", "game_tags", "installations", "scan_roots", "schema_migrations", "secrets", "settings", "store_connections", "sync_state", "tags", "user_game_data", "users"]);
+    expect(tables()).toEqual(["canonical_games", "collection_games", "collections", "devices", "game_properties", "game_tags", "installations", "price_links", "price_snapshots", "price_watch", "scan_roots", "schema_migrations", "secrets", "settings", "store_connections", "sync_state", "tags", "user_game_data", "users"]);
     expect(db.prepare("SELECT id, hash FROM schema_migrations").all()).toEqual([
       { id: "0001_library_scan", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0002_store_account", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
@@ -48,6 +48,8 @@ describe("migrate", () => {
       { id: "0004_dlc", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0005_user_data", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       { id: "0006_collection_source", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      { id: "0007_prices", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
+      { id: "0008_watch_media", hash: expect.stringMatching(/^[0-9a-f]{64}$/) },
     ]);
   });
 

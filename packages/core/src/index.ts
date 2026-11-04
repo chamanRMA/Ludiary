@@ -9,3 +9,4 @@ export { planCollectionMirror, emptyMirrorCounts, type MirrorState, type Collect
 export { collectionsKey } from "./settings";
 export { normalizeLabel, TAG_MAX_LENGTH, COLLECTION_MAX_LENGTH, LIMITS, type Label } from "./labels";
 export { planBackupPrune, MAX_LISTED_BACKUPS, type BackupsState, type LastRestore } from "./backups";
+export { WATCH_MAX } from "./env";

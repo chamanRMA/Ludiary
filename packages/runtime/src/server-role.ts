@@ -129,9 +129,9 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       if (dbOpen) db.close();
       dbOpen = false;
     };
-    const { core, facade, connectors } = composed;
+    const { core, facade, connectors, services } = composed;
     waitForScans = () => core.whenIdle();
-    const mediaHosts = unionMediaHosts(connectors);
+    const mediaHosts = unionMediaHosts(connectors, services);
     const webAssets = loadWebAssets(deps.webDir, log); // once, at startup (ADR 72 point 6)
 
     const locale = localeOf(deps);

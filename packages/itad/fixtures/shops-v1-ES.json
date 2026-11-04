@@ -1,0 +1,247 @@
+[
+ {
+  "id": 2,
+  "title": "AllYouPlay",
+  "deals": 404,
+  "games": 6222,
+  "update": "2026-11-03T10:20:58+01:00"
+ },
+ {
+  "id": 4,
+  "title": "Blizzard",
+  "deals": 49,
+  "games": 800,
+  "update": "2026-11-03T09:08:04+01:00"
+ },
+ {
+  "id": 13,
+  "title": "DLGamer",
+  "deals": 153,
+  "games": 4375,
+  "update": "2026-10-28T18:44:14+01:00"
+ },
+ {
+  "id": 15,
+  "title": "Dreamgame",
+  "deals": 380,
+  "games": 2338,
+  "update": "2026-11-03T10:42:00+01:00"
+ },
+ {
+  "id": 52,
+  "title": "EA Store",
+  "deals": 0,
+  "games": 563,
+  "update": "2026-11-03T10:22:25+01:00"
+ },
+ {
+  "id": 16,
+  "title": "Epic Game Store",
+  "deals": 346,
+  "games": 14541,
+  "update": "2026-11-03T09:34:44+01:00"
+ },
+ {
+  "id": 6,
+  "title": "Fanatical",
+  "deals": 9865,
+  "games": 16322,
+  "update": "2026-11-03T10:44:38+01:00"
+ },
+ {
+  "id": 17,
+  "title": "FireFlower",
+  "deals": 0,
+  "games": 253,
+  "update": "2026-11-02T00:02:33+01:00"
+ },
+ {
+  "id": 75,
+  "title": "Fortuna Digital",
+  "deals": 2,
+  "games": 564,
+  "update": "2026-11-03T10:04:30+01:00"
+ },
+ {
+  "id": 20,
+  "title": "GameBillet",
+  "deals": 7081,
+  "games": 7495,
+  "update": "2026-11-03T10:41:22+01:00"
+ },
+ {
+  "id": 24,
+  "title": "GamersGate",
+  "deals": 1468,
+  "games": 10474,
+  "update": "2026-11-03T10:41:41+01:00"
+ },
+ {
+  "id": 25,
+  "title": "Gamesload",
+  "deals": 749,
+  "games": 1797,
+  "update": "2026-11-02T09:44:06+01:00"
+ },
+ {
+  "id": 27,
+  "title": "GamesPlanet DE",
+  "deals": 7742,
+  "games": 8699,
+  "update": "2026-11-03T09:41:42+01:00"
+ },
+ {
+  "id": 28,
+  "title": "GamesPlanet FR",
+  "deals": 7778,
+  "games": 8740,
+  "update": "2026-11-03T09:41:29+01:00"
+ },
+ {
+  "id": 26,
+  "title": "GamesPlanet UK",
+  "deals": 7724,
+  "games": 8734,
+  "update": "2026-11-03T09:41:24+01:00"
+ },
+ {
+  "id": 29,
+  "title": "GamesPlanet US",
+  "deals": 7380,
+  "games": 8341,
+  "update": "2026-11-03T09:41:39+01:00"
+ },
+ {
+  "id": 76,
+  "title": "Gamesporium",
+  "deals": 71,
+  "games": 3664,
+  "update": "2026-11-03T10:43:10+01:00"
+ },
+ {
+  "id": 35,
+  "title": "GOG",
+  "deals": 8545,
+  "games": 12815,
+  "update": "2026-11-03T10:41:09+01:00"
+ },
+ {
+  "id": 36,
+  "title": "GreenManGaming",
+  "deals": 3257,
+  "games": 12776,
+  "update": "2026-11-03T03:40:21+01:00"
+ },
+ {
+  "id": 37,
+  "title": "Humble Store",
+  "deals": 2646,
+  "games": 13421,
+  "update": "2026-11-03T10:56:12+01:00"
+ },
+ {
+  "id": 42,
+  "title": "IndieGala Store",
+  "deals": 365,
+  "games": 8774,
+  "update": "2026-11-03T10:55:31+01:00"
+ },
+ {
+  "id": 65,
+  "title": "JoyBuggy",
+  "deals": 0,
+  "games": 0,
+  "update": "2026-11-03T10:44:44+01:00"
+ },
+ {
+  "id": 47,
+  "title": "MacGameStore",
+  "deals": 512,
+  "games": 4780,
+  "update": "2026-11-03T10:02:02+01:00"
+ },
+ {
+  "id": 48,
+  "title": "Microsoft Store",
+  "deals": 305,
+  "games": 6512,
+  "update": "2026-11-03T10:12:11+01:00"
+ },
+ {
+  "id": 77,
+  "title": "Muve",
+  "deals": 96,
+  "games": 5575,
+  "update": "2026-11-03T03:07:25+01:00"
+ },
+ {
+  "id": 49,
+  "title": "Newegg",
+  "deals": 0,
+  "games": 0,
+  "update": null
+ },
+ {
+  "id": 50,
+  "title": "Nuuvem",
+  "deals": 0,
+  "games": 0,
+  "update": null
+ },
+ {
+  "id": 73,
+  "title": "PlanetPlay",
+  "deals": 536,
+  "games": 5048,
+  "update": "2026-11-03T10:03:59+01:00"
+ },
+ {
+  "id": 74,
+  "title": "PlayerLand",
+  "deals": 1329,
+  "games": 2257,
+  "update": "2026-11-03T10:42:51+01:00"
+ },
+ {
+  "id": 70,
+  "title": "Playsum",
+  "deals": 39,
+  "games": 4060,
+  "update": "2026-11-03T10:42:50+01:00"
+ },
+ {
+  "id": 61,
+  "title": "Steam",
+  "deals": 35873,
+  "games": 327341,
+  "update": "2026-11-03T10:55:07+01:00"
+ },
+ {
+  "id": 62,
+  "title": "Ubisoft Store",
+  "deals": 0,
+  "games": 786,
+  "update": "2026-11-03T10:55:29+01:00"
+ },
+ {
+  "id": 64,
+  "title": "WinGameStore",
+  "deals": 2466,
+  "games": 6653,
+  "update": "2026-11-03T10:01:50+01:00"
+ },
+ {
+  "id": 78,
+  "title": "Zapagames",
+  "deals": 1795,
+  "games": 1972,
+  "update": "2026-11-03T07:07:58+01:00"
+ },
+ {
+  "id": 72,
+  "title": "ZOOM Platform",
+  "deals": 0,
+  "games": 954,
+  "update": "2026-10-28T11:21:50+01:00"
+ }
+]

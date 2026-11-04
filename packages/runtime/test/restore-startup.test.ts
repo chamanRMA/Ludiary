@@ -2,7 +2,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createBackupStore, openDatabase, userBackupName } from "@ludiary/db";
+import { createBackupStore, MIGRATIONS, openDatabase, userBackupName } from "@ludiary/db";
 import { makeLudiaryDb, tempDir, type FixtureOptions } from "../../db/test/backup-fixtures";
 import { migrateDatabase } from "../src/compose";
 import { restartSequence, waitForLockRelease } from "../src/launcher";
@@ -126,7 +126,7 @@ describe("restoration at startup", () => {
     await scene();
     const { db, lastRestore } = await start();
     expect(marker(db)).toBe('"restored"');
-    expect(snapshot(db).migrations).toBe(6); // migrated up from level 5
+    expect(snapshot(db).migrations).toBe(MIGRATIONS.length); // migrated up from level 5 to the current one
     expect(q(db, "SELECT id FROM installations")).toEqual([]); // a launch_data of the copy is never used (point 6.3 C)
     expect(setting(db, "backups.periodic")).toBe(true);
     expect(setting(db, "backups.folder")).toBe("D:\\Mine");

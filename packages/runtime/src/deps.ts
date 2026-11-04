@@ -70,6 +70,8 @@ export interface RuntimeDeps {
   embeddedLogin?: EmbeddedLogin;
   /** Connectors to register. Defaults to the static list of `connectors.ts` (ADR 38); only tests override it. */
   connectors?: readonly StoreConnector[];
+  /** Price services to register. Defaults to the static list of `connectors.ts` (ADR 86); only tests override it. */
+  priceServices?: CoreDeps["priceServices"];
   /** Releases what the platform keeps open (helper processes, e.g. a folder dialog) when the server shuts down. */
   dispose?: () => void;
 }

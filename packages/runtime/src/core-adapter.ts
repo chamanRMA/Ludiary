@@ -166,7 +166,14 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
     const [settings, roots] = await Promise.all([core.getSettings(), core.listScanRoots()]);
     // ADR 89: `backups.folder` is the resolved folder (null: none available), read from the same state as the backups section.
     const folder = core.capabilities.canBackup ? (await core.getBackups()).folder : null;
-    return { locale: settings.locale, detection: settings.detection, scanRoots: roots.map(scanRootDto), backups: { periodic: settings.backups.periodic, folder }, storeCollections: structuredClone(settings.storeCollections) };
+    return {
+      locale: settings.locale,
+      detection: settings.detection,
+      scanRoots: roots.map(scanRootDto),
+      backups: { periodic: settings.backups.periodic, folder },
+      storeCollections: structuredClone(settings.storeCollections),
+      ...(settings.prices ? { prices: { ...settings.prices } } : {}),
+    };
   };
 
   return {
@@ -202,6 +209,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
           ...(patch.detection !== undefined ? { detection: patch.detection } : {}),
           ...(patch.storeCollections !== undefined ? { storeCollections: patch.storeCollections } : {}),
           ...(patch.backups !== undefined ? { backups: patch.backups } : {}),
+          ...(patch.prices !== undefined ? { prices: patch.prices } : {}),
         });
         return settingsDto();
       }),
@@ -235,5 +243,26 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
       return state ? backupsDto(state) : null;
     }),
     restoreBackup: (id) => guard(() => core.restoreBackup(id)),
+    listServices: () => guard(async () => (await core.listServices()).map((x) => ({ ...x }))),
+    startServiceWizard: (service, returnBase) =>
+      guard(async () => {
+        const { wizardId, response } = await core.startServiceWizard(service, returnBase);
+        return { wizardId, response: wizardResponseDto(response) };
+      }),
+    disconnectService: (service) => guard(() => core.disconnectService(service)),
+    getGamePrices: (id) => guard(() => core.getGamePrices(id)),
+    getPriceBoard: () => guard(() => core.getPriceBoard()),
+    refreshPrices: (req) =>
+      guard(() =>
+        core.refreshPrices({
+          ...(req.canonicalIds ? { canonicalIds: req.canonicalIds } : {}),
+          ...(req.watchIds ? { watchIds: req.watchIds } : {}),
+          ...(req.manual !== undefined ? { manual: req.manual } : {}),
+        }),
+      ),
+    setPriceExclusion: (id, excluded) => guard(() => core.setPriceExclusion(id, excluded)),
+    searchPrices: (title) => guard(() => core.searchPrices(title)),
+    watchPrice: (resultId) => guard(() => core.watchPrice(resultId)),
+    unwatchPrice: (id) => guard(() => core.unwatchPrice(id)),
   };
 }

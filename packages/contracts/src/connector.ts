@@ -470,7 +470,7 @@ export interface PriceProvider {
 // ---------- Manifest check (pure) ----------
 
 const STORE_IDS: readonly string[] = ["steam", "gog", "epic", "ubisoft", "ea"];
-const HOST_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+export const HOST_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*$/;
 
 /**

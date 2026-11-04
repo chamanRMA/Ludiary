@@ -5,8 +5,15 @@ import type {
   CollectionDto,
   GameDetailDto,
   GamePatchDto,
+  GamePricesDto,
   GameSummaryDto,
   OnboardingDto,
+  PriceBoardDto,
+  PriceRefreshDto,
+  PriceSearchResultDto,
+  ServiceParams,
+  ServiceStatusDto,
+  WatchItemDto,
   ScanRootDto,
   SettingsDto,
   SettingsPatchDto,
@@ -55,6 +62,18 @@ export interface LudiaryCoreFacade {
   pickBackupFolder(): Promise<BackupsDto | null>;
   /** Prepares the restoration; the caller restarts the server after answering. */
   restoreBackup(id: string): Promise<void>;
+  // ADR 86, point 15 A2. Only the services that are registered; the GET-like ones read the cache and never the network.
+  listServices(): Promise<readonly ServiceStatusDto[]>;
+  startServiceWizard(service: ServiceParams["service"], returnBase: string): Promise<WizardStartDto>;
+  disconnectService(service: ServiceParams["service"]): Promise<void>;
+  getGamePrices(canonicalId: string): Promise<GamePricesDto>;
+  getPriceBoard(): Promise<PriceBoardDto>;
+  refreshPrices(req: PriceRefreshDto): Promise<void>;
+  setPriceExclusion(canonicalId: string, excluded: boolean): Promise<void>;
+  searchPrices(title: string): Promise<readonly PriceSearchResultDto[]>;
+  /** `created: false` when the game was already followed (the route answers 200 instead of 201). */
+  watchPrice(resultId: string): Promise<{ item: WatchItemDto; created: boolean }>;
+  unwatchPrice(id: string): Promise<void>;
 }
 
 export interface FacadeError {

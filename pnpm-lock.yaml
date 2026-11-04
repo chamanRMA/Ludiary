@@ -189,6 +189,16 @@ importers:
 
   packages/i18n: {}
 
+  packages/itad:
+    dependencies:
+      '@ludiary/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@ludiary/connector-testkit':
+        specifier: workspace:*
+        version: link:../connector-testkit
+
   packages/platform-node:
     dependencies:
       '@ludiary/contracts':
@@ -239,6 +249,9 @@ importers:
       '@ludiary/i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@ludiary/itad':
+        specifier: workspace:*
+        version: link:../itad
       '@ludiary/platform-node':
         specifier: workspace:*
         version: link:../platform-node

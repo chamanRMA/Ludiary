@@ -6,11 +6,11 @@ import { fakeCipher, harness, type Harness } from "./helpers";
 
 async function setup(cipher = fakeCipher(1, "k1")) {
   const h = await harness({ cipher, connected: ["steam"] });
-  const env: Env = { deps: h.deps, connectors: new Map(), userId: "the-user", deviceId: "dev", vaultFor: () => { throw new Error("unused"); } };
+  const env: Env = { deps: h.deps, connectors: new Map(), services: new Map(), serviceVaultFor: () => { throw new Error("unused"); }, userId: "the-user", deviceId: "dev", vaultFor: () => { throw new Error("unused"); } };
   return { h, vault: createVaultFactory(env)("steam") };
 }
 const withKey = (h: Harness, cipher: ReturnType<typeof fakeCipher>) => {
-  const env: Env = { deps: { ...h.deps, cipher }, connectors: new Map(), userId: "the-user", deviceId: "dev", vaultFor: () => { throw new Error("unused"); } };
+  const env: Env = { deps: { ...h.deps, cipher }, connectors: new Map(), services: new Map(), serviceVaultFor: () => { throw new Error("unused"); }, userId: "the-user", deviceId: "dev", vaultFor: () => { throw new Error("unused"); } };
   return createVaultFactory(env)("steam");
 };
 
@@ -43,7 +43,7 @@ describe("store vault", () => {
   it("the AAD carries the user: a row moved to another user does not decrypt", async () => {
     const { h, vault } = await setup();
     await vault.set("apiKey", "v");
-    const other = createVaultFactory({ deps: h.deps, connectors: new Map(), userId: "someone-else", deviceId: "dev", vaultFor: () => { throw new Error("unused"); } })("steam");
+    const other = createVaultFactory({ deps: h.deps, connectors: new Map(), services: new Map(), serviceVaultFor: () => { throw new Error("unused"); }, userId: "someone-else", deviceId: "dev", vaultFor: () => { throw new Error("unused"); } })("steam");
     expect(await other.get("apiKey")).toBeNull();
   });
 
