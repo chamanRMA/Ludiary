@@ -25,6 +25,7 @@ import type {
   StoreStatusDto,
   SyncRequestDto,
   WatchItemDto,
+  WishlistImportDto,
   WizardCallbackDto,
   WizardCallbackResponseDto,
   WizardResponseDto,
@@ -328,6 +329,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     searchPrices: (title) => http.post<readonly PriceSearchResultDto[]>("/api/prices/search", { title }),
     watchPrice: (resultId) => http.post<WatchItemDto>("/api/prices/watch", { resultId }),
     unwatchPrice: (id) => http.delete(`/api/prices/watch/${enc(id)}`),
+    importWishlist: (store) => http.post<WishlistImportDto>(`/api/prices/wishlist/${store}/import`, {}),
 
     // ---- Not available yet: the screens hide these in the real app, so nothing is simulated here.
     revokeSessions: async () => void (await http.post("/api/sessions/revoke", {})),

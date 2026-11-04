@@ -304,6 +304,9 @@ export const priceWatch = sqliteTable(
     // ADR 86 point 17. Null for games of the library and for items followed before 0008_watch_media.
     coverUrl: text("cover_url"),
     coverFallbackUrl: text("cover_fallback_url"),
+    // ADR 91 point 6. 'manual' (followed by hand) or the store whose wishlist import added it.
+    origin: text("origin").notNull().default("manual"),
+    originStoreGameId: text("origin_store_game_id"),
   },
   (t) => [
     uniqueIndex("price_watch_game_uq").on(t.userId, t.service, t.serviceGameId),
@@ -311,5 +314,8 @@ export const priceWatch = sqliteTable(
     check("price_watch_type_check", sql`${t.type} IS NULL OR ${t.type} IN ('game', 'dlc', 'package')`),
     check("price_watch_cover_check", sql`${t.coverUrl} IS NULL OR length(${t.coverUrl}) <= 2048`),
     check("price_watch_cover_fallback_check", sql`${t.coverFallbackUrl} IS NULL OR length(${t.coverFallbackUrl}) <= 2048`),
+    check("price_watch_origin_check", sql`${t.origin} IN ('manual', 'steam', 'gog')`),
+    check("price_watch_origin_pair_check", sql`(${t.origin} = 'manual') = (${t.originStoreGameId} IS NULL)`),
+    index("price_watch_origin_idx").on(t.userId, t.origin),
   ],
 );

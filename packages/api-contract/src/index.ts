@@ -175,13 +175,15 @@ export const GamePricesSchema = Type.Object(
 );
 export type GamePricesDto = RO<Static<typeof GamePricesSchema>>;
 
+/** ADR 91: how a follow-list item got there. */
+export const WatchOriginSchema = Type.Union([Type.Literal("manual"), Type.Literal("steam"), Type.Literal("gog")]);
 export const WatchItemSchema = Type.Object(
-  { id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), prices: Type.Union([PricesSchema, Type.Null()]) },
+  { id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), origin: WatchOriginSchema, prices: Type.Union([PricesSchema, Type.Null()]) },
   strict,
 );
 export type WatchItemDto = RO<Static<typeof WatchItemSchema>>;
 
-export const PriceBoardSchema = Type.Object({ ...BoardState, items: Type.Array(WatchItemSchema, { maxItems: 500 }) }, strict);
+export const PriceBoardSchema = Type.Object({ ...BoardState, items: Type.Array(WatchItemSchema, { maxItems: 500 }), wishlistStores: Type.Array(StoreIdSchema, { maxItems: 5 }) }, strict);
 export type PriceBoardDto = RO<Static<typeof PriceBoardSchema>>;
 
 export const PriceSearchResultSchema = Type.Object(
@@ -206,6 +208,17 @@ export type PriceSearchDto = Static<typeof PriceSearchSchema>;
 /** POST /api/prices/watch -> 201 WatchItemDto (200 if already followed). resultId must come from a recent search. */
 export const PriceWatchSchema = Type.Object({ resultId: Id }, strict);
 export type PriceWatchDto = Static<typeof PriceWatchSchema>;
+
+/** ADR 91. Only the stores with a readable wishlist have the route. */
+export const WishlistStoreParamsSchema = Type.Object({ store: Type.Union([Type.Literal("steam"), Type.Literal("gog")]) }, strict);
+export type WishlistStoreParams = Static<typeof WishlistStoreParamsSchema>;
+const Count = Type.Integer({ minimum: 0, maximum: 5000 });
+/** POST /api/prices/wishlist/:store/import -> 200. Counters only (ADR 91 point 5.6). */
+export const WishlistImportSchema = Type.Object(
+  { added: Count, removed: Count, alreadyWatched: Count, notFound: Count, overLimit: Count, hiddenOrEmpty: Type.Boolean() },
+  strict,
+);
+export type WishlistImportDto = Static<typeof WishlistImportSchema>;
 
 // ---- Wizard (ADR 74, point 5). Responses are plain types; requests are validated with TypeBox.
 export type WizardTarget = { kind: "store"; store: StoreId } | { kind: "service"; service: ServiceId };

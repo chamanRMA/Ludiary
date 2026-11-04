@@ -12,6 +12,10 @@ const MAX_URL = 2048;
 export const isNonEmptyText = (s: unknown, max: number): s is string =>
   typeof s === "string" && s.trim().length > 0 && s.length <= max && !CONTROL.test(s);
 
+/** The id format the core accepts from any store (library, wishlist). */
+export const isStoreGameId = (id: unknown): id is string =>
+  typeof id === "string" && id.length >= 1 && id.length <= 160 && id.trim() !== "" && !ID_FORBIDDEN.test(id);
+
 /** ADR 84: a title given by resolveTitles. Control characters become spaces, then trimmed; empty or over 300: undefined. */
 export function cleanTitle(t: unknown): string | undefined {
   if (typeof t !== "string") return undefined;

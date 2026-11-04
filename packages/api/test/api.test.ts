@@ -562,6 +562,8 @@ describe("services and prices (ADR 86, point 15 A2)", () => {
     expect((await go("POST", "/api/prices/search", { title: "hi" })).json()).toEqual([{ resultId: "r1", title: "Found", type: "game", watched: false }]);
     expect((await go("POST", "/api/prices/watch", { resultId: "r1" })).status).toBe(201);
     expect((await go("DELETE", "/api/prices/watch/w1")).status).toBe(204);
+    expect((await go("POST", "/api/prices/wishlist/gog/import", {})).json()).toEqual({ added: 1, removed: 0, alreadyWatched: 0, notFound: 0, overLimit: 0, hiddenOrEmpty: false });
+    expect(core.calls.find((c) => c[0] === "importWishlist")).toEqual(["importWishlist", "gog"]);
     expect(core.calls.find((c) => c[0] === "setPriceExclusion")).toEqual(["setPriceExclusion", "g1", true]);
   });
 
@@ -573,7 +575,7 @@ describe("services and prices (ADR 86, point 15 A2)", () => {
   });
 
   it("watch answers 200 when the game was already followed", async () => {
-    const again = fakeCore({ watchPrice: async () => ({ item: { id: "w1", title: "Found", type: null, prices: null }, created: false }) });
+    const again = fakeCore({ watchPrice: async () => ({ item: { id: "w1", title: "Found", type: null, origin: "manual" as const, prices: null }, created: false }) });
     const { port } = await start({ core: again });
     const { auth } = await login(port);
     expect((await send(port, "/api/prices/watch", { method: "POST", headers: auth, body: { resultId: "r1" } })).status).toBe(200);
@@ -594,6 +596,9 @@ describe("services and prices (ADR 86, point 15 A2)", () => {
       ["POST", "/api/prices/search", { title: "ok", extra: 1 }],
       ["POST", "/api/prices/watch", { resultId: "r1", title: "forged" }],
       ["POST", "/api/prices/watch", {}],
+      ["POST", "/api/prices/wishlist/epic/import", {}],
+      ["POST", "/api/prices/wishlist/steam/import", { extra: 1 }],
+      ["POST", "/api/prices/wishlist/steam/import?x=1", {}],
       ["POST", "/api/services/rawg/wizard", {}],
       ["POST", "/api/services/itad/wizard", { extra: 1 }],
       ["PUT", "/api/prices/games/g1/exclusion", { extra: 1 }],

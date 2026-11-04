@@ -35,6 +35,7 @@ export const PRICE_ROUTES: [string, string][] = [
   ["GET", "/api/prices/games/g1"], ["GET", "/api/prices"], ["POST", "/api/prices/refresh"],
   ["PUT", "/api/prices/games/g1/exclusion"], ["DELETE", "/api/prices/games/g1/exclusion"],
   ["POST", "/api/prices/search"], ["POST", "/api/prices/watch"], ["DELETE", "/api/prices/watch/w1"],
+  ["POST", "/api/prices/wishlist/steam/import"],
 ];
 
 export const WIZARD_ROUTES: [string, string][] = [
@@ -104,12 +105,13 @@ export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCor
     startServiceWizard: rec("startServiceWizard", { wizardId: "w-2", response: { kind: "info" as const, id: "intro", titleKey: "t", bodyKey: "b" } }),
     disconnectService: rec("disconnectService", undefined),
     getGamePrices: rec("getGamePrices", { service: "connected" as const, needsCountry: false, link: "found" as const, prices: null }),
-    getPriceBoard: rec("getPriceBoard", { service: "connected" as const, needsCountry: false, items: [] }),
+    getPriceBoard: rec("getPriceBoard", { service: "connected" as const, needsCountry: false, items: [], wishlistStores: [] }),
     refreshPrices: rec("refreshPrices", undefined),
     setPriceExclusion: rec("setPriceExclusion", undefined),
     searchPrices: rec("searchPrices", [{ resultId: "r1", title: "Found", type: "game" as const, watched: false }]),
-    watchPrice: rec("watchPrice", { item: { id: "w1", title: "Found", type: "game" as const, prices: null }, created: true }),
+    watchPrice: rec("watchPrice", { item: { id: "w1", title: "Found", type: "game" as const, origin: "manual" as const, prices: null }, created: true }),
     unwatchPrice: rec("unwatchPrice", undefined),
+    importWishlist: rec("importWishlist", { added: 1, removed: 0, alreadyWatched: 0, notFound: 0, overLimit: 0, hiddenOrEmpty: false }),
     ...overrides,
   } as LudiaryCoreFacade & { calls: [string, ...unknown[]][] };
 }

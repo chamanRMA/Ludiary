@@ -15,6 +15,7 @@
   "connectors.steam.error.key": "Steam does not accept that key. Check that you copied it whole, or that it has not been revoked, and try again.",
   "connectors.steam.error.openid": "Steam could not confirm your sign-in. Start again.",
   "connectors.steam.error.privateProfile": "Your game details are private, so Ludiary cannot see your games. Make “Game details” public in your Steam privacy settings.",
+  "connectors.steam.error.wishlist": "Steam did not let Ludiary read your wishlist. Check that your game details are public and try again later.",
   "connectors.steam.error.sessionExpired": "Steam has signed you out. Reconnect the account.",
   "connectors.steam.disconnect.revokeHint": "Ludiary deletes the key. To cancel it in Steam, press Revoke at steamcommunity.com/dev/apikey.",
   "connectors.steam.errors.malformedFile": "Steam has a file that Ludiary cannot read. That game is skipped.",

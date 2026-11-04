@@ -264,5 +264,6 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
     searchPrices: (title) => guard(() => core.searchPrices(title)),
     watchPrice: (resultId) => guard(() => core.watchPrice(resultId)),
     unwatchPrice: (id) => guard(() => core.unwatchPrice(id)),
+    importWishlist: (store) => guard(() => core.importWishlist(store)),
   };
 }

@@ -12,6 +12,8 @@ import type {
   PriceRefreshDto,
   PriceSearchResultDto,
   ServiceParams,
+  WishlistImportDto,
+  WishlistStoreParams,
   ServiceStatusDto,
   WatchItemDto,
   ScanRootDto,
@@ -76,6 +78,8 @@ export interface LudiaryCoreFacade {
   /** `created: false` when the game was already followed (the route answers 200 instead of 201). */
   watchPrice(resultId: string): Promise<{ item: WatchItemDto; created: boolean }>;
   unwatchPrice(id: string): Promise<void>;
+  /** ADR 91. */
+  importWishlist(store: WishlistStoreParams["store"]): Promise<WishlistImportDto>;
 }
 
 /** ADR 90 point 10. Lives in the runtime (it is not part of the core); the HTTP layer only needs this shape. */
