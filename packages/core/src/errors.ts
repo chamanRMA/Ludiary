@@ -83,7 +83,7 @@ export type LimitName = "tagsPerGame" | "tags" | "collections" | "gamesPerCollec
 export const limitReached = (max: number, what: LimitName): CoreError =>
   new CoreError("limit-reached", `User data limit reached: ${what}`, { key: asKey(`core.errors.limit-reached.${what}`), params: { max } });
 /** Brand names for texts with a {store} parameter (proper names, not translated). */
-const STORE_NAMES: Record<StoreId, string> = { steam: "Steam", gog: "GOG", epic: "Epic Games", ubisoft: "Ubisoft Connect", ea: "EA" };
+export const STORE_NAMES: Record<StoreId, string> = { steam: "Steam", gog: "GOG", epic: "Epic Games", ubisoft: "Ubisoft Connect", ea: "EA" };
 /** ADR 88. A mirror of a store's collection is read-only in Ludiary. */
 export const collectionManaged = (store: StoreId): CoreError =>
   new CoreError("collection-managed", "This collection comes from a store and is read-only", { key: asKey("core.errors.collectionManaged"), params: { store: STORE_NAMES[store] } });

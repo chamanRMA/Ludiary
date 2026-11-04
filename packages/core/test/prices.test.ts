@@ -4,7 +4,7 @@ import type { ConnectionWizard, I18nKey, PriceService, PriceSnapshot, StoreId, S
 import { describe, expect, it } from "vitest";
 import type { PriceLinkRecord, PriceSnapshotRecord, PriceWatchRecord, PropertyRecord } from "../src/model";
 import type { PriceRepository } from "../src/ports";
-import { harness, makeConnector, type Harness } from "./helpers";
+import { harness, makeConnector, memoryPrices, type Harness } from "./helpers";
 
 const k = (s: string) => s as I18nKey;
 const BASE = "http://ludiary.localhost:48123";
@@ -12,35 +12,6 @@ const U1 = "11111111-1111-4111-8111-111111111111";
 const U2 = "22222222-2222-4222-8222-222222222222";
 const U3 = "33333333-3333-4333-8333-333333333333";
 const DAY = 24 * 3_600_000;
-
-function memoryPrices() {
-  const links = new Map<string, PriceLinkRecord>();
-  const snaps = new Map<string, PriceSnapshotRecord>();
-  const watch: PriceWatchRecord[] = [];
-  const sk = (r: { serviceGameId: string; country: string; shops: string }) => `${r.serviceGameId}|${r.country}|${r.shops}`;
-  const repo: PriceRepository = {
-    getLinks: async (_s, ids) => new Map(ids.flatMap((id) => (links.has(id) ? [[id, links.get(id)!] as const] : []))),
-    putLink: async (r) => void links.set(r.canonicalGameId, r),
-    deleteLink: async (_s, id) => void links.delete(id),
-    findOwned: async (_s, ids) => new Map([...links.values()].filter((l) => l.status === "found" && ids.includes(l.serviceGameId!)).map((l) => [l.serviceGameId!, l.canonicalGameId])),
-    getSnapshots: async (_s, ids, country, shops) => new Map(ids.flatMap((id) => (snaps.has(sk({ serviceGameId: id, country, shops })) ? [[id, snaps.get(sk({ serviceGameId: id, country, shops }))!] as const] : []))),
-    putSnapshots: async (rs) => rs.forEach((r) => snaps.set(sk(r), r)),
-    listWatch: async () => [...watch],
-    getWatch: async (id) => watch.find((w) => w.id === id) ?? null,
-    addWatch: async (r) => {
-      const old = watch.find((w) => w.serviceGameId === r.serviceGameId);
-      if (old) return { record: old, created: false };
-      watch.push(r);
-      return { record: r, created: true };
-    },
-    deleteWatch: async (id) => void watch.splice(0, watch.length, ...watch.filter((w) => w.id !== id)),
-    clearService: async () => {
-      snaps.clear();
-      for (const [id, l] of links) if (l.status !== "excluded") links.delete(id);
-    },
-  };
-  return { repo, links, snaps, watch };
-}
 
 interface Calls {
   store: [StoreId, readonly string[]][];
@@ -367,7 +338,7 @@ describe("search and follow list (point 15, M6)", () => {
   it("the board is ordered by discount and marks games you own", async () => {
     const { h, mem } = await setup({ answers: { store: { "steam:10": U1 }, prices: [{ id: U1, deals: [deal({ cut: 20 })], historyLow: null }, { id: U2, deals: [deal({ cut: 80 })], historyLow: null }] } });
     game(h, "c1", "Mine", [["steam", "10"]]);
-    mem.watch.push({ id: "w1", service: "itad", serviceGameId: U1, title: "Mine", type: "game", addedAt: 1 }, { id: "w2", service: "itad", serviceGameId: U2, title: "Other", type: null, addedAt: 2 }, { id: "w3", service: "itad", serviceGameId: U3, title: "None", type: null, addedAt: 3 });
+    mem.watch.push({ id: "w1", service: "itad", serviceGameId: U1, title: "Mine", type: "game", addedAt: 1, origin: "manual", originStoreGameId: null }, { id: "w2", service: "itad", serviceGameId: U2, title: "Other", type: null, addedAt: 2, origin: "manual", originStoreGameId: null }, { id: "w3", service: "itad", serviceGameId: U3, title: "None", type: null, addedAt: 3, origin: "manual", originStoreGameId: null });
     await h.core.refreshPrices({ canonicalIds: ["c1"], watchIds: ["w2", "w3"] });
     const board = await h.core.getPriceBoard();
     expect(board.items.map((i) => i.id)).toEqual(["w2", "w1", "w3"]);
@@ -438,7 +409,7 @@ describe("service wizard (point 15, A1)", () => {
     const { h, mem } = await setup({ answers: { store: { "steam:10": U1 } } });
     game(h, "c1", "A", [["steam", "10"]]);
     game(h, "c2", "B", [["steam", "11"]]);
-    mem.watch.push({ id: "w1", service: "itad", serviceGameId: U2, title: "W", type: null, addedAt: 1 });
+    mem.watch.push({ id: "w1", service: "itad", serviceGameId: U2, title: "W", type: null, addedAt: 1, origin: "manual", originStoreGameId: null });
     await h.core.refreshPrices({ canonicalIds: ["c1"] });
     await h.core.setPriceExclusion("c2", true);
     h.store.kv.set("services.itad.status", "expired");
@@ -574,7 +545,7 @@ describe("images in the comparator (ADR 86 point 17)", () => {
 
   it("an image whose host is no longer allowed is omitted when read", async () => {
     const { h, mem } = await setup();
-    mem.watch.push({ id: "w1", service: "itad", serviceGameId: U1, title: "Old", type: null, coverUrl: "https://gone.example/c.jpg", coverFallbackUrl: `${IMG}/h.jpg`, addedAt: 1 });
+    mem.watch.push({ id: "w1", service: "itad", serviceGameId: U1, title: "Old", type: null, coverUrl: "https://gone.example/c.jpg", coverFallbackUrl: `${IMG}/h.jpg`, addedAt: 1, origin: "manual", originStoreGameId: null });
     const [item] = (await h.core.getPriceBoard()).items;
     expect(item!.coverUrl).toBeUndefined();
     expect(item!.coverFallbackUrl).toBe(`${IMG}/h.jpg`);

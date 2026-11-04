@@ -183,6 +183,12 @@ export interface PriceRepository {
   addWatch(record: PriceWatchRecord, max: number): Promise<{ record: PriceWatchRecord; created: boolean }>;
   /** Also when it does not exist. */
   deleteWatch(id: string): Promise<void>;
+  /**
+   * ADR 91 point 5 and 13 (c). ONE transaction: deletes `remove`, moves the origin id of `rekey` rows, then inserts `add` (a
+   * `serviceGameId` already followed is skipped). `limit-reached` (and nothing written) if the list would pass `max`.
+   * Returns what was really written.
+   */
+  applyWishlistImport(plan: { remove: readonly string[]; rekey: readonly { id: string; originStoreGameId: string }[]; add: readonly PriceWatchRecord[] }, max: number): Promise<{ added: number; removed: number }>;
   /** Disconnect: in ONE transaction deletes the service's snapshots and its links that are not 'excluded'. The follow list stays. */
   clearService(service: PriceServiceId): Promise<void>;
 }

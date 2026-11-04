@@ -12,6 +12,8 @@ import type {
   PriceRefreshDto,
   PriceSearchResultDto,
   ServiceParams,
+  WishlistImportDto,
+  WishlistStoreParams,
   ServiceStatusDto,
   WatchItemDto,
   ScanRootDto,
@@ -74,6 +76,8 @@ export interface LudiaryCoreFacade {
   /** `created: false` when the game was already followed (the route answers 200 instead of 201). */
   watchPrice(resultId: string): Promise<{ item: WatchItemDto; created: boolean }>;
   unwatchPrice(id: string): Promise<void>;
+  /** ADR 91. */
+  importWishlist(store: WishlistStoreParams["store"]): Promise<WishlistImportDto>;
 }
 
 export interface FacadeError {

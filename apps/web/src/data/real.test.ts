@@ -264,6 +264,7 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await api.searchPrices("hades");
     await api.watchPrice("r1");
     await api.unwatchPrice("w1");
+    await api.importWishlist("gog");
     expect(log).toEqual([
       "GET /api/services",
       "POST /api/services/itad/wizard {}",
@@ -279,6 +280,7 @@ describe("real client: point B, the rest comes from the simulator", () => {
       'POST /api/prices/search {"title":"hades"}',
       'POST /api/prices/watch {"resultId":"r1"}',
       "DELETE /api/prices/watch/w1",
+      "POST /api/prices/wishlist/gog/import {}",
     ]);
   });
 

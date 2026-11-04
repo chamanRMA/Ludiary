@@ -340,6 +340,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     library: () => library,
     service: () => services.get("itad")?.status ?? "disconnected",
     prices: () => settings.prices ?? { country: null, shops: "ludiary" },
+    connectedStores: () => [...stores].filter(([, v]) => v.connection === "connected").map(([id]) => id),
     now,
   });
 

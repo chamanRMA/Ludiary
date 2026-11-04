@@ -15,6 +15,7 @@
   "connectors.steam.error.key": "Steam no acepta esa clave. Comprueba que la copiaste entera y que no está revocada, e inténtalo de nuevo.",
   "connectors.steam.error.openid": "Steam no pudo confirmar tu inicio de sesión. Empieza de nuevo.",
   "connectors.steam.error.privateProfile": "Tus detalles de juego son privados y Ludiary no puede ver tus juegos. Pon «Detalles de juego» en «Público» en la privacidad de Steam.",
+  "connectors.steam.error.wishlist": "Steam no ha dejado leer la lista de deseos. Comprueba que los detalles de tus juegos son públicos e inténtalo más tarde.",
   "connectors.steam.error.sessionExpired": "Steam ha cerrado la sesión. Vuelve a conectar la cuenta.",
   "connectors.steam.disconnect.revokeHint": "Ludiary borra la clave. Para anularla en Steam, pulsa Revoke en steamcommunity.com/dev/apikey.",
   "connectors.steam.errors.malformedFile": "Steam tiene un fichero que Ludiary no puede leer. Ese juego se omite.",

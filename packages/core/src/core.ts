@@ -90,7 +90,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
   const sync = createSyncService(env, mirror);
   const gate = createPriceGate(env);
   const wizards = createWizardEngine(env, (store) => sync.schedule({ stores: [store], force: true, operations: ["library"] }), gate);
-  const prices = createPriceFeature(env, gate, (key) => wizards.cancelTarget(key));
+  const prices = createPriceFeature(env, gate, (key) => wizards.cancelTarget(key), sync.exclusive);
   const launch = createLaunchService(env);
   const backups = createBackupService(env, () => deps.lastRestore?.() ?? null);
   const capabilities: CoreCapabilities = {
@@ -187,6 +187,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     searchPrices: (title) => prices.search(title),
     watchPrice: (resultId) => prices.watch(resultId),
     unwatchPrice: (id) => prices.unwatch(id),
+    importWishlist: (store) => prices.importWishlist(store),
     submitWizard: (wizardId, stepId, input) => wizards.submit(wizardId, stepId, input),
     wizardCallback: (wizardId, query) => wizards.callback(wizardId, query),
     cancelWizard: async (wizardId) => wizards.cancel(wizardId),
