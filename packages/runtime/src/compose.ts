@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { LudiaryCoreFacade } from "@ludiary/api";
 import type { PriceService, StoreConnector } from "@ludiary/contracts";
-import { ConnectorRegistrationError, createCore, type CoreLogger, type LudiaryCore } from "@ludiary/core";
+import { ConnectorRegistrationError, createCore, type BackupStore, type CoreLogger, type LastRestore, type LudiaryCore } from "@ludiary/core";
 import { createRepositories, DatabaseTooNewError, migrate } from "@ludiary/db";
 import { translate, type ConnectorMessageKey, type MessageKey } from "@ludiary/i18n";
 import { createHttpClient, createNodeLocalFiles, createSecretCipher, systemClock } from "@ludiary/platform-node";
@@ -42,9 +42,9 @@ export function coreLogger(log: Logger): CoreLogger {
  * Applies migrations before anything reads the database (ADR 72 point 4). A database from a newer version is never
  * opened (exit 12, ADR 64); any other migration failure also exits with 12, after the pre-migration copy (ADR 57).
  */
-export async function migrateDatabase(sqlite: SqliteDatabase, backupDir: string, log: Logger): Promise<void> {
+export async function migrateDatabase(sqlite: SqliteDatabase, backupDir: string, log: Logger, skipBackup = false): Promise<void> {
   try {
-    const result = await migrate(sqlite, { backupDir });
+    const result = await migrate(sqlite, { backupDir, skipBackup });
     if (result.applied.length > 0) log("info", `migrations applied: ${result.applied.join(", ")}${result.backupFile ? " (pre-migration copy made)" : ""}`);
   } catch (e) {
     if (e instanceof DatabaseTooNewError) {
@@ -72,6 +72,7 @@ export async function composeCore(
   sqlite: SqliteDatabase,
   log: Logger,
   masterKey: { id: number; value: Uint8Array },
+  extra: { lastRestore?: () => LastRestore | null; backups?: BackupStore } = {},
 ): Promise<ComposedCore> {
   const connectors = deps.connectors ?? createConnectors();
   const files = createNodeLocalFiles();
@@ -100,6 +101,9 @@ export async function composeCore(
       ...(launcher ? { launcher } : {}),
       ...(deps.folderPicker ? { folderPicker: deps.folderPicker } : {}),
       ...(deps.embeddedLogin ? { embeddedLogin: deps.embeddedLogin } : {}),
+      ...(deps.userFolders ? { userFolders: deps.userFolders } : {}),
+      ...(extra.backups ? { backups: extra.backups } : {}),
+      ...(extra.lastRestore ? { lastRestore: extra.lastRestore } : {}),
       http: deps.http ?? ((hosts, signal, log, opts) => createHttpClient({ hosts, signal, log, ...(opts?.maxBytes ? { maxBytes: opts.maxBytes } : {}) })),
       clock: systemClock,
       newId: randomUUID,

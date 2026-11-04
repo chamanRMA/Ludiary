@@ -1,4 +1,5 @@
 import type {
+  BackupsDto,
   CollectionCreateDto,
   CollectionDto,
   CollectionPatchDto,
@@ -23,6 +24,7 @@ import type {
   StoreStatusDto,
   SyncRequestDto,
   WatchItemDto,
+  WishlistImportDto,
   WizardCallbackDto,
   WizardCallbackResponseDto,
   WizardResponseDto,
@@ -159,7 +161,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       storeCollections: server.storeCollections,
       ...(server.prices ? { prices: server.prices } : {}),
       // Present in the server answer: use it. Absent (feature not available yet): the simulator's value.
-      backups: server.backups ?? local.backups,
+      backups: server.backups ?? local.backups, // the server always sends it (ADR 89)
       autoUpdate: server.autoUpdate ?? local.autoUpdate,
       autostart: local.autostart,
       syncOnStart: local.syncOnStart,
@@ -167,11 +169,12 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
   }
 
   async function updateSettings(patch: SettingsUpdate): Promise<GeneralSettings> {
-    const { locale, detection, storeCollections, prices, ...rest } = patch;
+    const { locale, detection, storeCollections, backups, prices, ...rest } = patch;
     const serverPatch: SettingsPatchDto = {
       ...(locale === undefined ? {} : { locale }),
       ...(detection === undefined ? {} : { detection }),
       ...(storeCollections === undefined ? {} : { storeCollections }),
+      ...(backups === undefined ? {} : { backups }),
       ...(prices === undefined ? {} : { prices }),
     };
     if (Object.keys(serverPatch).length > 0) await http.patch<SettingsDto>("/api/settings", serverPatch);
@@ -180,15 +183,16 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     return getSettings();
   }
 
+  const getBackups = (): Promise<BackupsDto> => http.get<BackupsDto>("/api/backups");
+
   async function getMaintenance(): Promise<MaintenanceDto> {
-    // Backups are not implemented yet: never show the simulator's backup time as if a copy existed. Scan and sync are real.
-    const stores = await getStores();
+    const [stores, backups] = await Promise.all([getStores(), getBackups().catch(() => null)]);
     const latest = (operation?: "library" | "scan"): number | null => {
       const times = stores.flatMap((s) => s.sync.filter((x) => operation === undefined || x.operation === operation).map((x) => x.lastSuccessAt ?? 0));
       const max = Math.max(0, ...times);
       return max > 0 ? max : null;
     };
-    return { lastBackupAt: null, lastScanAt: latest("scan"), lastSyncAt: latest() };
+    return { lastBackupAt: backups?.lastBackupAt ?? null, lastScanAt: latest("scan"), lastSyncAt: latest() };
   }
 
   const api: LudiaryApi = {
@@ -324,10 +328,17 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
     searchPrices: (title) => http.post<readonly PriceSearchResultDto[]>("/api/prices/search", { title }),
     watchPrice: (resultId) => http.post<WatchItemDto>("/api/prices/watch", { resultId }),
     unwatchPrice: (id) => http.delete(`/api/prices/watch/${enc(id)}`),
+    importWishlist: (store) => http.post<WishlistImportDto>(`/api/prices/wishlist/${store}/import`, {}),
 
     // ---- Not available yet: the screens hide these in the real app, so nothing is simulated here.
     revokeSessions: async () => void (await http.post("/api/sessions/revoke", {})),
-    createBackup: unavailable,
+    getBackups,
+    createBackup: async () => void (await http.post("/api/backups", {})),
+    pickBackupFolder: async () => {
+      const answer = await http.post<PickCancelledDto | BackupsDto>("/api/backups/folder/pick", {});
+      return "cancelled" in answer ? null : answer;
+    },
+    restoreBackup: async (id) => void (await http.post("/api/backups/restore", { id })),
     exportLogs: unavailable,
     simulateExpiredSession: unavailable,
   };

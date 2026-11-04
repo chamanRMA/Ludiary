@@ -57,6 +57,18 @@ export interface StoreConnector {
    * capabilities.scan, a 'scan' location and importCollectionsRoot. Parse errors: fixed message, no cause (ADR 87 point 13).
    */
   importCollections?(ctx: CollectionImportContext): Promise<CollectionImportSnapshot>;
+  /**
+   * ADR 91 (points 3 and 13, M3). Optional, on demand only (never in a sync); present together with `describeWishlistItems`
+   * or not at all. The user's wishlist in the store, read with the stored connection: ids only, in store order, at most
+   * 5000, no title or media requests. Requires `connection` and `apiHosts`. Untrusted output: the core validates and caps.
+   * Errors: fixed English message, no response text, no `cause` (ADR 91 point 13, e). Never changes the connection state itself.
+   */
+  readWishlist?(ctx: SyncContext): Promise<WishlistSnapshot>;
+  /**
+   * ADR 91 (point 13, M3). Titles and media of at most 500 wishlist ids the core chose. Ids missing from the result:
+   * the core shows `<Store> <id>` and no image. Media follow rule 4 (https, host in mediaHosts).
+   */
+  describeWishlistItems?(storeGameIds: readonly string[], ctx: SyncContext): Promise<ReadonlyMap<string, WishlistItemInfo>>;
   /** ADR 87. Relative sub-folder of each resolved 'scan' location the import reader is confined to. No '..', not absolute. */
   readonly importCollectionsRoot?: string;
   /**
@@ -348,6 +360,20 @@ export interface LibrarySnapshot {
   readonly entries: readonly StoreEntry[];
 }
 
+/** ADR 91. */
+export interface WishlistSnapshot {
+  /** false: the store answered with an empty or unreadable list that may be hidden (Steam `{}`), or the list is partial. */
+  readonly complete: boolean;
+  /** Store order (Steam priority, GOG as received). At most 5000; storeGameId in the store's own format. */
+  readonly entries: readonly { readonly storeGameId: string; /** ISO 8601. */ readonly addedAt?: string }[];
+}
+
+/** ADR 91. Title (300 characters at most, no control characters) and optional media of one wishlist item. */
+export interface WishlistItemInfo {
+  readonly title: string;
+  readonly media?: EntryMedia;
+}
+
 export type ExternalIds = Readonly<Partial<Record<"igdb" | "rawg" | "steamAppId", string>>>;
 /** Same rules everywhere: https and host in the connector's mediaHosts (ADR 71). */
 export interface EntryMedia {
@@ -512,6 +538,11 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[] {
     if (r === "" || /^([a-zA-Z]:|[\\/])/.test(r) || r.split(/[\\/]/).some((x) => x === ".." || x === "")) {
       problems.push("importCollectionsRoot must be a relative path without '..' or empty parts");
     }
+  }
+  if (!c.readWishlist !== !c.describeWishlistItems) problems.push("readWishlist and describeWishlistItems go together");
+  if (c.readWishlist) {
+    if (!c.connection) problems.push("readWishlist requires a connection wizard");
+    if (c.apiHosts.length === 0) problems.push("readWishlist requires apiHosts");
   }
   if (cap.price !== (c.prices !== undefined)) problems.push("capabilities.price and prices disagree");
   if ((cap.dlc === "scan" || cap.dlc === "library-and-scan") && !cap.scan) problems.push("dlc 'scan' requires capabilities.scan");

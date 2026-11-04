@@ -1,4 +1,6 @@
 import type {
+  BackupDto,
+  BackupsDto,
   DetectionMode,
   CollectionDto,
   GameDetailDto,
@@ -10,6 +12,8 @@ import type {
   PriceRefreshDto,
   PriceSearchResultDto,
   ServiceParams,
+  WishlistImportDto,
+  WishlistStoreParams,
   ServiceStatusDto,
   WatchItemDto,
   ScanRootDto,
@@ -53,6 +57,13 @@ export interface LudiaryCoreFacade {
   wizardCallback(wizardId: string, query: Readonly<Record<string, string>>): Promise<WizardCallbackResponseDto>;
   cancelWizard(wizardId: string): Promise<void>;
   disconnect(store: StoreId): Promise<void>;
+  /** ADR 89. */
+  getBackups(): Promise<BackupsDto>;
+  createBackup(): Promise<BackupDto>;
+  /** null when the user cancelled the dialog. */
+  pickBackupFolder(): Promise<BackupsDto | null>;
+  /** Prepares the restoration; the caller restarts the server after answering. */
+  restoreBackup(id: string): Promise<void>;
   // ADR 86, point 15 A2. Only the services that are registered; the GET-like ones read the cache and never the network.
   listServices(): Promise<readonly ServiceStatusDto[]>;
   startServiceWizard(service: ServiceParams["service"], returnBase: string): Promise<WizardStartDto>;
@@ -65,6 +76,8 @@ export interface LudiaryCoreFacade {
   /** `created: false` when the game was already followed (the route answers 200 instead of 201). */
   watchPrice(resultId: string): Promise<{ item: WatchItemDto; created: boolean }>;
   unwatchPrice(id: string): Promise<void>;
+  /** ADR 91. */
+  importWishlist(store: WishlistStoreParams["store"]): Promise<WishlistImportDto>;
 }
 
 export interface FacadeError {
@@ -81,7 +94,10 @@ export function isCoreError(e: unknown): e is Error & FacadeError {
 export function statusForCoreError(code: string): number {
   if (code === "not-found") return 404;
   if (code === "invalid-input") return 400;
-  if (code === "busy") return 409;
+  if (code === "busy" || code === "backup.busy") return 409;
+  if (code === "backup.not-found") return 404;
+  if (code === "backup.folder-unavailable") return 503;
+  if (code === "backup.write-failed") return 500;
   if (code === "internal") return 500;
   return 422;
 }

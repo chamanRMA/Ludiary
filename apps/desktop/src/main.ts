@@ -9,6 +9,7 @@ import {
   CredentialManagerKeyStore,
   HelperProcessDialogs,
   HelperProcessFolderPicker,
+  HelperProcessUserFolders,
   HelperProcessTrayHost,
   WindowsLocationResolver,
   createHelperRunner,
@@ -102,6 +103,7 @@ function compose(serverRole: boolean): RuntimeDeps {
     createLocationResolver: (files) => new WindowsLocationResolver({ files, runHelper, env }),
     createProcessLauncher: (allowedSchemes) => createWindowsProcessLauncher({ allowedSchemes }),
     folderPicker: new HelperProcessFolderPicker(runHelper),
+    userFolders: new HelperProcessUserFolders(runHelper),
     ...(embeddedLogin ? { embeddedLogin } : {}),
     dispose: () => {
       runHelper.dispose();

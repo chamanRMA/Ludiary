@@ -1,5 +1,6 @@
 import type { LudiaryCoreFacade } from "@ludiary/api";
 import type {
+  BackupsDto,
   CollectionDto,
   GameDetailDto,
   GameSummaryDto,
@@ -15,6 +16,7 @@ import { ConnectorError } from "@ludiary/contracts";
 import {
   CoreError,
   toErrorInfo,
+  type BackupsState,
   type CollectionRecord,
   type CoreErrorInfo,
   type GameDetail,
@@ -141,6 +143,16 @@ export function scanRootDto(r: ScanRootRecord): ScanRootDto {
   };
 }
 
+const backupsDto = (b: BackupsState): BackupsDto => ({
+  periodic: b.periodic,
+  folder: b.folder,
+  folderIsDefault: b.folderIsDefault,
+  lastBackupAt: b.lastBackupAt,
+  lastError: b.lastError ? { key: b.lastError.key } : null,
+  lastRestore: b.lastRestore ? { ...b.lastRestore } : null,
+  copies: b.copies.map((c) => ({ ...c })),
+});
+
 /** Wraps the core in the facade `api` consumes (ADR 72 point 4): domain types to DTOs, errors to `FacadeCoreError`. */
 export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
   const guard = async <T>(fn: () => Promise<T>): Promise<T> => {
@@ -152,10 +164,13 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
   };
   const settingsDto = async (): Promise<SettingsDto> => {
     const [settings, roots] = await Promise.all([core.getSettings(), core.listScanRoots()]);
+    // ADR 89: `backups.folder` is the resolved folder (null: none available), read from the same state as the backups section.
+    const folder = core.capabilities.canBackup ? (await core.getBackups()).folder : null;
     return {
       locale: settings.locale,
       detection: settings.detection,
       scanRoots: roots.map(scanRootDto),
+      backups: { periodic: settings.backups.periodic, folder },
       storeCollections: structuredClone(settings.storeCollections),
       ...(settings.prices ? { prices: { ...settings.prices } } : {}),
     };
@@ -193,6 +208,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
           ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
           ...(patch.detection !== undefined ? { detection: patch.detection } : {}),
           ...(patch.storeCollections !== undefined ? { storeCollections: patch.storeCollections } : {}),
+          ...(patch.backups !== undefined ? { backups: patch.backups } : {}),
           ...(patch.prices !== undefined ? { prices: patch.prices } : {}),
         });
         return settingsDto();
@@ -220,6 +236,13 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
       }),
     cancelWizard: (wizardId) => guard(() => core.cancelWizard(wizardId)),
     disconnect: (store) => guard(() => core.disconnect(store)),
+    getBackups: () => guard(() => core.getBackups().then(backupsDto)),
+    createBackup: () => guard(() => core.createBackup().then((b) => ({ ...b }))),
+    pickBackupFolder: () => guard(async () => {
+      const state = await core.pickBackupFolder();
+      return state ? backupsDto(state) : null;
+    }),
+    restoreBackup: (id) => guard(() => core.restoreBackup(id)),
     listServices: () => guard(async () => (await core.listServices()).map((x) => ({ ...x }))),
     startServiceWizard: (service, returnBase) =>
       guard(async () => {
@@ -241,5 +264,6 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
     searchPrices: (title) => guard(() => core.searchPrices(title)),
     watchPrice: (resultId) => guard(() => core.watchPrice(resultId)),
     unwatchPrice: (id) => guard(() => core.unwatchPrice(id)),
+    importWishlist: (store) => guard(() => core.importWishlist(store)),
   };
 }

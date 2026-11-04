@@ -1,5 +1,5 @@
 // Public facade types of the core (ADR 72, point 4) and the shared environment of its use-case modules.
-import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, PriceService, PriceServiceId, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
+import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, PriceService, PriceServiceId, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, UserFolders, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
 import type {
   CoreErrorInfo,
   CoreLogger,
@@ -14,13 +14,17 @@ import type {
   PriceSearchResult,
   ServiceStatus,
   WatchItem,
+  WishlistImportResult,
   ScanRootRecord,
   Settings,
   SettingsPatch,
   StoreStatus,
   SyncOperation,
 } from "./model";
+import type { BackupInfo } from "./ports";
+import type { BackupsState, LastRestore } from "./backups";
 import type {
+  BackupStore,
   ConnectionRepository,
   IdentityRepository,
   LibraryRepository,
@@ -72,6 +76,10 @@ export const SEARCH_TTL_MS = 15 * 60_000;
 export const SEARCH_MAX_RESULTS = 20;
 export const SEARCH_KEEP = 200;
 export const WATCH_MAX = 500;
+/** ADR 91 point 13 (M3): own floor of the wishlist import, per store, in memory; apart from MANUAL_SYNC_FLOOR_MS. */
+export const WISHLIST_IMPORT_FLOOR_MS = 10 * 60_000;
+/** ADR 91: ids a store may return (the rest is cut and the list counts as partial). */
+export const WISHLIST_MAX_ENTRIES = 5000;
 /** Fixed order to pick the property to launch when none is given (ADR 72). */
 export const LAUNCH_ORDER: readonly StoreId[] = ["steam", "gog", "epic", "ubisoft", "ea"];
 
@@ -98,6 +106,12 @@ export interface CoreDeps {
   http?: (hosts: readonly string[], signal: AbortSignal, log: ConnectorLogger, opts?: { maxBytes?: number }) => HttpClient;
   /** ADR 80. Absent (Docker, Linux, tests): the embedded-login step is rejected as unavailable. */
   embeddedLogin?: EmbeddedLogin;
+  /** ADR 89. Absent: the mode has no backups. */
+  backups?: BackupStore;
+  /** ADR 89. Absent or null Documents: activating backups asks for a folder. */
+  userFolders?: UserFolders;
+  /** ADR 89. Result of a restoration applied at startup; lives in the memory of this process. */
+  lastRestore?: () => LastRestore | null;
   /** ADR 46, 74. */
   cipher: SecretCipher;
   secrets: SecretRepository;
@@ -115,6 +129,8 @@ export interface CoreCapabilities {
   canScan: boolean;
   canLaunch: boolean;
   canPickFolder: boolean;
+  /** ADR 89. */
+  canBackup: boolean;
 }
 
 export interface SyncRequest {
@@ -166,6 +182,15 @@ export interface LudiaryCore {
   /** Idempotent. */
   cancelWizard(wizardId: string): Promise<void>;
   disconnect(store: StoreId): Promise<void>;
+  /** ADR 89. */
+  getBackups(): Promise<BackupsState>;
+  createBackup(): Promise<BackupInfo>;
+  /** null when the user cancelled the dialog. */
+  pickBackupFolder(): Promise<BackupsState | null>;
+  /** Prepares the restoration (point 6.1); the caller then restarts the server. */
+  restoreBackup(id: string): Promise<void>;
+  /** Called by the runtime after startup and every hour. Never throws. */
+  backupTick(): Promise<void>;
   /** ADR 86. Registered price services with their state, derived without network. */
   listServices(): Promise<readonly ServiceStatus[]>;
   /** ADR 86. Same engine as startWizard; the key is stored by the core when the wizard ends. */
@@ -183,6 +208,11 @@ export interface LudiaryCore {
   /** Only a `resultId` from a recent search. `created: false` if it was already followed. */
   watchPrice(resultId: string): Promise<{ item: WatchItem; created: boolean }>;
   unwatchPrice(id: string): Promise<void>;
+  /**
+   * ADR 91. Reads the store's wishlist and follows it (see `PriceFeature.importWishlist`). `invalid-input` for a store without
+   * wishlist import. Counters only.
+   */
+  importWishlist(store: StoreId): Promise<WishlistImportResult>;
   /** ADR 80. Server shutdown: aborts the open login windows. */
   shutdown(): void;
 }

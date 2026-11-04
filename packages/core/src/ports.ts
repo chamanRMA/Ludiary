@@ -134,6 +134,28 @@ export interface UserDataRepository {
   mergeUserData(from: string, to: string, at: number): Promise<void>;
 }
 
+/** ADR 89. Paths are opaque to the core; the store joins names to its own folders and never accepts a path from the API. */
+export type BackupKind = "auto" | "manual" | "pre-migration" | "pre-restore";
+export interface BackupInfo {
+  id: string;
+  kind: BackupKind;
+  createdAt: number;
+  sizeBytes: number;
+  foreign: boolean;
+}
+export interface BackupStore {
+  /** `<Documents>\Ludiary\Copias` (Windows), composed by the store (ADR 89 point 4). */
+  defaultFolder(documents: string): string;
+  /** Online copy to `<folder>/<name>.partial`, then rename. Creates the folder. `installId`: 8 lower-case hex. */
+  create(folder: string, kind: "auto" | "manual", installId: string, now: number): Promise<BackupInfo>;
+  /** User folder (valid names, regular files only) plus the internal folder, newest first, at most 500. Missing folder: only internal ones. */
+  list(folder: string | null, installId: string): Promise<BackupInfo[]>;
+  /** Only an own `auto` copy that validates and is in the listing (ADR 89 point 16, M5). */
+  delete(folder: string, id: string, installId: string): Promise<void>;
+  /** Point 6.1. Throws a CoreError with the key of point 9. */
+  prepareRestore(folder: string | null, id: string, now: number): Promise<void>;
+}
+
 /**
  * ADR 86, point 8. Links, price cache and follow list of the only user. Every write is scoped to the service; `clearService`
  * is one transaction. Epoch checks (point 15, M3) are the core's job: it calls these only while its epoch is current.
@@ -161,6 +183,12 @@ export interface PriceRepository {
   addWatch(record: PriceWatchRecord, max: number): Promise<{ record: PriceWatchRecord; created: boolean }>;
   /** Also when it does not exist. */
   deleteWatch(id: string): Promise<void>;
+  /**
+   * ADR 91 point 5 and 13 (c). ONE transaction: deletes `remove`, moves the origin id of `rekey` rows, then inserts `add` (a
+   * `serviceGameId` already followed is skipped). `limit-reached` (and nothing written) if the list would pass `max`.
+   * Returns what was really written.
+   */
+  applyWishlistImport(plan: { remove: readonly string[]; rekey: readonly { id: string; originStoreGameId: string }[]; add: readonly PriceWatchRecord[] }, max: number): Promise<{ added: number; removed: number }>;
   /** Disconnect: in ONE transaction deletes the service's snapshots and its links that are not 'excluded'. The follow list stays. */
   clearService(service: PriceServiceId): Promise<void>;
 }

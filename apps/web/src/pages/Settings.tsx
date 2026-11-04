@@ -1,6 +1,6 @@
-import type { DetectionMode, ScanRootDto } from "@ludiary/api-contract";
+import type { BackupDto, DetectionMode, ScanRootDto } from "@ludiary/api-contract";
 import i18next from "i18next";
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { changeLocale } from "../app/i18n";
 import { Link } from "../app/Link";
@@ -10,7 +10,9 @@ import { errorText } from "../app/errors";
 import { STORE_BRAND } from "../app/stores";
 import { api, isSimulated } from "../data/api";
 import type { GeneralSettings, SettingsUpdate } from "../data/api";
-import { mutate, useQuery } from "../data/hooks";
+import { backupDate } from "../app/backups";
+import { mutate, setRestarting, useQuery } from "../data/hooks";
+import { ApiError } from "../data/http";
 import { cx, PageTitle, relativeTime, SimNote } from "../components/bits";
 import { CollectionsStatusLine, withCollections } from "../components/CollectionsStatus";
 import { TargetRow } from "../components/TargetRow";
@@ -19,9 +21,9 @@ import styles from "./settings.module.css";
 
 const ALL_SECTIONS = ["general", "stores", "services", "folders", "backups", "privacy", "about"] as const;
 export type SettingsSection = (typeof ALL_SECTIONS)[number];
-// Backups only exist in the simulator for now: the real app must not suggest them (ADR 57). Services appear in the real app
-// only when the server has one (IsThereAnyDeal, ADR 86): the nav hides the entry while the list is empty.
-export const SETTINGS_SECTIONS: readonly SettingsSection[] = isSimulated ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s !== "backups");
+// Backups are real (ADR 89). Services appear in the real app only when the server has one (IsThereAnyDeal, ADR 86): the nav
+// hides the entry while the list is empty.
+export const SETTINGS_SECTIONS: readonly SettingsSection[] = ALL_SECTIONS;
 const isSection = (v: string): v is SettingsSection => (SETTINGS_SECTIONS as readonly string[]).includes(v);
 
 function Switch({ checked, onChange, label }: { checked: boolean; onChange(v: boolean): void; label: string }) {
@@ -278,6 +280,7 @@ function Folders() {
   const { t, i18n } = useTranslation();
   const [settings, update] = useSettings();
   const maintenance = useQuery(() => api.getMaintenance());
+  const restoredDisabled = useQuery(() => api.getBackups().then((b) => b.lastRestore?.disabledRoots ?? 0, () => 0));
   const [scanned, setScanned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const modeId = useId();
@@ -312,6 +315,8 @@ function Folders() {
       </fieldset>
       {settings.detection === "manual-only" && <p className={styles.notice}>{t("onboarding.stores.manualWarning")}</p>}
       {settings.detection === "later" && <p className={styles.notice}>{t("onboarding.stores.laterWarning")}</p>}
+
+      {restoredDisabled !== undefined && restoredDisabled > 0 && <p className={styles.notice}>{t("settings.folders.restoredDisabled", { count: restoredDisabled })}</p>}
 
       <h3>{t("settings.folders.list")}</h3>
       {settings.scanRoots.map((root) => (
@@ -349,30 +354,126 @@ function Folders() {
   );
 }
 
+/** Native modal dialog: focus is trapped inside, Escape cancels and focus goes back to the button that opened it. */
+function ConfirmRestore({ onCancel, onConfirm }: { onCancel(): void; onConfirm(): void }) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => dialog?.close();
+  }, []);
+  return (
+    <dialog ref={ref} className={styles.dialog} aria-labelledby="backup-confirm-title" aria-describedby="backup-confirm-body" onCancel={(e) => { e.preventDefault(); onCancel(); }}>
+      <b id="backup-confirm-title">{t("settings.backups.confirm.title")}</b>
+      <p id="backup-confirm-body">{t("settings.backups.confirm.body")}</p>
+      <div className={ui.actions} style={{ justifyContent: "flex-start" }}>
+        <button type="button" className={ui.btn} autoFocus onClick={onCancel}>
+          {t("settings.backups.confirm.no")}
+        </button>
+        <button type="button" className={cx(ui.btn, ui.primary)} onClick={onConfirm}>
+          {t("settings.backups.confirm.yes")}
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
+function formatSize(bytes: number, lang: string): string {
+  return new Intl.NumberFormat(lang, { style: "unit", unit: "megabyte", maximumFractionDigits: 1 }).format(bytes / 1_048_576);
+}
+
 function Backups() {
   const { t, i18n } = useTranslation();
   const [settings, update] = useSettings();
-  const maintenance = useQuery(() => api.getMaintenance());
-  const [made, setMade] = useState(false);
-  if (!settings) return null;
+  const backups = useQuery(() => api.getBackups());
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<BackupDto | null>(null);
+  if (!settings || !backups) return null;
+  const when = (epoch: number) => new Date(epoch).toLocaleString(i18n.language);
+  const run = async (action: () => Promise<unknown>): Promise<void> => {
+    setError(null);
+    try {
+      await mutate(action());
+    } catch (e) {
+      setError(errorText(t, e));
+      throw e;
+    }
+  };
+  const pickFolder = () => run(() => api.pickBackupFolder());
+  // ADR 89 point 5: without a resolvable folder the server refuses to switch on; the dialog opens and the switch is retried.
+  const setPeriodic = async (periodic: boolean): Promise<void> => {
+    try {
+      await run(() => update({ backups: { periodic } }));
+    } catch (e) {
+      if (!(e instanceof ApiError && e.code === "backup.no-folder")) return;
+      try {
+        await pickFolder();
+        if ((await api.getBackups()).folder) await run(() => update({ backups: { periodic } }));
+      } catch {
+        // `run` already showed the error
+      }
+    }
+  };
+  const restore = async (copy: BackupDto): Promise<void> => {
+    setConfirming(null);
+    setError(null);
+    try {
+      await api.restoreBackup(copy.id); // no refresh: the server is shutting down
+      setRestarting(); // the whole app is replaced by the restart screen and stops querying
+    } catch (e) {
+      setError(errorText(t, e));
+    }
+  };
+  const lastRestore = backups.lastRestore;
   return (
     <>
       <p className={ui.muted}>{t("settings.backups.intro")}</p>
+      <p className={ui.muted}>{t("settings.backups.warning")}</p>
+      {lastRestore && (
+        <p className={lastRestore.outcome === "ok" ? styles.notice : ui.error} role="status">
+          {lastRestore.outcome === "ok" ? t("settings.backups.restored", { when: when(backupDate(lastRestore.id) ?? lastRestore.at) }) : t("settings.backups.rolledBack")}
+        </p>
+      )}
       <Row title={t("settings.backups.periodic")} hint={t("settings.backups.periodicHint")}>
-        <Switch checked={settings.backups.periodic} label={t("settings.backups.periodic")} onChange={(periodic) => void update({ backups: { ...settings.backups, periodic } })} />
+        <Switch checked={backups.periodic} label={t("settings.backups.periodic")} onChange={(periodic) => void setPeriodic(periodic)} />
       </Row>
-      <Row title={t("settings.backups.folder")} hint={settings.backups.folder ?? t("settings.backups.defaultFolder")}>
-        <span />
+      <Row title={t("settings.backups.folder")} hint={backups.folder ? `${backups.folder}${backups.folderIsDefault ? ` (${t("settings.backups.defaultFolder")})` : ""}` : t("settings.backups.noFolder")}>
+        <button type="button" className={cx(ui.btn, ui.small)} onClick={() => void pickFolder().catch(() => undefined)}>
+          {t("settings.backups.changeFolder")}
+        </button>
       </Row>
       <Row
         title={t("settings.backups.now")}
-        hint={maintenance?.lastBackupAt ? t("settings.backups.last", { when: relativeTime(maintenance.lastBackupAt, i18n.language) }) : t("settings.backups.never")}
+        hint={backups.lastBackupAt ? t("settings.backups.last", { when: relativeTime(backups.lastBackupAt, i18n.language) }) : t("settings.backups.never")}
       >
-        <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void mutate(api.createBackup()).then(() => setMade(true))}>
+        <button type="button" className={cx(ui.btn, ui.primary)} onClick={() => void run(() => api.createBackup()).catch(() => undefined)}>
           {t("settings.backups.button")}
         </button>
       </Row>
-      <SimNote show={made} />
+      {backups.lastError && (
+        <p className={ui.error} role="alert">
+          {t("settings.backups.lastError", { error: i18next.exists(backups.lastError.key) ? t(backups.lastError.key) : t("errors.generic") })}
+        </p>
+      )}
+      {error && <p className={ui.error} role="alert">{error}</p>}
+      <h3>{t("settings.backups.copies")}</h3>
+      {backups.copies.length === 0 && <p className={ui.muted}>{t("settings.backups.noCopies")}</p>}
+      {backups.copies.map((copy) => (
+        <div key={copy.id} className={ui.row}>
+          <div>
+            <b>{when(copy.createdAt)}</b>
+            <small style={{ display: "block", color: "var(--mu)" }}>
+              {t(`settings.backups.kind.${copy.kind}`)} · {formatSize(copy.sizeBytes, i18n.language)}
+              {copy.foreign && ` · ${t("settings.backups.foreign")}`}
+            </small>
+          </div>
+          <button type="button" className={cx(ui.btn, ui.small)} aria-label={t("settings.backups.restoreLabel", { when: when(copy.createdAt) })} onClick={() => setConfirming(copy)}>
+            {t("settings.backups.restore")}
+          </button>
+        </div>
+      ))}
+      {confirming && <ConfirmRestore onCancel={() => setConfirming(null)} onConfirm={() => void restore(confirming)} />}
       <p className={ui.muted}>{t("settings.backups.noKey")}</p>
     </>
   );

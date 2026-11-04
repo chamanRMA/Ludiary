@@ -41,15 +41,13 @@ export async function readSettings(env: Env): Promise<Settings> {
     locale: (LOCALES as readonly unknown[]).includes(locale) ? (locale as Settings["locale"]) : "system",
     detection: isMode(mode) ? mode : null,
     storeCollections,
+    backups: { periodic: (await env.deps.settings.get("backups.periodic")) === true },
     ...(env.services.size > 0 ? { prices: await readPriceSettings(env) } : {}),
   };
 }
 
-/** Validates and stores a patch. Returns the settings, whether the detection mode changed and the stores whose collections settings changed. */
-export async function writeSettings(
-  env: Env,
-  patch: SettingsPatch,
-): Promise<{ settings: Settings; detectionChanged: boolean; collections: { store: StoreId; enabledChanged: boolean; unverifiedChanged: boolean }[] }> {
+/** Throws `invalid-input` for anything wrong in the patch, before anything is stored. Returns the per-store entries. */
+export function validatePatch(env: Env, patch: SettingsPatch): [StoreId, Partial<StoreCollectionsSettings>][] {
   if (patch === null || typeof patch !== "object") throw new CoreError("invalid-input", "Settings patch must be an object");
   if (patch.locale !== undefined && !(LOCALES as readonly unknown[]).includes(patch.locale)) {
     throw new CoreError("invalid-input", "Unknown locale");
@@ -66,12 +64,24 @@ export async function writeSettings(
       if (v[k] !== undefined && typeof v[k] !== "boolean") throw new CoreError("invalid-input", `${k} must be a boolean`);
     }
   }
+  if (patch.backups !== undefined && (patch.backups === null || typeof patch.backups !== "object" || (patch.backups.periodic !== undefined && typeof patch.backups.periodic !== "boolean"))) {
+    throw new CoreError("invalid-input", "backups.periodic must be a boolean");
+  }
   if (patch.prices !== undefined) {
     const pr = patch.prices as { country?: unknown; shops?: unknown } | null;
     if (env.services.size === 0 || pr === null || typeof pr !== "object") throw new CoreError("invalid-input", "Prices settings are not available");
     if (pr.country !== undefined && !(typeof pr.country === "string" && COUNTRY.test(pr.country))) throw new CoreError("invalid-input", "Invalid country");
     if (pr.shops !== undefined && pr.shops !== "ludiary" && pr.shops !== "all") throw new CoreError("invalid-input", "Invalid shops value");
   }
+  return wanted;
+}
+
+/** Validates and stores a patch. Returns the settings, whether the detection mode changed and the stores whose collections settings changed. */
+export async function writeSettings(
+  env: Env,
+  patch: SettingsPatch,
+): Promise<{ settings: Settings; detectionChanged: boolean; collections: { store: StoreId; enabledChanged: boolean; unverifiedChanged: boolean }[] }> {
+  const wanted = validatePatch(env, patch);
   const before = await readSettings(env);
   if (patch.prices?.country !== undefined) await env.deps.settings.set(K_PRICES_COUNTRY, patch.prices.country);
   if (patch.prices?.shops !== undefined) await env.deps.settings.set(K_PRICES_SHOPS, patch.prices.shops);

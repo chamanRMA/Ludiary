@@ -10,6 +10,7 @@
   "connectors.gog.login.field": "Dirección de la página final",
   "connectors.gog.error.code": "El código ha caducado o ya se usó. Vuelve a iniciar sesión y pega la dirección nueva.",
   "connectors.gog.error.expired": "GOG ha cerrado la sesión. Vuelve a conectar la cuenta.",
+  "connectors.gog.error.wishlist": "GOG no ha dejado leer la lista de deseos. Inténtalo más tarde; tu conexión con GOG sigue activa.",
   "connectors.gog.errors.galaxyMissing": "Para instalar este juego hace falta GOG Galaxy. Instálalo desde gog.com o descarga el instalador desde tu biblioteca de gog.com.",
   "connectors.gog.disconnect.hint": "Ludiary borra su sesión de GOG de este equipo. Para cerrar todas las sesiones, cambia la contraseña en gog.com."
 }

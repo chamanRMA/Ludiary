@@ -18,7 +18,16 @@ export type CoreErrorCode =
   | "name-taken"
   | "collection-managed"
   | "limit-reached"
-  | "picker-unavailable";
+  | "picker-unavailable"
+  | "backup.busy"
+  | "backup.no-folder"
+  | "backup.folder-unavailable"
+  | "backup.write-failed"
+  | "backup.not-found"
+  | "backup.too-large"
+  | "backup.corrupt"
+  | "backup.not-ludiary"
+  | "backup.too-new";
 
 export interface CoreErrorInfo {
   code: ConnectorErrorCode | CoreErrorCode;
@@ -64,11 +73,15 @@ export interface Settings {
   prices?: PricesSettings;
   /** ADR 88. Only the stores that have the operation. */
   storeCollections: Partial<Record<StoreId, StoreCollectionsSettings>>;
+  /** ADR 89. */
+  backups: { periodic: boolean };
 }
 export interface SettingsPatch {
   locale?: Settings["locale"];
   detection?: DetectionMode | null;
   storeCollections?: Partial<Record<StoreId, Partial<StoreCollectionsSettings>>>;
+  /** ADR 89. The folder never travels here. */
+  backups?: { periodic?: boolean };
   prices?: { country?: string; shops?: PriceShops };
 }
 
@@ -395,6 +408,19 @@ export interface PriceWatchRecord {
   coverUrl?: string;
   coverFallbackUrl?: string;
   addedAt: number;
+  /** ADR 91 point 6. 'manual' followed by hand; otherwise the store whose wishlist import added it (`originStoreGameId` is then set). */
+  origin: WatchOrigin;
+  originStoreGameId: string | null;
+}
+export type WatchOrigin = "manual" | "steam" | "gog";
+/** ADR 91 point 5.6: counters only. */
+export interface WishlistImportResult {
+  added: number;
+  removed: number;
+  alreadyWatched: number;
+  notFound: number;
+  overLimit: number;
+  hiddenOrEmpty: boolean;
 }
 
 // ---- Prices as the API shows them (ADR 86 point 15, A2). Same shape as the DTOs.
@@ -431,10 +457,13 @@ export interface WatchItem {
   ownedGameId?: string;
   coverUrl?: string;
   coverFallbackUrl?: string;
+  origin: WatchOrigin;
   prices: PricesView | null;
 }
 export interface PriceBoard extends PriceBoardState {
   items: readonly WatchItem[];
+  /** ADR 91: connected stores that can import their wishlist. */
+  wishlistStores: readonly StoreId[];
 }
 export interface PriceSearchResult {
   resultId: string;

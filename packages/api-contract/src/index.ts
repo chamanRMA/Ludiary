@@ -175,13 +175,15 @@ export const GamePricesSchema = Type.Object(
 );
 export type GamePricesDto = RO<Static<typeof GamePricesSchema>>;
 
+/** ADR 91: how a follow-list item got there. */
+export const WatchOriginSchema = Type.Union([Type.Literal("manual"), Type.Literal("steam"), Type.Literal("gog")]);
 export const WatchItemSchema = Type.Object(
-  { id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), prices: Type.Union([PricesSchema, Type.Null()]) },
+  { id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), coverUrl: Type.Optional(Url2048), coverFallbackUrl: Type.Optional(Url2048), origin: WatchOriginSchema, prices: Type.Union([PricesSchema, Type.Null()]) },
   strict,
 );
 export type WatchItemDto = RO<Static<typeof WatchItemSchema>>;
 
-export const PriceBoardSchema = Type.Object({ ...BoardState, items: Type.Array(WatchItemSchema, { maxItems: 500 }) }, strict);
+export const PriceBoardSchema = Type.Object({ ...BoardState, items: Type.Array(WatchItemSchema, { maxItems: 500 }), wishlistStores: Type.Array(StoreIdSchema, { maxItems: 5 }) }, strict);
 export type PriceBoardDto = RO<Static<typeof PriceBoardSchema>>;
 
 export const PriceSearchResultSchema = Type.Object(
@@ -206,6 +208,17 @@ export type PriceSearchDto = Static<typeof PriceSearchSchema>;
 /** POST /api/prices/watch -> 201 WatchItemDto (200 if already followed). resultId must come from a recent search. */
 export const PriceWatchSchema = Type.Object({ resultId: Id }, strict);
 export type PriceWatchDto = Static<typeof PriceWatchSchema>;
+
+/** ADR 91. Only the stores with a readable wishlist have the route. */
+export const WishlistStoreParamsSchema = Type.Object({ store: Type.Union([Type.Literal("steam"), Type.Literal("gog")]) }, strict);
+export type WishlistStoreParams = Static<typeof WishlistStoreParamsSchema>;
+const Count = Type.Integer({ minimum: 0, maximum: 5000 });
+/** POST /api/prices/wishlist/:store/import -> 200. Counters only (ADR 91 point 5.6). */
+export const WishlistImportSchema = Type.Object(
+  { added: Count, removed: Count, alreadyWatched: Count, notFound: Count, overLimit: Count, hiddenOrEmpty: Type.Boolean() },
+  strict,
+);
+export type WishlistImportDto = Static<typeof WishlistImportSchema>;
 
 // ---- Wizard (ADR 74, point 5). Responses are plain types; requests are validated with TypeBox.
 export type WizardTarget = { kind: "store"; store: StoreId } | { kind: "service"; service: ServiceId };
@@ -291,7 +304,7 @@ export const SettingsSchema = Type.Object(
     detection: Type.Union([DetectionModeSchema, Type.Null()]),
     scanRoots: Type.Array(ScanRootSchema),
     /** Absent: the feature is not available (ADR 72). */
-    backups: Type.Optional(Type.Object({ periodic: Type.Boolean(), folder: Type.Union([Type.String(), Type.Null()]) }, strict)), // ADR 57
+    backups: Type.Optional(Type.Object({ periodic: Type.Boolean(), folder: Type.Union([Type.String(), Type.Null()]) }, strict)), // ADR 57, 89: the server always sends it
     autoUpdate: Type.Optional(Type.Boolean()), // ADR 32
     /** ADR 88. Only the stores that mirror collections. */
     storeCollections: perStore(StoreCollectionsSettingsSchema),
@@ -306,6 +319,8 @@ export const SettingsPatchSchema = Type.Object(
   {
     locale: Type.Optional(LocaleSchema),
     detection: Type.Optional(DetectionModeSchema),
+    /** ADR 89. The folder never travels here: it only changes through the native dialog. */
+    backups: Type.Optional(Type.Object({ periodic: Type.Boolean() }, strict)),
     storeCollections: Type.Optional(perStore(Type.Object({ enabled: Type.Optional(Type.Boolean()), unverifiedFavorites: Type.Optional(Type.Boolean()) }, strict))),
     prices: Type.Optional(Type.Object({ country: Type.Optional(Country), shops: Type.Optional(PriceShopsSchema) }, strict)),
   },
@@ -459,3 +474,31 @@ export interface WizardCallbackResponseDto {
   response: WizardResponseDto;
 }
 // DELETE /api/wizards/:wizardId and DELETE /api/stores/:store/connection answer 204 with no body.
+
+// ---- Backups (ADR 89)
+export const BackupKindSchema = Type.Union([Type.Literal("auto"), Type.Literal("manual"), Type.Literal("pre-migration"), Type.Literal("pre-restore")]);
+const BackupId = Type.String({
+  maxLength: 120,
+  pattern: "^(ludiary-\\d{8}T\\d{9}Z-[0-9a-f]{8}-(auto|manual)|pre-migration-\\d{15}-[0-9a-z_]{1,64}|pre-restore-\\d{15}(-origin)?)\\.sqlite$",
+});
+export const BackupSchema = Type.Object({ id: BackupId, kind: BackupKindSchema, createdAt: Type.Integer(), sizeBytes: Type.Integer({ minimum: 0 }), foreign: Type.Boolean() }, strict);
+export type BackupDto = Static<typeof BackupSchema>;
+export const BackupsSchema = Type.Object(
+  {
+    periodic: Type.Boolean(),
+    folder: Type.Union([Type.String(), Type.Null()]),
+    folderIsDefault: Type.Boolean(),
+    lastBackupAt: Type.Union([Type.Integer(), Type.Null()]),
+    lastError: Type.Union([Type.Object({ key: Type.String() }, strict), Type.Null()]),
+    lastRestore: Type.Union([
+      Type.Object({ id: BackupId, at: Type.Integer(), outcome: Type.Union([Type.Literal("ok"), Type.Literal("rolled-back")]), disabledRoots: Type.Integer({ minimum: 0 }) }, strict),
+      Type.Null(),
+    ]),
+    copies: Type.Array(BackupSchema, { maxItems: 500 }),
+  },
+  strict,
+);
+export type BackupsDto = RO<Static<typeof BackupsSchema>>;
+export const RestoreBodySchema = Type.Object({ id: BackupId }, strict);
+export type RestoreBodyDto = Static<typeof RestoreBodySchema>;
+export const RestoreResponseSchema = Type.Object({ restarting: Type.Literal(true) }, strict);

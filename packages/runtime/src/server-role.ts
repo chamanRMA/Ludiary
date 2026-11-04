@@ -3,11 +3,14 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { createLocalServer, SessionStore, type LocalServer } from "@ludiary/api";
 import type { KeyStore, TrayHost, TrayState } from "@ludiary/contracts";
-import { createSqliteInstanceLock, openDatabase } from "@ludiary/db";
+import type { LastRestore } from "@ludiary/core";
+import { createBackupStore, createSqliteInstanceLock } from "@ludiary/db";
 import { translate } from "@ludiary/i18n";
 import { composeCore, FatalError, migrateDatabase } from "./compose";
 import { unionMediaHosts } from "./connectors";
 import { APP_ID, EXIT, INSTALL_TOKEN_NAME, MAX_MASTER_KEY_ID, localeOf, masterKeyName, type RuntimeDeps } from "./deps";
+import { restartSequence, spawnAfterRestartLauncher } from "./launcher";
+import { startDatabase } from "./restore-startup";
 import { createFileLogger, readRuntimeInfo, writeRuntimeInfo, type Logger } from "./files";
 import { candidatePorts } from "./ports";
 import { loadWebAssets } from "./web-assets";
@@ -99,7 +102,23 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     const installToken = await step(EXIT.keyStore, "credential store", () => loadInstallToken(keyStore, log));
     log("info", `master key ${masterKeyName(masterKey.id)} ${masterKey.origin}`);
 
-    const db = await step(EXIT.database, "database", () => openDatabase(join(platform.dataDir, "ludiary.db"), deps.sqliteAddon));
+    // ADR 89 point 6.3: pending restoration -> database -> migrations -> adjustment -> composeCore (rolled back as a whole).
+    let lastRestore: LastRestore | null = null;
+    const started = await step(EXIT.database, "database", () =>
+      startDatabase({
+        dataDir: platform.dataDir,
+        addon: deps.sqliteAddon,
+        log,
+        now: Date.now,
+        migrate: (d, skipBackup) => migrateDatabase(d, join(platform.dataDir, "backups"), log, skipBackup), // FatalError(12) on failure or newer database
+        compose: (d) => {
+          const backups = createBackupStore({ db: d, dataDir: platform.dataDir, internalDir: join(platform.dataDir, "backups"), addon: deps.sqliteAddon });
+          return composeCore(deps, d, log, masterKey, { backups, lastRestore: () => lastRestore });
+        },
+      }),
+    );
+    const { db, composed } = started;
+    lastRestore = started.lastRestore;
     const dbStatus = {
       sqliteVersion: (db.prepare("SELECT sqlite_version() AS v").get() as { v: string }).v,
       journalMode: String(db.pragma("journal_mode", { simple: true })),
@@ -110,8 +129,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       if (dbOpen) db.close();
       dbOpen = false;
     };
-    await migrateDatabase(db, join(platform.dataDir, "backups"), log); // FatalError(12) on failure or newer database
-    const { core, facade, connectors, services } = await composeCore(deps, db, log, masterKey);
+    const { core, facade, connectors, services } = composed;
     waitForScans = () => core.whenIdle();
     const mediaHosts = unionMediaHosts(connectors, services);
     const webAssets = loadWebAssets(deps.webDir, log); // once, at startup (ADR 72 point 6)
@@ -120,6 +138,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     let exitResolve: (code: number) => void = () => {};
     const exited = new Promise<number>((resolve) => (exitResolve = resolve));
     let tray: TrayHost | null = null;
+    let backupTimer: NodeJS.Timeout | undefined;
     let stopping = false;
 
     const makeServer = () =>
@@ -137,6 +156,8 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
           tray: tray !== null,
         }),
         onShutdownRequested: () => void shutdown(),
+        // ADR 89 point 6.2: the launcher goes first and is independent of us; only then does this server shut down.
+        onRestartRequested: () => restartSequence(() => spawnAfterRestartLauncher(deps, log), () => void shutdown()),
         core: facade,
         webAssets,
         mediaHosts,
@@ -157,6 +178,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       log("info", "shutting down");
       // Safety net: a stuck step must never leave a zombie server. The OS releases the instance lock on exit.
       setTimeout(() => process.exit(EXIT.ok), 5_000).unref();
+      clearInterval(backupTimer);
       await tray?.stop().catch(() => {});
       core.shutdown(); // closes any open login window before the server waits for its pending request (ADR 80)
       await server.close().catch(() => {});
@@ -199,6 +221,11 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         log("error", `tray failed: ${(e as Error).message}`);
       }
     }
+
+    // ADR 89 point 5: the core has no timers. Once at the end of startup and then every hour.
+    void core.backupTick();
+    backupTimer = setInterval(() => void core.backupTick(), 3_600_000);
+    backupTimer.unref();
 
     process.once("SIGINT", () => void shutdown());
     process.once("SIGTERM", () => void shutdown());

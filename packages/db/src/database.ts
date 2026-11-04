@@ -10,7 +10,13 @@ export function openDatabase(file: string, addon: SqliteAddon | undefined): Data
   // The @types package predates the `nativeBinding: object` form of v13.
   const options = addon ? ({ nativeBinding: addon } as unknown as Database.Options) : undefined;
   const db = new Database(file, options);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+  try {
+    db.pragma("journal_mode = WAL");
+    db.pragma("foreign_keys = ON");
+    db.pragma("trusted_schema = OFF"); // ADR 89 point 16, H2: a view or trigger of a restored file never runs code of its own
+  } catch (e) {
+    db.close(); // a file that is not a database must not stay open (Windows would refuse to move it)
+    throw e;
+  }
   return db;
 }

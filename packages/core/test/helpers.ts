@@ -28,6 +28,9 @@ import type {
   InstallationRecord,
   LaunchTarget,
   LibraryPlan,
+  PriceLinkRecord,
+  PriceSnapshotRecord,
+  PriceWatchRecord,
   PropertyRecord,
   ScanPlan,
   ScanRootRecord,
@@ -39,6 +42,7 @@ import type {
   ConnectionRepository,
   IdentityRepository,
   LibraryRepository,
+  PriceRepository,
   ScanRootRepository,
   SecretRepository,
   SettingsRepository,
@@ -457,6 +461,8 @@ export interface ConnectorOptions {
   resolveMedia?: StoreConnector["resolveMedia"];
   resolveTitles?: StoreConnector["resolveTitles"];
   importCollections?: StoreConnector["importCollections"];
+  /** ADR 91: both or neither. */
+  wishlist?: { read: NonNullable<StoreConnector["readWishlist"]>; describe: NonNullable<StoreConnector["describeWishlistItems"]> };
   apiHosts?: string[];
   authHosts?: string[];
   library?: (ctx: SyncContext) => Promise<LibrarySnapshot>;
@@ -474,7 +480,7 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     minSyncIntervalMs: o.minSyncIntervalMs ?? 600_000,
     authHosts: o.authHosts ?? (o.connection ? ["login.example.com"] : []),
     mediaHosts: ["shared.akamai.steamstatic.com"],
-    apiHosts: o.apiHosts ?? (o.resolveMedia || o.resolveTitles || o.library ? ["api.example.com"] : []),
+    apiHosts: o.apiHosts ?? (o.resolveMedia || o.resolveTitles || o.library || o.wishlist ? ["api.example.com"] : []),
     locations: o.locations ?? [
       { id: "steam-root", purpose: "scan" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam" }] },
       { id: "steam-client", purpose: "launcher" as const, os: ["windows" as const], sources: [{ kind: "known-folder" as const, folder: "ProgramFilesX86" as const, relative: "Steam\\steam.exe" }] },
@@ -486,6 +492,7 @@ export function makeConnector(o: ConnectorOptions = {}): StoreConnector {
     ...(o.resolveMedia ? { resolveMedia: o.resolveMedia } : {}),
     ...(o.resolveTitles ? { resolveTitles: o.resolveTitles } : {}),
     ...(o.importCollections ? { importCollections: o.importCollections, importCollectionsRoot: "userdata" } : {}),
+    ...(o.wishlist ? { readWishlist: o.wishlist.read, describeWishlistItems: o.wishlist.describe } : {}),
     ...(o.library ? { listLibrary: o.library } : {}),
     ...(o.connection ? { connection: o.connection } : {}),
   };
@@ -551,6 +558,10 @@ export async function harness(
     cipher?: SecretCipher;
     /** Stores that start with a 'connected' row (ADR 74). */
     connected?: StoreId[];
+    /** ADR 89. */
+    backups?: CoreDeps["backups"];
+    userFolders?: CoreDeps["userFolders"];
+    lastRestore?: CoreDeps["lastRestore"];
     /** ADR 86. */
     prices?: CoreDeps["prices"];
     priceServices?: CoreDeps["priceServices"];
@@ -626,6 +637,9 @@ export async function harness(
     ...(launcher ? { launcher } : {}),
     ...(opts.picker ? { folderPicker: opts.picker } : {}),
     ...(opts.http ? { http: opts.http } : {}),
+    ...(opts.backups ? { backups: opts.backups } : {}),
+    ...(opts.userFolders ? { userFolders: opts.userFolders } : {}),
+    ...(opts.lastRestore ? { lastRestore: opts.lastRestore } : {}),
     ...(opts.prices ? { prices: opts.prices } : {}),
     ...(opts.priceServices ? { priceServices: opts.priceServices } : {}),
     cipher: opts.cipher ?? fakeCipher(),
@@ -651,4 +665,60 @@ export function addUserRoot(h: Harness, path: string, enabled = true): ScanRootR
 export async function scanNow(h: Harness) {
   await h.core.requestSync({ trigger: "manual" });
   await h.core.whenIdle();
+}
+
+/** ADR 86, 91: in-memory PriceRepository. */
+export function memoryPrices() {
+  const links = new Map<string, PriceLinkRecord>();
+  const snaps = new Map<string, PriceSnapshotRecord>();
+  const watch: PriceWatchRecord[] = [];
+  const sk = (r: { serviceGameId: string; country: string; shops: string }) => `${r.serviceGameId}|${r.country}|${r.shops}`;
+  const repo: PriceRepository = {
+    getLinks: async (_s, ids) => new Map(ids.flatMap((id) => (links.has(id) ? [[id, links.get(id)!] as const] : []))),
+    putLink: async (r) => void links.set(r.canonicalGameId, r),
+    deleteLink: async (_s, id) => void links.delete(id),
+    findOwned: async (_s, ids) => new Map([...links.values()].filter((l) => l.status === "found" && ids.includes(l.serviceGameId!)).map((l) => [l.serviceGameId!, l.canonicalGameId])),
+    getSnapshots: async (_s, ids, country, shops) => new Map(ids.flatMap((id) => (snaps.has(sk({ serviceGameId: id, country, shops })) ? [[id, snaps.get(sk({ serviceGameId: id, country, shops }))!] as const] : []))),
+    putSnapshots: async (rs) => rs.forEach((r) => snaps.set(sk(r), r)),
+    listWatch: async () => [...watch],
+    getWatch: async (id) => watch.find((w) => w.id === id) ?? null,
+    addWatch: async (r) => {
+      const old = watch.find((w) => w.serviceGameId === r.serviceGameId);
+      if (old) return { record: old, created: false };
+      watch.push(r);
+      return { record: r, created: true };
+    },
+    deleteWatch: async (id) => void watch.splice(0, watch.length, ...watch.filter((w) => w.id !== id)),
+    applyWishlistImport: async (plan, max) => {
+      const before = watch.map((w) => ({ ...w }));
+      let removed = 0;
+      for (const id of plan.remove) {
+        const i = watch.findIndex((w) => w.id === id);
+        if (i >= 0) {
+          watch.splice(i, 1);
+          removed++;
+        }
+      }
+      for (const r of plan.rekey) {
+        const w = watch.find((x) => x.id === r.id);
+        if (w) w.originStoreGameId = r.originStoreGameId;
+      }
+      let added = 0;
+      for (const r of plan.add) {
+        if (watch.some((w) => w.serviceGameId === r.serviceGameId)) continue;
+        if (watch.length >= max) {
+          watch.splice(0, watch.length, ...before);
+          throw new Error("limit");
+        }
+        watch.push(r);
+        added++;
+      }
+      return { added, removed };
+    },
+    clearService: async () => {
+      snaps.clear();
+      for (const [id, l] of links) if (l.status !== "excluded") links.delete(id);
+    },
+  };
+  return { repo, links, snaps, watch };
 }

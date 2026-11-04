@@ -1,4 +1,5 @@
 import type {
+  BackupsDto,
   CollectionDto,
   DetectionMode,
   Epoch,
@@ -18,6 +19,7 @@ import type {
   StoreId,
   StoreStatusDto,
   WatchItemDto,
+  WishlistImportDto,
   WizardInputDto,
   WizardResponseDto,
   WizardTarget,
@@ -39,7 +41,9 @@ export interface GeneralSettings extends Omit<SettingsDto, "backups" | "autoUpda
 }
 
 /** Settings that can be changed through `updateSettings`. Scan roots have their own methods. */
-export type SettingsUpdate = Partial<Pick<GeneralSettings, "locale" | "backups" | "autoUpdate" | "autostart" | "syncOnStart">> & {
+export type SettingsUpdate = Partial<Pick<GeneralSettings, "locale" | "autoUpdate" | "autostart" | "syncOnStart">> & {
+  /** ADR 89. The folder only changes through `pickBackupFolder`. */
+  backups?: { periodic: boolean };
   detection?: DetectionMode;
   /** ADR 88. Per store with collections: the mirror switch and the unverified-favorites switch. */
   storeCollections?: SettingsPatchDto["storeCollections"];
@@ -97,7 +101,13 @@ export interface LudiaryApi {
   launchGame(id: string, propertyId?: string, action?: LaunchActionDto): Promise<LaunchResponseDto>;
   /** Revokes every browser session, this one included (ADR 54). The next request answers 401. */
   revokeSessions(): Promise<void>;
+  /** ADR 89. Makes a manual copy in the backup folder. */
   createBackup(): Promise<void>;
+  getBackups(): Promise<BackupsDto>;
+  /** Opens the native folder dialog on the server. `null` when the user cancels. */
+  pickBackupFolder(): Promise<BackupsDto | null>;
+  /** The server prepares the restoration and restarts: after this resolves the page must stop using the API. */
+  restoreBackup(id: string): Promise<void>;
   exportLogs(): Promise<void>;
   // ---- ADR 86. The GET-like ones read the server cache; only `refreshPrices` and `searchPrices` reach IsThereAnyDeal.
   getGamePrices(id: string): Promise<GamePricesDto>;
@@ -109,6 +119,8 @@ export interface LudiaryApi {
   searchPrices(title: string): Promise<readonly PriceSearchResultDto[]>;
   watchPrice(resultId: string): Promise<WatchItemDto>;
   unwatchPrice(id: string): Promise<void>;
+  /** ADR 91. Only for the stores in `PriceBoardDto.wishlistStores`. Counters only; the follow list is read again afterwards. */
+  importWishlist(store: "steam" | "gog"): Promise<WishlistImportDto>;
   /** Simulator only: lets the Epic "expired session" screens be reached. Goes away with the real API. */
   simulateExpiredSession(store: StoreId): Promise<void>;
 }

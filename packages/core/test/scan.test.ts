@@ -503,7 +503,7 @@ describe("connector registration", () => {
   });
   it("accepts a mode without launcher (it cannot launch)", async () => {
     const h = await harness({ launcher: null });
-    expect(h.core.capabilities).toEqual({ canScan: true, canLaunch: false, canPickFolder: false });
+    expect(h.core.capabilities).toEqual({ canScan: true, canLaunch: false, canPickFolder: false, canBackup: false });
   });
 });
 
