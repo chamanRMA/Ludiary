@@ -17,6 +17,15 @@ const CORE_CODES: readonly string[] = [
   "collection-managed",
   "limit-reached",
   "picker-unavailable",
+  "backup.busy",
+  "backup.no-folder",
+  "backup.folder-unavailable",
+  "backup.write-failed",
+  "backup.not-found",
+  "backup.too-large",
+  "backup.corrupt",
+  "backup.not-ludiary",
+  "backup.too-new",
 ];
 
 /** Default translation key of an error code: core codes under `core.errors.*`, connector codes under `connectors.common.errors.*`. */
@@ -70,7 +79,7 @@ export function toCoreError(e: unknown): CoreError {
 }
 
 /** ADR 85. `max` goes to the translated text. */
-export type LimitName = "tagsPerGame" | "tags" | "collections" | "gamesPerCollection";
+export type LimitName = "tagsPerGame" | "tags" | "collections" | "gamesPerCollection" | "watch";
 export const limitReached = (max: number, what: LimitName): CoreError =>
   new CoreError("limit-reached", `User data limit reached: ${what}`, { key: asKey(`core.errors.limit-reached.${what}`), params: { max } });
 /** Brand names for texts with a {store} parameter (proper names, not translated). */
@@ -79,3 +88,6 @@ const STORE_NAMES: Record<StoreId, string> = { steam: "Steam", gog: "GOG", epic:
 export const collectionManaged = (store: StoreId): CoreError =>
   new CoreError("collection-managed", "This collection comes from a store and is read-only", { key: asKey("core.errors.collectionManaged"), params: { store: STORE_NAMES[store] } });
 export const nameTaken = (): CoreError => new CoreError("name-taken", "Another collection already has this name");
+
+/** ADR 89 point 9. The message is fixed English: it never quotes a path or text of the file. */
+export const backupError = (code: Extract<CoreErrorCode, `backup.${string}`>): CoreError => new CoreError(code, `Backup error: ${code}`);

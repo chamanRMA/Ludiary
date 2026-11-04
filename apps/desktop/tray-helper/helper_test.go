@@ -176,3 +176,20 @@ func TestFolderDialogCreates(t *testing.T) {
 	}
 	comRelease(dlg)
 }
+
+func TestKnownFolder(t *testing.T) {
+	var out bytes.Buffer
+	if code := handleKnownFolder([]string{"documents"}, &out); code != 0 {
+		t.Fatalf("documents: exit %d, %s", code, out.String())
+	}
+	var ok struct{ Path string }
+	if err := json.Unmarshal(out.Bytes(), &ok); err != nil || ok.Path == "" {
+		t.Fatalf("bad output %q", out.String())
+	}
+	for _, args := range [][]string{nil, {"desktop"}, {"documents", "x"}, {""}} {
+		out.Reset()
+		if code := handleKnownFolder(args, &out); code != 2 || strings.TrimSpace(out.String()) != `{"error":"bad-request"}` {
+			t.Errorf("args %q: exit %d, %q", args, code, out.String())
+		}
+	}
+}

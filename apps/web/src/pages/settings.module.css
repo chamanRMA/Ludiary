@@ -151,3 +151,14 @@
     flex-wrap: wrap;
   }
 }
+.dialog {
+  max-width: 480px;
+  padding: 20px;
+  border: 1px solid var(--ln);
+  border-radius: 14px;
+  background: var(--sf);
+  color: var(--tx);
+}
+.dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}

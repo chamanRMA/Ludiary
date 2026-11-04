@@ -6,7 +6,8 @@ import { RETURN_PATH } from "./app/connectReturn";
 import { matchRoute, navigate, useLocation, type Params } from "./app/router";
 import { api } from "./data/api";
 import { shouldShowWelcome } from "./app/welcome";
-import { useQueryState } from "./data/hooks";
+import { useQueryState, useRestarting } from "./data/hooks";
+import { Restarting } from "./components/Restarting";
 import { ConnectReturn } from "./pages/ConnectReturn";
 import { Game } from "./pages/Game";
 import { Home } from "./pages/Home";
@@ -15,7 +16,8 @@ import { Library } from "./pages/Library";
 import { NotFound } from "./pages/NotFound";
 import { Settings } from "./pages/Settings";
 import { Store } from "./pages/Store";
-import { Collections, Local, Prices } from "./pages/Simple";
+import { Prices } from "./pages/Prices";
+import { Collections, Local } from "./pages/Simple";
 import { Welcome } from "./pages/Welcome";
 
 // ADR 68 routes. `/welcome` renders without the app frame.
@@ -33,6 +35,7 @@ const ROUTES: readonly [pattern: string, render: (p: Params) => ReactNode][] = [
 ];
 
 export function App() {
+  if (useRestarting()) return <Restarting />;
   return (
     <>
       <AuthNotice />

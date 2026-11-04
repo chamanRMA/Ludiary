@@ -8,10 +8,13 @@ import { isCoreError, statusForCoreError, type LudiaryCoreFacade } from "./core"
 import { OPEN_CSP, openScript, spaCsp, type WebAssets } from "./web";
 import {
   CollectionCreateSchema, CollectionPatchSchema, CollectionSchema, GamePatchSchema, type CollectionCreateDto, type CollectionPatchDto, type GamePatchDto,
+  BackupSchema, BackupsSchema, RestoreBodySchema, RestoreResponseSchema, type RestoreBodyDto,
   EmptyObjectSchema, GameDetailSchema, GameSummarySchema, IdParamsSchema, LaunchRequestSchema,
   LaunchResponseSchema, OnboardingCompleteSchema, OnboardingSchema, PickCancelledSchema, ScanRootPatchSchema,
   ScanRootSchema, SettingsPatchSchema, SettingsSchema, StoreParamsSchema, StoreStatusSchema, SyncRequestSchema,
   WizardCallbackSchema, WizardIdParamsSchema, WizardSubmitSchema,
+  GamePricesSchema, PriceBoardSchema, PriceRefreshSchema, PriceSearchResultSchema, PriceSearchSchema, PriceWatchSchema, ServiceParamsSchema, ServiceStatusSchema, WatchItemSchema,
+  type PriceRefreshDto, type PriceSearchDto, type PriceWatchDto, type ServiceParams,
   type IdParams, type LaunchRequestDto, type StoreParams, type WizardCallbackDto, type WizardIdParams, type WizardSubmitDto, type OnboardingCompleteDto, type ScanRootPatchDto, type SettingsPatchDto,
   type SyncRequestDto,
 } from "@ludiary/api-contract";
@@ -50,6 +53,8 @@ export interface LocalServerDeps {
   getStatus: () => Record<string, unknown>;
   /** Called by the launcher's shutdown action after the response is sent. */
   onShutdownRequested: () => void;
+  /** ADR 89 point 6.2. Called after the response of a prepared restoration has been sent (`onResponse`). */
+  onRestartRequested?: () => void;
   sessions: SessionStore;
   /** Facade over the core (ADR 72). */
   core: LudiaryCoreFacade;
@@ -347,6 +352,36 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     async (req) => core.updateSettings(req.body),
   );
 
+  // ---- ADR 89. All 'session+key'. The restart is triggered by this layer, after the 202 has been sent.
+  app.get("/api/backups", { schema: { querystring: noQuery, response: { 200: BackupsSchema } } }, async () => core.getBackups());
+
+  app.post("/api/backups", { schema: { querystring: noQuery, body: EmptyObjectSchema, response: { 201: BackupSchema } } }, async (_req, reply) =>
+    reply.code(201).send(await core.createBackup()),
+  );
+
+  app.post(
+    "/api/backups/folder/pick",
+    { schema: { querystring: noQuery, body: EmptyObjectSchema, response: { 200: { anyOf: [PickCancelledSchema, BackupsSchema] } } } },
+    async () => (await core.pickBackupFolder()) ?? { cancelled: true },
+  );
+
+  app.post<{ Body: RestoreBodyDto }>(
+    "/api/backups/restore",
+    {
+      schema: { querystring: noQuery, body: RestoreBodySchema, response: { 202: RestoreResponseSchema } },
+      onResponse: (_req, reply, done) => {
+        if (reply.statusCode === 202) deps.onRestartRequested?.();
+        done();
+      },
+    },
+    async (req, reply) => {
+      // Without a way to restart, nothing is prepared: a prepared copy would be applied by a later, unrelated start.
+      if (!deps.onRestartRequested) throw Object.assign(new Error("restart unavailable"), { code: "action-unavailable", key: "core.errors.action-unavailable" });
+      await core.restoreBackup(req.body.id);
+      return reply.code(202).send({ restarting: true });
+    },
+  );
+
   app.patch<{ Params: IdParams; Body: ScanRootPatchDto }>(
     "/api/scan-roots/:id",
     { schema: { params: IdParamsSchema, querystring: noQuery, body: ScanRootPatchSchema, response: { 200: ScanRootSchema } } },
@@ -413,6 +448,73 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
       return reply.code(204).send();
     },
   );
+
+  // ---- Services and prices (ADR 86, point 15 A2). All 'session+key', the GET ones included (they read the cache only).
+  app.get("/api/services", { schema: { querystring: noQuery, response: { 200: list(ServiceStatusSchema) } } }, async () => core.listServices());
+
+  // Like the store route, the body is built by the core from validated output (ADR 74).
+  app.post<{ Params: ServiceParams }>(
+    "/api/services/:service/wizard",
+    { schema: { params: ServiceParamsSchema, querystring: noQuery, body: EmptyObjectSchema } },
+    async (req, reply) => reply.code(201).send(await core.startServiceWizard(req.params.service, `http://${req.headers.host}`)),
+  );
+
+  app.delete<{ Params: ServiceParams }>(
+    "/api/services/:service/connection",
+    { schema: { params: ServiceParamsSchema, querystring: noQuery } },
+    async (req, reply) => {
+      await core.disconnectService(req.params.service);
+      return reply.code(204).send();
+    },
+  );
+
+  app.get<{ Params: IdParams }>(
+    "/api/prices/games/:id",
+    { schema: { params: IdParamsSchema, querystring: noQuery, response: { 200: GamePricesSchema } } },
+    async (req) => core.getGamePrices(req.params.id),
+  );
+
+  app.get("/api/prices", { schema: { querystring: noQuery, response: { 200: PriceBoardSchema } } }, async () => core.getPriceBoard());
+
+  app.post<{ Body: PriceRefreshDto }>("/api/prices/refresh", { schema: { querystring: noQuery, body: PriceRefreshSchema } }, async (req, reply) => {
+    await core.refreshPrices(req.body);
+    return reply.code(204).send();
+  });
+
+  app.put<{ Params: IdParams }>(
+    "/api/prices/games/:id/exclusion",
+    { schema: { params: IdParamsSchema, querystring: noQuery, body: EmptyObjectSchema } },
+    async (req, reply) => {
+      await core.setPriceExclusion(req.params.id, true);
+      return reply.code(204).send();
+    },
+  );
+
+  app.delete<{ Params: IdParams }>("/api/prices/games/:id/exclusion", { schema: { params: IdParamsSchema, querystring: noQuery } }, async (req, reply) => {
+    await core.setPriceExclusion(req.params.id, false);
+    return reply.code(204).send();
+  });
+
+  // POST so the searched title stays out of the URL and the request log.
+  app.post<{ Body: PriceSearchDto }>(
+    "/api/prices/search",
+    { schema: { querystring: noQuery, body: PriceSearchSchema, response: { 200: { ...list(PriceSearchResultSchema), maxItems: 20 } } } },
+    async (req) => core.searchPrices(req.body.title),
+  );
+
+  app.post<{ Body: PriceWatchDto }>(
+    "/api/prices/watch",
+    { schema: { querystring: noQuery, body: PriceWatchSchema, response: { 200: WatchItemSchema, 201: WatchItemSchema } } },
+    async (req, reply) => {
+      const { item, created } = await core.watchPrice(req.body.resultId);
+      return reply.code(created ? 201 : 200).send(item);
+    },
+  );
+
+  app.delete<{ Params: IdParams }>("/api/prices/watch/:id", { schema: { params: IdParamsSchema, querystring: noQuery } }, async (req, reply) => {
+    await core.unwatchPrice(req.params.id);
+    return reply.code(204).send();
+  });
 
   // ---- SPA (ADR 72, point 6): only what is in the in-memory map; no paths computed from the request.
   const NO_FALLBACK_PREFIXES = ["/api/", "/open", "/assets/"];

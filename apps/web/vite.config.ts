@@ -7,8 +7,8 @@ const csp = [
   "script-src 'self'",
   "style-src 'self'",
   "font-src 'self'",
-  // ADR 71: covers load straight from the stores' CDNs (union of connector mediaHosts).
-  "img-src 'self' data: https://app-images.ea.com https://cdn1.epicgames.com https://cdn2.unrealengine.com https://drop-assets.ea.com https://images.gog.com https://shared.akamai.steamstatic.com https://shared.cloudflare.steamstatic.com https://shared.steamstatic.com https://static3.cdn.ubi.com",
+  // ADR 71, 86 point 17: images load straight from the stores' CDNs and the price service's (union of the mediaHosts of connectors and services).
+  "img-src 'self' data: https://app-images.ea.com https://assets.isthereanydeal.com https://cdn1.epicgames.com https://cdn2.unrealengine.com https://dbxce1spal1df.cloudfront.net https://drop-assets.ea.com https://images.gog.com https://shared.akamai.steamstatic.com https://shared.cloudflare.steamstatic.com https://shared.steamstatic.com https://static3.cdn.ubi.com",
   "connect-src 'self'",
   "manifest-src 'self'",
   "base-uri 'none'",

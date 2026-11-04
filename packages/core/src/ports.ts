@@ -1,7 +1,7 @@
 // Persistence ports (ADR 38, 72, 74). Implemented by packages/db. Async in the signature even if the
 // driver is synchronous, so the core is not tied to it. Repositories are scoped to the only user and
 // the local device, which IdentityRepository.ensure creates and returns once at startup.
-import type { EntryMedia, StoreId } from "@ludiary/contracts";
+import type { EntryMedia, PriceServiceId, StoreId } from "@ludiary/contracts";
 import type {
   GameDetail,
   GameSummary,
@@ -19,6 +19,10 @@ import type {
   GameDataPatch,
   CollectionMirrorCounts,
   CollectionMirrorInput,
+  PriceLinkRecord,
+  PriceShops,
+  PriceSnapshotRecord,
+  PriceWatchRecord,
 } from "./model";
 import type { Label } from "./labels";
 
@@ -128,4 +132,57 @@ export interface UserDataRepository {
   deleteCollectionMirrors(store: StoreId): Promise<number>;
   /** Copies the user data of `from` onto `to` (favorite, tags, collections; lower position wins). `from` is left for the caller to delete. */
   mergeUserData(from: string, to: string, at: number): Promise<void>;
+}
+
+/** ADR 89. Paths are opaque to the core; the store joins names to its own folders and never accepts a path from the API. */
+export type BackupKind = "auto" | "manual" | "pre-migration" | "pre-restore";
+export interface BackupInfo {
+  id: string;
+  kind: BackupKind;
+  createdAt: number;
+  sizeBytes: number;
+  foreign: boolean;
+}
+export interface BackupStore {
+  /** `<Documents>\Ludiary\Copias` (Windows), composed by the store (ADR 89 point 4). */
+  defaultFolder(documents: string): string;
+  /** Online copy to `<folder>/<name>.partial`, then rename. Creates the folder. `installId`: 8 lower-case hex. */
+  create(folder: string, kind: "auto" | "manual", installId: string, now: number): Promise<BackupInfo>;
+  /** User folder (valid names, regular files only) plus the internal folder, newest first, at most 500. Missing folder: only internal ones. */
+  list(folder: string | null, installId: string): Promise<BackupInfo[]>;
+  /** Only an own `auto` copy that validates and is in the listing (ADR 89 point 16, M5). */
+  delete(folder: string, id: string, installId: string): Promise<void>;
+  /** Point 6.1. Throws a CoreError with the key of point 9. */
+  prepareRestore(folder: string | null, id: string, now: number): Promise<void>;
+}
+
+/**
+ * ADR 86, point 8. Links, price cache and follow list of the only user. Every write is scoped to the service; `clearService`
+ * is one transaction. Epoch checks (point 15, M3) are the core's job: it calls these only while its epoch is current.
+ */
+export interface PriceRepository {
+  /** Links of the given canonical games; a game with no row is absent from the map. */
+  getLinks(service: PriceServiceId, canonicalIds: readonly string[]): Promise<ReadonlyMap<string, PriceLinkRecord>>;
+  /** Upsert by (canonical game, service). `not-found` if the canonical game does not exist. */
+  putLink(record: PriceLinkRecord): Promise<void>;
+  /** Also when it does not exist ("Search again", point 15, B4). */
+  deleteLink(service: PriceServiceId, canonicalId: string): Promise<void>;
+  /** "Ya lo tienes": service game id -> canonical id, for the 'found' links of ids shown (one per id; the oldest lookup wins). */
+  findOwned(service: PriceServiceId, serviceGameIds: readonly string[]): Promise<ReadonlyMap<string, string>>;
+  /** Snapshots for one country and shops value; a missing one is absent from the map (keyed by serviceGameId). */
+  getSnapshots(service: PriceServiceId, serviceGameIds: readonly string[], country: string, shops: PriceShops): Promise<ReadonlyMap<string, PriceSnapshotRecord>>;
+  /** Upsert by the full key. */
+  putSnapshots(records: readonly PriceSnapshotRecord[]): Promise<void>;
+  /** In order of addition. */
+  listWatch(service: PriceServiceId): Promise<readonly PriceWatchRecord[]>;
+  getWatch(id: string): Promise<PriceWatchRecord | null>;
+  /**
+   * Inserts, or returns the existing entry for the same (service, serviceGameId) with `created: false`.
+   * `limit-reached` past `max` entries (500).
+   */
+  addWatch(record: PriceWatchRecord, max: number): Promise<{ record: PriceWatchRecord; created: boolean }>;
+  /** Also when it does not exist. */
+  deleteWatch(id: string): Promise<void>;
+  /** Disconnect: in ONE transaction deletes the service's snapshots and its links that are not 'excluded'. The follow list stays. */
+  clearService(service: PriceServiceId): Promise<void>;
 }

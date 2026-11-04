@@ -130,6 +130,11 @@ export interface FolderPicker {
   pick(opts: { title: string }): Promise<string | null>;
 }
 
+/** ADR 89. Documents folder of the user, already resolved by the OS. null if the OS does not say. */
+export interface UserFolders {
+  documents(): Promise<string | null>;
+}
+
 /** Time for the core, which must not use timers or Date directly (ADR 38). */
 export interface Clock {
   now(): number;

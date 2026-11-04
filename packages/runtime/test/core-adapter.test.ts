@@ -58,14 +58,14 @@ function fakeCore(over: Partial<LudiaryCore> = {}): LudiaryCore & { calls: unkno
     };
   return {
     calls,
-    capabilities: { canScan: true, canLaunch: true, canPickFolder: true },
+    capabilities: { canScan: true, canLaunch: true, canPickFolder: true, canBackup: false },
     listLibrary: rec("listLibrary", [{ ...detail, internalOnly: "must not leak" } as never]),
     getGame: async (id: string) => (id === "g1" ? ({ ...detail, secret: "x" } as never) : null),
     launch: rec("launch", { status: "started" as const }),
     requestSync: rec("requestSync", undefined),
     whenIdle: rec("whenIdle", undefined),
     storeStatus: rec("storeStatus", [status]),
-    getSettings: rec("getSettings", { locale: "es" as const, detection: "manual-only" as const, storeCollections: { steam: { enabled: true, unverifiedFavorites: false } } }),
+    getSettings: rec("getSettings", { locale: "es" as const, detection: "manual-only" as const, backups: { periodic: false }, storeCollections: { steam: { enabled: true, unverifiedFavorites: false } } }),
     updateSettings: rec("updateSettings", { locale: "en" as const, detection: null, storeCollections: {} }),
     getOnboarding: rec("getOnboarding", { completedAt: 7, detection: "later" as const }),
     completeOnboarding: rec("completeOnboarding", undefined),
@@ -127,6 +127,7 @@ describe("core to LudiaryCoreFacade adapter (ADR 72 point 4)", () => {
     expect(await facade.getSettings()).toEqual({
       locale: "es",
       detection: "manual-only",
+      backups: { periodic: false, folder: null },
       storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
       scanRoots: [{ id: "r1", origin: "discovered", path: "D:\\SteamLibrary", store: "steam", enabled: true, declarationId: "steam-root", tag: "library" }],
     });

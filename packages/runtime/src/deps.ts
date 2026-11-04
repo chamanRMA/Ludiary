@@ -9,6 +9,7 @@ import type {
   StoreConnector,
   TrayHost,
   UserDialogs,
+  UserFolders,
 } from "@ludiary/contracts";
 import type { CoreDeps } from "@ludiary/core";
 import type { SqliteAddon } from "@ludiary/db";
@@ -63,10 +64,14 @@ export interface RuntimeDeps {
   createProcessLauncher?: (allowedSchemes: readonly string[]) => ProcessLauncher;
   /** Absent: this mode cannot open a native folder dialog. */
   folderPicker?: FolderPicker;
+  /** ADR 89. Absent: activating the periodic backups asks for a folder. */
+  userFolders?: UserFolders;
   /** ADR 80. Absent (Docker, Linux): the embedded-login step is rejected as unavailable. */
   embeddedLogin?: EmbeddedLogin;
   /** Connectors to register. Defaults to the static list of `connectors.ts` (ADR 38); only tests override it. */
   connectors?: readonly StoreConnector[];
+  /** Price services to register. Defaults to the static list of `connectors.ts` (ADR 86); only tests override it. */
+  priceServices?: CoreDeps["priceServices"];
   /** Releases what the platform keeps open (helper processes, e.g. a folder dialog) when the server shuts down. */
   dispose?: () => void;
 }

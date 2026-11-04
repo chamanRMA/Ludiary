@@ -8,6 +8,15 @@ const subscribe = (cb: () => void): (() => void) => {
   return () => listeners.delete(cb);
 };
 
+// ADR 89 point 6.5: after a restoration the server is gone. From then on no query loads and the app shows the restart screen.
+let restarting = false;
+export function setRestarting(): void {
+  restarting = true;
+  version += 1;
+  listeners.forEach((l) => l());
+}
+export const useRestarting = (): boolean => useSyncExternalStore(subscribe, () => restarting);
+
 /** Re-runs every active query (used while a background sync is running). */
 export function refresh(): void {
   version += 1;
@@ -41,6 +50,7 @@ export interface QueryState<T> {
 
 /** Runs one load. A failure keeps the previous data and exposes the error (the 401 case also shows its own notice). Returns the cancel function. */
 export function startLoad<T>(load: () => Promise<T>, v: number, setState: (update: (prev: QueryState<T>) => QueryState<T>) => void): () => void {
+  if (restarting) return () => {};
   let live = true;
   void load().then(
     (data) => live && setState(() => ({ data, version: v })),

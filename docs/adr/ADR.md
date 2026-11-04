@@ -36,7 +36,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 21 | DLC y contenidos adicionales | Vigente |
 | 22 | Lanzamiento y escaneo directos en modo localhost | Vigente |
 | 23 | Seguridad local del servidor | Vigente; ampliada en la 63, la 66 y la 67 |
-| 24 | Comparador de precios: IsThereAnyDeal primero | Vigente |
+| 24 | Comparador de precios: IsThereAnyDeal primero | Vigente; concretada en la 86 |
 | 25 | Secuencia: localhost primero, Docker después | Vigente |
 | 26 | Instalador y acceso directo en localhost | Vigente; instancia única concretada en la 62 |
 | 27 | Sistemas operativos del modo localhost | Vigente |
@@ -52,7 +52,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
 | 39 | Gestor de paquetes: pnpm con workspaces | Vigente (confirmada por el usuario) |
-| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; propósito `library`, `SyncContext.fs`, `readBytes`, paso `embedded-login`, puerto `EmbeddedLogin` y fila de Ubisoft en la 80; fila de EA de la tabla y `readText` con UTF-16 en la 81; fila de EA otra vez y `source` en la captura de `embedded-login` en la 82; `importCollections` y `CollectionImportContext` en la 87; `sourceId` en la 88 |
+| 40 | Contrato de los conectores de tienda | Vigente (confirmada por el usuario); `mediaHosts` añadido en la 71; `discoverRoots`, medios en instalados y `launchersResolved` añadidos en la 72; `apiHosts`, `resolveMedia` y el primer `HttpClient` en la 73; asistente con `fields` en `open-external`, `WizardContext.now`, `makeSecret`, `SecretCipher` y `HttpClient` con POST en la 74; `ExecError` y fila de GOG de la tabla en la 76; regla 7 revisada para GOG y regla 5 (las ubicaciones `launcher` ya no amplían el `exec`) revisada en la 77; regla 7 revisada para Epic y fila de Epic en la 78; `ResolvedLocation.subkey` y fila de Ubisoft de la tabla en la 79; propósito `library`, `SyncContext.fs`, `readBytes`, paso `embedded-login`, puerto `EmbeddedLogin` y fila de Ubisoft en la 80; fila de EA de la tabla y `readText` con UTF-16 en la 81; fila de EA otra vez y `source` en la captura de `embedded-login` en la 82; `importCollections` y `CollectionImportContext` en la 87; `sourceId` en la 88; `readWishlist`, `describeWishlistItems` y `WishlistSnapshot` en la 91 (punto 13) |
 | 41 | Controlador de SQLite: `better-sqlite3` con Drizzle estable | Vigente (confirmada por el usuario) |
 | 42 | Detección de instalaciones: autodetección y carpetas manuales | Vigente (confirmada por el usuario); consecuencia sobre Ubisoft concretada en la 79 |
 | 43 | Credenciales en los asistentes de conexión | Vigente (confirmada por el usuario; revisa la 11); parte de Epic revisada en la 78 (sin ventana de `legendary`); para Ubisoft, ventana de login integrada en la 80 (decisión expresa del usuario); para EA, en la 82 (decisión expresa del usuario, 23-10-2026) |
@@ -69,7 +69,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63; segundo factor y cookie de la dirección alternativa en la 67 |
 | 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
 | 56 | Tiempo de juego propio y tiempo informado por las tiendas | Vigente (confirmada por el usuario) |
-| 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18) |
+| 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18); concretada en la 89 |
 | 58 | Actualización y firma de las versiones | Vigente (confirmada por el usuario); hereda de la 45 el requisito de validar la actualización con vuelta atrás; concretada en la 90 (custodia de la clave privada revisada en la 90 si se mantiene su 15.3 (a)) |
 | 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario); ampliada en la 70 |
@@ -98,8 +98,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 83 | DLC dentro de la ficha de su juego base | Propuesta (encargada por el usuario el 24-10-2026; concreta las 21, 47 y 52; revisa los DLC de las 76, 77, 78 y 82 y el filtro de EA de la 50; GOG biblioteca y escaneo, Epic y EA biblioteca, Steam y Ubisoft fuera; migración 0003 con `base_store_game_id`; `contractVersion` 1; punto 10 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 13, que prevalece: precedencia del escaneo en `kind` y base, guardián de biblioteca vacía solo con juegos, `kindChanges`, borrado de canónicos vacíos, EA con `normalizeTitle` movida a `contracts`; falta la del código y la prueba manual); Steam y Ubisoft revisados en la 84; M1 revisado en la 85 para canónicos con datos del usuario |
 | 84 | DLC de Steam y Ubisoft en la ficha | Propuesta (encargada el 24-10-2026; amplía la 83 y revisa su punto 9 para Steam; Steam `dlc: 'scan'` por `InstalledDepots.dlcappid` y títulos con `resolveTitles` sobre `GetItems`, aditivo, `contractVersion` 1, sin migración; Ubisoft sigue `'none'`; punto 8 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 24-10-2026 en el punto 10, sin críticos ni altos; falta la del código y la prueba manual) |
 | 85 | Favoritos, etiquetas y colecciones | Propuesta (encargada el 2-11-2026; concreta las 36 y 47, revisa la M1 de la 83 y fija la regla de datos del usuario de las futuras fusiones y separaciones de las 20 y 51; migración 0004 con cascada, `PATCH /api/games/:id` y CRUD de colecciones `session+key`, `normalizeLabel` con límites; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 12, sin críticos (migrador con claves ajenas desactivadas fuera de la transacción y `foreign_key_check`, sin Playwright, `\p{Cf}`); falta la del código y la prueba manual); importación de colecciones de Steam en la 87; unicidad de `name_key` solo entre propias y espejos de solo lectura en la 88 |
+| 86 | Comparador de precios con IsThereAnyDeal | Propuesta (encargada el 02-11-2026, fase 3; concreta las 24 y 31; solo IsThereAnyDeal con la clave del usuario, sin precios directos de tienda; paquete `@ludiary/itad` con las reglas de un conector; ID de IsThereAnyDeal por ID de tienda en Steam y GOG y por título en Epic, Ubisoft y EA; precios bajo demanda con caché de 6 h; migración `0006_prices.sql` (id `0007_prices`); `PriceProvider` y `capabilities.price` sin cambios; implementación encargada el 02-11-2026 con el punto 12 aplicado por defecto (12.1 b, lista de seguimiento; resto a); revisión del `auditor` sobre el diseño incorporada en el punto 15, que prevalece, sin críticos (motor de asistentes con `WizardTarget` y adaptadores, la clave solo se guarda tras comprobarla, estado `invalid`, rutas con esquema estricto `session+key`, `linkHosts` con supuesto ITAD12); orden de cortes en el punto 16; la respuesta de IsThereAnyDeal del punto 13 condiciona la publicación, no el código; falta la revisión del código y la prueba manual). **Ampliada en su punto 17** (03-11-2026): imagen del juego en la búsqueda y la lista de seguimiento desde el CDN de IsThereAnyDeal (`assets.isthereanydeal.com`, supuesto ITAD14) o la carátula de la biblioteca si ya lo tiene; `PriceService.mediaHosts` y `search` con `media`, aditivos; migración `0007_watch_media` (id `0008_watch_media`); `img-src` con la unión de conectores y servicios; panel de la ficha sin imagen; 17.1 aplicado por defecto con (a); revisión del `auditor` en el punto 18: `validateMedia` descarta también URL con puerto. Listas de deseos en la 91 |
+| 91 | Importar las listas de deseos de Steam y GOG a la lista de seguimiento | Propuesta (encargada el 03-11-2026; amplía las 40, 74, 77 y 86; operación opcional `readWishlist` y `WishlistSnapshot`, aditivas, `contractVersion` 1; Steam con `IWishlistService/GetWishlist/v1` (no documentada, sin clave) y GOG con `embed.gog.com/user/wishlist.json` (no oficial); Epic, Ubisoft, EA y la lista de espera de IsThereAnyDeal (OAuth) fuera; emparejamiento solo por ID de tienda; importación a petición; origen en `price_watch` con la migración `0008_watch_origin.sql` (id `0009_watch_origin`); lo manual nunca se toca; punto 9 aplicado por defecto con (a) en todo; rama nueva desde `feature/comparador-precios`; revisión del `auditor` sobre el diseño incorporada el 03-11-2026 en el punto 13, que prevalece, sin críticos ni altos: `SyncService.exclusive`, errores propios de Steam sin tocar la conexión, dos fases `readWishlist` y `describeWishlistItems`, suelo de 10 minutos, nada escrito si falla un lote; falta el código, su revisión y la prueba manual) |
 | 87 | Importar las colecciones de Steam | Propuesta (encargada el 2-11-2026; amplía las 40, 72 y 85; operación opcional `importCollections` del conector, aditiva, `contractVersion` 1, sin migración; lee `userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json` bajo `steam-root` solo a petición del usuario y con autodetección; bajo demanda con resumen previo (`dryRun`), solo aditiva y por `name_key`; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 13, sin críticos: errores sin texto del fichero, cuenta sin verificar sin favoritos, plan dentro de la transacción, lector estrechado a `userdata`; falta la del código y la prueba manual). La 86 (precios) se escribe en otra rama. **Revisada en la 88**: deja de ser bajo demanda y aditiva |
 | 88 | Colecciones de Steam que se cargan y se refrescan solas al sincronizar | Propuesta (encargada por el usuario el 2-11-2026; revisa las 85 y 87, amplía las 40 y 50; paso al final del bucle de sincronización de cada tienda con `importCollections`; espejo de solo lectura por `source_id` con la migración 0005 e índice único parcial de `name_key` solo entre propias; favoritos solo añadidos y solo los nuevos en Steam; ajustes persistentes `collections.<store>.enabled` y `unverifiedFavorites`; `sourceId` aditivo, `contractVersion` 1; se retiran la ruta de importación y su diálogo; punto 14 aplicado por defecto con (a) salvo 14.3 (b); revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 15, que prevalece: sin adopción, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, guardián de borrado explícito, cambio de cuenta, 200 propias + 200 espejos, migración `0005_collection_source` con id `0006`; falta el código, su revisión y la prueba manual) |
+| 89 | Copias de seguridad periódicas, manuales y restauración | Propuesta (encargada por el usuario el 3-11-2026 para la 0.1; concreta la 57 y amplía la 62; copia completa de la base con `db.backup()`, sin la clave; puerto `BackupStore` en `db` y `UserFolders` en `platform-windows`; restauración preparada en caliente y aplicada al rearrancar, con copia previa y vuelta atrás; validación con esquema idéntico al de sus migraciones; sin migración; punto 12 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 16, que prevalece: carpetas de una copia ajena desactivadas, comparación de esquema sin patrones, máquina de estados por `restore-pending.json`, `installId` en el nombre, reinicio desde `api` con `--after-restart`, `pre-restore` con `-origin` y `-raw`; falta el código, su revisión y la prueba manual) |
 | 90 | Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás | Propuesta (encargada por el usuario el 3-11-2026; concreta las 32 y 58, amplía las 45, 57, 64, 65 y 69; el paquete es el instalador de Inno en silencio; lanzador estable en Go con `app-<versión>` y `versions.json`; `releases/latest` sin token con ETag, solo estable; manifiesto firmado con Ed25519 y verificado otra vez justo antes de ejecutar; se aplica solo en un arranque en frío o con «Reiniciar y actualizar»; copia previa y restauración siempre en la vuelta atrás; código de salida 20; punto 15 aplicado por defecto con (a) salvo 15.1 y 15.2, que esperan al usuario (sin su conformidad para cambiar el invariante 9 no hay `auto` por defecto); 15.3 revisa la custodia de la clave de la 58; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 18, que prevalece: sin críticos y 3 altos (vuelta atrás reanudable, restauración de la 89 bajo el cerrojo de la 62, cerrojo de aplicación y prueba autenticada con la acción `version`); revisa la 62 y amplía la 63; se implementa después de integrar la 89; falta el código, su revisión y la prueba manual) |
 
 ## Decisiones
@@ -322,7 +325,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - **Ampliación (decisión 66):** «solo en `127.0.0.1`» pasa a ser «solo en la interfaz de bucle local»: el servidor escucha en `127.0.0.1` y en `[::1]`, en el mismo puerto, y nunca en otra interfaz. `Host` y `Origin` se validan contra una lista cerrada con el nombre `ludiary.localhost` y la dirección `127.0.0.1`, siempre con el puerto vigente.
 - **Ampliación (decisión 67):** el «token por instalación en las acciones que cambian datos o lanzan procesos» se concreta, para el navegador, en dos factores: la cookie de sesión y una clave ligada al origen que la página envía en una cabecera. La cookie sola no autoriza ninguna de esas acciones.
 
-### 24. Comparador de precios: IsThereAnyDeal primero (revisa la decisión 9)
+### 24. Comparador de precios: IsThereAnyDeal primero (revisa la decisión 9; concretada en la decisión 86)
 
 **Decisión:** el comparador usa IsThereAnyDeal como fuente principal de precios, y el histórico y los mínimos salen del mismo servicio. Los precios directos de cada tienda solo se añaden donde ese servicio no cubra.
 
@@ -486,7 +489,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - La navegación con teclado sigue siendo una base de accesibilidad, aunque no se prepare soporte de mando.
 - Si en el futuro se quisiera un modo de mando o de televisión, bastaría una interfaz alternativa sobre el mismo núcleo, sin rehacerlo.
 
-### 38. Estructura del repositorio y fronteras entre paquetes
+### 38. Estructura del repositorio y fronteras entre paquetes (paquete `packages/itad` añadido en la decisión 86)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):** un único repositorio organizado como monorepo con workspaces (decisión 39), TypeScript con módulos ES en todos los paquetes y referencias de proyecto de TypeScript. Ámbito de paquetes `@ludiary/`, con todos los paquetes privados (decisión 44).
 
@@ -1204,7 +1207,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** el tiempo de Steam ya incluye las sesiones lanzadas desde la aplicación; sumar ambos lo contaría dos veces, y quedarse con el mayor por propiedad lo evita. Alternativa descartada: sumar siempre (cuenta doble); usar solo el de la tienda (Ubisoft y EA no informan).
 
-### 57. Copias de seguridad: frecuencia y retención
+### 57. Copias de seguridad: frecuencia y retención (concretada en la decisión 89)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -6246,6 +6249,676 @@ Sin críticos. Decisiones de la coordinación sobre los hallazgos. **Lo que sigu
 - Riesgos: SC10; las colecciones importadas con la 87 conviven con sus espejos como propias (el usuario borra las que sobren); colecciones de otra persona del mismo PC con cuenta sin verificar (marcadas, de solo lectura y sin favoritos); un cambio de formato de Steam deja los espejos congelados, no los borra.
 - El `auditor` revisa el diseño y el código (escritura automática sin confirmación, guardián de borrado, guardas de espejos en el repositorio, registros); el diseño ya está revisado (punto 15). El `tester` prepara la prueba del punto 12. El `documentalista` cambia en la guía de usuario «importar colecciones» por «colecciones de Steam» (se traen solas, son de solo lectura, cómo apagarlo, que hace falta la autodetección y que conviene cerrar Steam para ver los cambios al momento).
 
+### 86. Comparador de precios con IsThereAnyDeal (concreta las decisiones 24 y 31; amplía las 38, 47 y 69; imagen del juego en el Comparador en su punto 17; importación de las listas de deseos en la decisión 91)
+
+Encargo (02-11-2026, rama `feature/comparador-precios`): diseñar el comparador de precios de la fase 3. La fase 4 (histórico y alertas) no entra, pero el diseño no debe impedirla.
+
+#### 1. Lo que ya está decidido
+
+- **24:** IsThereAnyDeal es la fuente principal, también del histórico y los mínimos; los precios directos de tienda, solo donde no cubra.
+- **31:** cada usuario aporta su clave, opcional, con un asistente en Ajustes y cifrada como los tokens; sin clave el comparador queda desactivado.
+- **40:** `capabilities.price` (hoy `false` en todas) y `prices?: PriceProvider` reservados para los precios directos de tienda; `checkConnectorManifest` exige que coincidan.
+- **69:** IsThereAnyDeal va en Ajustes > Servicios y no aparece en el primer arranque hasta la fase 3.
+- **Invariantes 5, 6, 8 y 9:** clave cifrada; textos traducidos; vías oficiales; nada sale del equipo salvo hacia las tiendas y los servicios que configure el usuario.
+
+#### 2. Qué hay hoy (leído el 02-11-2026)
+
+- **Web:** `Prices` (`apps/web/src/pages/Simple.tsx`) es un panel «Próximamente»; el menú marca «Comparador» con `soon`. En modo real, `getServices` devuelve `[]` y Ajustes oculta «Servicios» (`Settings.tsx`); el simulador tiene `itad: { purpose: "prices", available: false }`.
+- **API:** `ServiceId` ya incluye `"itad"`; `WizardTarget` ya admite `{ kind: "service" }`, pero en el servidor no hay ningún servicio.
+- **Núcleo:** el motor de asistentes (`wizards.ts`) solo trabaja con tiendas (`StoreId`, `vaultFor(store)`, prefijo `connectors.<id>.`). `secrets.scope` ya prevé `service:<id>` (47). `matchProperties` (`normalize.ts`) existe y no lo usa nadie.
+- **Datos:** ficheros `0000` a `0005` (ids embebidos `0001_library_scan` a `0006_collection_source`, tras las 85 y 88); nada de precios.
+
+#### 3. Qué ofrece cada fuente (comprobado el 02-11-2026 salvo donde se indica)
+
+| Fuente | Qué da | Acceso |
+|---|---|---|
+| **IsThereAnyDeal**, API 2.11.0 en `api.isthereanydeal.com` | Precio actual por tienda, precio normal, descuento, mínimo histórico, histórico, paquetes; búsqueda por título; traducción de ID de tienda a ID propio (UUID) | Clave de API (`key` o cabecera `ITAD-API-Key`) en los datos públicos; OAuth 2.0 con PKCE solo para los datos de la cuenta (lista de espera, colección). `service/shops/v1` responde sin clave; `games/lookup/v1` sin clave da 403 (ITAD1, ITAD2) |
+| Steam, `store.steampowered.com/api/appdetails?filters=price_overview&cc=` | Precio de Steam en la moneda del país | Pública, sin clave, sin documentación oficial (ITAD8) |
+| GOG, `api.gog.com/products/<id>/prices?countryCode=` | Precio base y final de GOG | Pública, sin clave, no oficial (ITAD8) |
+| Epic | Solo el GraphQL interno de la tienda | No oficial |
+| Ubisoft, EA | Nada público conocido (24) | — |
+
+Tiendas de Ludiary en IsThereAnyDeal (`service/shops/v1?country=ES`, 02-11-2026, sin clave): **Steam 61** (326 580 juegos), **GOG 35** (12 810), **Epic Game Store 16** (14 530), **Ubisoft Store 62** (786, 0 ofertas ese día), **EA Store 52** (563). Las cinco están cubiertas; Ubisoft y EA con catálogo corto.
+
+#### 4. Decisión: de dónde salen los precios
+
+**Solo IsThereAnyDeal, con la clave del usuario.** Ningún conector implementa precios directos en este corte: `capabilities.price` sigue `false`, `PriceProvider` sigue reservado sin cambios (la 24 lo deja para «donde no cubra», y hoy cubre las cinco) y `contractVersion` sigue en 1. Sin clave no hay comparador (31).
+
+IsThereAnyDeal no es una tienda: va en un **paquete propio, `packages/itad` (`@ludiary/itad`)**, con las mismas reglas que `connectors/*` (decisión 38: solo importa `contracts`; sin `node:*` de E/S, `fetch`, `process.env` ni temporizadores; red solo por el `HttpClient` del contexto; registro estático en `runtime`). Fila nueva en la tabla de la 38: `packages/itad` → `contracts`. `runtime` es el único que lo conoce.
+
+#### 5. Contrato (`packages/contracts/src/prices.ts`, nuevo; aditivo)
+
+```ts
+// ADR 86. Price service contract. The service describes and fetches; the core validates, caches and decides.
+export type PriceServiceId = 'itad';
+
+export interface PriceService {
+  readonly id: PriceServiceId;
+  readonly nameKey: I18nKey;
+  /** HTTPS hosts the HttpClient may call, e.g. ['api.isthereanydeal.com']. */
+  readonly apiHosts: readonly string[];
+  /** ADR 86 audit A1: hosts an `open-external` step may open, e.g. ['isthereanydeal.com']. */
+  readonly authHosts: readonly string[];
+  /** HTTPS hosts a deal link may point to (shown to the user, never fetched). ADR 86 point 15, M1. */
+  readonly linkHosts: readonly string[];
+  /** Key wizard: same engine and step kinds as a store (ADR 40, 74). */
+  readonly connection: ConnectionWizard;
+  /** Store property -> service game id. Absent key in the result = not found. */
+  lookupByStore(store: StoreId, storeGameIds: readonly string[], ctx: SyncContext): Promise<ReadonlyMap<string, string>>;
+  lookupByTitle(titles: readonly string[], ctx: SyncContext): Promise<ReadonlyMap<string, string>>;
+  search(title: string, ctx: SyncContext): Promise<readonly { id: string; title: string; type: 'game' | 'dlc' | 'package' | null }[]>;
+  /** Current prices per shop plus the historical low: up to 200 ids, 50 with shops 'all' (point 15, M5). */
+  prices(ids: readonly string[], q: { country: string; shops: readonly StoreId[] | 'all' }, ctx: SyncContext):
+    Promise<readonly PriceSnapshot[]>;
+}
+
+export interface PriceSnapshot {
+  readonly id: string;
+  readonly deals: readonly {
+    shop: { storeId: StoreId | null; serviceShopId: number; name: string };
+    amountMinor: number; regularMinor: number; currency: string; cut: number;
+    voucher: string | null; url: string; expiresAt: string | null;
+  }[];
+  readonly historyLow: { amountMinor: number; currency: string } | null;
+}
+```
+
+- `checkPriceServiceManifest` (como `checkConnectorManifest`): `apiHosts`, `authHosts` y `linkHosts` con `HOST_RE` (minúsculas, sin esquema) y no vacíos, `connection` presente.
+- El núcleo valida toda la salida como no confiable (punto 7) y nunca la reenvía sin filtrar.
+
+#### 6. Paquete `@ludiary/itad`
+
+- **Clave:** en la cabecera `itad-api-key` (en minúsculas: `platform-node/src/http.ts` exige `^[a-z0-9-]{1,64}$`; HTTP no distingue mayúsculas) como `Secret`, nunca en la consulta (no acaba en URL ni en registros).
+- **Lookup por tienda:** `POST /lookup/id/shop/{shopId}/v1` con un lote de ID. **Steam:** `app/<appid>` (formato comprobado en las páginas de producto de IsThereAnyDeal, ITAD4). **GOG:** el ID de producto tal cual, que es el `storeGameId` de la 76 (1512372112, Cold Waters, comprobado en la página de producto, ITAD4). **Epic, Ubisoft y EA no:** IsThereAnyDeal guarda allí ID de oferta o de su tienda web (32 hexadecimales o *slug* en Epic, `Origin.OFR.…` y `OFB-EAST:…` en EA, hexadecimales de 24 en Ubisoft), que no son los `storeGameId` de las 78, 79 y 81 (ITAD5).
+- **Lookup por título:** `POST /lookup/id/title/v1`, coincidencia exacta tras el preproceso de IsThereAnyDeal (ITAD3). Se manda el `title` del canónico, no el normalizado.
+- **Búsqueda:** `GET /games/search/v1?title=` (lista de seguimiento, punto 9); `type` fuera de `game`/`dlc`/`package` → `null` (ITAD13).
+- **Precios:** `POST /games/prices/v3?country=<cc>&shops=<ids>`, lotes de hasta 200 UUID (50 con `'all'`); `country` se envía siempre; `amountInt` → `amountMinor`; `historyLow.all` → `historyLow` (ITAD6). Con `shops: 'all'` se omite el parámetro. El mapa `StoreId` → ID de tienda (61, 35, 16, 62, 52) va en el paquete; una prueba lo contrasta con la respuesta grabada de `service/shops/v1`.
+- **Errores:** 401/403 → `auth.invalid`; 429 → `store.rate-limited` con `retryAfterMs` de `Retry-After`; 5xx → `network.unavailable`; forma inesperada → `store.unexpected-response`. Sin reintentos propios (regla 10 de la 40). Cada error lleva `messageKey` `connectors.itad.errors.<invalid|rateLimited|unavailable|unexpected>` (no los textos comunes, que hablan de «la tienda») y un `message` fijo en inglés, sin `cause` ni trozos de la respuesta (los de `JSON.parse` incluidos; punto 15, B2 y B6).
+- **Asistente (`connection`):** tres pasos.
+  1. `info`: qué es, que es opcional, que el proyecto no está afiliado y **qué se envía**: los ID de los juegos en Steam y GOG y los títulos de los juegos cuyo precio se consulta, los títulos que se buscan y el país; y que esas consultas quedan asociadas a su cuenta de IsThereAnyDeal (punto 15, B3).
+  2. `open-external` a `https://isthereanydeal.com/apps/my/` con un campo secreto y Pegar: crear cuenta y **verificar el correo** (el límite de 1000 peticiones depende de ello, ITAD2), registrar una aplicación (por ejemplo «Ludiary personal»), copiar la **API key** (no el *Client ID* ni el secreto de OAuth). Patrón permisivo `^[A-Za-z0-9_-]{16,128}$` (formato no publicado, ITAD7).
+  3. Comprobación en el servidor con **una** petición barata (`lookup/id/shop/61/v1` con `["app/220"]`) usando la clave candidata: 200 → la deja en `wizardState` como `apiKey` y devuelve `done`; 401/403 → el mismo paso con `auth.invalid`. **El paquete nunca escribe `ctx.secrets` en el asistente**: guarda el núcleo (punto 15, A1).
+  - `status` no se usa para servicios (el núcleo deriva el estado, punto 15); `disconnect` no hace nada (no hay sesiones de herramientas): el núcleo borra el ámbito, la caché y los enlaces (punto 8).
+- Registros: solo contadores (`requested`, `found`, `notFound`, `deals`). Nunca títulos, ID, URL ni la clave.
+
+#### 7. Núcleo (`packages/core/src/prices.ts`)
+
+- **Asistente:** el motor de `wizards.ts` pasa de `StoreId` a `WizardTarget` (tienda o servicio) con adaptadores por tipo; el detalle exacto, en el punto 15 (A1), que prevalece. Prefijos de claves `connectors.itad.` y `connectors.common.` (los textos de RAWG e IGDB ya usan `connectors.<servicio>.*`). El paquete trae `locales/es.json` y `en.json`, que `i18n` agrega como los de los conectores.
+- **Emparejar un juego con IsThereAnyDeal** (por canónico, solo `kind = 'game'`):
+  1. ID de tienda, en este orden: propiedades de Steam y después de GOG;
+  2. si ninguna da resultado, el título del canónico;
+  3. si dos propiedades dan ID distintos: `conflict`, sin precios (mismo criterio conservador que la 20: mejor nada que el precio de otro juego);
+  4. el resultado se guarda con su `source` y un `inputs_hash` de lo consultado. Se vuelve a buscar si cambia el hash (propiedad nueva, título nuevo) o, si no se encontró, a los 30 días.
+  - El usuario puede marcar «No es este juego» (`excluded`): ya no se busca ni se muestra; se deshace desde la misma ficha («Buscar de nuevo», borra la fila y la próxima consulta busca otra vez; punto 15, B4). `shortcut:` la marca cuelga del canónico y se pierde si este se borra (83, M1) o se fusiona; cuando exista el emparejamiento, pasa a claves estables como `match_decisions`.
+  - **No alimenta el emparejamiento de la 20/51.** Un ID sacado por título no es un ID externo. Cuando llegue ese corte podrá valorar los obtenidos por ID de tienda; aquí no se toca `matchProperties`.
+- **Cuándo se pide (bajo demanda, sin sincronización en segundo plano):**
+  - al abrir la ficha de un juego o la página Comparador, la web pide `POST /api/prices/refresh` con los canónicos o elementos visibles; el núcleo solo consulta los que no tienen precio de ese país o lo tienen de hace más de **6 horas** (`PRICE_TTL_MS`);
+  - botón «Actualizar precios» con el suelo de 1 minuto de `MANUAL_SYNC_FLOOR_MS` (50, revisión del 24-10-2026).
+- **Cuotas:** presupuesto propio de **200 peticiones cada 5 minutos** (la quinta parte del límite por defecto, ITAD2), contado en memoria **por usuario** (`Map` por `user_id`; en la fase 2, con varios usuarios y una clave cada uno, sigue valiendo; punto 15, B7); las búsquedas cuentan. Si se agota, se sirve lo guardado y se marca `stale`. Un 429 fija un único `waitUntil` para el servicio con `Retry-After`, con el tope de un día de la 73. Una biblioteca de 2000 juegos cuesta como mucho unas 10 + 10 + 10 peticiones la primera vez (lookup por Steam, por GOG y por título) y 10 de precios; en la práctica, solo lo que el usuario mira.
+- **Validación de la salida** (como `validate.ts` y `media.ts`): UUID con formato de UUID; `amountMinor` y `regularMinor` enteros entre 0 y 10⁹; `currency` `^[A-Z]{3}$`; `cut` entero de 0 a 100; `url` con la regla del `HttpClient` (`https`, sin credenciales, puerto vacío o 443, como mucho 2048 caracteres) y host en `linkHosts` (si no, el enlace se descarta, el precio se muestra sin él y se registra `linksDropped` con `droppedLinkHosts`, hosts con forma de host y como mucho 8, como `blockedHosts` de la 80; punto 15, M1); textos sin caracteres de control y de 300 como mucho; como mucho 100 ofertas por juego; tienda desconocida con `storeId: null`. **Los datos se muestran sin alterar** (condición de uso, ITAD9): ni redondeo, ni conversión de moneda, ni se quitan parámetros de afiliado de la URL.
+- Tiempo máximo de **15 s** por petición (`PRICE_CALL_MS`, como `MEDIA_TIMEOUT_MS`) y `maxBytes` explícito: 4 MiB en precios, 1 MiB en los lookup y 512 KiB en la búsqueda (punto 15, M5); un fallo de precios nunca afecta a la biblioteca ni a las tiendas.
+
+#### 8. Datos (fichero `packages/db/drizzle/0006_prices.sql`, id embebido `0007_prices`; punto 15, M7)
+
+| Tabla | Columnas | Notas |
+|---|---|---|
+| `price_links` | `user_id` (FK `users`), `canonical_game_id` (FK, `ON DELETE CASCADE`), `service` (`CHECK (service = 'itad')`), `service_game_id` (nulo si no se encontró o `excluded`), `status` (`CHECK` en `found` / `not-found` / `conflict` / `excluded`), `source` (nulo o `CHECK` en `steam` / `gog` / `title`), `inputs_hash`, `looked_up_at` | Clave (`user_id`, `canonical_game_id`, `service`). Índice (`user_id`, `service`, `service_game_id`) para «Ya lo tienes». Sin `manual`: nada lo produce. |
+| `price_snapshots` | `user_id` (FK `users`), `service` (`CHECK`), `service_game_id`, `country` (`CHECK (length(country) = 2)`), `shops` (`CHECK` en `ludiary` / `all`), `data` (JSON validado: ofertas y mínimo), `fetched_at` | Clave (`user_id`, `service`, `service_game_id`, `country`, `shops`) (punto 15, M4). Es caché, no histórico. |
+| `price_watch` (12.1 b) | `id`, `user_id` (FK `users`), `service` (`CHECK`), `service_game_id`, `title` (validado por el servidor, sin control, ≤ 300), `type` (nulo o `CHECK` en `game` / `dlc` / `package`), `added_at` | Índice único (`user_id`, `service`, `service_game_id`). Como mucho 500 por usuario (`limit-reached`). Datos del usuario. |
+
+- Ajustes (`settings`, ámbito de usuario): `prices.country` (`^[A-Z]{2}$`; sin valor por defecto) y `prices.shops` (`'ludiary'` por defecto / `'all'`); `services.itad.status` (`'invalid'` / `'expired'`; ausente = sano; punto 15, A1 y M2).
+- Clave: `secrets` con ámbito `service:itad` y nombre `apiKey` (46).
+- Desconectar borra la clave (todo el ámbito), `services.itad.status`, `price_snapshots` y los `price_links` que no sean `excluded`; `price_watch` se queda. Copia previa a la migración (57).
+- **Copias (36, 57), comprobado en el código el 02-11-2026:** la única copia que existe hoy es la previa a la migración, `db.backup` de SQLite (`packages/db/src/migrator.ts`), que copia la base entera; la periódica de la 57 aún no está y usará el mismo mecanismo. Así que `price_watch` y los `excluded` entran en las copias sin hacer nada (y la caché también, sin daño); la clave de cifrado no.
+- **Fase 4:** las alertas cuelgan de `price_links` y `price_watch` (qué juegos, con qué ID); el histórico se pide a IsThereAnyDeal (`games/history/v2`, `storelow/v2`) cuando haga falta, sin guardar uno propio. Los *webhooks* de IsThereAnyDeal no sirven (exigen un servidor accesible desde internet, 7); las alertas serían comprobaciones al abrir la aplicación.
+
+#### 9. Qué ve el usuario
+
+- **Ajustes > Servicios** (deja de ocultarse en modo real, solo con IsThereAnyDeal; RAWG e IGDB siguen simulados y ocultos hasta su corte): estado, Conectar/Desconectar, selector de país y «solo mis tiendas / todas las tiendas autorizadas».
+- **Ficha del juego:** panel «Precios» si hay clave: mejor precio actual (tienda, precio, normal, descuento), mínimo histórico, una fila por tienda con enlace (`<a target="_blank" rel="noopener noreferrer">`, solo `https`, 68), país y moneda, fecha de la consulta, «Actualizar precios», «No es este juego» y «Precios de IsThereAnyDeal» con enlace a `isthereanydeal.com` (atribución recomendada, ITAD9). Estados: sin encontrar, conflicto, sin datos de ese país, límite alcanzado (con la fecha de lo guardado). Los DLC no tienen panel.
+- **Página Comparador** (quita `soon` del menú): la lista de seguimiento (12.1 b) ordenada por descuento, con «Ya lo tienes» (enlace a la ficha) cuando el ID coincide con un `price_links` `found`; un buscador (espera 400 ms tras dejar de escribir, de 2 a 100 caracteres) con «Seguir» en cada resultado y «Dejar de seguir» en cada elemento. Sin clave: el panel actual con un botón a Ajustes > Servicios. Clave `invalid`: el mismo aviso con «Reconectar» (punto 15, M2).
+- **País (12.4 a):** al terminar el asistente, si `prices.country` está vacío y la región del idioma del navegador cumple `^[A-Z]{2}$` (`es-ES` → ES), la web la guarda con el parche de ajustes; si no, Ajustes > Servicios pide el país y el panel lo dice. Nunca US por defecto (punto 15, B5).
+- Precios con `Intl.NumberFormat(locale, { style: 'currency', currency })` sobre `amountMinor` y los decimales de la moneda; es formato, no alteración.
+- Textos nuevos en `packages/i18n` y en `locales/` del paquete (6). Sin imágenes de IsThereAnyDeal: la CSP no cambia (**revisado en el punto 17**: imágenes de IsThereAnyDeal en la búsqueda y la lista de seguimiento, con su host en `img-src`).
+- **API:** la lista completa, con esquemas, en el punto 15 (A2), que prevalece. Las `GET` solo leen la caché, nunca llaman a la red; todas son `session+key` (67). Ninguna respuesta lleva la clave (68).
+
+#### 10. Pruebas
+
+- **`@ludiary/itad`:** respuestas inventadas con la forma de la documentación (sin datos personales) para `lookup/id/shop`, `lookup/id/title`, `games/search` y `games/prices/v3`, más la respuesta pública grabada de `service/shops/v1?country=ES`. Casos: `app/<id>` para Steam y el ID tal cual para GOG; valores `null`; la clave va en la cabecera y nunca en `query`; 401, 403, 429 con y sin `Retry-After`, 5xx, cuerpo raro; lotes de 200; `shops` con las cinco tiendas y sin parámetro con `'all'`; asistente: patrón, comprobación correcta y clave rechazada. Conformidad con `checkPriceServiceManifest`.
+- **Núcleo:** orden Steam → GOG → título; conflicto; `inputs_hash`; reintento a los 30 días; `excluded` no se consulta; TTL de 6 h por país; presupuesto agotado → `stale` sin red; 429 → `waitUntil` compartido y tope de un día; validación (UUID, importes, moneda, `cut`, URL fuera de `linkHosts`, más de 100 ofertas, control); DLC sin consulta; el motor de asistentes con `WizardTarget` de servicio y el prefijo de claves; registros sin títulos ni ID.
+- **`db`:** migración `0007_prices` sobre una base con `0006_collection_source` y datos; los `CHECK` rechazan valores fuera de lista; índice único de `price_watch`; cascada al borrar un canónico; desconectar borra caché y enlaces salvo `excluded`.
+- **API:** **todas** las rutas del punto 15 (también las `GET`) sin clave de origen → 403; cuerpos con claves de más o fuera de límites → 400; las `GET` no llaman al servicio (doble que falla si se le llama); `/callback` con un asistente de servicio → 400.
+- **Núcleo, del punto 15:** un error interno o una clave rechazada en el asistente no borran la clave buena; el asistente de servicio no escribe `store_connections` ni sincroniza; 401/403 en una consulta → `invalid` y ninguna petición más hasta reconectar; desconectar a mitad de un refresh: no se escribe nada; dos refresh del mismo canónico y país: una sola consulta; `prices.shops` cambiado: otra fila de caché; sin país: error sin red; añadir a la lista un id no salido de una búsqueda reciente → `not-found`.
+- **Web:** panel con precios, sin clave, sin encontrar, conflicto, `stale`; Comparador sin clave; Ajustes > Servicios real.
+
+#### 11. Prueba manual (la prepara el `tester`; la hace el usuario con su propia clave)
+
+1. Crear la clave siguiendo el asistente (correo verificado); comprobar que una clave inventada se rechaza.
+2. País ES: un juego de Steam y uno de GOG (Cold Waters, si sigue en la biblioteca) muestran precios en EUR y el mínimo histórico; anotar si `source` es `steam`/`gog` (cierra ITAD4 y ITAD6). Si las filas salen sin enlace, el registro exportado da `droppedLinkHosts`: ese es el host real de las ofertas (cierra ITAD12; ver punto 15, M1).
+3. Un juego de Epic, uno de Ubisoft y uno de EA: anotar cuántos se encuentran por título y si alguno es el juego equivocado (ITAD3, ITAD5).
+4. «No es este juego», deshacerlo, y «Actualizar precios» dos veces seguidas (la segunda espera al suelo).
+4b. Buscar un juego que no se tenga, seguirlo, verlo en el Comparador y dejar de seguirlo; anotar los `type` que devuelve la búsqueda (ITAD13).
+5. Cambiar el país a US: precios en USD sin borrar los de ES.
+6. Desconectar: desaparecen la clave y la caché.
+7. El registro exportado no contiene la clave, títulos ni ID.
+
+#### 12. Lo que decide el usuario (solo producto)
+
+**Aplicado por defecto el 02-11-2026**, al encargar el usuario la implementación: 12.1 (b), 12.2 a 12.7 (a), las recomendaciones del arquitecto. El usuario puede cambiar cualquiera; 12.1 (c) iría en su propio corte.
+
+1. **Qué juegos entran en el Comparador:**
+   - (a) solo la biblioteca: lista de los juegos propios con su mejor precio (poco útil: ya los tiene);
+   - (b) **recomendada:** ficha de los juegos propios bajo demanda **más una lista de seguimiento local** (buscar en IsThereAnyDeal por título y añadir; tabla `price_watch`), que es lo que la página Comparador muestra, ordenada por descuento, con «Ya lo tienes» si coincide con un juego de la biblioteca. Es lo que da sentido a un comparador y lo que necesitarán las alertas de la fase 4;
+   - (c) como (b) pero importando además la lista de deseos de Steam (`IWishlistService/GetWishlist`, sin verificar, ITAD10) o la lista de espera de IsThereAnyDeal (exige OAuth con PKCE y volver a `ludiary.localhost`): en su propio corte.
+2. **Cuándo se consultan precios de la biblioteca:** (a) **recomendada:** solo de los juegos que el usuario mira (ficha, Comparador): menos datos de su biblioteca salen hacia IsThereAnyDeal y menos cuota; (b) toda la biblioteca de una vez al conectar.
+3. **Tiendas:** (a) **recomendada:** las cinco de Ludiary por defecto, con opción «todas las autorizadas»; (b) todas por defecto.
+4. **País:** (a) **recomendada:** se propone el de la región del idioma del navegador (`es-ES` → ES) y, si no la tiene, se pide en Ajustes antes de la primera consulta; (b) EE. UU. por defecto, como la API.
+5. **Sin clave:** (a) **recomendada:** nada en la ficha y el aviso con botón solo en la página Comparador; (b) también una línea en la ficha.
+6. **Primer arranque:** (a) **recomendada:** IsThereAnyDeal solo en Ajustes; (b) añadirlo al paso 4 de la 69.
+7. **Sin clave, precios directos de Steam y GOG** (`appdetails` y `api.gog.com`, públicos, ITAD8): (a) **recomendada:** no (revisaría la 31, son dos vías más que mantener y sin histórico); (b) sí, como modo reducido.
+
+#### 13. Antes de publicar (antes «Antes de implementar»)
+
+- **Escribir a `api@isthereanydeal.com`** (ya previsto en la 69), lo hace el usuario: describir Ludiary (código abierto, GPL, local, cada usuario registra su propia aplicación y su clave) y preguntar si lo aceptan y si la cláusula de no competir les preocupa. Precedente público: la extensión Game Scout de Raycast pide a cada usuario su propia clave. **Condiciona solo la publicación, no el código:** no se publica una versión con el comparador sin esa respuesta; si la rechazan, se retira de la versión (Ajustes > Servicios vuelve a ocultarse) sin tocar el resto.
+- Revisión del `auditor` sobre el diseño: hecha el 02-11-2026 (punto 15). Falta la del código.
+
+#### 14. Coste
+
+| Parte | Tamaño |
+|---|---|
+| Contrato `PriceService` y `checkPriceServiceManifest` | S |
+| Paquete `@ludiary/itad` (lookup, precios, búsqueda, asistente, errores) con pruebas | M |
+| Motor de asistentes para servicios (`WizardTarget`, ámbito de secretos, prefijos) | S |
+| Núcleo `prices.ts` (emparejamiento, caché, presupuesto, 429, validación) | M |
+| Migración y repositorios | S |
+| API (rutas y esquemas del punto 15) | S |
+| Web: Ajustes > Servicios real, panel de la ficha, página Comparador | M |
+| Lista de seguimiento (si 12.1 b): búsqueda, tabla, interfaz | M |
+| Total | L (M sin la lista de seguimiento) |
+
+Orden: el del punto 16, que sustituye a este («contrato → paquete y núcleo en paralelo → datos y API → web»). El `tester` prepara las respuestas y la prueba manual; el `auditor` revisa el código.
+
+#### 15. Revisión del auditor sobre el diseño (02-11-2026; prevalece sobre los puntos anteriores)
+
+Sin críticos. Todos los hallazgos aceptados; los puntos 2 y 5 a 11 ya están ajustados y remiten aquí.
+
+**A1 (alto). El motor de asistentes está atado a `StoreConnector`.** Hoy `checkStep` exige `c.authHosts` (`wizards.ts`, l. 104), `finish` escribe `store_connections` y llama a `onConnected`, que sincroniza; ante un error interno (l. 255 y 271) se borra el ámbito si no hay fila de conexión, y un servicio nunca la tiene: un reintento fallido borraría la clave buena; `vaultFor` marca `expired` en `store_connections`; épocas, registrador y campos de registro usan `StoreId`. Se resuelve así:
+
+```ts
+// packages/core/src/wizards.ts (ADR 86, point 15, A1). The session holds a subject; each kind has its adapter.
+type SubjectKey = StoreId | `service:${PriceServiceId}`;     // epochs and cancelTarget()
+interface WizardSubject {
+  readonly target: { kind: 'store'; store: StoreId } | { kind: 'service'; service: PriceServiceId };
+  readonly key: SubjectKey;
+  readonly keyPrefix: string;                                // `connectors.${id}.`
+  readonly authHosts: readonly string[];                     // StoreConnector or PriceService (checked by its manifest)
+  readonly apiHosts: readonly string[];                      // cleanField('url-query') as today
+  readonly connection: ConnectionWizard;
+  readonly logFields: { connector: StoreId } | { service: PriceServiceId };
+  /** Service: false. checkStep rejects `embedded-login` and `awaits: 'callback'`; callback() rejects the session. */
+  readonly interactive: boolean;
+  context(signal: AbortSignal): Promise<SyncContext>;
+  /** Store: today's finish(). Service: see below. `live` = the session is still the open one. */
+  onDone(state: SecretVault, done: WizardDone, live: boolean): Promise<WizardResponse>;
+  /** Store: today's "deleteScope if no connection row". Service: nothing, ever. */
+  onInternalError(): Promise<void>;
+}
+interface Session { id: string; subject: WizardSubject; callbackUrl: string; step: WizardStep | null;
+  state: Map<string, string>; touchedAt: number; busy: boolean; abort: AbortController | null; epoch: number }
+// WizardEngine.start(target, returnBase); cancelStore(store) -> cancelTarget(key); callback() keeps `{ store, response }`
+// and throws CoreError('invalid-input') before touching a service session.
+```
+
+- **Tienda:** el adaptador reproduce el comportamiento actual sin cambios (incluido el borrado del ámbito si llega `done` con la sesión cancelada). Las pruebas actuales del motor siguen pasando sin tocarlas.
+- **Servicio:** `context` = `serviceContext(env, svc, signal, { maxBytes: 1 MiB })` (nuevo en `contexts.ts`: registrador con campo `service`, `http` con `svc.apiHosts`, `secrets` **de solo lectura**, cuyo `set` y `delete` lanzan `ConnectorError('internal')`). La clave candidata solo vive en `wizardState` (memoria); el paquete deja ahí `apiKey` tras comprobarla (punto 6). `onDone`: si `!live` o `epochOf(env, 'service:itad') !== session.epoch` → `rejected` `invalid-input` sin escribir nada; si falta `apiKey` en el estado → `rejected` `internal`; si no, `serviceVaultFor('itad').set('apiKey', …)`, `settings.delete('services.itad.status')`, `bumpEpoch`, registro `Service connected` con `{ service }` y `{ kind: 'done' }`. **No toca `store_connections` ni sincroniza.** Un error interno, un tiempo agotado o una clave rechazada nunca borran el ámbito: la clave anterior, si la había, sigue.
+- **`vault.ts`:** `createVaultFactory` pasa a una función común `scopedVault(env, scope, logFields, onUnreadable)`. `vaultFor(store)` la usa con `store:<id>`, `{ connector }` y `connections.setStatus(store, 'expired')` (como hoy); `serviceVaultFor(service)` (nuevo en `Env`), con `service:<id>`, `{ service }` y `settings.set('services.<id>.status', 'expired')`.
+- **`contexts.ts`:** el mapa de épocas pasa a `SubjectKey`; `epochOf` y `bumpEpoch` aceptan `SubjectKey` (los llamadores actuales pasan `StoreId`, sin cambios); `serviceLogger(env, id)` con campo `service`.
+- **Estado:** `ServiceStatusDto` pasa a esquema (punto A2) con `status: 'disconnected' | 'connected' | 'invalid' | 'expired'`: sin fila `apiKey` → `disconnected`; con fila, el valor de `services.itad.status` si existe; si no, `connected`. Sin petición de red. `configured` se mantiene (`status !== 'disconnected'`).
+- **`LudiaryCore`:** `startWizard(store, …)` sigue igual; nuevos `listServices()`, `startServiceWizard(service, returnBase)`, `disconnectService(service)` (cancela sus asistentes, `bumpEpoch`, `connection.disconnect` con tiempo máximo, `deleteScope('service:itad')`, `settings.delete('services.itad.status')`, `prices.clearService('itad')`, vacía las búsquedas en memoria, `bumpEpoch`) y los de precios del punto A2.
+
+**A2 (alto). Rutas.** Todas `session+key` (67), **también las `GET`** (no declaran `access`, que es el valor por defecto de `server.ts`); todas con `querystring: EmptyObjectSchema`; entradas y salidas TypeBox con `strict` en `packages/api-contract/src/index.ts`.
+
+| Ruta | Entrada | Salida |
+|---|---|---|
+| `GET /api/services` | — | 200 `list(ServiceStatusSchema)`; en modo real, solo `itad` con `available: true` |
+| `POST /api/services/:service/wizard` | `ServiceParamsSchema` (`{ service: 'itad' }`, solo los implementados); cuerpo `EmptyObjectSchema` | 201 `WizardStartDto`; `returnBase` del `Host` validado, como en tiendas. Igual que la ruta de tiendas, el cuerpo lo construye el núcleo con salida ya validada (74, punto 5): única excepción a la salida con esquema, ya aceptada allí |
+| `POST /api/wizards/:wizardId/submit`, `DELETE /api/wizards/:wizardId` | las actuales | sin cambios; sirven a los dos tipos |
+| `POST /api/wizards/:wizardId/callback` | la actual | asistente de servicio → 400 `invalid-input`, sin tocar la sesión |
+| `DELETE /api/services/:service/connection` | `ServiceParamsSchema` | 204 |
+| `GET /api/prices/games/:id` | `IdParamsSchema` | 200 `GamePricesSchema`; 404 si el juego no se muestra o es DLC |
+| `GET /api/prices` | — | 200 `PriceBoardSchema` (página Comparador) |
+| `POST /api/prices/refresh` | `{ canonicalIds?: Id[] ≤ 200 únicos, watchIds?: Id[] ≤ 200 únicos, manual?: boolean }`, `minProperties: 1` | 204 al terminar (la web vuelve a leer); `manual` aplica el suelo de 1 minuto y salta el TTL; bajo el suelo, 204 sin consultar |
+| `PUT /api/prices/games/:id/exclusion` | `IdParamsSchema`; cuerpo `EmptyObjectSchema` | 204 |
+| `DELETE /api/prices/games/:id/exclusion` | `IdParamsSchema` | 204, idempotente (B4) |
+| `POST /api/prices/search` | `{ title: string, minLength 2, maxLength 100 }` | 200 `list(PriceSearchResultSchema)`, `maxItems: 20`. `POST` para que el título no vaya en la URL ni en el registro de peticiones |
+| `POST /api/prices/watch` | `{ resultId: Id }` | 201 `WatchItemSchema`; ya seguido → 200 con el existente |
+| `DELETE /api/prices/watch/:id` | `IdParamsSchema` | 204, idempotente |
+| `PATCH /api/settings` | `SettingsPatchSchema` + `prices?: { country?: '^[A-Z]{2}$', shops?: 'ludiary' \| 'all' }` (`strict`) | 200 `SettingsSchema` + `prices?: { country: string \| null, shops }` (ausente = función no disponible) |
+
+```ts
+// packages/api-contract/src/index.ts (ADR 86, point 15, A2)
+const ServiceIdSchema = Type.Union([Type.Literal('igdb'), Type.Literal('rawg'), Type.Literal('itad')]);
+export const ServiceStatusSchema = Type.Object({ service: ServiceIdSchema, purpose: Type.Union([Type.Literal('metadata'), Type.Literal('prices')]),
+  available: Type.Boolean(), configured: Type.Boolean(),
+  status: Type.Union([Type.Literal('disconnected'), Type.Literal('connected'), Type.Literal('invalid'), Type.Literal('expired')]) }, strict);
+export const ServiceParamsSchema = Type.Object({ service: Type.Literal('itad') }, strict);
+const Minor = Type.Integer({ minimum: 0, maximum: 1_000_000_000 });
+const Currency = Type.String({ pattern: '^[A-Z]{3}$' });
+const Country = Type.String({ pattern: '^[A-Z]{2}$' });
+const Text300 = Type.String({ maxLength: 300 });
+const PriceKind = Type.Union([Type.Literal('game'), Type.Literal('dlc'), Type.Literal('package'), Type.Null()]);
+const DealSchema = Type.Object({ shop: Type.Object({ storeId: Type.Union([StoreIdSchema, Type.Null()]), name: Text300 }, strict),
+  amountMinor: Minor, regularMinor: Minor, currency: Currency, cut: Type.Integer({ minimum: 0, maximum: 100 }),
+  voucher: Type.Union([Text300, Type.Null()]), url: Type.Optional(Type.String({ maxLength: 2048 })), expiresAt: Type.Optional(EpochSchema) }, strict);
+const PricesSchema = Type.Object({ country: Country, fetchedAt: EpochSchema, stale: Type.Boolean(),
+  deals: Type.Array(DealSchema, { maxItems: 100 }), historyLow: Type.Union([Type.Object({ amountMinor: Minor, currency: Currency }, strict), Type.Null()]) }, strict);
+const BoardState = { service: ServiceStatusSchema.properties.status, needsCountry: Type.Boolean(), limitedUntil: Type.Optional(EpochSchema) };
+export const GamePricesSchema = Type.Object({ ...BoardState,
+  link: Type.Union([Type.Literal('pending'), Type.Literal('found'), Type.Literal('not-found'), Type.Literal('conflict'), Type.Literal('excluded')]),
+  prices: Type.Union([PricesSchema, Type.Null()]) }, strict);
+export const WatchItemSchema = Type.Object({ id: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id),
+  prices: Type.Union([PricesSchema, Type.Null()]) }, strict);
+export const PriceBoardSchema = Type.Object({ ...BoardState, items: Type.Array(WatchItemSchema, { maxItems: 500 }) }, strict);
+export const PriceSearchResultSchema = Type.Object({ resultId: Id, title: Text300, type: PriceKind, ownedGameId: Type.Optional(Id), watched: Type.Boolean() }, strict);
+```
+
+- `expiresAt` del paquete (ISO) se convierte a epoch en la validación del núcleo; si no se interpreta, se omite.
+- Errores de estas rutas: los traducibles de siempre. Sin clave → `action-unavailable` con `prices.errors.notConnected`; `invalid` o `expired` → `auth.invalid` con `connectors.itad.errors.invalid`; sin país → `invalid-input` con `prices.errors.countryMissing`; lista llena → `limit-reached`.
+
+**M1 (medio). `linkHosts`.** `['itad.link', 'isthereanydeal.com', 'next.isthereanydeal.com']` (supuesto ITAD12). Regla de URL del punto 7 (la del `HttpClient`). Mientras no se confirme el host real, una oferta con otro host se muestra sin enlace y se registra el host (punto 7); la prueba manual (punto 11, paso 2) lo descubre y, si hace falta, se añade en una revisión de esta decisión. **Privacidad:** el enlace pasa por el redirector de IsThereAnyDeal, que ve el clic (IP y oferta) antes de la tienda; no se puede evitar sin alterar la URL (ITAD9). Lo dicen el paso `info` («los enlaces de las ofertas pasan por IsThereAnyDeal») y la guía de privacidad.
+
+**M2 (medio).** Un 401/403 en **cualquier** llamada (lookup, precios, búsqueda) escribe `services.itad.status = 'invalid'` (si la época no ha cambiado) y corta el resto del refresh. Desde entonces, ninguna petición hasta reconectar (el asistente borra la marca). Ajustes > Servicios, el panel de la ficha y el Comparador muestran el aviso con «Reconectar».
+
+**M3 (medio).** Época por servicio (`'service:itad'`, A1): cada refresh la toma al empezar y comprueba antes de cada escritura (enlaces, caché, marca `invalid`); desconectar la sube antes y después, así que un refresh empezado antes no escribe nada. Una consulta a la vez por canónico (o elemento de la lista), país y `shops`: `Map` en memoria de promesas en curso; un segundo refresh espera a la misma.
+
+**M4 (medio).** `shops` entra en la clave de `price_snapshots` (punto 8): cambiar el ajuste lee otra fila y volver al anterior reaprovecha la caché. Se elige frente a caducar al cambiar porque no necesita borrar nada ni coordinar el borrado con un refresh en curso.
+
+**M5 (medio).** 15 s por petición, `maxBytes` explícito y lotes de 50 con `'all'` (puntos 5 y 7).
+
+**M6 (medio).** Búsqueda: el núcleo recorta y rechaza control; de 2 a 100 caracteres; cuenta para el presupuesto; la web espera 400 ms tras dejar de escribir y no busca con menos de 2. Los resultados se guardan en memoria del servidor por usuario (`resultId` = `deps.newId()`, 15 minutos, como mucho 200, salen los más viejos; se vacían al desconectar). `POST /api/prices/watch` solo acepta un `resultId` de ahí (si no, `not-found`) y guarda el `service_game_id`, el `title` (validado por el servidor: sin control, ≤ 300) y el `type` (lista cerrada) de ese resultado, nunca lo que mande la web. Índice único en `price_watch`.
+
+**M7 (medio).** Migración y pruebas como en los puntos 2, 8 y 10: fichero `0006_prices.sql`, id `0007_prices`, prueba sobre `0006_collection_source`, `CHECK` en `status`, `source`, `service`, `shops` y `type`, FK a `users`, sin `manual`.
+
+**Bajos:** B1 cabecera en minúsculas (punto 6); B2 y B6 errores con `connectors.itad.errors.*` y mensaje fijo (punto 6); B3 texto de `info` (punto 6 y M1); B4 deshacer «No es este juego» (punto 7 y A2); B5 país `^[A-Z]{2}$` en esquema y núcleo, sin país el refresh da error traducible sin red, nunca US por defecto (puntos 8 y 9); B7 presupuesto por usuario (punto 7).
+
+**Copias (pedido verificar):** comprobado en el punto 8: la copia es la base entera, así que `price_watch` y los `excluded` entran.
+
+#### 16. Orden de implementación
+
+| Corte | Quién | Ficheros | Depende de |
+|---|---|---|---|
+| **0. Contrato** | `programador` (lo revisa el arquitecto antes de seguir) | `packages/contracts/src/prices.ts` (nuevo: `PriceService`, `PriceSnapshot`, `checkPriceServiceManifest`), `packages/contracts/src/index.ts`, su prueba en `packages/contracts/test/`; esquemas del punto 15 (A2) en `packages/api-contract/src/index.ts`; interfaz `PriceRepository` y registros en `packages/core/src/ports.ts` y `model.ts` | — |
+| **A. Paquete** | `conectores` | `packages/itad/` nuevo: `package.json` (`@ludiary/itad`, `private`), `tsconfig.json`, `src/index.ts` (manifiesto), `src/client.ts` (lookup, búsqueda, precios, errores), `src/shops.ts` (mapa 61/35/16/62/52), `src/wizard.ts`, `locales/es.json` y `en.json`, `test/` con respuestas inventadas y `service/shops/v1` grabado; fila `packages/itad` → `contracts` en la comprobación de fronteras de la 38 | 0 |
+| **B. Núcleo** | `programador` | `packages/core/src/wizards.ts`, `contexts.ts`, `vault.ts`, `env.ts`, `core.ts`, `settings.ts`, `prices.ts` (nuevo: emparejamiento, caché, presupuesto, 429, `invalid`, épocas, búsquedas en memoria, validación), `index.ts`; pruebas en `packages/core/test/` con un `PriceService` doble (no necesita A) | 0 |
+| **C. Datos** | `programador` | `packages/db/drizzle/0006_prices.sql`, `src/schema.ts`, `src/migrations.generated.ts` (con su generador), `src/repositories.ts` (`PriceRepository`; `clearService` en una transacción); pruebas en `packages/db/test/` (migración, `CHECK`, cascada, únicos) | 0 |
+| **D. API y composición** | `programador` | `packages/api/src/server.ts` y `core.ts`, `packages/api/test/api.test.ts`; `packages/runtime/src/connectors.ts` y `compose.ts` (registrar `itad`, `serviceVaultFor`, `PriceRepository`); `packages/i18n/src/connectors.ts` (agregar `@ludiary/itad/locales`) y claves `prices.*` y `settings.services.*` en `packages/i18n` | A, B, C |
+| **E. Web** | `programador` | `apps/web/src/data/api.ts`, `real.ts`, `mock.ts` (y sus pruebas); `components/ConnectWizard.tsx` (destino servicio); `pages/Settings.tsx` (Servicios real, país, tiendas, `invalid`); `pages/Game.tsx` (panel Precios); página Comparador (sustituye `Prices` de `pages/Simple.tsx`) y quitar `soon` del menú | D (puede empezar sobre el simulador tras 0) |
+
+A, B y C van en paralelo tras el corte 0, cada uno en su rama o copia de trabajo, y se integran en D. Después: el `tester` (respuestas, pruebas de la API y prueba manual del punto 11), el `auditor` sobre el código y el `documentalista` (guía para crear la clave, privacidad con el redirector y aviso de no afiliación).
+
+#### 17. Imagen del juego en el Comparador (ampliación encargada el 03-11-2026 tras la prueba del usuario; revisa la frase «Sin imágenes de IsThereAnyDeal» del punto 9)
+
+Encargo: el usuario ha probado el comparador y pide la imagen de cada juego en la búsqueda y en la lista de seguimiento, y en el panel de la ficha si encaja.
+
+**Qué hay (leído el 03-11-2026):** `itadSearch` (`packages/itad/src/client.ts`) descarta todo salvo `id`, `title` y `type`; `price_watch` no guarda imagen; la web tiene `Cover` (`components/bits.tsx`: degradado con el color del título, respaldo `coverFallbackUrl` con `contain`, `no-referrer`, `lazy`), que usan la biblioteca y la ficha; `img-src` es la unión de los `mediaHosts` de los conectores (`unionMediaHosts`, `runtime/src/connectors.ts`), con prueba de paridad contra `apps/web/vite.config.ts`; el migrador compara el hash de cada migración aplicada (`migrator.ts`).
+
+**Qué da IsThereAnyDeal (ITAD14):** `games/search/v1`, `games/info/v2` y `waitlist/games/v1` devuelven por juego `assets` (`obj.asset-map`) con `boxart`, `banner145`, `banner300`, `banner400` y `banner600`, todas opcionales. **La búsqueda ya las trae**: no hace falta ninguna petición más. El host de los ejemplos es `assets.isthereanydeal.com/<uuid>/boxart.jpg?t=<n>`.
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| **A. CDN de IsThereAnyDeal en el navegador**, con la URL que da la búsqueda guardada en el elemento | Cero peticiones extra; cubre cualquier juego que IsThereAnyDeal conozca; mismo patrón que las 71 y 73 | Un host nuevo en `img-src`; host real sin confirmar (ITAD14); el CDN de IsThereAnyDeal ve la carga |
+| B. CDN de Steam por AppID | Host ya permitido | Hace falta el AppID (`games/info/v2`, una petición por juego, hasta 500); no cubre juegos que no estén en Steam; **contradice el alcance de la 71 confirmado por el usuario**: Valve sabría de juegos que no tiene en Steam |
+| C. El servidor descarga y sirve la imagen | Sin host nuevo | Ya descartada por el usuario en la 75 |
+
+**Decisión (técnica): A**, así:
+
+1. **Juego de la biblioteca** (`ownedGameId` presente, en la lista o en la búsqueda): su carátula guardada, la misma del resumen de la biblioteca (orden fijo de la 71). Basta: ni se pide ni se guarda la de IsThereAnyDeal.
+2. **Juego que no está:** `boxart` → `coverUrl` (vertical) y `banner400` → `coverFallbackUrl` (horizontal, se pinta con `contain`, como el respaldo de la 71). Los demás tamaños no se usan.
+3. **Contrato (aditivo):** `PriceService.mediaHosts: readonly string[]` (`['assets.isthereanydeal.com']`) y `search` devuelve además `media?: EntryMedia` (`coverUrl`, `heroUrl`). `checkPriceServiceManifest` exige `HOST_RE` en `mediaHosts` (la lista puede estar vacía).
+4. **Paquete:** toma solo esas dos claves y las valida con la regla de la 71 (`https`, host en `mediaHosts`, sin credenciales, puerto vacío o 443, como mucho 2048 caracteres, sin espacios ni control). La URL va tal cual, con su `?t=` (es su caché; no se altera, ITAD9). Una URL con otro host se omite y se registra `mediaDropped` con `droppedMediaHosts` (con forma de host, como mucho 8), como `linksDropped` (M1): así la prueba manual descubre el host real.
+5. **Núcleo:** vuelve a validar con `validateMedia(m, svc.mediaHosts)` (la misma de los conectores) y guarda la media en el resultado de búsqueda en memoria (M6). `POST /api/prices/watch` la copia a `price_watch` **desde ese resultado, nunca desde la web**. Al leer, se omite una URL cuyo host ya no esté en la unión actual de `img-src`.
+6. **Datos:** migración `packages/db/drizzle/0007_watch_media.sql` (id embebido `0008_watch_media`): `price_watch.cover_url` y `cover_fallback_url`, `text` nulos con `CHECK (… IS NULL OR length(…) <= 2048)` (lo que genere `drizzle-kit`, con la reconstrucción de tabla y las claves ajenas desactivadas como en la 85). No se edita `0006_prices.sql`: ya está aplicada en la base de prueba del usuario y el hash no casaría. Los elementos seguidos antes quedan con el degradado hasta dejar de seguirlos y volver a seguirlos; rellenarlos costaría un `games/info/v2` por elemento y la función aún no está publicada.
+7. **CSP:** `img-src` pasa a ser la unión de los `mediaHosts` de los conectores **y** de los servicios de precios; `vite.config.ts` añade `https://assets.isthereanydeal.com` y la prueba de paridad lo cubre. El host está también sin clave (no se carga nada si no hay elementos).
+8. **API:** `WatchItemSchema` y `PriceSearchResultSchema` añaden `coverUrl?` y `coverFallbackUrl?` (`Type.String({ maxLength: 2048 })`).
+9. **Web:** miniatura con `Cover` (el mismo componente, `no-referrer`, `lazy`, `decoding="async"`, sin `crossorigin`, `alt=""` porque el título va al lado) en cada resultado y cada elemento de la lista. Sin imagen o si fallan las dos URL: el degradado con el color del título. El simulador lleva elementos con y sin imagen.
+10. **Panel de la ficha: sin imagen.** La ficha ya muestra la carátula del juego encima del panel.
+11. **Privacidad (invariante 9):** IsThereAnyDeal es el servicio que el usuario configuró y ya conoce el UUID de cada juego mostrado, porque salió de su API; en localhost la IP es la misma que la del servidor. Lo nuevo es el agente de usuario del navegador y, si el navegador admite cookies de terceros y hay una sesión abierta en `isthereanydeal.com`, esa cookie; la clave ya liga las consultas a su cuenta, así que no añade identidad. `no-referrer` evita que vea `ludiary.localhost`. El paso `info` del asistente añade «las imágenes de los juegos que no tienes se cargan desde IsThereAnyDeal», y la guía de privacidad también.
+
+**Pruebas:** paquete (con y sin `assets`, host ajeno, `http`, URL de más de 2048, `banner400` sin `boxart`); `checkPriceServiceManifest` con `mediaHosts` malos; núcleo (la media del elemento sale del resultado en memoria y no de la petición; un juego propio usa la carátula de la biblioteca; host retirado de la unión → sin imagen); `db` (`0008_watch_media` sobre `0007_prices` con datos, `CHECK` de longitud); `runtime` (CSP con la unión, paridad con `vite.config.ts`); web (miniatura, degradado, respaldo).
+
+**Prueba manual (se añade al punto 11, paso 4b):** buscar un juego que no se tenga y comprobar que la miniatura se ve en la búsqueda y, tras seguirlo, en la lista; si sale el degradado, la consola del navegador (bloqueo de CSP) o el registro exportado (`droppedMediaHosts`) dan el host real o la redirección. Cierra ITAD14.
+
+**Coste:** S. Va en esta rama (`feature/comparador-precios`), antes de fusionarla.
+
+**17.1 (usuario, producto).** Juegos marcados `mature` por IsThereAnyDeal (contenido adulto; la búsqueda trae ese campo): (a) **recomendada:** mostrar la imagen igual, porque el usuario buscó ese juego; (b) degradado sin imagen para ellos. Mientras no decida se aplica (a).
+
+#### 18. Revisión del auditor sobre el punto 17 (03-11-2026, commit `db8d1a0`; prevalece sobre el punto 17)
+
+- **Bajo (a), puerto en `validateMedia`.** Comprobado: `packages/core/src/validate.ts`, l. 34, descarta protocolo distinto de `https:` y credenciales, pero no un puerto. Se añade `u.port !== ""` al descarte (un `:443` explícito ya lo normaliza `URL` a vacío, así que vale la regla «puerto vacío o 443» del punto 17.4). Afecta a todos los conectores y a las imágenes de IsThereAnyDeal; prueba en `packages/core/test/` con `https://assets.isthereanydeal.com:8443/…` y con un host de un conector con puerto, los dos descartados.
+
+#### Supuestos
+
+- **ITAD1 (comprobado 02-11-2026, documentación):** API 2.11.0; clave por `key` o `ITAD-API-Key`; OAuth 2.0 con PKCE solo para datos de la cuenta; `lookup/id/shop/{shopId}/v1`, `lookup/id/title/v1`, `games/search/v1`, `games/prices/v3` (1 a 200 UUID, `country` ISO alfa-2 por defecto US, `shops` como enteros separados por comas), `games/overview/v2`, `games/historylow/v1`, `games/history/v2`. `service/shops/v1` responde sin clave; `games/lookup/v1` sin clave da 403.
+- **ITAD2 (comprobado 02-11-2026, documentación):** 1000 peticiones por ventana de 5 minutos con el correo verificado; 429 con `Retry-After`; piden caché y no agotar la cuota; saltarse los límites puede acabar en bloqueo.
+- **ITAD3 (sin verificar):** `lookup/id/title/v1` encuentra los juegos de Epic, Ubisoft y EA con el título de la tienda en una proporción útil; la documentación avisa de que solo hay coincidencia exacta tras un preproceso.
+- **ITAD4 (formato comprobado 02-11-2026 en páginas de producto; respuesta de la API sin verificar):** Steam se identifica como `app/<appid>` y GOG con el ID de producto (1512372112). Que `lookup/id/shop/35/v1` acepte ese ID de GOG no se ha podido probar sin clave.
+- **ITAD5 (comprobado 02-11-2026, páginas de producto):** para Epic, EA y Ubisoft IsThereAnyDeal guarda ID que no son los nuestros (oferta o *slug* de Epic; `Origin.OFR.…` y `OFB-EAST:…` en EA; 24 hexadecimales en Ubisoft). Si una tienda resulta dar un ID compatible (por ejemplo, el `originOfferId` de EA de la 82), se añade como fuente por ID en su propia decisión.
+- **ITAD6 (sin verificar):** `prices/v3` sin `deals` devuelve todas las tiendas con precio y no solo las ofertas; `historyLow` trae `all`; `amountInt` está en unidades menores; la moneda la decide el país (ES → EUR).
+- **ITAD7 (sin verificar):** formato de la clave; patrón permisivo.
+- **ITAD8 (comprobado 02-11-2026, sin clave):** `appdetails?appids=220&cc=es&filters=price_overview` da el precio de Steam en EUR; `api.gog.com/products/1512372112/prices?countryCode=ES` da precios base y final en EUR y USD. Ninguna está documentada como API pública estable.
+- **ITAD9 (comprobado 02-11-2026, condiciones de la documentación):** uso comercial permitido si la aplicación es pública y uso personal permitido; atribución recomendada, no obligatoria; prohibido alterar los datos (incluidas las etiquetas de afiliado), dar a entender afiliación, competir con IsThereAnyDeal o ayudar a un competidor; acceso revocable. No dicen nada de aplicaciones abiertas con la clave de cada usuario (punto 13).
+- **ITAD10 (sin verificar):** `IWishlistService/GetWishlist` con el SteamID de un perfil público, sin clave; la prueba con un perfil ajeno devolvió `response` vacío, sin poder distinguir lista oculta de clave necesaria. (Sustituido por SW1 y SW2 de la decisión 91.)
+- **ITAD11 (comprobado 02-11-2026):** IsThereAnyDeal cubre las cinco tiendas (IDs 61, 35, 16, 62 y 52); Ubisoft Store tenía 0 ofertas registradas ese día.
+- **ITAD12 (documentación leída el 02-11-2026; respuesta real sin verificar):** el ejemplo de `games/prices/v3` da `url` como `https://next.isthereanydeal.com/link/<uuid>/`; los de `games/overview/v2` y de los *webhooks* usan `itad.link`. Es un redirector propio hacia la tienda. Se cierra con el paso 2 de la prueba manual.
+- **ITAD13 (sin verificar):** `games/search/v1` devuelve `type` con `game`, `dlc` o `package` (u otros, que se guardan como `null`). (El esquema de la API 2.11.0 lo confirma: `obj.game-type` es `game`, `dlc`, `package` o `null`; comprobado el 03-11-2026 en `IsThereAnyDeal/API`, `dist/openapi.yaml`. Falta la respuesta real.)
+- **ITAD14 (esquema comprobado el 03-11-2026 en `github.com/IsThereAnyDeal/API`, `dist/openapi.yaml`, versión 2.11.0; host real sin verificar):** cada resultado de `games/search/v1` (`obj.game`) lleva `id`, `slug`, `title`, `type`, `mature` y `assets`; `obj.asset-map` tiene `banner145`, `banner300`, `banner400`, `banner600` y `boxart`, todas cadenas y ninguna obligatoria. Los ejemplos usan `https://assets.isthereanydeal.com/<uuid>/boxart.jpg?t=<n>`, pero otro ejemplo del mismo fichero usa un host de CloudFront y otro `cdn.example.com`. Supuesto: el host real es `assets.isthereanydeal.com` y no redirige a otro (la CSP comprueba también el destino). Se cierra con la prueba manual del punto 17. `docs.isthereanydeal.com` respondió 403 a la consulta automática.
+- **ITAD15 (comprobado el 03-11-2026, mismo fichero):** la lista de espera se lee con `GET /waitlist/games/v1` y OAuth 2.0 con el ámbito `wait_read` (hay 11 ámbitos: `user_info`, `notes_*`, `profiles`, `wait_*`, `coll_*`, `ignored_*`, `webhooks`). `PUT /profiles/sync/waitlist/v1` (ámbito `profiles`, cabecera `ITAD-Profile`) sirve para que un servicio **empuje** su lista a IsThereAnyDeal, no para leerla. Ver la decisión 91, punto 4.
+
+**Motivo:** IsThereAnyDeal cubre ya las cinco tiendas con una API oficial, histórico incluido, así que los precios directos no hacen falta y el contrato reservado puede esperar sin cambios. Un paquete con las reglas de un conector aísla la parte frágil y la deja comprobable con respuestas grabadas, sin tocar el contrato de las tiendas. Consultar solo lo que el usuario mira respeta el invariante 9 en su espíritu (sale lo mínimo, y solo hacia el servicio que él configuró) y deja la cuota muy por debajo del límite. Emparejar por ID de tienda donde coincide y por título exacto donde no, con conflicto visible y «No es este juego», sigue el criterio conservador de la 20. Alternativas descartadas: precios directos de cada tienda (sin histórico, cinco vías que mantener, Epic no oficial y Ubisoft y EA inexistentes; la 24 ya los dejaba para lo no cubierto); una clave del proyecto en el repositorio (31); OAuth de IsThereAnyDeal para todo (solo hace falta para la lista de espera; la clave basta para precios); sincronización periódica de toda la biblioteca (más datos fuera y más cuota sin necesidad); *webhooks* (exigen exponer el equipo a internet, 7); leer IsThereAnyDeal con `games/overview/v2` (solo la mejor oferta, y el comparador necesita todas); poner IsThereAnyDeal como un `StoreConnector` más (no tiene biblioteca, escaneo ni acciones, y ensuciaría `StoreId`).
+
+**Consecuencias:**
+
+- Contrato nuevo `PriceService` en `contracts` (aditivo); `PriceProvider` y `capabilities.price` intactos; `contractVersion` sigue en 1. Fila nueva en la tabla de dependencias de la 38.
+- El motor de asistentes deja de ser solo de tiendas: servirá también para RAWG e IGDB cuando lleguen.
+- Migración `000N_prices` con copia previa; la caché de precios no es dato del usuario, la lista de seguimiento sí.
+- Ludiary envía a IsThereAnyDeal ID y títulos de los juegos consultados: el asistente lo dice y la guía de privacidad también.
+- Dependencia de un tercero que puede revocar el acceso: si lo hace, el comparador muestra el error y lo guardado, y el resto de la aplicación sigue igual.
+- El `documentalista` escribe la guía para crear la clave (con capturas), la nota de privacidad y el aviso de no afiliación; el `tester`, las respuestas y la prueba del punto 11; el `auditor` revisa diseño y código.
+
+### 89. Copias de seguridad periódicas, manuales y restauración (concreta la decisión 57; amplía la 62)
+
+Encargo (3-11-2026, rama `feature/copias-seguridad`): lo siguiente que falta para la 0.1 del MVP. Hoy en `main` solo existe la copia previa a una migración (`packages/db/src/migrator.ts`, `db.backup()` en `%LOCALAPPDATA%\Ludiary\backups`, conserva 3). La sección Ajustes > Copias de seguridad está oculta fuera del simulador (`SETTINGS_SECTIONS` en `Settings.tsx`), `createBackup` de `real.ts` es `unavailable`, `getMaintenance` devuelve `lastBackupAt: null` y `SettingsDto.backups` no viene del servidor. Las sesiones del navegador viven en memoria (`SessionStore`), no en la base.
+
+#### 1. Lo que ya está decidido y se reutiliza
+
+- **57:** periódicas desactivadas por defecto; al activarlas, copia al arrancar si la última tiene más de 24 h y cada 24 h en marcha; se conservan 7 diarias y 4 semanales; carpeta por defecto `Documentos\Ludiary\Copias`, configurable, creada solo al activarlas; copia interna previa a migraciones; restauración validada con `PRAGMA integrity_check`, con el servidor parado y con copia previa de la base actual; desinstalar no toca la carpeta del usuario.
+- **41:** `db.backup()` de `better-sqlite3`. **46 y 64:** un secreto que no descifra o es de otro compartimento pone su tienda en «hay que volver a conectar» sin tocar la biblioteca (`packages/core/src/vault.ts`, ya implementado). **62:** cerrojo de instancia y orden de arranque. **67:** acciones que cambian datos o exportan ficheros con `session+key` (el nivel por defecto de `server.ts`). **72:** el núcleo trata las rutas como texto opaco y una carpeta solo entra por el selector nativo (`FolderPicker`), nunca como ruta escrita en la API.
+
+#### 2. Qué se copia
+
+- **La base entera** (`ludiary.db`), en un solo fichero SQLite: biblioteca, datos del usuario (36, 85, 88), carpetas de escaneo, decisiones de emparejamiento, tiempo de juego, ajustes (tabla `settings`) y la tabla `secrets` **cifrada**.
+- **No se copia:** la clave maestra ni el token de instalación (Administrador de credenciales, 46 y 63), `runtime.json` (puerto, 53), registros, `instance.lock` ni las portadas (caché del navegador, 75).
+- **Consecuencia (invariante 5):** la copia nunca lleva un secreto legible. Restaurada **en el mismo equipo y usuario de Windows**, las tiendas siguen conectadas. En **otro equipo** (u otra clave), los secretos no descifran: `vault.ts` los borra o los deja como compartimento y la tienda pasa a `expired`; se reconecta con el asistente y la biblioteca y los datos del usuario se conservan. Es lo que ya dice el texto `settings.backups.noKey`.
+- Alternativa descartada: copiar solo los datos del usuario (exportación JSON). Es otro formato que mantener y versionar con cada migración; la base entera ya lo contiene y el migrador ya sabe subirla de versión.
+
+#### 3. Cómo se hace la copia en caliente
+
+- `db.backup(destino)` sobre la conexión del servidor (API de copia en línea de SQLite). Según la documentación de SQLite (`sqlite3_backup_step`, comprobado el 3-11-2026), si la base cambia **por la misma conexión** la copia se actualiza a la vez, y si cambia por otra conexión la copia vuelve a empezar. El servidor tiene una sola conexión, así que la copia es una instantánea coherente aunque haya una sincronización en curso. Es asíncrona por bloques de páginas y no bloquea el bucle de eventos.
+- Se escribe en `<nombre>.partial` y se renombra al terminar: una copia cortada (apagón, disco lleno) nunca aparece en la lista. Antes de la siguiente copia se borran solo los `.partial` cuyo nombre casa con el patrón propio del punto 4 más `\.partial$` (punto 16, M5); nada más de la carpeta.
+- Alternativa descartada: `VACUUM INTO` (compacta, pero es síncrona y bloquea el servidor mientras dura).
+- Una sola operación de copia o restauración a la vez (cerrojo en memoria en el núcleo): la segunda petición recibe `backup.busy`.
+
+#### 4. Dónde, nombres y retención
+
+| Tipo | Carpeta | Nombre | Retención |
+|---|---|---|---|
+| `auto` (periódica) | Carpeta del usuario (`backups.folder`, o `Documentos\Ludiary\Copias` si es nula) | `ludiary-<AAAAMMDDTHHmmssSSS>Z-<instalación>-auto.sqlite` (UTC) | 7 más recientes + la más reciente de cada una de las 4 semanas anteriores (semana ISO en UTC). Solo las propias. |
+| `manual` | La misma | `ludiary-<…>Z-<instalación>-manual.sqlite` | Nunca se borran solas (punto 12.1). |
+| `pre-migration` | `%LOCALAPPDATA%\Ludiary\backups` | La de hoy: `pre-migration-<ms con 15 cifras>-<última migración>.sqlite` | 3 (sin cambios, la poda del migrador). |
+| `pre-restore` | `%LOCALAPPDATA%\Ludiary\backups` | `pre-restore-<ms con 15 cifras>[-origin].sqlite` | 3 más recientes **más** la `-origin` más reciente; se poda solo tras una restauración `ok` (punto 16, M2). |
+
+- **Identificador de instalación** (punto 16, H4): 8 cifras hexadecimales aleatorias guardadas en `settings` como `backups.installId`, creadas la primera vez que se necesitan y **conservadas al restaurar** (punto 6.3). Una copia de la carpeta es **propia** si su `<instalación>` es la actual y **de otro equipo** si no. Las de otro equipo se listan y se pueden restaurar, pero nunca se podan ni cuentan para el tic. Se usa un ajuste y no `devices.id` porque restaurar la copia de otro equipo trae su `devices`, y con él las copias propias pasarían a parecer ajenas.
+- **Identificador de una copia en la API = su nombre de fichero**, validado con estas expresiones antes de nada (los prefijos distintos dicen en qué carpeta está):
+  - `^ludiary-\d{8}T\d{9}Z-[0-9a-f]{8}-(auto|manual)\.sqlite$`
+  - `^pre-migration-\d{15}-[0-9a-z_]{1,64}\.sqlite$`
+  - `^pre-restore-\d{15}(-origin)?\.sqlite$`
+  El servidor solo abre un nombre que valida **y** que aparece en el listado de su carpeta, y antes comprueba con `lstat` que es un fichero normal, no un enlace ni una unión (punto 16, M5). Nunca recibe una ruta.
+- **Listado** (punto 16, B4): se ignoran las copias con `createdAt` posterior a ahora (reloj mal puesto o nombre fabricado) para el tic y la poda, aunque se listen; el servidor devuelve como mucho las 500 más nuevas.
+- **Carpeta de Documentos** (punto 16, B3): puerto nuevo `UserFolders` en `contracts`. `platform-windows` lo implementa con un modo nuevo del auxiliar de Go, `--known-folder documents`, que llama a `windows.KnownFolderPath(windows.FOLDERID_Documents, 0)` como ya hace con `LocalAppData` en `embeddedwindow.go` (sigue a OneDrive si Documentos está redirigida). El puerto devuelve solo Documentos; el `BackupStore` compone `Ludiary\Copias`. Si no resuelve, `null` y activar las copias pide elegir una carpeta.
+- **Carpeta configurable:** solo con el selector nativo (`FolderPicker`, ruta `POST /api/backups/folder/pick`), como las carpetas de escaneo. Se admite una carpeta UNC o de otra unidad elegida por el usuario (72). Se guarda en `settings` como `backups.folder`.
+- **Retención:** función pura `planBackupPrune(copias, now)` en el núcleo, solo sobre las `auto` propias; el `BackupStore` borra lo que devuelve. Se poda después de cada copia `auto`, nunca antes. `BackupStore.delete` solo acepta una `auto` propia con nombre válido y presente en el listado (punto 16, M5).
+- **Registros (59):** solo el nombre de la copia, su tamaño y si la carpeta es la predeterminada o elegida; nunca la ruta.
+
+#### 5. Frecuencia y copia manual
+
+- Ajuste `backups.periodic` (booleano, `false` si no existe). `PATCH /api/settings` acepta `backups: { periodic }`; la carpeta nunca va en ese cuerpo (la web deja de mandar `folder`, punto 10).
+- **Al activarlas** (punto 16, B4): sin carpeta (Documentos sin resolver y ninguna elegida) responde `backup.no-folder` y **no guarda** el ajuste; la web abre el selector. Con carpeta, guarda `true`, responde 200 y lanza la primera copia sin esperarla; si falla, queda en `lastError` y el ajuste sigue en `true`.
+- **Programación:** el núcleo no usa temporizadores (38). `runtime` llama a `core.backupTick()` al terminar el arranque y cada hora (`setInterval(...).unref()`). El núcleo copia si las periódicas están activas y la copia **propia** más reciente de la carpeta (`auto` o `manual`, sin las de fecha futura) tiene 24 h o más. Así se cubre «al arrancar» y «cada 24 h», y también el equipo que vuelve de suspensión. `core.whenIdle()` espera también al cerrojo de copias, para que `shutdown()` no cierre la base en mitad de una copia.
+- **Fallo** (carpeta desconectada, disco lleno, sin permisos): se registra, se guarda en memoria `lastError` (`backup.folder-unavailable` o `backup.write-failed`) y se reintenta en el siguiente tic. La web lo muestra en la sección.
+- **Copia manual:** botón «Crear copia» (`POST /api/backups`), funciona con las periódicas activadas o no, en la misma carpeta, con tipo `manual`.
+
+#### 6. Restauración: preparar en caliente, aplicar al rearrancar
+
+Opciones:
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| **A. Preparar y rearrancar** (recomendada) | El cambio de fichero ocurre en el arranque, con el cerrojo de la 62 y antes de abrir la base: no hay conexiones abiertas, ni escaneos, ni estado del núcleo que rehacer. El migrador sube la copia de versión por el camino ya probado. | Se pierde la sesión del navegador (vive en memoria): el lanzador abre una pestaña nueva con un enlace de un solo uso. |
+| B. Cambiar la base sin parar el servidor | La pestaña sigue abierta. | Hay que poder cerrar y recomponer el núcleo, los conectores y la fachada que tiene Fastify, con peticiones en vuelo. Mucho código nuevo y frágil para una acción rara. |
+
+Se aplica **A**:
+
+1. `POST /api/backups/restore` con `{ id }`. El núcleo toma el cerrojo de copias y pide al `BackupStore` que **prepare** la copia, en este orden (punto 16, M6 y H2):
+   1. el nombre valida (punto 4) y está en el listado; `lstat` dice fichero normal (no enlace ni unión) de 512 MiB como mucho (supuesto BK5);
+   2. se borran los restos `restore-pending.sqlite`, `.partial`, `-wal` y `-shm`; se copia con un flujo que corta al pasar de 512 MiB a `%LOCALAPPDATA%\Ludiary\restore-pending.sqlite.partial` y se vuelve a medir. **Todo lo demás se comprueba sobre esa copia**, no sobre el original (puede estar en un USB o cambiar entre la comprobación y el uso). Si no empieza por `SQLite format 3\0`: `backup.corrupt`;
+   3. se abre con `better-sqlite3` en `readonly: true, fileMustExist: true` y se fijan `trusted_schema = OFF`, `cell_size_check = ON` y `mmap_size = 0`. Solo se ejecutan `PRAGMA` y `SELECT` (ninguna escritura, así que ningún disparador corre);
+   4. **esquema primero:** se lee `sqlite_master`. La fila de `schema_migrations` debe tener el mismo `sql` que crea el migrador; si no, `backup.not-ludiary`. Se leen sus ID: deben ser un **prefijo** de las migraciones embebidas con el mismo hash (`hashMigration`). ID desconocidos: `backup.too-new`; hash distinto: `backup.not-ludiary`. Se aplica ese prefijo a una base en memoria y se compara, en JavaScript y con igualdad exacta, el conjunto completo `(type, name, tbl_name, sql)` de `sqlite_master` **sin excluir nada por patrón**. La única diferencia admitida son tablas de nombre exacto `sqlite_stat1` a `sqlite_stat4` (las puede crear `PRAGMA optimize`). Cualquier otra (una vista, un disparador o un índice de más, también con nombres como `sqliteX` o `SQLITE_x`) es `backup.not-ludiary`;
+   5. después, `PRAGMA integrity_check` = `ok` y `PRAGMA foreign_key_check` vacío; si no, `backup.corrupt`;
+   6. se cierra, se renombra a `restore-pending.sqlite` y se escribe `restore-pending.json` (fichero temporal y renombrado) con `{ phase: 'prepared', id, requestedAt }`.
+   Corre en el hilo principal: tras ella el servidor se reinicia y no hay nada más que atender. Un `Worker` queda descartado en este corte; si la prueba manual con la copia más grande tarda más de 2 s, se revisa.
+2. Responde **202** `{ restarting: true }`. El reinicio lo dispara la **capa `api`** en el `onResponse` de esa ruta, con `deps.onRestartRequested()`, igual que `onShutdownRequested` (punto 16, M1). El núcleo no tiene puerto de ciclo de vida. `runtime`:
+   1. primero lanza, desacoplado, el lanzador (`deps.selfCommand` con `--after-restart`). El lanzador espera hasta 20 s a que `InstanceLock.isHeld()` dé `false` antes de su flujo normal, para no pedir el enlace al servidor que se está cerrando; si vence el plazo, `fatal.timeout`;
+   2. después llama al `shutdown()` de hoy. La red de 5 s (`process.exit`) ya no impide nada, porque el lanzador está lanzado y es independiente;
+   3. el cerrojo de copias no se suelta hasta salir: ninguna copia ni restauración entra entre la preparación y el reinicio.
+   Con la 58, `selfCommand` será el lanzador estable de la raíz de la instalación. En Docker (fase 2) será salir con un código y dejar que la política de reinicio lo levante.
+3. **En el arranque** (amplía el orden de la 62): cerrojo → credenciales → **restauración pendiente** → base → migraciones → **ajuste posterior** → `composeCore` → resto. Hay una máquina de estados guiada por `restore-pending.json` (punto 16, H3). Cada cambio de fase se escribe con fichero temporal y renombrado, y cada paso se puede repetir sin daño:
+
+   | Al arrancar con… | Qué se hace |
+   |---|---|
+   | Sin `.json`, con restos `restore-pending.*` | Se borran (preparación sin terminar). Arranque normal. |
+   | Sin `.json` | Arranque normal. Si existe el ajuste `backups.restoredAt`, se borra (cierra la cadena de restauraciones, punto 16, M2). |
+   | `prepared` sin `restore-pending.sqlite` | Se borra el `.json`; resultado `rolled-back`. |
+   | `prepared` | Paso **A**, luego **B**. |
+   | `swapped` | Si sigue existiendo `restore-pending.sqlite`, se termina **B**. Luego se abre, se migra y se hace **C**. |
+   | `adjusted` | Se abre, se migra (nada pendiente) y se repite **C**, que es idempotente. |
+   | `rolling-back` | Se repite **D**. |
+
+   - **A. Copia previa.** Se abre la base actual y se leen los valores que se conservan: `backups.periodic`, `backups.folder`, `backups.installId` y `next_allowed_at` de cada fila de `sync_state`. Se hace `db.backup()` a `backups\pre-restore-<ms>[-origin].sqlite.partial` y se renombra. El sufijo `-origin` va cuando la base actual no tiene `backups.restoredAt`: son los datos del usuario antes de una cadena de restauraciones. Se cierra (SQLite pasa el WAL a la base).
+     - **Si la base actual está dañada** y abrirla o copiarla falla (punto 16, M3): se cierra lo que se haya abierto y se **mueven** `ludiary.db`, `-wal` y `-shm`, sin abrirlos, a `backups\pre-restore-<ms>-raw\`. Los valores conservados pasan a sus valores por defecto (`installId` nuevo) y se sigue. Esa carpeta no sale en la lista de restaurar; el `documentalista` documenta cómo recuperarla a mano.
+     - Si ni la copia ni el traslado son posibles, se borran `restore-pending.*`, resultado `rolled-back` y arranque normal con la base actual.
+   - **B. Intercambio.** Se escribe la fase `swapped` con `{ id, requestedAt, preRestore, kept }`. Se borran `ludiary.db-wal`, `ludiary.db-shm`, `restore-pending.sqlite-wal` y `restore-pending.sqlite-shm`. Se renombra `restore-pending.sqlite` sobre `ludiary.db` (supuesto BK2).
+   - **Migración.** Con `migrate(..., { skipBackup: true })`: no hace falta copia previa de una base cuyo original sigue en su carpeta (punto 16, M2).
+   - **C. Ajuste posterior.** Un solo sitio: `runtime`, justo después de `migrate()` (punto 16, M4). Es una transacción idempotente:
+     - se borran todas las filas de `installations` (pueden ser de otro equipo o de otra época; el escaneo al abrir la web, 12, las rehace, y así un `launch_data` de la copia nunca se usa para lanzar);
+     - se borran las `scan_roots` con `origin = 'discovered'` (la autodetección las vuelve a crear);
+     - si el `backups.installId` de la copia restaurada falta o no es el conservado, las `scan_roots` con `origin = 'user'` pasan a `enabled = 0` y se cuentan (punto 16, H1, opción (a));
+     - `next_allowed_at` de cada fila de `sync_state` toma el valor conservado de la misma (`store`, `operation`), o nulo si no lo había (punto 16, B4);
+     - se escriben los `backups.periodic`, `backups.folder` y `backups.installId` conservados y `backups.restoredAt = now`.
+     Después se escribe la fase `adjusted` con el número de carpetas desactivadas.
+   - **Final.** Cuando `composeCore` termina bien: se podan las `pre-restore` (las 3 más recientes más la `-origin` más reciente), se borra el `.json` y queda `lastRestore = { id, at, outcome: 'ok', disabledRoots }` **en memoria del proceso** (punto 16, B1).
+4. **D. Vuelta atrás.** Si falla cualquier paso desde **B** hasta que `composeCore` termina (renombrar, abrir, migrar, ajustar o componer; punto 16, M4):
+   1. se escribe la fase `rolling-back`;
+   2. se cierra la base y se borran `ludiary.db-wal` y `ludiary.db-shm`;
+   3. se copia `preRestore` a `ludiary.db.partial` y se renombra sobre `ludiary.db` (o, en el caso `-raw`, se vuelven a mover sus ficheros). La copia previa se queda en su sitio;
+   4. se borran el `.json` y los restos `restore-pending.*`;
+   5. queda en memoria `lastRestore = { …, outcome: 'rolled-back' }` y el arranque sigue con los datos de antes: abrir, migrar y componer.
+   Si falla también la vuelta atrás, `FatalError(12)` como hoy (64). La copia previa sigue en `backups` y el siguiente arranque reintenta **D** por la fase `rolling-back`.
+5. La pestaña antigua muestra «Ludiary se está reiniciando; se abrirá en una pestaña nueva. Puedes cerrar esta» y deja de consultar el servidor. En la nueva, Ajustes muestra el resultado de `lastRestore` mientras el proceso siga en marcha. Si hay carpetas desactivadas, Ajustes > Carpetas pide revisarlas y activarlas (punto 10).
+
+#### 7. Importar una copia de otro sitio
+
+Con el punto 12.3 (a): no hay subida ni selector de ficheros. Para restaurar una copia de otro equipo o de un USB, el usuario elige con «Cambiar carpeta» la carpeta donde está el fichero (o lo copia a su carpeta de copias); la lista la muestra si su nombre sigue el formato. Exportar es lo mismo: elegir como carpeta un USB o una carpeta sincronizada. Cero puertos y rutas nuevos para esto.
+
+#### 8. Contratos
+
+Núcleo (`packages/core/src/ports.ts`), implementado en `db`:
+
+```ts
+/** ADR 89. Paths are opaque to the core; the store joins names to its own folders and never accepts a path from the API. */
+export type BackupKind = 'auto' | 'manual' | 'pre-migration' | 'pre-restore';
+export interface BackupInfo { id: string; kind: BackupKind; createdAt: number; sizeBytes: number; foreign: boolean }
+export interface BackupStore {
+  /** Online copy to `<folder>/<name>.partial`, then rename. Creates the folder. `installId`: 8 lower-case hex. */
+  create(folder: string, kind: 'auto' | 'manual', installId: string, now: number): Promise<BackupInfo>;
+  /** User folder (valid names, regular files only) plus the internal folder, newest first, at most 500. Missing folder → only internal ones. */
+  list(folder: string | null, installId: string): Promise<BackupInfo[]>;
+  /** Only an own `auto` copy that validates and is in the listing (ADR 89 point 16, M5). */
+  delete(folder: string, id: string, installId: string): Promise<void>;
+  /** Point 6.1. Throws BackupError with the key of point 9. */
+  prepareRestore(folder: string | null, id: string, now: number): Promise<void>;
+}
+```
+
+`contracts` (implementado en `platform-windows`; en Docker, `null`):
+
+```ts
+/** ADR 89. Documents folder of the user, already resolved by the OS. null if the OS does not say. */
+export interface UserFolders { documents(): Promise<string | null> }
+```
+
+`db`:
+
+- `readPendingRestore(dataDir)`, `applyPendingRestoreSwap(dataDir, addon, log)` (pasos **A** y **B**), `applyRestoreAdjustments(db, kept, now)` (paso **C**), `finishRestore(dataDir)` (final) y `rollBackRestore(dataDir)` (paso **D**);
+- `migrate()` gana la opción `skipBackup`;
+- `openDatabase` fija también `PRAGMA trusted_schema = OFF` (punto 16, H2).
+
+La máquina de estados la conduce `server-role.ts`, que llama a cada pieza en el orden del punto 6.3. `createLocalServer` gana `onRestartRequested` (punto 6.2).
+
+API (`packages/api-contract`, TypeBox con `strict`; todas `session+key`, el nivel por defecto):
+
+```ts
+const BackupId = Type.String({ maxLength: 120, pattern: '^(ludiary-\\d{8}T\\d{9}Z-[0-9a-f]{8}-(auto|manual)|pre-migration-\\d{15}-[0-9a-z_]{1,64}|pre-restore-\\d{15}(-origin)?)\\.sqlite$' });
+export const BackupSchema = Type.Object({ id: BackupId, kind: BackupKindSchema, createdAt: Type.Integer(), sizeBytes: Type.Integer({ minimum: 0 }), foreign: Type.Boolean() }, strict);
+export const BackupsSchema = Type.Object({
+  periodic: Type.Boolean(),
+  folder: Type.Union([Type.String(), Type.Null()]),   // resolved path shown to the user; null = none available
+  folderIsDefault: Type.Boolean(),
+  lastBackupAt: Type.Union([Type.Integer(), Type.Null()]),
+  lastError: Type.Union([Type.Object({ key: Type.String() }, strict), Type.Null()]),
+  lastRestore: Type.Union([Type.Object({ id: BackupId, at: Type.Integer(), outcome: Type.Union([Type.Literal('ok'), Type.Literal('rolled-back')]), disabledRoots: Type.Integer({ minimum: 0 }) }, strict), Type.Null()]),
+  copies: Type.Array(BackupSchema, { maxItems: 500 }),
+}, strict);
+export const RestoreBodySchema = Type.Object({ id: BackupId }, strict);
+```
+
+| Ruta | Cuerpo | Respuesta |
+|---|---|---|
+| `GET /api/backups` | — | 200 `BackupsSchema` (copias más nuevas primero) |
+| `POST /api/backups` | `{}` | 201 `BackupSchema` (manual) |
+| `POST /api/backups/folder/pick` | `{}` | 200 `{ cancelled: true }` o 200 `BackupsSchema` |
+| `POST /api/backups/restore` | `RestoreBodySchema` | 202 `{ restarting: true }` |
+| `PATCH /api/settings` | `backups: { periodic }` (añadido a `SettingsPatchSchema`) | 200 `SettingsSchema`, ahora siempre con `backups` |
+
+`lastRestore` vive en memoria del proceso que arrancó tras la restauración y se devuelve en cada `GET /api/backups` hasta el siguiente reinicio. No se guarda en `settings` ni se borra al leerlo (punto 16, B1).
+
+#### 9. Errores (claves traducibles, sin rutas ni texto del fichero)
+
+| Clave | HTTP | Cuándo |
+|---|---|---|
+| `backup.busy` | 409 | Otra copia o restauración en curso. |
+| `backup.no-folder` | 422 | Sin carpeta resoluble. |
+| `backup.folder-unavailable` | 503 | La carpeta no existe ni se puede crear (unidad desconectada). |
+| `backup.write-failed` | 500 | Disco lleno, permisos. |
+| `backup.not-found` | 404 | Nombre válido que no está en el listado. |
+| `backup.too-large` | 422 | Más de 512 MiB. |
+| `backup.corrupt` | 422 | No es SQLite o falla la comprobación de integridad o de claves foráneas. |
+| `backup.not-ludiary` | 422 | Sin `schema_migrations`, hash distinto o esquema distinto. |
+| `backup.too-new` | 422 | Copia de una versión más nueva. |
+
+#### 10. Web
+
+- `Settings.tsx`: la sección `backups` deja de estar oculta fuera del simulador. Contenido:
+  - el texto `intro` y el aviso de la 57 (lo que se pierde sin copias);
+  - interruptor de copias automáticas;
+  - fila de carpeta con la ruta (o «Documentos\Ludiary\Copias (predeterminada)») y botón «Cambiar…»;
+  - «Crear copia» con la hora de la última y, si existe, el último error;
+  - lista de copias (fecha local, tipo: «Automática», «Manual», «Antes de actualizar», «Antes de restaurar», tamaño; marca «De otro equipo» si `foreign`) con «Restaurar» en cada una;
+  - diálogo de confirmación: «Se guardará antes una copia de tus datos actuales. Ludiary se reiniciará y se abrirá en una pestaña nueva. Si la copia es de otro equipo, tendrás que volver a conectar las tiendas y revisar tus carpetas»;
+  - pantalla de reinicio del punto 6.5 y aviso del resultado de `lastRestore`.
+- Ajustes > Carpetas: si `lastRestore.disabledRoots > 0`, aviso «Se han desactivado N carpetas que venían de la copia. Revísalas y actívalas si son tuyas» (punto 16, H1).
+- `Settings.tsx:304` manda solo `{ backups: { periodic } }`, sin `folder` (punto 16, B4); `SettingsUpdate` en `api.ts` se estrecha igual.
+- `api.ts`: `getBackups()`, `pickBackupFolder()`, `restoreBackup(id)`; `createBackup()` real. `real.ts`: `getMaintenance().lastBackupAt` sale de `getBackups()`; el simulador implementa lo mismo. **Corrección:** `mock.ts` tiene `backups.periodic: true` por defecto; pasa a `false` (57).
+- **Corrección de textos (punto 16, B2):** `settings.backups.intro` (`locales/web/es.json:180` y su par en `en.json`) dice que la copia no incluye «las sesiones de las tiendas», y es falso: lleva la tabla `secrets` cifrada. Texto nuevo: «Una copia guarda tu biblioteca, favoritos, etiquetas, colecciones y tiempo de juego. Las conexiones con las tiendas van cifradas y solo se pueden usar en este equipo». Lo cambia el `programador`.
+- Todos los textos nuevos en `locales/web/{es,en}.json` (invariante 6); fechas con `relativeTime` y la fecha local.
+
+#### 11. Pruebas y prueba manual
+
+Automáticas (Vitest):
+
+- **Núcleo:** `planBackupPrune` (7 diarias, 4 semanales, cambio de semana ISO, `manual` y copias internas nunca podadas); `backupTick` (desactivadas, sin copias, 23 h, 24 h, copia manual reciente cuenta, fallo deja `lastError` y el siguiente tic reintenta); cerrojo `backup.busy` y `whenIdle` que lo espera; la restauración responde bien solo si la preparación sale bien.
+- **`db`:** `create` con escrituras simultáneas por la misma conexión (la copia abre y tiene el estado final); `.partial` ni se lista ni sobrevive; `list` ignora nombres fuera del formato y `..\`; `prepareRestore` rechaza: no SQLite, truncado, `integrity_check` fallido, sin `schema_migrations`, ID desconocido (`too-new`), hash cambiado, disparador o vista de más, fichero de más de 512 MiB (simulado), nombre válido ausente; acepta una copia de cada nivel de migración desde `0001`. Máquina de estados: intercambio con WAL presente, copia previa hecha (`-origin` si toca), `installations` vacía, `next_allowed_at` y ajustes `backups.*` conservados de la base actual, migración sin `pre-migration`; vuelta atrás si la migración falla (copia previa intacta y base anterior en uso); sin fichero pendiente no hace nada. Secretos de otra clave tras restaurar: la tienda queda `expired` y la biblioteca intacta.
+- **API:** las cinco rutas sin cookie (401), sin clave de origen (403), con `id` que no casa con el patrón (400) o con propiedades de más (400); 202 y `onRestartRequested` solo en `onResponse`; `PATCH periodic: true` sin carpeta no guarda nada.
+- **`runtime`:** orden de arranque con fichero pendiente; el lanzador se lanza antes de `shutdown()` y espera a que el cerrojo quede libre; `--after-restart` con el cerrojo tomado más de 20 s da `fatal.timeout`.
+- **Revisión del auditor (punto 16):**
+  - H1: copia con otro `installId` y una `scan_root` de usuario UNC (`\\servidor\x`) → queda `enabled = 0`, el escaneo no la toca y lanzar un juego de esa raíz falla; con el mismo `installId` sigue activa; las `discovered` se borran siempre.
+  - H2: disparador o vista llamados `sqliteX`, `sqlite_x` y `SQLITE_x` → `backup.not-ludiary`; `sqlite_stat1` admitida; `openDatabase` con `trusted_schema` a 0.
+  - H3: corte simulado tras cada fase (`prepared`, a mitad de **B**, `swapped` sin el `.sqlite`, `adjusted`, `rolling-back`) → el siguiente arranque llega a `ok` o a la base anterior, nunca a una mezcla; **C** dos veces deja lo mismo.
+  - H4: dos `installId` en la misma carpeta → cada uno poda y calcula el tic solo con las suyas; las ajenas salen con `foreign: true`.
+  - M2: cadena de dos restauraciones seguidas con poda → la `-origin` sobrevive; con `rolled-back` no se poda nada.
+  - M3: base actual ilegible → carpeta `-raw` con los tres ficheros y la restauración sigue.
+  - M4: `composeCore` que falla tras **C** → vuelta atrás.
+  - M5: un `.partial` ajeno y un enlace simbólico con nombre válido → ni se borran ni se abren; `delete` de una `manual` o ajena → rechazado.
+  - B4: copia con fecha futura → ni cuenta para el tic ni se poda; 600 copias → 500 en la respuesta.
+- **Web:** `real.test.ts` (sección visible, `lastBackupAt` real, errores traducidos); simulador con `periodic: false`.
+
+Prueba manual (la prepara el `tester`; la hace el usuario, en Windows 11 con el instalador):
+
+1. Activar las copias automáticas: aparece `Documentos\Ludiary\Copias` (si Documentos está en OneDrive, ahí) con una copia `auto`.
+2. «Crear copia» durante una sincronización de todas las tiendas: la copia se lista y se restaura bien.
+3. Marcar un favorito, restaurar una copia anterior: se abre una pestaña nueva, el favorito no está, las tiendas siguen conectadas, los instalados reaparecen tras el escaneo y en `%LOCALAPPDATA%\Ludiary\backups` hay un `pre-restore-…`.
+4. Restaurar ese `pre-restore-…`: vuelve el favorito.
+5. Elegir como carpeta un USB, crear copia, desenchufarlo: la sección muestra el error y no se rompe nada; al enchufarlo, el siguiente tic copia.
+6. Llevar una copia a otra cuenta de Windows (u otro equipo) con Ludiary, elegir su carpeta y restaurar: biblioteca y datos del usuario presentes, tiendas en «hay que volver a conectar», carpetas manuales desactivadas con el aviso en Ajustes > Carpetas y la copia marcada «De otro equipo» antes de restaurarla.
+7. Restaurar un fichero `.sqlite` cualquiera renombrado con el formato: mensaje «no es una copia de Ludiary» y nada cambia.
+
+#### 12. Lo que decide el usuario (solo producto; aplicado por defecto lo marcado)
+
+1. **Copias manuales:** (a) **nunca se borran solas** (recomendado: el usuario las hizo a propósito; ocupan poco); (b) cuentan en la retención de 7 + 4.
+2. **Copias internas en la lista de restaurar** («Antes de actualizar», «Antes de restaurar»): (a) **se muestran, marcadas** (recomendado: deshacer una restauración o una actualización sin buscar carpetas ocultas); (b) solo las de la carpeta del usuario.
+3. **Restaurar una copia que está en otro sitio:** (a) **eligiendo su carpeta con «Cambiar…»** (recomendado: sin código nuevo y vale también para exportar); (b) botón «Restaurar desde un fichero…» con un selector de ficheros nativo (modo nuevo del auxiliar de Go, `empaquetador`); (c) subir el fichero desde el navegador (sirve también en Docker, pero es una ruta que acepta ficheros grandes).
+
+#### 13. Supuestos
+
+- **BK1** (comprobado en la documentación de SQLite, 3-11-2026): la copia en línea por la misma conexión es coherente con escrituras simultáneas. Falta comprobarlo con la prueba del punto 11.
+- **BK2:** `fs.renameSync` de Node sustituye un fichero existente en Windows si nadie lo tiene abierto. Un antivirus puede tenerlo abierto un momento: tres reintentos de 200 ms antes de dar el paso por fallido (y volver atrás).
+- ~~**BK3:** `User Shell Folders\Personal` da la carpeta Documentos real, y el auxiliar de registro devuelve `REG_EXPAND_SZ` sin expandir.~~ Falso según el `auditor` (el auxiliar ya expande). Se sustituye por `KnownFolderPath(FOLDERID_Documents)` en el auxiliar (punto 4). **BK3 nuevo:** esa llamada devuelve la carpeta redirigida a OneDrive cuando lo está. Se comprueba en la prueba manual, paso 1.
+- **BK4:** con `trusted_schema = OFF` y sin escrituras, abrir una base ajena con `better-sqlite3` no ejecuta SQL de la copia; `better-sqlite3` no carga extensiones si no se llama a `loadExtension`.
+- **BK5:** 512 MiB sobra (una biblioteca de miles de juegos ocupa pocos MB).
+- **BK6:** una copia hecha por `db.backup()` de una base en WAL conserva el modo WAL en su cabecera; por eso nunca se abre en la carpeta del usuario (crearía `-wal` y `-shm` allí), solo su copia en `restore-pending`. Abrirla en `readonly` en una carpeta con permiso de escritura funciona según la documentación de WAL de SQLite (desde 3.22) y falta comprobarlo en la prueba. Si falla, antes de abrir se ponen a 1 los bytes 18 y 19 de la cabecera de la copia en `restore-pending` (modo de diario clásico; no hay `-wal` que perder).
+
+#### 14. Coste, alcance y riesgos
+
+- **Coste:** medio (antes medio-bajo; sube por la máquina de estados del punto 16). Sin migración (los ajustes van en `settings`). Lo más largo: `prepareRestore` con la comparación de esquema, la máquina de estados con la vuelta atrás y sus pruebas de corte en cada fase.
+- **Fuera:** borrar copias desde la web, copias cifradas con contraseña, restaurar solo una parte, subir ficheros, el volumen de Docker (fase 2, ya en la 18).
+- **Riesgos:** una carpeta sincronizada con la nube saca la copia del equipo (decisión del usuario; la guía lo explica: lleva la biblioteca y rutas, pero ningún secreto legible); restaurar una copia antigua deshace lo hecho después (la copia previa lo cubre).
+
+#### 15. Orden de implementación
+
+1. ~~`auditor`: revisa este diseño antes del código.~~ Hecho el 3-11-2026 (punto 16).
+2. `programador`, en este orden y en la misma rama:
+   1. `contracts` (`UserFolders`) y `core` (`BackupStore`, `planBackupPrune`, `backupTick`, cerrojo de copias en `whenIdle`, ajustes `backups.*` con `installId`, errores);
+   2. `db`: `trusted_schema` en `openDatabase`, `skipBackup` en `migrate`, `createBackupStore` (con `lstat` y `.partial` propios), `prepareRestore` en el orden del punto 6.1, y las piezas de la máquina de estados (`readPendingRestore`, `applyPendingRestoreSwap`, `applyRestoreAdjustments`, `finishRestore`, `rollBackRestore`), reutilizando `hashMigration` y `MIGRATIONS`;
+   3. `runtime`: máquina de estados en `server-role.ts` con la vuelta atrás hasta el final de `composeCore`, tic horario, `onRestartRequested` (lanzador antes de `shutdown()`) y `--after-restart` en `launcher.ts`;
+   4. `api-contract` y `api`: esquemas, rutas y `onResponse` de la restauración;
+   5. `web`: sección real, aviso de carpetas desactivadas, `PATCH` sin `folder`, cliente y simulador, textos (con la corrección de `settings.backups.intro`).
+3. `empaquetador`: modo `--known-folder documents` del auxiliar de Go (`KnownFolderPath(FOLDERID_Documents)`) y `UserFolders` en `platform-windows`. Comprobar que el ejecutable empaquetado se relanza con `--after-restart`. Con la 58, apuntar `selfCommand` al lanzador estable.
+4. `tester`: pruebas del punto 11 (incluidas las del punto 16) y guía de la prueba manual.
+5. `auditor`: revisión del código. `documentalista`:
+   - el «punto de restauración documentado» de la 18: activar, cambiar carpeta, restaurar, llevar a otro equipo y revisar las carpetas, qué no incluye;
+   - cómo recuperar a mano una carpeta `pre-restore-…-raw`;
+   - el aviso sobre carpetas en la nube.
+
+#### 16. Revisión del auditor sobre el diseño (03-11-2026)
+
+Sin críticos; cuatro altos, seis medios y cuatro bajos. **Se aceptan todos.** Este punto prevalece sobre lo anterior y los puntos afectados ya están ajustados.
+
+| Hallazgo | Qué se cambia | Dónde |
+|---|---|---|
+| **H1** (alto). Las `scan_roots` de usuario de la copia quedaban activas (`core/src/active-roots.ts`): escaneo de rutas UNC (fuga de NTLM) y lanzamiento de ejecutables de esas carpetas (`launch.ts`). | Opción **(a)**: si la copia es de otra instalación, sus carpetas de usuario quedan con `enabled = 0` y Ajustes pide confirmarlas; las `discovered` se borran siempre. Se elige (a) frente a borrarlas porque en el caso legítimo (el mismo usuario en un equipo nuevo) conserva su trabajo y el riesgo queda cerrado igual hasta que él las activa. «Otra instalación» se mide con `backups.installId` (H4), no con `devices.id`, que cambia al restaurar. **Endurecido por la sesión principal (03-11-2026):** como `installId` no es secreto (va en el nombre de las copias), no basta; una carpeta de usuario de la copia solo queda activa si la misma ruta está activa como carpeta de usuario en la base actual, sea cual sea el `installId`; todas las demás quedan con `enabled = 0` hasta que el usuario las confirme. | 6.3 C, 10, 11 |
+| **H2** (alto). `NOT LIKE 'sqlite_%'` dejaba fuera `sqliteAevil` (el `_` es comodín). | Comparación completa sin patrón, con una lista cerrada de nombres exactos admitidos (`sqlite_stat1` a `sqlite_stat4`). `sqlite_sequence` y `sqlite_autoindex_*` no necesitan excepción, porque la base de referencia los genera igual. `trusted_schema = OFF` también en `openDatabase`. | 6.1.4, 8, 11 |
+| **H3** (alto). Un corte a mitad de la restauración podía dejar un estado ambiguo. | Máquina de estados por `restore-pending.json` (`prepared`, `swapped`, `adjusted` y además `rolling-back`), escrito con temporal y renombrado; ajuste posterior idempotente que corre aunque falte el `.sqlite`; vuelta atrás con cierre, borrado de `-wal` y `-shm`, copia a `.partial` y renombrado; `-wal` y `-shm` de `restore-pending` borrados antes. | 6.3, 6.4 |
+| **H4** (alto). Copias de varios equipos en la misma carpeta (OneDrive) se podaban entre sí. | `installId` de 8 hexadecimales en el nombre; poda y tic solo con las propias; las ajenas se listan como «de otro equipo»; patrones ajustados. Se elige el nombre, no una subcarpeta, para que la lista siga siendo una sola carpeta y elegirla con «Cambiar…» (punto 7) funcione con copias de cualquier equipo. | 4, 5, 8, 10 |
+| **M1** | El reinicio lo dispara `api` en `onResponse`; el lanzador sale antes de `shutdown()` y espera al cerrojo con plazo; el cerrojo de copias se mantiene hasta salir; con la 58, el lanzador estable. | 6.2 |
+| **M2** | `pre-restore` se poda solo tras `ok` y conserva la `-origin` de la cadena; migrar una base recién restaurada no hace `pre-migration`. | 4, 6.3 |
+| **M3** | Base actual dañada: se mueve sin abrir a `pre-restore-<ms>-raw\` y se sigue; procedimiento manual documentado. | 6.3 A, 15 |
+| **M4** | Un solo sitio para el ajuste (tras `migrate()`) y vuelta atrás hasta que `composeCore` termina bien. | 6.3, 6.4 |
+| **M5** | Solo se borran `.partial` con el patrón propio; `delete` solo para `auto` propias validadas y listadas; `lstat` de fichero normal. | 3, 4, 8 |
+| **M6** | Orden: copia con límite, nueva medida, `readonly` + `fileMustExist`, `trusted_schema`, `cell_size_check`, `mmap_size = 0`, esquema primero, después integridad. `Worker` valorado y descartado en este corte (motivo en 6.1). | 6.1 |
+| **B1** | `lastRestore` en memoria del proceso, sin borrarlo al leerlo. | 6.3, 8 |
+| **B2** | `settings.backups.intro` (es y en) decía que la copia no incluye las sesiones de las tiendas: se corrige. | 10 |
+| **B3** | BK3 era falso; Documentos con `KnownFolderPath(FOLDERID_Documents)` en el auxiliar; el puerto devuelve Documentos y el `BackupStore` compone la subcarpeta. | 4, 13, 15 |
+| **B4** | Se conserva `next_allowed_at` de la base actual; se ignoran las copias con fecha futura; 500 más nuevas en el servidor; `PATCH periodic: true` sin carpeta no se guarda y con fallo se guarda y deja `lastError`; la web no manda `folder`; `whenIdle` incluye el cerrojo de copias. | 4, 5, 6.3 C, 10 |
+
 ### 90. Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás (concreta las decisiones 32 y 58; amplía las 45, 57, 63, 64, 65 y 69; revisa la 62; se implementa después de la 89)
 
 *Revisión del auditor sobre el diseño en el punto 18, que prevalece sobre los puntos 1 a 17 donde no coincida.*
@@ -6677,6 +7350,206 @@ Aplicar solo en un arranque en frío garantiza que no se interrumpe nada. Altern
 6. Usuario: decide el punto 15; genera las dos claves; activa las *immutable releases* y 2FA; publica la primera versión a mano (quien tenga una compilación anterior la instala a mano una vez).
 7. `documentalista`: privacidad (qué sale hacia GitHub), guía de actualizaciones y de vuelta atrás, procedimiento de publicación y custodia de claves (`docs/release.md`), y solución de problemas (proxy, antivirus, «Ludiary está dañado»).
 
+### 91. Importar las listas de deseos de Steam y GOG a la lista de seguimiento de precios (amplía las decisiones 40, 74, 77 y 86; resuelve la opción 12.1 (c) de la 86 para las tiendas; contrato, cerrojo, errores y volumen revisados por el auditor en su punto 13)
+
+Encargo (03-11-2026, tras probar el comparador): importar las listas de deseos de las tiendas a la lista de seguimiento (`price_watch`) de la 86. Los números 89 y 90 están ocupados en otras ramas.
+
+#### 1. Lo que ya está decidido
+
+- **86:** lista de seguimiento local de 500 elementos como mucho por usuario, con ID de IsThereAnyDeal; lookup por ID de tienda solo en Steam (`app/<appid>`) y GOG (ID de producto); presupuesto de 200 peticiones cada 5 minutos; nada sale salvo lo que el usuario mira. La 86 dejaba la importación (12.1 c) para su propio corte.
+- **40:** operaciones opcionales del conector, aditivas, con `contractVersion` 1 (como `importCollections` en la 87); el núcleo valida toda la salida como no confiable.
+- **74 y 77:** Steam conecta con OpenID (SteamID) y la API key del usuario, cifrados en `store:steam`, y exige perfil con «Detalles de juegos» público; GOG, con el login oficial y el token de Galaxy en `store:gog`, que rota el `refresh_token` en cada renovación.
+- **Invariantes 8 y 9:** vías oficiales cuando existan; nada sale salvo hacia las tiendas y los servicios que configure el usuario.
+
+#### 2. Qué ofrece cada tienda (comprobado el 03-11-2026 salvo donde se indica)
+
+| Tienda | Vía | Con la conexión que ya tiene Ludiary | Veredicto |
+|---|---|---|---|
+| **Steam** | `GET https://api.steampowered.com/IWishlistService/GetWishlist/v1/?steamid=<id>` | Sí: solo el SteamID; el host ya está en `apiHosts` | **Entra.** Es la API web de Valve, pero no está en la documentación de Steamworks (`partner.steamgames.com/doc/webapi` no lista `IWishlistService`); la referencia comunitaria `steamapi.xpaw.me` la marca como no documentada y sin clave. Mismo estatus que `IStoreBrowseService/GetItems`, aceptado en la 73. Con un perfil ajeno devolvió `{"response":{}}` (SW2). No hay vía documentada, así que es la más oficial que existe (invariante 8) |
+| **GOG** | `GET https://embed.gog.com/user/wishlist.json` con `Authorization: Bearer` | Sí: el token de la 77; el host ya está en `apiHosts` | **Entra.** No oficial, como toda la API de GOG que ya usa el conector (`user/data/games`, 77). Forma de la respuesta sin verificar (GW1) |
+| **Epic** | Solo el GraphQL de la tienda web, con consultas persistidas y la sesión del navegador | No: el token de la 78 es de launcher | **Fuera** (NW1) |
+| **Ubisoft** | La lista de deseos vive en la tienda web (`store.ubisoft.com`), con su sesión | No | **Fuera** (NW1) |
+| **EA** | No se conoce lista de deseos en la app de EA ni API | No | **Fuera** (NW1) |
+| **IsThereAnyDeal (lista de espera)** | `GET /waitlist/games/v1`, OAuth 2.0 con PKCE y ámbito `wait_read` (ITAD15) | No: Ludiary solo tiene la API key | **Fuera por ahora** (punto 4) |
+
+#### 3. Decisión: contrato
+
+```ts
+// packages/contracts/src/connector.ts (ADR 91). Optional, additive; contractVersion stays 1.
+export interface StoreConnector {
+  // ...
+  /**
+   * ADR 91. Optional. The user's wishlist in the store, read with the stored connection. Never in a sync, only
+   * when the core asks (point 5). Requires `connection` and `apiHosts`. Untrusted output: the core validates and caps.
+   */
+  readWishlist?(ctx: SyncContext): Promise<WishlistSnapshot>;
+}
+
+/** ADR 91. */
+export interface WishlistSnapshot {
+  /** false: the store answered with an empty or unreadable list that may be hidden (Steam `{}`), or the list is partial. */
+  readonly complete: boolean;
+  /** Store order (Steam priority, GOG as received). At most 5000; storeGameId with the store's own format. */
+  readonly entries: readonly { readonly storeGameId: string; readonly title: string; readonly addedAt?: string; readonly media?: EntryMedia }[];
+}
+```
+
+- `checkConnectorManifest`: `readWishlist requires a connection wizard` y `readWishlist requires apiHosts`.
+- Solo lo implementan **Steam** y **GOG**.
+- **Steam (`connectors/steam/src/wishlist.ts`):** `GetWishlist` con el SteamID como `Secret` en la consulta, **sin la API key** (no la necesita, SW2; menos exposición). `response.items[]` con `appid` (SW1); fuera de rango o repetido, se salta y el resultado queda `complete: false`. `response` sin `items` → `{ complete: false, entries: [] }` (vacía u oculta: no se distinguen, SW2). Títulos con `resolveSteamTitles` (`GetItems`, lotes de 50; sin título → `Steam <appid>`, SW3); media con `steamMedia(appid)`, sin petición. `addedAt` de `date_added` (segundos) si es válido. Errores con `throwForStatus` de `library.ts`.
+- **GOG (`connectors/gog/src/wishlist.ts`):** `refreshSession(ctx)` y `GET embed.gog.com/user/wishlist.json`; solo las claves de `wishlist` con valor `true` y forma `^\d{1,20}$` (GW1). 401/403 → `expiredError` como en `library.ts`. Títulos y portadas con `api.gog.com/products?ids=` en lotes de 50 y la media de la 76 (`images.gog.com`); un producto que no vuelve sale como `GOG <id>` y sin imagen (GW2).
+- **Privacidad de la imagen:** la media de un elemento importado viene de la propia tienda (CDN de Steam o de GOG), no de IsThereAnyDeal. Encaja con la 71: Valve y GOG ya conocen su propia lista de deseos.
+
+#### 4. La lista de espera de IsThereAnyDeal: fuera por ahora
+
+Leerla exige OAuth 2.0 con PKCE (ITAD15): que el usuario registre en su aplicación de IsThereAnyDeal una URL de vuelta a `ludiary.localhost:<puerto>`, cuando el puerto puede cambiar (28 y 53); un tipo de asistente con `awaits: 'callback'` para servicios, que la 86 (punto 15, A1) prohíbe a propósito; y guardar y renovar tokens de OAuth además de la clave. Mucho coste para una lista que el usuario ya puede llenar en la web de IsThereAnyDeal importando allí su lista de Steam. Si se pide, va en su propia decisión.
+
+#### 5. Núcleo (`packages/core/src/prices.ts`, operación nueva `importWishlist(store)`)
+
+1. **Requisitos:** IsThereAnyDeal conectado y sin `invalid` (86, M2); la tienda conectada y con `readWishlist`. No hace falta país (el lookup no lo usa).
+2. **Lectura:** con el contexto de sincronización de esa tienda (`secrets` de escritura, porque GOG rota el `refresh_token`), **encadenada con su sincronización** (el mismo cerrojo por tienda del bucle de la 50 y la 88: dos renovaciones a la vez de GOG invalidarían la sesión) y con la época de la tienda.
+3. **Validación:** como mucho 5000 entradas; `storeGameId` con el formato de cada tienda (el de `validate.ts`); títulos sin control y de 300 como mucho; media con `validateMedia(m, connector.mediaHosts)`; repetidos fuera.
+4. **Emparejar con IsThereAnyDeal:** solo los ID que no estén ya en `price_watch` con ese origen (punto 6); `lookupByStore(store, ids)` en lotes de 200 (3 peticiones para 500), dentro del presupuesto de la 86. **Sin lookup por título**: un ID de la tienda que IsThereAnyDeal no conoce se cuenta como `notFound`, no se guarda y se vuelve a buscar en la próxima importación.
+5. **Escritura**, en una transacción, solo si no han cambiado ni la época de la tienda ni la de `service:itad` (M3):
+   - nuevo `service_game_id` → fila con `origin = <tienda>`, `origin_store_game_id`, el título y la media de la tienda, `type` nulo, `added_at` = ahora; **en el orden de la tienda y hasta llenar el límite de 500** (los que no caben se cuentan, `overLimit`);
+   - `service_game_id` ya seguido (a mano o desde la otra tienda) → no se toca (`alreadyWatched`); **lo añadido a mano nunca lo cambia ni lo quita una importación**;
+   - punto 9.2 (a): si `complete` y la lista trae al menos un elemento, se borran las filas con ese `origin` cuyo `origin_store_game_id` ya no está. Con `complete: false` o la lista vacía no se borra nada (como el guardián de biblioteca vacía de la 83).
+6. **Resultado:** `{ added, removed, alreadyWatched, notFound, overLimit, hiddenOrEmpty }`, solo contadores. Los precios no se piden aquí: los pide la página con el refresh normal de la 86.
+7. **Suelo:** 1 minuto por tienda (`MANUAL_SYNC_FLOOR_MS`, 50); debajo, `rate-limited` sin red.
+8. **Registros:** solo contadores (`requested`, `found`, `notFound`, `added`, `removed`). Nunca ID, títulos ni el SteamID.
+9. Desconectar la tienda no toca `price_watch`: son datos del usuario (86, punto 8). Con otra cuenta, la siguiente importación completa quita lo que no esté en su lista.
+
+#### 6. Datos (en la rama de esta decisión: `packages/db/drizzle/0008_watch_origin.sql`, id embebido `0009_watch_origin`)
+
+| Tabla | Columnas nuevas | Notas |
+|---|---|---|
+| `price_watch` | `origin` (`text NOT NULL DEFAULT 'manual'`, `CHECK` en `manual` / `steam` / `gog`), `origin_store_game_id` (`text`, nulo) | `CHECK ((origin = 'manual') = (origin_store_game_id IS NULL))`. Índice (`user_id`, `origin`). Las filas actuales quedan como `manual`. Lo que genere `drizzle-kit` con la reconstrucción de tabla, como en la 85 |
+
+- Numeración: tras la `0007_watch_media` del punto 17 de la 86. Si otra rama (89, 90) fusiona antes una migración, la que llegue después se renumera antes de fusionar; los ID embebidos no se reutilizan.
+- Copias: la base entera (86, punto 8), así que el origen entra sin hacer nada.
+
+#### 7. API
+
+| Ruta | Entrada | Salida |
+|---|---|---|
+| `POST /api/prices/wishlist/:store/import` | `WishlistStoreParamsSchema` (`{ store: 'steam' \| 'gog' }`, `strict`); cuerpo `EmptyObjectSchema` | 200 `WishlistImportSchema` (los contadores del punto 5.6, enteros de 0 a 5000, y `hiddenOrEmpty: boolean`) |
+| `GET /api/prices` | la actual | `PriceBoardSchema` añade `wishlistStores: StoreId[]` (tiendas conectadas con `readWishlist`) y `WatchItemSchema` añade `origin: 'manual' \| 'steam' \| 'gog'` |
+
+- `session+key` (67), como todas las de la 86. Errores: sin IsThereAnyDeal → `action-unavailable` con `prices.errors.notConnected`; tienda sin conectar → `auth.required` con el texto de esa tienda; tienda sin `readWishlist` → `action-unavailable`; bajo el suelo → `rate-limited`; los de la tienda (`account.private-profile`, `auth.expired`…) con sus textos, y los de IsThereAnyDeal con `connectors.itad.errors.*`.
+
+#### 8. Qué ve el usuario
+
+- **Comparador:** un botón «Importar lista de deseos de Steam» y otro de GOG, solo para las tiendas de `wishlistStores`. Antes de importar, un diálogo: «Ludiary leerá tu lista de deseos de Steam y enviará a IsThereAnyDeal los identificadores de esos juegos para seguir su precio. Lo que añadiste a mano no cambia.» Al terminar, un aviso con los contadores («12 añadidos, 3 ya los seguías, 2 sin datos en IsThereAnyDeal, 4 no caben: la lista admite 500»).
+- `hiddenOrEmpty`: «No se ha encontrado ningún juego. Si tu lista de deseos de Steam no es pública, cámbialo en la privacidad de tu perfil (Detalles de juegos) y vuelve a intentarlo.»
+- Cada elemento importado lleva una etiqueta pequeña «Lista de deseos de Steam» o «de GOG». Con 9.3 (a), «Dejar de seguir» en uno importado avisa de que volverá en la próxima importación si sigue en la lista de deseos de la tienda.
+- Textos en `packages/i18n` (`prices.wishlist.*`) y errores de cada conector en sus `locales/` (6).
+
+#### 9. Lo que decide el usuario (solo producto)
+
+Mientras no decida, se aplica la recomendada de cada punto.
+
+1. **Cuándo se importa:** (a) **recomendada:** con el botón, a petición (el usuario sabe cuándo su lista de deseos sale hacia IsThereAnyDeal); (b) también sola al terminar cada sincronización de la tienda, con un interruptor apagado por defecto en Ajustes (como el espejo de la 88).
+2. **Si se quita el juego de la lista de deseos de la tienda** (o se compra, que lo quita): (a) **recomendada:** en la siguiente importación completa se deja de seguir, solo si lo trajo la importación; (b) se queda siempre y el usuario lo quita a mano.
+3. **«Dejar de seguir» un importado que sigue en la lista de la tienda:** (a) **recomendada:** vuelve en la próxima importación, con aviso al quitarlo; (b) se recuerda y no vuelve (una tabla de descartes más y su interfaz).
+4. **Límite:** (a) **recomendada:** 500 en total, se importan en el orden de la tienda y se avisa de los que no caben; (b) subirlo a 1000 (el doble de peticiones de precios al abrir el Comparador).
+5. **Epic, Ubisoft y EA:** (a) **recomendada:** fuera, sin botón; (b) fuera, con un texto que explique por qué.
+
+#### 10. Pruebas
+
+- **Steam:** respuestas inventadas con la forma de SW1 (sin SteamID real): lista normal, `{"response":{}}`, `appid` fuera de rango o repetido, 401/403, 429 con `Retry-After`, 5xx, cuerpo raro; la API key **no** se envía; el SteamID va como `Secret`; títulos por lotes de 50 y título de respaldo.
+- **GOG:** `wishlist` con `true` y `false`, claves que no son ID, 401 → expirada, sesión renovada antes de pedir; productos ausentes.
+- **Contrato:** `checkConnectorManifest` con `readWishlist` sin `connection` o sin `apiHosts`; conformidad de los cinco conectores (Epic, Ubisoft y EA no lo declaran).
+- **Núcleo:** sin IsThereAnyDeal o con `invalid`, sin red; solo se buscan los ID nuevos; `notFound` no se guarda; límite de 500 con `overLimit`; lo manual nunca se toca; borrado solo con `complete` y lista no vacía, y solo del mismo origen; época de la tienda o del servicio cambiada a mitad → no se escribe; encadenado con la sincronización de esa tienda; suelo de 1 minuto; registros sin ID ni títulos.
+- **`db`:** `0008_watch_origin.sql` (id `0009_watch_origin`) sobre `0007_watch_media.sql` (id `0008_watch_media`) con datos (las filas quedan `manual`); los `CHECK` de `origin` y de la pareja `origin` / `origin_store_game_id`.
+- **API:** sin clave de origen → 403; `:store` fuera de `steam`/`gog` → 400; cuerpo con claves → 400.
+- **Web:** botones solo para `wishlistStores`, diálogo, resumen, `hiddenOrEmpty`, etiqueta de origen.
+
+#### 11. Prueba manual (la prepara el `tester`; la hace el usuario con sus cuentas)
+
+1. Steam con lista de deseos pública: importar; comprobar títulos, imágenes y precios; anotar la forma de la respuesta en el registro de depuración (cierra SW1 y SW3).
+2. Poner la lista privada (o «Detalles de juegos» en amigos): importar y ver el aviso `hiddenOrEmpty` sin que se borre nada (cierra SW2).
+3. Quitar un juego de la lista en Steam e importar: deja de seguirse (9.2 a); uno añadido a mano sigue.
+4. GOG: importar con la cuenta conectada; anotar si `wishlist.json` responde con el token de Galaxy y su forma (cierra GW1 y GW2) y si IsThereAnyDeal encuentra los ID de GOG (cierra ITAD4).
+5. Importar dos veces seguidas (la segunda espera al suelo) y una vez durante una sincronización de GOG: la sesión de GOG sigue valiendo.
+6. El registro exportado no tiene SteamID, ID ni títulos.
+
+#### 12. Coste y rama
+
+| Parte | Tamaño |
+|---|---|
+| Contrato `readWishlist` y comprobación del manifiesto | S |
+| Steam y GOG `readWishlist` con pruebas | S + S |
+| Núcleo `importWishlist` | M |
+| Migración, repositorio, API | S |
+| Web (botones, diálogo, resumen, etiqueta) | S |
+| Total | M |
+
+**Rama recomendada:** una nueva, `feature/listas-deseos`, **desde `feature/comparador-precios`** cuando esta tenga el punto 17 de la 86. Motivo: toca el contrato de las tiendas y dos conectores (con la sesión de GOG), así que pide su propia revisión del `auditor`, y el comparador puede cerrarse y fusionarse sin esperarla. Orden: contrato (`programador`, lo revisa el arquitecto) → `conectores` (Steam y GOG) y `programador` (núcleo, datos, API) en paralelo → web → `tester`, `auditor` y `documentalista` (privacidad: la lista de deseos sale hacia IsThereAnyDeal al importarla).
+
+#### 13. Revisión del auditor sobre el diseño (03-11-2026, commit `db8d1a0`; prevalece sobre los puntos 3 a 12)
+
+Sin críticos ni altos. Todos los hallazgos aceptados.
+
+**M1 (medio). El cerrojo del punto 5.2 no existe.** Comprobado: `inFlight` es privado de `createSyncService` (`packages/core/src/sync.ts`, l. 51) y `schedule` (l. 73-82), con una pasada en curso, **encola** si es forzada y **salta** si no: no espera. Se añade al `SyncService`:
+
+```ts
+// packages/core/src/sync.ts (ADR 91, point 13, M1). Shares inFlight with schedule().
+/** Runs fn alone for this store: waits for the pass in flight (if any), then holds the store's slot until fn settles. */
+exclusive<T>(store: StoreId, fn: () => Promise<T>): Promise<T>;
+```
+
+- `exclusive` espera a la promesa de `inFlight` de esa tienda (sin propagar su error), registra la suya en el mismo `inFlight` y la quita en `finally`; dos `exclusive` seguidos se encadenan.
+- Una pasada pedida **durante** la importación se **encola** siempre (también sin `force`, porque si no se perdería la sincronización al abrir la web) y arranca al acabar la importación con el bucle de hoy (`runLoop` sobre `queued`).
+- `importWishlist` corre dentro de `exclusive(store, …)`. Riesgo que evita: dos `refreshSession` de GOG a la vez, uno de los dos con el `refresh_token` ya rotado → `auth.expired` y conexión marcada como caducada.
+- Pruebas en los dos sentidos: importación pedida con una pasada en curso → espera y no hay dos `refreshSession` solapados; pasada (forzada y no forzada) pedida durante una importación → se encola y se ejecuta después.
+
+**M2 (medio). Errores de Steam.** No se reutiliza `throwForStatus` de `connectors/steam/src/library.ts` (l. 14-18): marca un 401/403 como `auth.invalid` con «clave inválida», y `GetWishlist` va sin clave. En `wishlist.ts`, 401/403 → `store.unexpected-response` con la clave propia `connectors.steam.error.wishlist` («Steam no ha dejado leer la lista de deseos»); 429 → `store.rate-limited` con `retryAfterMs`; 5xx → `network.unavailable`. **`importWishlist` nunca cambia el estado de la conexión de la tienda** (`store_connections`, `services.itad.status` aparte, que sigue la M2 de la 86), salvo una renovación de GOG rechazada, que da `auth.expired` como en la sincronización (77). Prueba: un 401/403 de `GetWishlist` deja Steam `connected` y no muestra el texto de la clave.
+
+**M3 (medio). Volumen.** Una lista de 5000 costaba 100 `GetItems` y 25 lookups para meter como mucho 500. Se parte la operación en dos fases (sustituye al contrato del punto 3):
+
+```ts
+// packages/contracts/src/connector.ts (ADR 91, point 13, M3). Both optional; present together or not at all.
+/** Ids only, in store order, at most 5000. No title or media requests. */
+readWishlist?(ctx: SyncContext): Promise<{ readonly complete: boolean; readonly entries: readonly { readonly storeGameId: string; readonly addedAt?: string }[] }>;
+/** Titles and media of at most 500 ids the core chose (point 5). Ids missing from the result: `<Store> <id>` and no image. */
+describeWishlistItems?(storeGameIds: readonly string[], ctx: SyncContext): Promise<ReadonlyMap<string, { readonly title: string; readonly media?: EntryMedia }>>;
+```
+
+- `checkConnectorManifest`: los dos juntos o ninguno, más las reglas del punto 3. `WishlistSnapshot` queda como el tipo de retorno de `readWishlist` (sin `title` ni `media`).
+- Orden del núcleo: `readWishlist` → quitar los ID ya en `price_watch` con ese origen → lookup en lotes de 200 **en el orden de la tienda, parando en cuanto los encontrados llenan el hueco** hasta 500 → `describeWishlistItems` solo con los que se van a añadir → escritura. Para el borrado del punto 5.5 basta con los ID de `readWishlist`, sin lookup.
+- **Suelo propio de la importación: 10 minutos por tienda** (`WISHLIST_IMPORT_FLOOR_MS`, en memoria), separado del `MANUAL_SYNC_FLOOR_MS` de la sincronización (sustituye al punto 5.7). Debajo, `rate-limited` sin red, con la hora a la que se puede volver a importar.
+
+**Bajos:**
+
+- **(a)** `validateMedia` sin comprobación de puerto: corregido en la 86, punto 18, y aplica aquí a la media de Steam y GOG.
+- **(b) Borrado por origen** cuando el mismo juego de IsThereAnyDeal viene de dos ID. **Elección:** dentro de una tienda se comprueba; entre tiendas se acepta el riesgo.
+  - **Misma tienda** (dos AppID que IsThereAnyDeal une en un juego): antes de borrar la fila de un `origin_store_game_id` que ya no está, se mira si otro ID de la lista actual se ha emparejado en esta importación con el mismo `service_game_id`; si es así, la fila se queda y pasa a ese ID. Es barato: ese otro ID no estaba como origen, así que ya se buscó en esta pasada.
+  - **Dos tiendas** (en las listas de Steam y de GOG): la fila lleva un solo origen; si se quita de la lista de esa tienda se borra, aunque siga en la otra, y vuelve en la siguiente importación de la otra tienda (con 9.1 a, cuando el usuario la pida). Se acepta porque se corrige sola. Comprobar la última lista completa de la otra tienda exigiría guardar las listas, una tabla nueva solo para este caso.
+- **(c)** Si falla **cualquier** lote de `lookupByStore` o `describeWishlistItems`, no se escribe nada, borrados incluidos: todo se calcula antes y se escribe en una sola transacción al final. Prueba: segundo lote con 429 o 5xx → `price_watch` sin cambios.
+- **(d)** Cita uniforme: **`0008_watch_origin.sql` (id `0009_watch_origin`)**, corregida en el índice, en las consecuencias, en el punto 10 y en «Pendiente por decidir».
+- **(e)** Los `ConnectorError` de `wishlist.ts` (Steam y GOG) llevan mensaje fijo en inglés, sin texto de la respuesta ni `cause` (también los de `JSON.parse`), como el punto 15 (B2 y B6) de la 86 (punto 5.8). Prueba: un cuerpo raro con un texto marcador no aparece en el registro ni en la respuesta de la API.
+
+Las preguntas del punto 9 siguen abiertas; mientras, rige la recomendada de cada una.
+
+#### Supuestos
+
+- **SW1 (sin verificar):** `GetWishlist/v1` responde `{ response: { items: [{ appid, priority, date_added }] } }`, en orden de prioridad. Lo que se ha comprobado (03-11-2026): la ruta existe y responde 200 sin clave; `steamapi.xpaw.me` la lista con un solo parámetro, `steamid`, y la marca como no documentada.
+- **SW2 (sin verificar):** no necesita la API key y solo devuelve la lista si los «Detalles de juegos» del perfil son públicos (el requisito de la 74); una lista oculta y una vacía dan las dos `{"response":{}}`, sin poder distinguirlas (comprobado con un perfil ajeno; sustituye a ITAD10 de la 86).
+- **SW3 (sin verificar):** `GetItems` da nombre también para juegos aún sin publicar de la lista de deseos.
+- **GW1 (sin verificar):** `embed.gog.com/user/wishlist.json` acepta el token de Galaxy de la 77 y responde `{ wishlist: { "<productId>": true, … }, checksum }`. Comprobado solo que lo usan clientes de terceros (la *crate* `gog` de Rust con `Bearer`); `gogapidocs` no lo documenta.
+- **GW2 (sin verificar):** `api.gog.com/products` devuelve título e imágenes de los productos de la lista de deseos, también de los que aún no se venden.
+- **NW1 (búsqueda del 03-11-2026, sin resultado):** Epic no tiene lista de deseos legible con el token de launcher; Ubisoft solo en su tienda web con la sesión del navegador; EA sin lista de deseos conocida. Si aparece una vía con la conexión actual, se añade en su propia decisión.
+
+**Motivo:** Steam y GOG son las dos tiendas con lista de deseos legible con la conexión que el usuario ya hizo, y las dos únicas que IsThereAnyDeal empareja por ID de tienda (86, ITAD5), así que la importación no necesita emparejar por título, que podría seguir el precio de otro juego. Una operación opcional del conector, como `importCollections` en la 87, mantiene aislada la parte frágil y no cambia `contractVersion`. Marcar el origen permite reflejar la lista de la tienda sin tocar nunca lo añadido a mano. Importar a petición deja al usuario decidir cuándo sale su lista hacia IsThereAnyDeal. Alternativas descartadas: la lista de espera de IsThereAnyDeal por OAuth (punto 4); emparejar por título lo que el lookup no encuentra (riesgo de seguir el juego equivocado); Epic, Ubisoft y EA por rutas de sus tiendas web (sin vía con la conexión actual, NW1); importar a la vez la biblioteca (ya tiene su panel en la ficha).
+
+**Consecuencias:**
+
+- Operación opcional nueva `readWishlist` en el contrato de las tiendas (aditiva, `contractVersion` 1) y `WishlistSnapshot`; fila de la 40 en el índice.
+- Migración `0008_watch_origin.sql` (id `0009_watch_origin`) con copia previa; la lista de seguimiento distingue lo importado de lo añadido a mano.
+- Ludiary envía a IsThereAnyDeal los ID de la lista de deseos al importarla: lo dicen el diálogo y la guía de privacidad.
+- Dos rutas más que pueden romperse sin aviso (Steam no documentada y GOG no oficial): el fallo se muestra en el resumen con el texto de la tienda y el resto del comparador sigue.
+- El `documentalista` actualiza la guía del comparador y la nota de privacidad; el `tester`, las respuestas y la prueba del punto 11; el `auditor` revisa diseño y código.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -6693,6 +7566,7 @@ Aplicar solo en un arranque en frío garantiza que no se interrumpe nada. Altern
 - Ubisoft y EA sin API oficial: instalados por escaneo local y cuenta sobre API internas no oficiales (Ubisoft por ventana de login integrada, decisión 80; EA en el navegador del usuario pegando el token, decisión 82, punto 14), con identificadores de cliente de la tienda (`Ubi-AppId`, `ORIGIN_JS_SDK`) expuestos a sus condiciones de uso. En EA la sesión dura alrededor de una hora y hay que reconectar para actualizar la lista.
 - Limitación del modo servidor: sin agente local no puede lanzar juegos ni escanear carpetas del PC.
 - Precios directos de tienda: mantenimiento continuo.
+- Listas de deseos de Steam y GOG por rutas no documentadas o no oficiales (decisión 91), e imágenes del Comparador desde un host de IsThereAnyDeal sin confirmar (decisión 86, punto 17): si cambian, la importación falla con el texto de la tienda y las miniaturas caen al degradado; el resto sigue.
 - Credenciales de varias cuentas guardadas en el servidor: cifrado y alcance solo LAN.
 - Empaquetado del ejecutable (instalador, bandeja, almacén de claves y SQLite): validarlo pronto.
 - Lanzamiento heterogéneo por tienda: GOG usa línea de comandos y las URI de EA han fallado en algunos juegos.
@@ -6735,10 +7609,14 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
 - Decisión 87 (importar colecciones de Steam): punto 11 aplicado por defecto con (a) en todo (favoritos de Steam como favoritos de Ludiary, ocultos ignorados y contados, repetir por nombre sin migración, botón en Colecciones, resumen previo, destino colecciones, sin colecciones vacías); el usuario puede cambiarlo, en especial 11.1 (que el punto 13 limita a la cuenta verificada) y 11.2. Revisión del `auditor` sobre el diseño incorporada (punto 13); falta la del código y la prueba manual (punto 12) para cerrar SC2 a SC4 y SC6. Va después de cerrar el código de la 85. **Revisada en la 88** (2-11-2026): 11.3 resuelto con (b); su botón, su diálogo y su ruta se retiran; su prueba manual la sustituye la de la 88.
 - Decisión 88 (colecciones de Steam que se refrescan solas): punto 14 aplicado por defecto con (a) salvo 14.3, que pasa a (b) (interruptor encendido, favoritos sin verificar con ajuste apagado, las importadas con la 87 se quedan como propias, colecciones sin verificar traídas con aviso, espejo de solo lectura, apagar borra los espejos); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 15, sin críticos). Falta el código, su revisión y la prueba manual (punto 12) para cerrar SC10 (y SC2 a SC4 y SC6 de la 87). La página de la tienda (`Store.tsx`) recibe los espejos como colecciones normales con `source`; coordinarlo con su tarea.
 - Transversal, fuera de la 87 (hallazgo del `auditor`, 2-11-2026): `toCoreError` (`packages/core/src/errors.ts`) copia `e.message`, y los `SyntaxError` de `JSON.parse` y otros errores de análisis citan trozos de la entrada. Revisar en **todos** los conectores que ningún error con texto de ficheros o respuestas de tiendas llegue a registros o respuestas (mensaje fijo, sin `cause`), y si `toCoreError` debe dejar de copiar `e.message`.
+- Decisión 86 (comparador de precios): implementación encargada el 02-11-2026; punto 12 aplicado por defecto (12.1 b, lista de seguimiento; 12.2 a 12.7 a), que el usuario puede cambiar. Revisión del `auditor` sobre el diseño incorporada (punto 15, sin críticos); implementada el 03-11-2026 en el orden del punto 16. Revisión del `auditor` sobre el código hecha el 03-11-2026: sin críticos, altos ni medios; los seis bajos corregidos (época al conectar, `waitUntil` que sobrevive a desconectar y que respeta el asistente, URL de oferta sin normalizar, lista refrescada en tandas de 200, texto neutro del límite, `aria-label` de «Seguir»). Falta la prueba manual (punto 11), que cierra ITAD3, ITAD4, ITAD6, ITAD7, ITAD12 e ITAD13. **El usuario** escribe a `api@isthereanydeal.com` (punto 13): condiciona la publicación de una versión con el comparador, no el código.
+- Decisión 86, puntos 17 y 18 (imagen en el Comparador, 03-11-2026): implementados en esta rama; 17.1 aplicado por defecto con (a) (imagen también en los juegos `mature`), que el usuario puede cambiar. La prueba manual (paso 4b) cierra ITAD14, el host real de las imágenes.
+- Decisión 91 (listas de deseos de Steam y GOG): punto 9 aplicado por defecto con (a) en todo (botón a petición, se quita lo que sale de la lista de la tienda, «Dejar de seguir» no se recuerda, 500 en total, Epic, Ubisoft y EA sin botón); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada el 03-11-2026 (punto 13, sin críticos ni altos; migración `0008_watch_origin.sql`, id `0009_watch_origin`). Falta el código en `feature/listas-deseos` (desde `feature/comparador-precios`) y la prueba manual (punto 11), que cierra SW1 a SW3, GW1, GW2 e ITAD4.
 - Decisión 76: prueba manual con GOG Galaxy y Beneath a Steel Sky (punto 9) para cerrar los supuestos G1 a G15.
 - Decisión 74: comprobar a mano con la cuenta real la vuelta de OpenID a `ludiary.localhost` (supuesto S1) y el resto de supuestos de Steam (S3 a S11).
   - Aviso «Simulado» en producción en las partes que el cliente real delega en el simulador (punto 7). Propuesta del auditor, que el arquitecto recomienda: quitar `&& isSimulated` de `SimNote` en `bits.tsx` y que `getMaintenance` de `real.ts` devuelva `lastBackupAt: null`.
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
+- Decisión 89 (copias de seguridad y restauración, para la 0.1): punto 12 aplicado por defecto con (a) en todo (copias manuales sin borrado automático, copias internas en la lista de restaurar, copias de otro sitio eligiendo su carpeta); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada el 3-11-2026 (punto 16, sin críticos, todos aceptados; H1 con (a): carpetas de una copia de otra instalación desactivadas hasta que el usuario las confirme). Falta el código, su revisión y la prueba manual (punto 11) para cerrar BK1 a BK6. Al cerrarla, el `documentalista` escribe el punto de restauración documentado que pide la 18.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
 - Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
 - Verificar los supuestos marcados en las decisiones 39 a 82 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).
