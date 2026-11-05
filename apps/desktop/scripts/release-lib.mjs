@@ -56,6 +56,16 @@ export function readPublicKeys() {
   if (bad) throw new Error(`key ${bad} belongs to the tests; it cannot be used to sign a release`);
   return keys;
 }
+/** ADR 90 point 22: the last version whose tag has a "v". Same constant in apps/web/src/app/updates.ts; a test compares both. */
+export const LAST_V_TAG = "0.1.1";
+const cmpVersions = (a, b) => {
+  const x = a.split(".").map(Number);
+  const y = b.split(".").map(Number);
+  return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+};
+/** `v0.1.1` up to LAST_V_TAG, plain `0.1.2` after it. */
+export const tagFor = (version) => (cmpVersions(version, LAST_V_TAG) <= 0 ? `v${version}` : version);
+
 /** The version comes from the tag (ADR 90 point 21), never from package.json, which stays at 0.0.0 as the mark of development builds. */
 export const version = () => {
   const v = process.env.LUDIARY_VERSION;

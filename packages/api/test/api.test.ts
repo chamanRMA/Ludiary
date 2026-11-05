@@ -400,7 +400,7 @@ describe("routes against the fake facade (ADR 72, point 5)", () => {
     expect(sc.status).toBe(200);
     expect(core.calls.filter((c) => c[0] === "updateSettings").at(-1)).toEqual(["updateSettings", { storeCollections: { steam: { enabled: false } } }]);
     const before = core.calls.filter((c) => c[0] === "updateSettings").length;
-    const bad = [{ locale: "fr" }, { detection: null }, { scanRoots: [] }, { autoUpdate: true }, { storeCollections: { nope: { enabled: true } } }, { storeCollections: { steam: { enabled: "yes" } } }, { storeCollections: { steam: { path: "x" } } }, { storeCollections: [] }];
+    const bad = [{ locale: "fr" }, { detection: null }, { scanRoots: [] }, { autoUpdate: true }, { storeCollections: { nope: { enabled: true } } }, { storeCollections: { steam: { enabled: "yes" } } }, { storeCollections: { steam: { path: "x" } } }, { storeCollections: [] }, { storeLaunch: { gog: { mode: "constructor" } } }, { storeLaunch: { gog: { mode: "client", x: 1 } } }, { storeLaunch: { nope: { mode: "client" } } }];
     expect(before).toBeGreaterThan(0);
     for (const body of bad) {
       expect((await send(port, "/api/settings", { method: "PATCH", headers: auth, body })).status, JSON.stringify(body)).toBe(400);

@@ -1,4 +1,4 @@
-import type { StoreConnector } from "@ludiary/contracts";
+import type { I18nKey, StoreConnector } from "@ludiary/contracts";
 import { resolveGogAction } from "./launch";
 import { GOG_GALAXY_CLIENT, GOG_LOCATIONS, GOG_NAME_KEY } from "./manifest";
 import { listGogLibrary } from "./library";
@@ -29,6 +29,10 @@ export function createGogConnector(): StoreConnector {
     apiHosts: GOG_API_HOSTS,
     mediaHosts: GOG_MEDIA_HOSTS,
     locations: [...GOG_LOCATIONS, GOG_GALAXY_CLIENT],
+    launchModes: [
+      { id: "client", labelKey: "connectors.gog.launch.client" as I18nKey, hintKey: "connectors.gog.launch.clientHint" as I18nKey },
+      { id: "direct", labelKey: "connectors.gog.launch.direct" as I18nKey, hintKey: "connectors.gog.launch.directHint" as I18nKey },
+    ],
     externalTools: [],
     connection: gogConnection,
     listLibrary: listGogLibrary,

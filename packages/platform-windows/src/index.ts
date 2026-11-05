@@ -25,3 +25,4 @@ export {
   type HelperEmbeddedLoginOptions,
 } from "./embedded-login";
 export { createWindowsUpdatePlatform, type WindowsUpdatePlatform } from "./update-platform";
+export { HelperProcessWatcher, parseProcessList, PROCESS_LIST_MAX_BYTES, PROCESS_LIST_TIMEOUT_MS } from "./process-watcher";

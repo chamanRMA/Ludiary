@@ -8,8 +8,15 @@ export type I18nParams = Readonly<Record<string, string | number>>;
 export type GameAction = "play" | "open-store-page" | "install";
 export type ExternalToolId = "legendary" | "gogdl";
 
+/** ADR 76 point 12. */
+export type LaunchModeId = "client" | "direct";
+/** ADR 76 point 12: bare file name of a store client, `LocationDeclaration.executable`. */
+export const LAUNCHER_EXECUTABLE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}\.exe$/i;
+
 export interface StoreConnector {
   readonly contractVersion: 1;
+  /** ADR 76 point 12. Ways to play, first = default. Absent = no setting. 'client' needs launchKinds 'exec' and a 'launcher' location with `executable`. */
+  readonly launchModes?: readonly { readonly id: LaunchModeId; readonly labelKey: I18nKey; readonly hintKey?: I18nKey }[];
   readonly id: StoreId;
   readonly nameKey: I18nKey;
   /** 'unofficial-api' is shown to the user as fragile. */
@@ -175,6 +182,8 @@ export interface LaunchContext extends BaseContext {
    * 'launch.launcher-missing' because of it.
    */
   readonly launchersResolved: boolean;
+  /** ADR 76 point 12. The user's choice, already validated; undefined when the connector declares no launchModes. */
+  readonly launchMode?: LaunchModeId;
   /** Confined to the launcher locations and the installPath of the property. */
   readonly fs: ScopedFileReader;
 }
@@ -263,6 +272,8 @@ export interface LocationDeclaration {
   readonly purpose: "scan" | "launcher" | "library";
   readonly os: readonly ("windows" | "linux" | "macos")[];
   readonly sources: readonly LocationSource[];
+  /** ADR 76 point 12. Only for purpose 'launcher': bare file name of the store client. The only file outside installPath an exec may target. */
+  readonly executable?: string;
 }
 
 export interface ResolvedLocation {
@@ -321,10 +332,10 @@ export type WizardStep =
       url: string;
       /** https, host in authHosts, no query or fragment; matched on origin and path. */
       doneUrl: string;
-      /** https, host in authHosts, no fragment; a query only with source 'document-json' (ADR 82). */
+      /** https, host in authHosts, no query or fragment. */
       captureUrl: string;
       /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. */
-      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
     };
 
 export interface WizardField {
@@ -564,6 +575,20 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[] {
     seen.add(l.id);
     if (l.sources.length === 0) problems.push(`location '${l.id}' has no sources`);
     if (l.os.length === 0) problems.push(`location '${l.id}' has no os`);
+  }
+
+  for (const l of c.locations) {
+    if (l.executable === undefined) continue;
+    if (l.purpose !== "launcher") problems.push(`location '${l.id}': executable only for purpose 'launcher'`);
+    else if (typeof l.executable !== "string" || !LAUNCHER_EXECUTABLE.test(l.executable) || l.executable.includes("..")) problems.push(`location '${l.id}': invalid executable`);
+  }
+  if (c.launchModes !== undefined) {
+    const ids = c.launchModes.map((m) => m.id).sort().join(",");
+    if (ids !== "client,direct") problems.push("launchModes must have exactly 'client' and 'direct'");
+    if (c.launchModes.some((m) => !m.labelKey)) problems.push("a launch mode has no labelKey");
+    if (c.launchModes.some((m) => m.id === "client") && !(cap.launchKinds.includes("exec") && c.locations.some((l) => l.purpose === "launcher" && l.executable !== undefined))) {
+      problems.push("launch mode 'client' needs launchKind 'exec' and a 'launcher' location with executable");
+    }
   }
 
   if (c.connection && c.authHosts.length === 0) problems.push("a connector with a connection wizard needs authHosts");

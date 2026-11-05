@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in Ludiary does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Ludiary sends nothing by itself, so we only know what you tell us here.
+
+        **Please attach the exported logs.** In Ludiary open **Settings > Privacy and logs**, press **Export logs** and drag the `.txt` file into this form.
+        Read the file before you attach it. Never paste tokens, API keys or passwords, here or in the file.
+  - type: input
+    id: ludiary-version
+    attributes:
+      label: Ludiary version
+      description: Shown in Settings > About.
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: For example Windows 11 23H2. Press Win+R and run `winver` if you are not sure.
+    validations:
+      required: true
+  - type: dropdown
+    id: store
+    attributes:
+      label: Affected store
+      options:
+        - Steam
+        - GOG
+        - Epic
+        - Ubisoft
+        - EA
+        - prices/IsThereAnyDeal
+        - updater
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Drag the exported `ludiary-logs-*.txt` file here. Review it first. Do not paste tokens, keys or passwords.

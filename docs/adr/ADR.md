@@ -47,7 +47,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 32 | Actualización de la aplicación en modo localhost | Vigente |
 | 33 | Idiomas de la interfaz | Vigente |
 | 34 | Licencia del proyecto: GPL-3.0 | Vigente (confirmada por el usuario) |
-| 35 | Diagnóstico de fallos | Vigente |
+| 35 | Diagnóstico de fallos | Vigente; exportación y enlace a GitHub concretados en la 92 |
 | 36 | Organización de la biblioteca en el MVP | Vigente; favoritos, etiquetas y colecciones concretados en la 85 |
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
@@ -67,11 +67,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario); sección de Ajustes aplazada en la 83 |
 | 53 | Puerto: dónde se guarda y rango permitido | Vigente (confirmada por el usuario) |
 | 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63; segundo factor y cookie de la dirección alternativa en la 67 |
-| 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
+| 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales); puerto `ProcessWatcher`, vía nativa en Windows y uso por el actualizador concretados en la 92, con la lista de lo que falta probar en su punto 9 |
 | 56 | Tiempo de juego propio y tiempo informado por las tiendas | Vigente (confirmada por el usuario) |
 | 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18); concretada en la 89 |
 | 58 | Actualización y firma de las versiones | Vigente (confirmada por el usuario); hereda de la 45 el requisito de validar la actualización con vuelta atrás; concretada en la 90 (custodia de la clave privada revisada en la 90 si se mantiene su 15.3 (a)) |
-| 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
+| 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario); exportación revisada en la 92 (un `.txt` en lugar de un zip) |
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario); ampliada en la 70 |
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
 | 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26); el lanzador interno lo toma también fuera del servidor para las actualizaciones (decisión 90, punto 18, B6) |
@@ -88,7 +88,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 73 | Portadas de Steam con ruta con hash: `IStoreBrowseService/GetItems` | Vigente (recomendada; amplía las 40, 71 y 72) |
 | 74 | Cuenta de Steam: OpenID, API key cifrada y juegos no instalados | Vigente (recomendada; amplía las 40, 43, 46, 47, 50, 68, 72 y 73); punto 12 decidido por el usuario el 22-10-2026 |
 | 75 | Portadas guardadas en el equipo y servidas por el servidor local | **Descartada** por el usuario el 22-10-2026: la caché del navegador ya las guarda 10 años; la 71 sigue vigente |
-| 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11.1 pendiente del usuario; punto 11.2 resuelto en la 77); vía de la cuenta y orden del emparejamiento revisados en la 77 |
+| 76 | Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos | Vigente (recomendada; encargada por el usuario el 22-10-2026, lo que resuelve el punto C de la 72; amplía las 40, 42, 72 y 73; revisada por el auditor sin críticos ni altos y ajustada el mismo día; `LocalFiles.realPath` y comprobación de raíz activa al lanzar; punto 11.1 resuelto por el usuario el 5-11-2026 en el punto 12: Jugar a través de GOG Galaxy por defecto, con ajuste para abrir directo; punto 11.2 resuelto en la 77); vía de la cuenta y orden del emparejamiento revisados en la 77 |
 | 77 | Cuenta de GOG: login oficial con código pegado, sesión cifrada y juegos no instalados | Vigente (recomendada; encargada por el usuario el 22-10-2026 antes del corte 2b y sin emparejamiento; amplía las 40, 43, 50, 74 y 76; revisa para GOG la regla 7 de la 40; sin cambios de contrato; revisada por el auditor el mismo día: las ubicaciones `launcher` ya no amplían el `exec` (revisa la regla 5 de la 40), época por tienda contra la carrera de rotación, `extract` de URL restringido; punto 12 aplicado por defecto con (a) y (a)) |
 | 78 | Conector de Epic Games: instalados, Jugar y portadas (corte 1) y cuenta, no instalados e Instalar (corte 2) | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42, 50, 73, 74, 76 y 77; revisa para Epic la regla 7 y la fila de la 40 y la parte de Epic de la 43; sin tipos nuevos; `storeGameId` hasta 160 caracteres; punto 13 aplicado por defecto con (a), (a) y (a); corte 2 tras la prueba del corte 1; revisada por el auditor el mismo día sin críticos ni altos (punto 14): `.item` como entrada no confiable con regla estricta de ruta, solo el valor extraído en `json-field`, E5 comprobado y `AppDataPath` como primera fuente; E7 falso en la práctica: el corte 1 va sin portadas y sin `resolveMedia` (punto 15)) |
 | 79 | Conector de Ubisoft Connect: instalados por el registro y Jugar con `uplay://` | Vigente (recomendada; encargada por el usuario el 22-10-2026; amplía las 40, 42 y 72; `ResolvedLocation.subkey`, ID en el `tag` de la raíz, «ausente frente a ilegible» en `LocationResolver`; sin portadas ni red; `contractVersion` 1; punto 11.1 aplicado por defecto con (a); revisada por el auditor el 23-10-2026 sin críticos (punto 12: raíces sin robo entre tiendas sin migración, subclaves y carpetas ilegibles frente a ausentes, descubrimiento por declaración, aviso `scan.discovery-unavailable`, topes que no borran); prueba manual del 23-10-2026: detección correcta, U4 y U7 confirmados (punto 13); portadas, Instalar, cuenta y biblioteca revisados en la 80) |
@@ -103,7 +103,8 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 87 | Importar las colecciones de Steam | Propuesta (encargada el 2-11-2026; amplía las 40, 72 y 85; operación opcional `importCollections` del conector, aditiva, `contractVersion` 1, sin migración; lee `userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json` bajo `steam-root` solo a petición del usuario y con autodetección; bajo demanda con resumen previo (`dryRun`), solo aditiva y por `name_key`; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 13, sin críticos: errores sin texto del fichero, cuenta sin verificar sin favoritos, plan dentro de la transacción, lector estrechado a `userdata`; falta la del código y la prueba manual). La 86 (precios) se escribe en otra rama. **Revisada en la 88**: deja de ser bajo demanda y aditiva |
 | 88 | Colecciones de Steam que se cargan y se refrescan solas al sincronizar | Propuesta (encargada por el usuario el 2-11-2026; revisa las 85 y 87, amplía las 40 y 50; paso al final del bucle de sincronización de cada tienda con `importCollections`; espejo de solo lectura por `source_id` con la migración 0005 e índice único parcial de `name_key` solo entre propias; favoritos solo añadidos y solo los nuevos en Steam; ajustes persistentes `collections.<store>.enabled` y `unverifiedFavorites`; `sourceId` aditivo, `contractVersion` 1; se retiran la ruta de importación y su diálogo; punto 14 aplicado por defecto con (a) salvo 14.3 (b); revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 15, que prevalece: sin adopción, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, guardián de borrado explícito, cambio de cuenta, 200 propias + 200 espejos, migración `0005_collection_source` con id `0006`; falta el código, su revisión y la prueba manual) |
 | 89 | Copias de seguridad periódicas, manuales y restauración | Propuesta (encargada por el usuario el 3-11-2026 para la 0.1; concreta la 57 y amplía la 62; copia completa de la base con `db.backup()`, sin la clave; puerto `BackupStore` en `db` y `UserFolders` en `platform-windows`; restauración preparada en caliente y aplicada al rearrancar, con copia previa y vuelta atrás; validación con esquema idéntico al de sus migraciones; sin migración; punto 12 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 16, que prevalece: carpetas de una copia ajena desactivadas, comparación de esquema sin patrones, máquina de estados por `restore-pending.json`, `installId` en el nombre, reinicio desde `api` con `--after-restart`, `pre-restore` con `-origin` y `-raw`; falta el código, su revisión y la prueba manual) |
-| 90 | Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás | Propuesta (encargada por el usuario el 3-11-2026; concreta las 32 y 58, amplía las 45, 57, 64, 65 y 69; el paquete es el instalador de Inno en silencio; lanzador estable en Go con `app-<versión>` y `versions.json`; `releases/latest` sin token con ETag, solo estable; manifiesto firmado con Ed25519 y verificado otra vez justo antes de ejecutar; se aplica solo en un arranque en frío o con «Reiniciar y actualizar»; copia previa y restauración siempre en la vuelta atrás; código de salida 20; punto 15 aplicado por defecto con (a) salvo 15.1 y 15.2, resueltos por el usuario el 4-11-2026 en el punto 20 (`notify` por defecto sin puerta ni tarjeta, invariante 9 con la excepción de GitHub, aviso firmado con Aplicar / Más tarde / Ignorar y banner tras actualizar); 15.3 revisa la custodia de la clave de la 58; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 18, que prevalece: sin críticos y 3 altos (vuelta atrás reanudable, restauración de la 89 bajo el cerrojo de la 62, cerrojo de aplicación y prueba autenticada con la acción `version`); revisa la 62 y amplía la 63; se implementa después de integrar la 89; falta el código, su revisión y la prueba manual) |
+| 90 | Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás | Propuesta (encargada por el usuario el 3-11-2026; concreta las 32 y 58, amplía las 45, 57, 64, 65 y 69; el paquete es el instalador de Inno en silencio; lanzador estable en Go con `app-<versión>` y `versions.json`; `releases/latest` sin token con ETag, solo estable; manifiesto firmado con Ed25519 y verificado otra vez justo antes de ejecutar; se aplica solo en un arranque en frío o con «Reiniciar y actualizar»; copia previa y restauración siempre en la vuelta atrás; código de salida 20; punto 15 aplicado por defecto con (a) salvo 15.1 y 15.2, resueltos por el usuario el 4-11-2026 en el punto 20 (`notify` por defecto sin puerta ni tarjeta, invariante 9 con la excepción de GitHub, aviso firmado con Aplicar / Más tarde / Ignorar y banner tras actualizar); 15.3 revisa la custodia de la clave de la 58; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 18, que prevalece: sin críticos y 3 altos (vuelta atrás reanudable, restauración de la 89 bajo el cerrojo de la 62, cerrojo de aplicación y prueba autenticada con la acción `version`); revisa la 62 y amplía la 63; se implementa después de integrar la 89; falta el código, su revisión y la prueba manual); exportación de registros y `update.game-running` en la 92, que revisa su punto 7.6 |
+| 92 | Exportar los registros y saber si hay un juego abierto | Propuesta (encargada el 5-11-2026; concreta las 35 y 55 para el actualizador; revisa la exportación de la 59 y el punto 7.6 de la 90; un `.txt` filtrado con `POST /api/logs/export` `session+key`; `ProcessWatcher` opcional con `ludiary-tray.exe --processes`; `restart` da `409 update.game-running` y la actualización queda pospuesta; sin migración ni dependencias; la 55 sigue abierta para el tiempo de juego; falta el código, la revisión del `auditor` y la prueba manual) |
 
 ## Decisiones
 
@@ -456,7 +457,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - Hay que comprobar la licencia de cada herramienta o librería incluida en el instalador y cumplir sus avisos.
 - Cambiar de licencia más adelante exigiría el acuerdo de los colaboradores, lo que afecta a la política de contribuciones.
 
-### 35. Diagnóstico de fallos
+### 35. Diagnóstico de fallos (concretada en la decisión 92)
 
 **Decisión:** la aplicación guarda registros locales y ofrece en Ajustes un botón para exportarlos, junto con un enlace al repositorio de GitHub para abrir una incidencia (issue).
 
@@ -1184,7 +1185,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** con un solo usuario en local, una sesión larga evita molestias, y la revocación cubre el caso de perder el control del navegador. Alternativa descartada: una sesión que muere al cerrar el navegador (obligaría a pasar siempre por el acceso directo).
 
-### 55. Detección del proceso de cada juego (propuesta; se cierra con pruebas reales)
+### 55. Detección del proceso de cada juego (propuesta; se cierra con pruebas reales; puerto, vía nativa en Windows y uso por el actualizador concretados en la decisión 92)
 
 **Decisión (propuesta):**
 
@@ -1234,7 +1235,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** las carpetas versionadas dan vuelta atrás de forma natural (decisión 32), y la verificación propia no depende del certificado comercial. Alternativas descartadas: Velopack (no admite volver atrás, según su documentación); un certificado comercial (coste anual; el usuario prefiere publicar sin firma si SignPath no acepta el proyecto).
 
-### 59. Registros: tamaño y rotación
+### 59. Registros: tamaño y rotación (exportación revisada en la decisión 92)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -3038,7 +3039,7 @@ export interface CoverFiles {
   - privacidad: el servidor descarga cada portada una vez;
   - solución de problemas: dónde están las portadas, que se pueden borrar sin perder nada y que una que falta aparece tras el siguiente escaneo con conexión.
 
-### 76. Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos (amplía las decisiones 40, 42, 72 y 73; revisa el orden de cortes de la 72 y la fila de GOG de la tabla de la 40; vía de la cuenta, orden del emparejamiento y el `..` del punto 4 revisados en la decisión 77; DLC del escaneo revisados en la decisión 83)
+### 76. Primer corte vertical de GOG: instalados, portadas y lanzamiento por línea de comandos (amplía las decisiones 40, 42, 72 y 73; revisa el orden de cortes de la 72 y la fila de GOG de la tabla de la 40; vía de la cuenta, orden del emparejamiento y el `..` del punto 4 revisados en la decisión 77; DLC del escaneo revisados en la decisión 83; Jugar a través de GOG Galaxy por defecto, con ajuste, en su punto 12; revisión del auditor sobre ese diseño en su punto 13)
 
 **Decisión (recomendada, 22 de octubre de 2026):** el 22 de octubre de 2026 el usuario encarga «empieza con el conector de GOG». Eso resuelve el punto (C) de la decisión 72: **GOG va antes que el corte 2b** (tiempo de juego), que pasa a ir después. Este corte es el equivalente de la 72 para GOG: lo justo para ver los juegos de GOG instalados y jugarlos, y sobre todo para validar el lanzamiento por línea de comandos (`exec`), el caso más distinto del contrato.
 
@@ -3287,11 +3288,136 @@ Fixtures **inventadas**: IDs de producto ficticios (`1000000001`, `1000000002`�
 
 #### 11. Lo que decide el usuario
 
-1. **Cómo se abre un juego de GOG:**
+1. **Cómo se abre un juego de GOG** (**resuelto por el usuario el 5-11-2026**: «que sea configurable pero hay que tirar por pedirlo a GOG Galaxy»; es la (c) con Galaxy por defecto en vez de (a). Se concreta en el punto 12):
    - (a) siempre directo, sin Galaxy (recomendado en este corte: funciona con y sin Galaxy, es lo más rápido y no depende de una sintaxis sin documentar). Coste: las partidas en la nube de GOG no se sincronizan al abrir desde Ludiary, y algunos juegos pueden querer Galaxy abierto para logros o multijugador;
    - (b) a través de Galaxy si está instalado, y directo si no (opción B del punto 4). Coste: abre Galaxy cada vez y depende de que Galaxy acepte el argumento `/path` tal como lo entrecomilla Node, que solo se sabe probándolo;
    - (c) un ajuste por tienda para elegir, con (a) por defecto. Coste: una pantalla y un ajuste más.
 2. **Qué va después de este corte:** (a) el corte 2b, tiempo de juego, que cierra la 55 con Steam y GOG a la vez (recomendado: el lanzamiento ya está validado en las dos tiendas); (b) la cuenta de GOG junto con el emparejamiento entre tiendas; (c) el emparejamiento solo, antes de cualquier cuenta nueva.
+
+#### 12. Jugar a través de GOG Galaxy, con ajuste para abrir directo (5 de noviembre de 2026; concreta 11.1; amplía el contrato de la 40 con tres campos opcionales; hace la «regla propia» que pedía el A1 del punto 7 de la 77)
+
+**Decisión.** Jugar a un juego de GOG va **a través de GOG Galaxy por defecto**. Un ajuste de la tienda GOG permite elegir **abrirlo directamente** con su ejecutable (la opción A del punto 4, que no cambia). Instalar no cambia (punto 7 de la 77).
+
+**12.1. La orden.** La de Playnite (`GogLibrary.cs`, `StartGamesUsingGalaxy`), que es la variante de G13 más usada:
+
+```ts
+{ kind: "exec",
+  executable: ctx.fs.join(galaxy.path, "GalaxyClient.exe"),   // galaxy = launcher location 'gog-galaxy-client'
+  args: ["/launchViaAutostart", `/gameId=${id}`, "/command=runGame", `/path=${installPath}`],
+  cwd: galaxy.path }
+```
+
+- `id` es `storeGameId` ya validado con `^\d{1,20}$`; `installPath` es el de la instalación guardada, sin separador final (salvo la raíz de una unidad).
+- Las comillas: Playnite escribe `/path="<ruta>"` en una sola cadena; Node pasa la lista y entrecomilla el argumento entero (`"/path=F:\GOG Galaxy\Games ñ\Cold Waters"`). Con las reglas de `CommandLineToArgvW` (las de `splitWindowsArgs`) las dos formas dan el mismo `argv`: `/path=F:\GOG Galaxy\Games ñ\Cold Waters`. Esto resuelve el coste de la opción B del punto 4 **si Galaxy analiza su línea con esas reglas** (supuesto GG1). Sigue sin usarse `windowsVerbatimArguments`.
+- Se comprueba antes, igual que Instalar: con `ctx.launchersResolved`, la ubicación `gog-galaxy-client` y `ctx.fs.exists(<carpeta>\GalaxyClient.exe)`.
+
+**12.2. Dónde se busca `GalaxyClient.exe`.** Solo en la ubicación `gog-galaxy-client` que ya existe (`HKLM\SOFTWARE\WOW6432Node\GOG.com\GalaxyClient\paths`, valor `client`; GA9 confirmado en el equipo del usuario) más el nombre fijo `GalaxyClient.exe`. Sin rutas por defecto añadidas: si el registro no lo da, para Ludiary no hay Galaxy.
+
+**12.3. Si Galaxy no está.** **Se abre directo, sin aviso** (opción A del punto 4), y se registra `info` «Galaxy not found, launching directly» con el conector y nada más. Pasa en tres casos: la ubicación no se resuelve, `GalaxyClient.exe` no existe dentro, o `launchersResolved` es `false` (detección «solo carpetas manuales» o «más tarde», decisión 42, o registro ilegible). Motivo: el ajuste por defecto es «Galaxy» y quien usa el instalador sin conexión sin Galaxy no ha elegido nada; un error le dejaría sin Jugar por un ajuste que no conoce. El texto del ajuste lo explica (12.6). Se descarta avisar con `launch.launcher-missing`: sería lo correcto solo si el usuario hubiera elegido Galaxy expresamente, y el ajuste no distingue «por defecto» de «elegido» (no vale la pena otro estado por esto).
+
+**12.4. El ajuste.** Genérico en el núcleo, con los textos en el conector, siguiendo la forma de `storeCollections` (decisión 88):
+
+```ts
+// packages/contracts/src/connector.ts — ADR 76 point 12 (optional; contractVersion stays 1)
+export type LaunchModeId = "client" | "direct";
+// StoreConnector:
+/** Ways to play, first = default. Absent = no setting. 'client' needs launchKinds 'exec' and a 'launcher' location with `executable`. */
+readonly launchModes?: readonly { readonly id: LaunchModeId; readonly labelKey: I18nKey; readonly hintKey?: I18nKey }[];
+// LocationDeclaration:
+/** Only for purpose 'launcher': bare file name of the store client, ^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}\.exe$ (case-insensitive). The only file outside installPath an exec may target. */
+readonly executable?: string;
+// LaunchContext:
+/** The user's choice, already validated; undefined when the connector declares no launchModes. */
+readonly launchMode?: LaunchModeId;
+```
+
+- **Valor por defecto: `client`**, que para GOG se muestra como «A través de GOG Galaxy» (lo que el encargo llama «galaxy»). El valor guardado es genérico para que el núcleo no conozca tiendas (invariante 2).
+- **Se guarda** en `settings` con la clave `launch.<store>.mode` (JSON `"client"` o `"direct"`). Sin fila = el primero de `launchModes`. Un valor guardado que ya no esté en `launchModes` se lee como el primero. Va en las copias de seguridad como el resto de `settings`, sin trato especial en la restauración.
+- **Núcleo** (`packages/core/src/settings.ts`; validación concretada en 13.5): `readSettings` añade `storeLaunch: Partial<Record<StoreId, { mode: LaunchModeId }>>` para los conectores con `launchModes`; `validatePatch` acepta `storeLaunch: { <store>: { mode } }` solo para esos conectores y con un `id` de su lista (si no, `invalid-input`). `launch.ts` lee el modo y lo pone en `LaunchContext.launchMode`. Va por el mismo `PATCH` de ajustes que ya existe, con su cookie y su clave de origen (decisión 67): no hay ruta nueva.
+- **`checkConnectorManifest`:** `launchModes`, si viene, tiene exactamente `client` y `direct` sin repetir, con `labelKey`; con `client`, `launchKinds` incluye `exec` y hay al menos una ubicación `launcher` con `executable`; `executable` solo en ubicaciones `launcher` y con la expresión de arriba (sin separadores ni `..`).
+- **Web:** en Ajustes > Tiendas, en la página de la tienda (`Store.tsx`), un grupo de dos opciones (radio) «Cómo se abre al pulsar Jugar», visible solo si `settings.storeLaunch[store]` existe. `api-contract`, `core-adapter` y los datos simulados (`mock.ts`) siguen a `storeCollections`.
+
+**12.5. Núcleo: la regla propia del cliente (invariante 3; concretada por el auditor en el punto 13, puntos 13.1 a 13.3, que prevalecen).** Hoy `checkSpec` solo acepta `exec` dentro de `installPath` (A1 de la 77). Se añade **una sola excepción, exacta**:
+
+- Solo con `action === 'play'` y `launchMode === 'client'`.
+- `executable`, tras `realPath`, es **igual** (no «dentro de») a `realPath(join(l.path, decl.executable))` para alguna ubicación `launcher` resuelta `l` de **ese** conector cuya declaración tenga `executable`. Comparación con la misma normalización que `insideAny` (sin distinguir mayúsculas en Windows).
+- `cwd`, si viene, dentro de esa misma `l.path`.
+- Los argumentos pasan las reglas de siempre (64, 8192 caracteres, sin control). El núcleo no interpreta su contenido.
+- ~~La comprobación de que existe (`scoped(...).exists`) y las de `realPath` usan, en este caso, la carpeta de `l` además de `installPath`.~~ Revisado en 13.1: solo la carpeta de `l`, en lugar de `installPath`.
+- Para cualquier otro caso, todo sigue igual: un `.exe` de la biblioteca de Galaxy (que vive dentro de su carpeta) sigue rechazado.
+- La segunda barrera de `platform-windows` no cambia: `C:\Program Files (x86)\GOG Galaxy\GalaxyClient.exe` la cumple.
+
+Invariante 3: la API solo trae el ID del juego canónico (y, por el `PATCH` de ajustes, un valor de una lista cerrada que elige entre dos órdenes ya construidas, nunca una ruta). La orden se construye con el `storeGameId` guardado, el `installPath` guardado, la carpeta de Galaxy leída del registro y un nombre de fichero fijo del manifiesto. Nada de eso llega por la API.
+
+**12.6. Conector** (`connectors/gog`; defensa añadida en 13.4): `resolveGogAction('play')` con `ctx.launchMode === 'client'` y Galaxy encontrado devuelve la orden de 12.1; en otro caso, la rama actual sin cambios. **Antes de devolver la orden de Galaxy no se lee el `.info`**: Galaxy sabe abrir el juego, y un `.info` sin tarea principal (G6) no debe impedirlo. `GOG_GALAXY_CLIENT` gana `executable: "GalaxyClient.exe"`, y el manifiesto, `launchModes: [{ id: 'client', labelKey: 'connectors.gog.launch.client', hintKey: 'connectors.gog.launch.clientHint' }, { id: 'direct', labelKey: 'connectors.gog.launch.direct', hintKey: 'connectors.gog.launch.directHint' }]`.
+
+**Textos** (`connectors/gog/locales`, más uno común en la web):
+
+| Clave | es | en |
+|---|---|---|
+| `settings.stores.launchMode` (web) | Cómo se abre al pulsar Jugar | How Play opens games |
+| `connectors.gog.launch.client` | A través de GOG Galaxy | Through GOG Galaxy |
+| `connectors.gog.launch.clientHint` | Galaxy sincroniza tus partidas en la nube y registra logros. Si Galaxy no está instalado, el juego se abre directamente. Si un juego no se abre así, elige «Directamente». | Galaxy syncs your cloud saves and tracks achievements. If Galaxy is not installed, the game opens directly. If a game does not open this way, choose "Directly". |
+| `connectors.gog.launch.direct` | Directamente, con el ejecutable del juego | Directly, with the game's executable |
+| `connectors.gog.launch.directHint` | Más rápido y sin abrir Galaxy, pero sin sincronizar las partidas en la nube. | Faster and without opening Galaxy, but cloud saves are not synced. |
+
+Al pulsar Jugar sigue `game.launching` con `{store}` = GOG. Los errores `connectors.gog.errors.*` existentes no cambian.
+
+**12.7. Pruebas.**
+
+- `connectors/gog` (`resolveAction`): `client` con Galaxy → la orden exacta de 12.1 (orden de argumentos, `cwd`, sin leer el `.info`); `client` con `launchersResolved: false`, sin ubicación o sin `GalaxyClient.exe` → la orden directa de siempre; `direct` con Galaxy → directa; `launchMode` ausente → directa (compatibilidad); `installPath` con espacios, `ñ` y separador final → `/path=` sin separador final y sin comillas propias; `install` no cambia; ningún error lleva rutas. Ida y vuelta: `splitWindowsArgs(quote_cmd_arg("/path=…"))` (la reimplementación de libuv de la prueba del punto 8) da el mismo argumento que `splitWindowsArgs('/path="…"')`. `assertConnectorConformance` con `launchModes`.
+- `contracts` / `checkConnectorManifest`: `launchModes` incompleto, repetido o con `client` sin ubicación con `executable`; `executable` en una ubicación `scan`, con `\`, `/`, `..` o sin `.exe` → rechazado.
+- `core`: `checkSpec` acepta el cliente exacto con modo `client` y `play`; rechaza el mismo ejecutable con modo `direct`, con `install`, de la ubicación de **otro** conector, otro `.exe` de la carpeta de Galaxy (`Games\X\x.exe`), una unión que tras `realPath` apunta a otro fichero, y un `cwd` fuera de la carpeta de Galaxy; `LaunchContext.launchMode` refleja el ajuste, el primero sin fila y el primero con un valor desconocido guardado; `validatePatch` rechaza tienda sin `launchModes`, `mode` desconocido o no texto; el registro no lleva rutas ni argumentos.
+- `api` y `web`: `PATCH` con `storeLaunch` sin clave de origen → rechazado; el grupo de opciones sale solo en GOG, guarda y se repinta. Paridad i18n de las claves nuevas.
+- Playwright: con `LocationResolver` doble que da la carpeta de Galaxy (con un `GalaxyClient.exe` vacío), Jugar graba la orden de Galaxy; tras elegir «Directamente», graba la directa.
+
+**12.8. Prueba manual** (se añade a la del punto 9; equipo del usuario, Cold Waters):
+
+1. Con el ajuste por defecto y Galaxy **cerrado**: Jugar abre Galaxy y Galaxy abre el juego (GG1, GG3). Repetir con Galaxy abierto (GG4).
+2. La ruta lleva espacios y `ñ` (`F:\GOG Galaxy\Games ñ\Cold Waters`): si el juego no se abre o Galaxy dice que no lo encuentra, GG1 es falso (punto 12.9).
+3. Si hay un juego instalado con el instalador sin conexión (G2), probar si Galaxy lo abre (GG5).
+4. Cambiar a «Directamente»: Jugar abre el juego sin Galaxy, como en la prueba del 22-10-2026.
+5. Opcional: cerrar sesión en Galaxy o desinstalarlo y comprobar 12.3 (abre directo).
+6. Con un juego con partidas en la nube, ver si Galaxy sincroniza antes de jugar (GG6).
+7. El registro exportado no lleva la ruta ni los argumentos.
+
+**12.9. Supuestos.**
+
+- **GG1 (sin verificar):** `GalaxyClient.exe` analiza su línea con `CommandLineToArgvW` (o equivalente), de modo que `"/path=<ruta con espacios>"` vale lo mismo que `/path="<ruta>"`. Si es falso, **no** se pasa a `windowsVerbatimArguments`: el `exec` de Galaxy se retira (vuelve a ser `direct` por defecto) y se decide aparte.
+- **GG2 (sin verificar):** `/launchViaAutostart` es inofensivo y hace que Galaxy no robe el primer plano. Fuente: Playnite. Si estorba, se quita.
+- **GG3 (sin verificar):** con Galaxy cerrado, la orden lo arranca y abre el juego cuando termina de iniciar.
+- **GG4 (sin verificar):** con Galaxy abierto, el segundo `GalaxyClient.exe` pasa la orden a la instancia abierta y termina enseguida.
+- **GG5 (sin verificar):** Galaxy solo abre juegos que conoce (instalados o importados en Galaxy). Uno del instalador sin conexión puede no abrirse; por eso el texto de 12.6 dice «elige Directamente».
+- **GG6 (sin verificar):** abrir por Galaxy sincroniza las partidas en la nube y activa la superposición, que es la razón de esta opción (G12).
+- **GG7 (sin verificar):** el proceso del juego es hijo de Galaxy, no de Ludiary. Afecta a la detección de la 55 en el corte 2b, que se valida con los dos modos.
+
+**Motivo:** cumple la elección del usuario con lo que ya hay (ubicación `gog-galaxy-client` confirmada, `exec`, el `PATCH` de ajustes) y abre al cliente una sola puerta exacta, en vez de ampliar el confinamiento a su carpeta, que es lo que el A1 de la 77 prohibió. Caer a directo sin Galaxy mantiene Jugar funcionando para quien no lo tiene. Descartados: `windowsVerbatimArguments` (prohibido por el punto 4); un ajuste propio de GOG en el núcleo (rompería el invariante 2); la URI `goggalaxy://` para lanzar (no existe, G14).
+
+**Consecuencias:**
+
+- Tres campos opcionales nuevos en el contrato (`launchModes`, `LocationDeclaration.executable`, `LaunchContext.launchMode`); `contractVersion` sigue en 1. Otra tienda con cliente (EA, Ubisoft) podría usarlos sin otra decisión de contrato.
+- La fila de GOG de la tabla de la 40 pasa a «`exec` (GOG Galaxy por defecto; ejecutable del juego según el ajuste)».
+- El `auditor` revisa la excepción de `checkSpec` (igualdad exacta tras `realPath`, solo `play` y `client`) antes y después del código.
+- El `documentalista` cambia en la guía «Jugar abre el juego sin pasar por Galaxy» (punto 10.4) por el ajuste y su caída a directo.
+
+#### 13. Revisión del auditor sobre el diseño del punto 12 (5 de noviembre de 2026)
+
+Sin críticos ni altos. Se aceptan todos los hallazgos; **lo que sigue prevalece sobre el punto 12 donde no coincida**.
+
+1. **[MEDIO] La excepción es una rama aparte de `checkSpec`**, que se evalúa **antes** que la regla normal:
+   - Solo con `kind === 'exec'`, `action === 'play'` y `launchMode === 'client'`.
+   - La declaración se busca entre las de ese conector con `purpose === 'launcher'` y `executable` presente, y su ubicación resuelta `l` por `declarationId`.
+   - Se exige `realPath(executable)` igual a `realPath(join(l.path, decl.executable))`.
+   - Las raíces de esa rama son **solo** `[realPath(l.path)]`, tanto para el ejecutable como para el `cwd`: en lugar de `installPath`, no además. `l.path` nunca entra en `execRoots`.
+   - Si la rama no se cumple, se aplica la regla normal sin cambios (y el cliente, fuera de `installPath`, queda rechazado).
+2. **[MEDIO] Contra enlaces plantados:** además de lo anterior, `basename(realExe)` es igual a `decl.executable` sin distinguir mayúsculas, y `realExe` está dentro de `realPath(l.path)`. Prueba en `core`: un `GalaxyClient.exe` que es un enlace (simbólico o unión de su carpeta) a otro `.exe` de la carpeta de Galaxy se rechaza con `launch.rejected`.
+3. **[BAJO] Ubicaciones parciales:** la rama exige `launchersResolved === true`. Con una resolución parcial (`LocationsUnreadableError.partial`), un `exec` del cliente se rechaza en el núcleo; el conector ya abre directo en ese caso (12.3). Prueba en `core`.
+4. **[BAJO] Defensa en el conector:** si `installPath` contiene un espacio seguido de `-` o de `/`, el conector abre directo (rama A) aunque el modo sea `client`, para que la ruta no se pueda leer como otra opción de Galaxy si GG1 resultara falso en parte. Prueba en `connectors/gog` con `C:\Games\X -foo` y `C:\Games\X /command=y`. Nunca `windowsVerbatimArguments`.
+5. **[BAJO] Validación del ajuste:**
+   - `api-contract`: `mode` es `Type.Union([Type.Literal('client'), Type.Literal('direct')])`, dentro del objeto `perStore` estricto (`additionalProperties: false`).
+   - Núcleo, al escribir (`validatePatch`): la tienda se valida contra la lista de conectores que tienen `launchModes` (como `mirrored`), y el modo con `typeof mode === 'string'` y `launchModes.some((m) => m.id === mode)`; nunca con `in` ni buscando en un objeto por clave.
+   - Núcleo, al leer (`readSettings` y `launch.ts`): las mismas comprobaciones sobre el valor guardado; si fallan, el primero de `launchModes`.
+   - Pruebas: `mode` `"constructor"`, `"__proto__"`, `"toString"` y una tienda `"__proto__"` → `invalid-input`; el mismo valor guardado a mano en `settings` → se lee como `client`.
 
 #### Supuestos de GOG (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
 
@@ -3307,7 +3433,7 @@ Fixtures **inventadas**: IDs de producto ficticios (`1000000001`, `1000000002`�
 - **G10:** el entrecomillado de Node (libuv) es la inversa de las reglas del CRT de Microsoft. Un juego que analice a mano su línea de órdenes podría ver otras comillas si sus argumentos las llevan; quien lea `GetCommandLineW` ve la línea tal como la vuelve a entrecomillar libuv, no la cadena original del `.info`. La prueba de BASS lo cubre en parte.
 - **G11 (sin verificar):** `spawn` de un ejecutable que exige administrador falla con `EACCES` (`ERROR_ELEVATION_REQUIRED` traducido por libuv).
 - **G12 (sin verificar):** los juegos de GOG no necesitan Galaxy para arrancar (sin DRM); los que usan su SDK pueden necesitarlo para logros o multijugador.
-- **G13:** `GalaxyClient.exe /command=runGame /gameId=<id> /path="<ruta>"` arranca un juego. Solo foros de GOG y de Lutris. No se usa salvo que el usuario elija (b) o (c) en el punto 11.1.
+- **G13:** `GalaxyClient.exe /command=runGame /gameId=<id> /path="<ruta>"` arranca un juego. Solo foros de GOG y de Lutris. ~~No se usa salvo que el usuario elija (b) o (c) en el punto 11.1.~~ Se usa por defecto desde el punto 12 (5-11-2026); Playnite usa la misma orden con `/launchViaAutostart` delante (supuestos GG1 a GG7 del punto 12).
 - **G14:** Galaxy no registra un esquema de URI para lanzar juegos. Hilo antiguo del foro de GOG; no se usa.
 - **G15 (sin verificar):** Beneath a Steel Sky se abre con ScummVM y una tarea con argumentos entre comillas.
 - **G16 (sin verificar):** con `detached: true`, un ejecutable de consola (DOSBox) puede arrancar sin ventana de consola visible. Si pasa, decisión aparte con el auxiliar de Go y `CREATE_NEW_CONSOLE`; nunca un intérprete de órdenes.
@@ -3457,7 +3583,7 @@ Fuentes consultadas el 22 de octubre de 2026: [GameFinder, GOG Galaxy](https://g
   - Es la misma forma que Steam.
 - **`play` no cambia** (decisión 76): `exec` directo.
 - **Ubicación nueva** (`locations`), `gog-galaxy-client` (`launcher`): `{ kind: 'registry-value', hive: 'HKLM', key: 'SOFTWARE\\GOG.com\\GalaxyClient\\paths', value: 'client', view: '32' }`, la carpeta del cliente según Playnite (supuesto GA9).
-  - ~~Efecto secundario: la regla 5 de la 40 permite un `exec` también dentro de las ubicaciones `launcher`. Se acepta, porque el conector nunca lo construye.~~ **Revisado tras el auditor (A1):** la carpeta de Galaxy incluye su biblioteca por defecto, así que esa ampliación dejaba lanzar cualquier `.exe` de otros juegos. Se decide: las ubicaciones `launcher` **no amplían** el confinamiento del `exec`; el núcleo (`checkSpec`) solo acepta `executable` y `cwd` dentro de `installPath` de la propiedad (revisa la regla 5 de la 40). Las ubicaciones `launcher` siguen sirviendo para comprobar que un cliente existe y para las URI. Si un día se lanza a través de Galaxy (punto 11.1 de la 76), hará falta una regla propia con el ejecutable exacto del cliente, en una decisión nueva.
+  - ~~Efecto secundario: la regla 5 de la 40 permite un `exec` también dentro de las ubicaciones `launcher`. Se acepta, porque el conector nunca lo construye.~~ **Revisado tras el auditor (A1):** la carpeta de Galaxy incluye su biblioteca por defecto, así que esa ampliación dejaba lanzar cualquier `.exe` de otros juegos. Se decide: las ubicaciones `launcher` **no amplían** el confinamiento del `exec`; el núcleo (`checkSpec`) solo acepta `executable` y `cwd` dentro de `installPath` de la propiedad (revisa la regla 5 de la 40). Las ubicaciones `launcher` siguen sirviendo para comprobar que un cliente existe y para las URI. Si un día se lanza a través de Galaxy (punto 11.1 de la 76), hará falta una regla propia con el ejecutable exacto del cliente, en una decisión nueva. (Hecho en el punto 12 de la 76, 5-11-2026, por encargo de añadirlo ahí.)
 - La web pinta «Instalar» y, al pulsar, «Abriendo GOG Galaxy…» (`game.installing` con `{store}`).
 
 #### 8. Manifiesto y contrato (`contractVersion` sigue en 1)
@@ -4389,10 +4515,10 @@ export type WizardStep =
       url: string;
       /** https, host in authHosts, no query or fragment; matched on origin and path. Reached by navigation (ADR 82, point 3 c). */
       doneUrl: string;
-      /** ADR 82, point 3 b: with "document-json", query allowed and exact match. */
+      /** ADR 82, point 3 b: with "document-json", query allowed and exact match. (retirado el 5-11-2026, ver la 82) */
       captureUrl: string;
       /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. ADR 82: `source`, same for every field. */
-      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[]; // (retirado el 5-11-2026, ver la 82)
     };
 
 export type WizardInput =
@@ -4426,7 +4552,7 @@ export interface EmbeddedLogin {
     req: {
       title: string; startUrl: string; doneUrl: string; captureUrl: string;
       allowedHosts: readonly string[];
-      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; maxLength: number }[]; // source: ADR 82
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; maxLength: number }[]; // source: ADR 82 // (retirado el 5-11-2026, ver la 82)
     },
     signal: AbortSignal,
   ): Promise<
@@ -4440,7 +4566,7 @@ export interface EmbeddedLogin {
 
 - **Por qué un tipo de paso y no que el conector abra la ventana:** las llamadas al conector tienen 30 s (decisión 74) y un login dura minutos. Además, el conector no hace E/S propia (decisión 40): solo describe la ventana, y la abren el núcleo y la plataforma.
 - **Motor de asistentes (`packages/core/src/wizards.ts`):**
-  - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento (revisado en la 82: consulta en `captureUrl` con `document-json`; `url` y `doneUrl` con el mismo origen y ruta → `internal`); `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión.
+  - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento (revisado en la 82: consulta en `captureUrl` con `document-json`; `url` y `doneUrl` con el mismo origen y ruta → `internal`); `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión. (retirado el 5-11-2026, ver la 82)
   - **La web** pinta el paso y su botón envía `submit` con `{ kind: 'continue' }`; la API no cambia (el cuerpo sigue admitiendo solo `continue` y `fields`). El núcleo entonces:
     1. incrementa la época de la tienda (77, A2);
     2. llama a `EmbeddedLogin.run` con `allowedHosts` = `authHosts` **del manifiesto**, nunca del paso; con el título traducido; y con una señal que se aborta con `DELETE /api/wizards/:id`, al abrir otro asistente de la misma tienda o a los **10 minutos**. Mientras espera, la sesión del asistente no caduca. **Revisado en el punto 18, M2:** `AbortController` en la sesión, `busy` hasta el fin de `submit` y comprobación de sesión y época antes de llamar al conector;
@@ -4693,7 +4819,7 @@ Sin críticos. **Se aceptan todos los hallazgos.** Lo que sigue **prevalece sobr
   - antes de llamar al conector con los valores capturados, el núcleo comprueba que `sessions.get(id) === s` y que la época de la tienda no ha cambiado desde el paso 1; si no, `rejected` y los valores se descartan sin llegar al conector.
   - Pruebas: `DELETE`, `cancelStore` y apagado durante la espera → la señal se aborta; captura que llega después de `cancelStore` o con la época cambiada → `rejected` y `submit` del conector no se llama.
 - **M3 (medio). Cuándo y qué se ejecuta.** Revisa «Flujo» y «Guion fijo» del punto 5:
-  - (Revisado en la 82, puntos 3 y 13 M1: `done` por navegación y, con `document-json`, coincidencia exacta con `captureUrl`.) `ExecuteScript` solo se llama tras haber completado la carga en `doneUrl` (máquina de estados: `start` → `done` → `capture`; no se salta estados) y solo si `Source()` está en el origen y la ruta de `captureUrl`, **comprobado antes de cada reintento**; si la página se ha ido a otra ruta, no se ejecuta;
+  - (Revisado en la 82, puntos 3 y 13 M1: `done` por navegación y, con `document-json`, coincidencia exacta con `captureUrl`.) `ExecuteScript` solo se llama tras haber completado la carga en `doneUrl` (máquina de estados: `start` → `done` → `capture`; no se salta estados) y solo si `Source()` está en el origen y la ruta de `captureUrl`, **comprobado antes de cada reintento**; si la página se ha ido a otra ruta, no se ejecuta; (retirado el 5-11-2026, ver la 82)
   - **nunca** `AddScriptToExecuteOnDocumentCreated`;
   - el resultado bruto de `ExecuteScript` se limita a **64 KiB**; de él solo se aceptan cadenas en los nombres pedidos;
   - riesgo aceptado: el valor lo controla la página de Ubisoft. Una página manipulada, como mucho, haría que se conecte **otra cuenta**; no da acceso a nada del equipo.
@@ -5089,9 +5215,9 @@ Fuentes consultadas el 23 de octubre de 2026: [Lutris, `services/ea_app.py`](htt
 
 Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado no cambia (se repite el paso 1 de su prueba manual, punto 10).
 
-**a) Modo de captura `document-json`.**
+**a) Modo de captura `document-json`.** (retirado el 5-11-2026, ver la 82)
 
-- Contrato: cada campo de `capture` admite `source?: 'local-storage' | 'document-json'`, por defecto `'local-storage'` (lo de hoy). Con `'document-json'`, `storageKeys` va vacío o ausente; con `'local-storage'`, de 1 a 3 claves como hoy. Todos los campos de un paso usan el mismo `source`. Lo mismo en el puerto `EmbeddedLogin` y en el protocolo del auxiliar (`"source"` en cada campo).
+- Contrato: cada campo de `capture` admite `source?: 'local-storage' | 'document-json'`, por defecto `'local-storage'` (lo de hoy). Con `'document-json'`, `storageKeys` va vacío o ausente; con `'local-storage'`, de 1 a 3 claves como hoy. Todos los campos de un paso usan el mismo `source`. Lo mismo en el puerto `EmbeddedLogin` y en el protocolo del auxiliar (`"source"` en cada campo). (retirado el 5-11-2026, ver la 82)
 - **Segundo guion fijo**, constante en Go, con los parámetros como literal JSON de `json.Marshal` (igual que el primero):
   - toma el `textContent` del primer `pre` hijo de `body` si existe (Chromium pinta así un documento JSON, supuesto EAA3) y, si no, `document.body.textContent`;
   - si ese texto pasa de 64 KiB, devuelve todo a `null`;
@@ -5100,10 +5226,10 @@ Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado n
   - devuelve un objeto con los nombres pedidos y nada más.
 - No lee cookies, `localStorage`, formularios ni pulsaciones. Siguen el límite de 64 KiB del resultado, la comprobación de `Source()` antes de cada `ExecuteScript` y los reintentos de 500 ms durante 10 s (80, M3).
 
-**b) `captureUrl` con consulta, solo en `document-json`.**
+**b) `captureUrl` con consulta, solo en `document-json`.** (retirado el 5-11-2026, ver la 82)
 
-- El núcleo (`wizards.ts`) y el auxiliar aceptan consulta en `captureUrl` solo si el paso usa `document-json`; con `local-storage` sigue sin consulta. Fragmento, nunca. `doneUrl` sigue sin consulta.
-- Con `document-json`, la coincidencia con `captureUrl` (al llegar a ella y antes de cada `ExecuteScript`) es **exacta** en esquema, host, ruta y consulta, no solo en origen y ruta. Motivo: en EA la ruta `/connect/auth` también aparece durante el login con otro `client_id`; solo se lee la página a la que navegó el propio auxiliar.
+- El núcleo (`wizards.ts`) y el auxiliar aceptan consulta en `captureUrl` solo si el paso usa `document-json`; con `local-storage` sigue sin consulta. Fragmento, nunca. `doneUrl` sigue sin consulta. (retirado el 5-11-2026, ver la 82)
+- Con `document-json`, la coincidencia con `captureUrl` (al llegar a ella y antes de cada `ExecuteScript`) es **exacta** en esquema, host, ruta y consulta, no solo en origen y ruta. Motivo: en EA la ruta `/connect/auth` también aparece durante el login con otro `client_id`; solo se lee la página a la que navegó el propio auxiliar. (retirado el 5-11-2026, ver la 82)
 
 **c) Llegada a `doneUrl` por navegación.**
 
@@ -5114,7 +5240,7 @@ Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado n
   3. sin armar, ninguna carga cuenta. `atDone` se sustituye por esta regla (la cubre) y su prueba se adapta.
 - Sigue sin saltarse estados: `capture` exige `done`, y `done` exige haber navegado a `doneUrl`. La primera visita a una página con la ruta de `captureUrl` nunca se lee.
 
-**Pruebas del auxiliar (Go):** guion `document-json` construido con `json.Marshal` (comillas, barras y saltos de línea escapados); `captureUrl` con otra consulta → no se captura; texto en `pre` y sin `pre`; texto de más de 64 KiB → `capture-missing`; JSON que es una lista, texto o número, y `access_token` ausente o que no es texto → `capture-missing`; campos con `source` mezclado, `storageKeys` con `document-json` o consulta en `captureUrl` con `local-storage` → `bad-request`; armado por un `NavigationStarting` con `IsRedirected` → la siguiente carga, en otro URL, lleva a `captureUrl`; un `NavigationStarting` cancelado por el filtro no arma; sin armar no se captura; el recorrido de Ubisoft (`/ready` con 404 y después `/login`) sigue capturando.
+**Pruebas del auxiliar (Go):** guion `document-json` construido con `json.Marshal` (comillas, barras y saltos de línea escapados); `captureUrl` con otra consulta → no se captura; texto en `pre` y sin `pre`; texto de más de 64 KiB → `capture-missing`; JSON que es una lista, texto o número, y `access_token` ausente o que no es texto → `capture-missing`; campos con `source` mezclado, `storageKeys` con `document-json` o consulta en `captureUrl` con `local-storage` → `bad-request`; armado por un `NavigationStarting` con `IsRedirected` → la siguiente carga, en otro URL, lleva a `captureUrl`; un `NavigationStarting` cancelado por el filtro no arma; sin armar no se captura; el recorrido de Ubisoft (`/ready` con 404 y después `/login`) sigue capturando. (retirado el 5-11-2026, ver la 82)
 
 #### 4. Sesión y errores (decisión 46, mínimo de este corte)
 
@@ -5190,7 +5316,7 @@ Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado n
 
 - **Auxiliar (Go):** las del punto 3.
 - **Plataforma:** `embedded-login.ts` pasa `source` al auxiliar y valida la respuesta igual que hoy; un campo con `source` desconocido → `failed`.
-- **Núcleo (`wizards.ts`):** `document-json` con `storageKeys` → `internal`; consulta en `captureUrl` con `local-storage` → `internal`; `source` mezclado → `internal`; consulta en `captureUrl` con `document-json` → aceptado; el resto de pruebas de la 80 sigue pasando.
+- **Núcleo (`wizards.ts`):** `document-json` con `storageKeys` → `internal`; consulta en `captureUrl` con `local-storage` → `internal`; `source` mezclado → `internal`; consulta en `captureUrl` con `document-json` → aceptado; el resto de pruebas de la 80 sigue pasando. (retirado el 5-11-2026, ver la 82)
 - **`connectors/ea`:**
   - asistente: paso exacto (`url`, `doneUrl`, `captureUrl`, `capture`); con `embedded`, consulta de identidad con la cabecera como `Secret`; `set` de los dos valores con `accessTokenExpiresAt = now + 50 min`; nombre saneado o ausente; 401 → `auth.invalid`; token con otra forma → rechazado por el núcleo antes de llegar al conector;
   - sesión: `status` `connected` antes de la hora y `expired` después; `listLibrary` caducado → `auth.expired` **sin ninguna petición**; sin token → `auth.required`; 401, 403, 429 y error de red;
@@ -5253,12 +5379,12 @@ Sin críticos. Lo que sigue prevalece sobre los puntos 2 a 9 donde no coincida.
 - **M1 (medio). Armado ligado a su navegación** (punto 3 c):
   - el armado guarda el `NavigationId` del `NavigationStarting` que armó; solo cuenta el `NavigationCompleted` con ese mismo id (otro `NavigationCompleted` no pasa a `done`);
   - «si son la misma» compara `doneUrl` y `captureUrl` del pedido, no el URL al que se llegó;
-  - con `document-json`, el estado `capture` empieza solo con el `NavigationCompleted` de la navegación a `captureUrl` que lanzó el auxiliar tras `done`; cualquier `NavigationStarting` del documento principal durante `capture` da `capture-missing`;
+  - con `document-json`, el estado `capture` empieza solo con el `NavigationCompleted` de la navegación a `captureUrl` que lanzó el auxiliar tras `done`; cualquier `NavigationStarting` del documento principal durante `capture` da `capture-missing`; (retirado el 5-11-2026, ver la 82)
   - prueba de Go para cada regla.
 - **M2 (medio). `blockedHosts` sin URL.** Para un URL sin host (por ejemplo `nucleus:rest#access_token=…`), `blockedHosts` guarda solo el esquema con `:` (`nucleus:`) o nada; nunca el URL ni el fragmento. Pruebas: Go (navegación a `nucleus:rest#access_token=…` → en `blockedHosts` no aparece el token) y plataforma (una entrada sin forma de host se descarta).
 - **M3 (medio). Confirmación del usuario** sobre la contraseña en la ventana: ya dada (punto 12).
 - **Bajos:**
-  - remisiones en la 80 a este cambio: flujo del punto 5 (llegada a `doneUrl`), TS del punto 6 (`doneUrl`, `captureUrl` y `source?: "local-storage" | "document-json"`), validación del paso, `ExecuteScript` del punto 18 y `atDone` del punto 19;
+  - remisiones en la 80 a este cambio: flujo del punto 5 (llegada a `doneUrl`), TS del punto 6 (`doneUrl`, `captureUrl` y `source?: "local-storage" | "document-json"`), validación del paso, `ExecuteScript` del punto 18 y `atDone` del punto 19; (retirado el 5-11-2026, ver la 82)
   - el núcleo rechaza (`internal`) un paso cuyo `url` y `doneUrl` tienen el mismo origen y ruta (armaría en la primera navegación);
   - `captureUrl` se compara tras `url.Parse` por `Scheme`, `Host` en minúsculas, `Path` y `RawQuery` exactos;
   - la constante `ORIGIN_JS_SDK` es un riesgo de condiciones de uso (identifica un cliente de EA), como el `Ubi-AppId` de la 80; se declara así en la guía y en «Riesgos principales»;
@@ -5295,7 +5421,7 @@ Sin críticos. Lo que sigue prevalece sobre los puntos 2 a 9 donde no coincida.
   - Ludiary no ve la contraseña ni la sesión de Google o de EA: viven en el navegador del usuario.
 - **Revisión de la 43 para EA, retirada:** la contraseña ya no se escribe en una ventana que controla Ludiary, sino en el navegador del usuario. Para EA vuelve a valer la 43 tal cual (como Steam, GOG y Epic). La confirmación expresa del punto 12 y la mitigación M3 del punto 13 quedan sin objeto para EA.
 - **Auxiliar (punto 3):**
-  - el modo de captura `document-json`, su segundo guion y `captureUrl` con consulta **quedan sin uso por ahora**. Se conservan, con sus pruebas; si ninguna tienda los usa, son candidatos a retirarse en su propia decisión, con revisión del `auditor`;
+  - el modo de captura `document-json`, su segundo guion y `captureUrl` con consulta **quedan sin uso por ahora**. Se conservan, con sus pruebas; si ninguna tienda los usa, son candidatos a retirarse en su propia decisión, con revisión del `auditor`; **retirados el 5-11-2026 por decisión del usuario (ver más abajo)**;
   - la llegada a `doneUrl` por navegación, con el armado ligado al `NavigationId` (punto 3 c y M1 del punto 13), **sigue aplicando a Ubisoft**, igual que M2 (`blockedHosts` sin URL).
 - **Pruebas** (revisa el punto 9 en lo del asistente): paso exacto (`url`, campo, `extract`, `pattern`, `maxLength`); con `fields`, consulta de identidad con la cabecera como `Secret`, `set` de los dos valores y nombre saneado; 401 → `auth.invalid`; web: `{"error":"login_required"}` → `wizard.paste.storeError` sin petición; JSON con `access_token`, `token_type` y `expires_in` → solo viaja el token. Las pruebas del auxiliar del punto 3 siguen.
 - **Prueba manual** (revisa los pasos 1 a 3 del punto 10): con la sesión de ea.com abierta en el navegador (con Google), abrir el enlace, copiar y pegar → «Conectado como <nombre>» (EAA13, EAA8); sin sesión, pegar el JSON de error → mensaje `storeError`. Los pasos 4 a 10 siguen; el 10 (regresión de Ubisoft) también, por el cambio del auxiliar ya hecho.
@@ -5310,7 +5436,7 @@ Sin críticos ni altos. Lo probado por el usuario el 23 y 24-10 se mantiene. Cor
 - **Bajo. `webview-cleanup-failed`** (80, punto 18 A3): el ejecutable pasa ya el registro al puerto `EmbeddedLogin`; solo se escribe el código.
 - **Bajo. Fallar cerrado ante un pánico** (80, punto 18 A1): la decisión de navegación cancela la navegación antes de propagar el pánico.
 - **Bajo. Portadas de EA:** el host real visto el 24-10-2026 es `app-images.ea.com` (además de `drop-assets.ea.com`); está en `mediaHosts` y en la CSP. EAA11 queda cerrado con ese host.
-- **Pendiente de decidir:** retirar el modo `document-json` del auxiliar, sin uso desde el punto 14 (no es explotable hoy: solo lo activa un conector del repositorio y los hosts siguen limitados a `authHosts`).
+- **Decidido el 5-11-2026 por el usuario: se retira el modo `document-json`** del auxiliar, de `wizards.ts` y de los contratos (`source` desaparece de `capture`; `captureUrl` vuelve a no admitir consulta; el auxiliar ignora un `source` desconocido). Se conserva `embedded-login` con `local-storage` para Ubisoft. Los puntos 3 a y 3 b y la mitigación M1 quedan sin efecto.
 
 #### Supuestos de la cuenta de EA (verificar en la prueba manual; los marcados con «sin verificar» no tienen más fuente que la indicada)
 
@@ -6971,7 +7097,7 @@ Se aplica **A**. El lanzador estable es un ejecutable aparte del auxiliar de ban
 2. **Petición:** `GET https://api.github.com/repos/chamanRMA/Ludiary/releases/latest` con `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2026-03-10` (GH7), `User-Agent: Ludiary/<versión>` (GH4) e `If-None-Match` con la ETag guardada. Sin token, sin cookies y sin nada más. El repositorio es una constante de compilación (`__LUDIARY_UPDATE_REPO__`), no un ajuste. Solo la variante de pruebas admite `LUDIARY_UPDATE_FEED` (se añade a `TEST_HOOK_VARS`, 65).
 3. **Respuesta:** tiempo máximo 15 s y cuerpo de 1 MiB como mucho.
    - `304`: nada nuevo.
-   - `200`: se exige `draft: false`, `prerelease: false`, `tag_name` = `v<semver>`, y dos recursos con nombre exacto `ludiary-update.json` y `ludiary-update.json.sig` en estado `uploaded`, de 64 KiB como mucho. Se guardan la ETag y el resultado en el ajuste interno `updates.cache`. Si la versión de la etiqueta no es mayor que la actual: `up-to-date`.
+   - `200`: se exige `draft: false`, `prerelease: false`, `tag_name` = `v<semver>` (*revisado en el punto 22: `v<semver>` o `<semver>`*), y dos recursos con nombre exacto `ludiary-update.json` y `ludiary-update.json.sig` en estado `uploaded`, de 64 KiB como mucho. Se guardan la ETag y el resultado en el ajuste interno `updates.cache`. Si la versión de la etiqueta no es mayor que la actual: `up-to-date`.
    - `404` (sin versiones publicadas): `up-to-date`.
    - `403` o `429` con `x-ratelimit-remaining: 0` o `retry-after`: el siguiente intento espera hasta `x-ratelimit-reset` o `retry-after`, y como mínimo 1 h, en silencio.
    - Otro error o sin red: `check-failed` con su código, y se reintenta en el siguiente ciclo.
@@ -7043,7 +7169,7 @@ Ajuste `updates.mode` (clave-valor, sin migración):
    - Sale con 0 (servidor arrancado, comprobación de estado superada y enlace obtenido, 64): `trial: false`, se borran las `app-*` que no sean `active` ni `previous` y se borra el instalador.
    - Otro código o tiempo agotado: vuelta atrás (punto 8).
    - El usuario ve unos segundos la ventana de progreso de Inno (en su idioma) y luego se abre la web como siempre.
-6. **«Reiniciar y actualizar»** (bandeja y Acerca de): el servidor lanza en segundo plano `<raíz>\Ludiary.exe --after-stop` y se para. El lanzador estable con `--after-stop` ejecuta `--stop` (espera a que se libere el cerrojo, 15 s) y sigue como en el paso 1. Cuando exista la detección de procesos de la 55, el botón se desactiva con una partida en curso (`409 update.game-running`). Hasta entonces, el diálogo avisa de que los juegos abiertos siguen abiertos.
+6. **«Reiniciar y actualizar»** (bandeja y Acerca de): el servidor lanza en segundo plano `<raíz>\Ludiary.exe --after-stop` y se para. El lanzador estable con `--after-stop` ejecuta `--stop` (espera a que se libere el cerrojo, 15 s) y sigue como en el paso 1. Cuando exista la detección de procesos de la 55, el botón se desactiva con una partida en curso (`409 update.game-running`). Hasta entonces, el diálogo avisa de que los juegos abiertos siguen abiertos. *Revisado en la decisión 92: el botón no se desactiva; al pulsarlo con un juego abierto responde `409 update.game-running` y la actualización queda lista para el próximo arranque.*
 7. **Nunca:** instalar con el servidor en marcha; instalar al apagar Windows; instalar al pulsar «Salir» sin preguntar (15.4). Los juegos lanzados son procesos independientes (URI a través de la tienda o `exec` separado, 72 y 76): parar el servidor no los cierra.
 8. **Disposición en plano (instalaciones previas a esta decisión):** el instalador nuevo borra con `[InstallDelete]` `{app}\native`, `{app}\web`, `{app}\bin`, `{app}\licenses` y `{app}\version.txt`, y el `Ludiary.exe` viejo queda sustituido por el lanzador estable. `[UninstallDelete]` añade `{app}\app-*` y `{app}\versions.json`. El servidor viejo responde a `--stop` porque es el mismo SEA.
 9. **Sin `versions.json` o inválido:** el lanzador estable usa la `app-*` de versión más alta. Sin ninguna, muestra «Ludiary está dañado; vuelve a instalarlo», desde un pequeño fichero de mensajes es/en incrustado y elegido por el idioma del sistema (invariante 6).
@@ -7376,6 +7502,15 @@ Cambios respecto al texto de los puntos 1 a 18 (para que el arquitecto los confi
 - **Descarga:** un recurso del manifiesto con estado distinto de 200 es `update.download-failed`, no `manifest-invalid`. El barrido de carpetas conserva `updates/<to>` en estado `applying`.
 - **Manifiesto:** Go y Node rechazan (`format`) una clave que coincida con una conocida solo salvo mayúsculas (`encoding/json` no distingue mayúsculas, JavaScript sí); dos vectores nuevos.
 
+**Carrera en la instalación manual (5-11-2026, `launcher.log` de una instalación de desarrollo sobre la 0.1.0).**
+
+- **Síntoma:** el registro mostraba un arranque normal con navegador (PID 19984) justo antes de la prueba; la prueba (`--trial`) salía con «a server was already answering» dos veces y Go volvía atrás. Los datos quedaron intactos.
+- **Causa:** `--commit-update` esperaba al mutex de Setup sondeando cada 250 ms y solo entonces tomaba `apply.lock`. La casilla «Abrir Ludiary» (`[Run]` postinstall, sin argumentos) se ejecuta al pulsar Terminar, cuando Setup aún está vivo. Ese lanzador esperaba al mutex con el mismo sondeo (`waitFree`) y, al desaparecer, **no retenía** el cerrojo: arrancó la versión activa de entonces, la antigua, porque `versions.json` aún no se había confirmado, y su servidor siguió respondiendo. La prueba de la versión nueva lo encontró en marcha y falló, como está diseñado. Los dos arranques de prueba (21276 y 21116) no son una segunda carrera: son los dos intentos del punto 8 (M4), que repite el arranque cuando falla por código 1.
+- **Corrección (Go, `update.go`):** (1) `--commit-update` toma `apply.lock` **primero** y lo retiene mientras espera a que Setup salga y durante toda la prueba; (2) todo arranque de acceso directo espera a que no haya Setup ni cerrojo ocupado y **retiene** el cerrojo mientras arranca (`waitAndHold`, que sustituye a `waitFree`), así que nunca se intercala con una confirmación o una aplicación; el código 20 reutiliza el cerrojo ya retenido; (3) el arranque que lanza «Abrir Ludiary» queda detrás de la prueba y abre el navegador con la versión nueva ya confirmada. La actualización silenciosa (`/UPDATE=1`) no cambia de orden: el cerrojo de la cadena de relevos ya cubría el solape, y un acceso directo pulsado mientras tanto confirma él mismo la carpeta completa con `applying` (M2) o espera. No se añade parada previa del servidor antes de la prueba.
+- **Tope y respaldo sin cerrojo (auditoría):** el acceso directo espera hasta `shortcutWait` = 10 minutos (más que el peor caso de una confirmación: 120 s de Setup, dos pruebas de 120 s, 20 s de parada y 120 s de vuelta atrás); `--commit-update` espera igual para tomar el cerrojo, y 120 s para que Setup salga. Si aun así se agota, `start()` **no** confirma, no hace prueba y no pide aplicar: arranca la versión activa sin `--from-launcher`. Las pruebas usan una copia de la configuración por proceso simulado.
+- **Pruebas (Go):** `TestShortcutDuringAManualInstallWaitsForTheCommitAndTheTrial` (cinco rondas; falla con el código anterior: «the old version must never run») y `TestShortcutDuringASilentUpdateWaitsToo`.
+- **«No copy of the database for this update» es lo esperado** en una instalación manual: la copia previa (`pre-migration-…-update_<from>_to_<to>`) solo la hace el lanzador interno al pedir el código 20 (actualización descargada). Una instalación a mano no pasa por ahí, así que la vuelta atrás no tiene copia que restaurar y deja la base como está. Es correcto si la versión nueva no llegó a migrar. Si migró y luego falló, la base queda más nueva que la antigua (error 14); entonces vale la copia `pre-migration-…` que hace el migrador (Ajustes > Copias de seguridad) o el aviso de bajada de versión (M8). Queda anotado como límite conocido.
+
 **W4 (parcial).** Comprobado el 4-11-2026: la documentación de Inno (`SetupMutex`) dice que Setup crea el mutex al arrancar si no existe y que el ejemplo usa también la forma `Global\`; una prueba con un instalador sonda (Inno 6, por usuario, `Uninstallable=no`) confirmó que `OpenMutex` con el nombre simple lo ve desde otro proceso de la misma sesión mientras Setup trabaja y que desaparece al terminar. Observado: el mutex aparece **después** de `InitializeSetup`, no al principio. Sin verificar y pendiente de la prueba manual: que Inno sustituya `{app}\Ludiary.exe` recién salido (W3), el idioma que usa Inno en modo silencioso (la documentación no lo dice) y el comportamiento con dos clics durante la instalación sobre el instalador real.
 
 **Pendiente.** Exportación de registros (35): la web aún no la tiene (`exportLogs` no disponible), así que el registro de Inno (`updates/<v>/install.log`, M6) no entra todavía en ninguna exportación; el `install.log` se borra con la carpeta tras una prueba superada. Detección de partida en curso (55) para `update.game-running`. Flujo de CI (`release.yml`; diseñado en el punto 21). Guía manual `docs/manual-tests/updater.md` y `docs/release.md`. Authenticode y `WinVerifyTrust` (punto 11.7). Prueba del ciclo completo con el instalador real de Inno y los dos clics (punto 16, 18).
@@ -7395,7 +7530,7 @@ Encargo del usuario: «Por defecto debería ser ir al repo validar si hay una nu
    - **Solo tras verificar la firma.** Hoy `available` sale de `releases/latest` sin el manifiesto. Cambia: cuando `check()` encuentra una versión mayor que no esté ya verificada, descarga el manifiesto y su `.sig` (los mismos dos recursos de 64 KiB y el mismo cliente; no gastan cupo de la API, van a `github.com` y la CDN) y ejecuta `verifyManifest` con `badVersions: []` (una versión mala se verifica igual; la marca `latestFailedBefore` sigue saliendo de `versions.json`). Se extrae de `download()` la parte «bajar manifiesto y firma y verificar» a una función interna que usan los dos; `download()` sigue verificando otra vez antes de bajar el instalador, y Go una tercera antes de ejecutar (punto 7.3).
    - `updates.cache` gana `verifiedVersion`; `readCache` solo lo conserva si es una versión válida e igual a `release.version`. Una versión ya verificada no se vuelve a bajar en cada ciclo.
    - El estado `available` (y `latest`, y la entrada «Hay una versión nueva» de la bandeja, que sale de `status()`) exige `verifiedVersion === release.version`. Si la verificación falla: `lastError = "manifest-invalid"` (o `manual-required` con `schema` distinto), estado `failed`, sin aviso; Acerca de lo muestra como hoy. Fallo de red al bajar el manifiesto: `check-failed`, se reintenta en el ciclo siguiente.
-   - **Enlace a las notas de la versión:** `releaseNotesUrl(version)` de `apps/web/src/app/updates.ts`, que ya existe: `https://github.com/chamanRMA/Ludiary/releases/tag/v<versión>`, con la versión validada por el contrato (`^\d+\.\d+\.\d+$`), y se abre fuera (`target="_blank"`, `rel="noopener noreferrer"`; la SPA no pinta el texto remoto, CSP de la 68). **No se usa `html_url` de la respuesta**: para una versión publicada es la misma página, pero componerla no depende de un campo de la red, no necesita validar prefijos y vale igual para el banner del punto 4, cuando ya no hay respuesta guardada de esa versión. *Atajo anotado:* el repositorio está escrito en la web y en `UPDATE_REPO` de `build.mjs`; si un día se compila con otro repositorio, se pasa al contrato.
+   - **Enlace a las notas de la versión:** `releaseNotesUrl(version)` de `apps/web/src/app/updates.ts`, que ya existe: `https://github.com/chamanRMA/Ludiary/releases/tag/v<versión>` (*revisado en el punto 22: `tag/<tagFor(versión)>`, sin «v» desde la 0.1.2*), con la versión validada por el contrato (`^\d+\.\d+\.\d+$`), y se abre fuera (`target="_blank"`, `rel="noopener noreferrer"`; la SPA no pinta el texto remoto, CSP de la 68). **No se usa `html_url` de la respuesta**: para una versión publicada es la misma página, pero componerla no depende de un campo de la red, no necesita validar prefijos y vale igual para el banner del punto 4, cuando ya no hay respuesta guardada de esa versión. *Atajo anotado:* el repositorio está escrito en la web y en `UPDATE_REPO` de `build.mjs`; si un día se compila con otro repositorio, se pasa al contrato.
    - **Cuándo se ve:** `showPrompt(s)` (función pura nueva en `updates.ts`) = `mode === "notify"` y no `snoozed` y (`state === "available"` sin `latestFailedBefore`, o `state === "ready"`). Una versión que ya falló no avisa: se reintenta desde Acerca de, con la confirmación de M4 que ya existe. En `auto` no hay aviso: se descarga sola y se ve el banner del punto 4.
    - **Aplicar:** `window.confirm` con `updates.restartConfirm` (ya existe: «Ludiary se reiniciará… los juegos abiertos seguirán abiertos»). Si el estado es `available`, `POST /api/updates/download` y el aviso muestra la barra de progreso (sondeo cada 2 s con `isBusy`, como `UpdatesPanel`); al pasar a `ready`, la web llama a `POST /api/updates/restart` y `setRestarting()`, el flujo actual de «Reiniciar y actualizar». Si ya estaba `ready`, va directo a `restart`. Si la descarga acaba en `failed`, el aviso muestra el error con `errorKey` y no reinicia. Si se cierra la pestaña a medias, la versión queda `ready`: se instala en el próximo arranque en frío (punto 7) y el aviso vuelve a ofrecer Aplicar.
    - **Más tarde:** `PUT /api/updates/settings { later: true }`. El servidor guarda **en memoria** `snooze = { version, until: now + 24 h }` (no en la base). `status()` devuelve `snoozed: true` mientras `latest` sea esa versión y no haya pasado el plazo. Vuelve a avisar en el siguiente arranque del servidor, tras 24 h (el mismo ritmo que la comprobación) o si sale una versión más nueva. Motivo de las 24 h: el servidor puede pasar días en la bandeja sin reiniciarse.
@@ -7453,7 +7588,7 @@ Se reutilizan `updates.notes`, `updates.restartConfirm`, `updates.state.download
 - `documentalista`: guía de privacidad (comprobación activa por defecto, qué sale, cómo desactivarla) y guía de actualizaciones (los tres botones y el banner).
 - Coste: bajo (unas 150 líneas con pruebas).
 
-#### 21. Publicación semiautomática: borrador desde la CI y firma en local (4 de noviembre de 2026; concreta 11.3 y 11.6 con 15.3 (a); revisa 11.1 y 11.6)
+#### 21. Publicación semiautomática: borrador desde la CI y firma en local (4 de noviembre de 2026; concreta 11.3 y 11.6 con 15.3 (a); revisa 11.1 y 11.6; forma de la etiqueta revisada en el punto 22)
 
 Encargo del usuario (modo semiautomático): al fusionar un PR en `main`, GitHub Actions compila en `windows-latest`, genera el instalador y `ludiary-update.json` sin firmar y crea una versión en **borrador** `v<versión>` con la descripción del PR como notas. El mantenedor firma en su equipo con `release:sign`, sube la `.sig` y publica. La clave privada nunca va a GitHub. Versión según la etiqueta del PR (`release:patch`, `release:minor`, `release:major`); sin etiqueta, no hay versión.
 
@@ -7485,7 +7620,7 @@ Encargo del usuario (modo semiautomático): al fusionar un PR en `main`, GitHub 
    | **A. La última etiqueta `v*` más la subida; solo se etiqueta** (elegida) | Ningún commit del robot en `main`: sin choque con la protección de la rama, sin bucles de `push` y sin `contents: write` en `plan`. Los guiones ya aceptan `LUDIARY_VERSION` (`version()` de `release-lib.mjs`). | `package.json` no dice la versión publicada (la dice la etiqueta). |
    | B. `version` de `apps/desktop/package.json`, subida con un commit | La versión está en el árbol. | El robot empuja a `main` (protección de rama, un `push` más que vuelve a disparar el flujo y permisos de escritura antes de compilar). |
 
-   - **Base:** la mayor versión entre las etiquetas `refs/tags/vX.Y.Z` del repositorio (`gh api --paginate repos/{repo}/git/matching-refs/tags/v`). Solo valen las que cumplen `^v\d+\.\d+\.\d+$`; el resto se ignoran. Sin ninguna, la base es `0.0.0`. La etiqueta de un borrador no existe hasta publicarlo (supuesto CI2), así que un borrador sin publicar no consume versión.
+   - **Base** (*revisada en el punto 22: entre `vX.Y.Z` y `X.Y.Z`, y la etiqueta nueva la da `tagFor`*): la mayor versión entre las etiquetas `refs/tags/vX.Y.Z` del repositorio (`gh api --paginate repos/{repo}/git/matching-refs/tags/v`). Solo valen las que cumplen `^v\d+\.\d+\.\d+$`; el resto se ignoran. Sin ninguna, la base es `0.0.0`. La etiqueta de un borrador no existe hasta publicarlo (supuesto CI2), así que un borrador sin publicar no consume versión.
    - **Subida:** `release:patch` da X.Y.(Z+1); `release:minor`, X.(Y+1).0; `release:major`, (X+1).0.0. Sin etiqueta `release:*`: `plan` termina en verde con «sin etiqueta release:*, no hay versión» en el resumen, y `build` y `release` se saltan. Con más de una: falla con un mensaje claro y nada más se ejecuta.
    - **PR del commit:** de la respuesta de `commits/{sha}/pulls`, el único PR con `merged_at` no nulo, `base.ref == "main"` y `merge_commit_sha == GITHUB_SHA`. Vale para fusión, *squash* y *rebase*. Si no hay ninguno (`push` directo), no hay versión.
    - **Sin commit:** `apps/desktop/package.json` se queda en `0.0.0`, la marca de las compilaciones de desarrollo (`0.0.0-proto`, `unsupported`, punto 19). La versión llega a `build` como salida de `plan`, ya validada con `^\d+\.\d+\.\d+$`, y se pasa en `env: LUDIARY_VERSION` (nunca escrita dentro de `run:`). `release-build.mjs` y `release-manifest.mjs` ya la leen de ahí. La etiqueta la crea GitHub al publicar, sobre `--target <GITHUB_SHA>`. Para una publicación a mano sin CI, el mantenedor pasa `LUDIARY_VERSION`.
@@ -7589,6 +7724,57 @@ Encargo del usuario (modo semiautomático): al fusionar un PR en `main`, GitHub 
 - **CI3 (sin verificar):** el cuerpo de una versión de GitHub admite unos 125 000 caracteres. El tope de 30 000 deja margen de sobra.
 - **CI4 (sin verificar):** Node 24 incluye corepack y sabe activar `pnpm@11` desde `packageManager`. Si no, se instala con `npm i -g pnpm@<versión de packageManager>`, sin acción de terceros.
 - **CI5 (sin verificar en el README de la imagen):** `windows-latest` (`windows-2025`) no trae Inno Setup. Hay una petición abierta en `actions/runner-images` (#11644). Si lo trajera, se usa igualmente la versión fijada.
+
+#### 22. Etiquetas sin «v» a partir de la 0.1.2, con la 0.1.1 de puente (5 de noviembre de 2026; revisa el punto 3 (forma de `tag_name`), el 21.2 (base), el 21.5, el 21.6 y el enlace a las notas del punto 20)
+
+Encargo del usuario: las etiquetas pasan de `vX.Y.Z` a `X.Y.Z`. La `v0.1.0` ya está publicada como *immutable release* y no se puede renombrar.
+
+**Lo que acepta la 0.1.0 (comprobado en el código de `main`; supuesto TV1).**
+
+- `parseLatestRelease` (`packages/runtime/src/updates/release.ts`, l. 26) rechaza cualquier `tag_name` que no empiece por `v`: `!tag.startsWith("v") || !isVersion(tag.slice(1))`. La URL de cada recurso se exige igual a `${downloadBase}/${tag}/${name}` (l. 33), así que esa parte ya vale para cualquier etiqueta.
+- `readCache` (`service.ts`, l. 147) revalida la versión guardada rehaciendo la etiqueta como `` `v${version}` ``: con una etiqueta sin «v», las URL guardadas dejarían de coincidir y la caché se descartaría en cada ciclo.
+- `releaseNotesUrl` (`apps/web/src/app/updates.ts`) compone `…/releases/tag/v<versión>`.
+- La verificación del manifiesto no mira la etiqueta: `tagVersion` es `release.version`, ya sin prefijo (TS), y en Go `verifyManifest` compara `version` con `to`, que sale de `versions.json`. El lanzador Go no compone URL ni lee etiquetas. Ni el punto 18 (M1) ni los vectores (`tag` ya es `X.Y.Z`) cambian.
+
+Consecuencia: **una 0.1.0 que lea en `releases/latest` una etiqueta `0.1.1` la da por inválida (`check-failed`) y nunca se actualiza sola**.
+
+**Decisión.**
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| A. Sin «v» desde la 0.1.1 | Corte inmediato. | Toda instalación 0.1.0 se queda sin actualizaciones para siempre: falla la comprobación y hay que reinstalar a mano. |
+| **B. Puente: la 0.1.1 sale como `v0.1.1` y ya acepta las dos formas; sin «v» desde la 0.1.2** (elegida) | La 0.1.0 se actualiza a la 0.1.1 con el código que ya lleva. Desde la 0.1.1, cualquier forma vale. Cambio pequeño y acotado. | Una versión más con «v». Una 0.1.0 que no se actualice antes de que se publique la 0.1.2 se queda atascada (ver Consecuencias). |
+| C. Seguir con «v» siempre | Ningún riesgo. | Lo que el usuario no quiere. |
+
+1. **Regla única de etiqueta.** `LAST_V_TAG = "0.1.1"`. `tagFor(version)` = `` `v${version}` `` si `version` ≤ `LAST_V_TAG`; si no, `version`. Va en `apps/desktop/scripts/release-lib.mjs` (la usan `release-plan.mjs` y `release-publish.mjs`) y, copiada con el mismo nombre y constante, en `apps/web/src/app/updates.ts` (la web no importa guiones). Las dos copias llevan una prueba con `0.1.0`, `0.1.1` y `0.1.2`.
+2. **Cálculo de la versión (`planRelease`, revisa 21.2).** `TAG` pasa a `^refs\/tags\/v?(\d+\.\d+\.\d+)$`: la base es la mayor entre `vX.Y.Z` y `X.Y.Z`. El resto (subidas, `0.0.0` sin etiquetas, etiquetas no semver ignoradas) no cambia. `planRelease` devuelve también `tag: tagFor(version)`, y `main()` escribe `tag=<tag>` en `$GITHUB_OUTPUT` y lo usa en el resumen y en el mensaje (hoy dicen `v${version}` a mano).
+3. **`release.yml`.**
+   - `plan`: `gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/" --jq '.[].ref'` (sin la `v` final, para traer las dos formas). Nueva salida `tag`.
+   - `release`: recibe `TAG` por `env:` y lo valida con `^v?[0-9]+\.[0-9]+\.[0-9]+$` y, además, que sea `VERSION` o `v$VERSION`. La comprobación de existencia mira **las dos** formas (`git/ref/tags/${VERSION}`, `git/ref/tags/v${VERSION}` y `gh release view` de ambas). `gh release create "$TAG"`. El título sigue siendo `Ludiary ${VERSION}`; el resumen dice `release:publish ${VERSION}`.
+4. **`release-publish.mjs` (revisa 21.6).** `const tag = tagFor(version)` en lugar de `` `v${version}` ``. Los mensajes de `checkDraft` usan la etiqueta. El uso sigue siendo `release:publish X.Y.Z`.
+5. **Cliente (`release.ts`, revisa el punto 3).**
+   - `tag_name` debe cumplir `^v?(\d+\.\d+\.\d+)$` (con `isVersion` sobre la captura); la versión es la captura. La regla B3 de la URL no cambia: sigue exigiendo la etiqueta **tal como llega**.
+   - `LatestRelease` gana `tag: string`. `readCache` revalida con `tag_name: typeof rel.tag === "string" ? rel.tag : \`v${rel.version}\`` (una caché escrita por la 0.1.0 no tiene `tag`, y sus etiquetas tenían «v»). Si no supera `parseLatestRelease`, se descarta como hoy.
+   - No se acepta ninguna otra forma (`V1.2.3`, `release-1.2.3`, sufijos): mismas reglas de confianza que antes.
+6. **Enlace a las notas (revisa el punto 20).** `releaseNotesUrl(version)` = `…/releases/tag/${tagFor(version)}`. Sigue sin usar `html_url`, y vale para el banner tras actualizar.
+7. **Secuencia.** El PR que implementa este punto lleva `release:patch` y da `v0.1.1` (base `v0.1.0`, `tagFor("0.1.1")` con «v»). El siguiente PR con etiqueta `release:*` da `0.1.2`, sin «v». **Antes de publicar la 0.1.2**, el mantenedor comprueba en una 0.1.0 real que se actualiza a la 0.1.1 (prueba del punto 19 que ya estaba pendiente).
+8. **`docs/release.md`** (documentalista): `vX.Y.Z` pasa a «la etiqueta (`X.Y.Z`; `v0.1.0` y `v0.1.1` son las únicas con "v")» en el resumen, en la tabla de fallos y en la publicación a mano (`gh release create X.Y.Z …`).
+
+**Motivo.** Solo el código ya publicado decide qué acepta la 0.1.0, y exige la «v». La única forma de no dejar atrás esas instalaciones sin reinstalar es que la siguiente versión aún lleve «v» y ya entienda la forma nueva. Una constante y una función compartida bastan; no hace falta guardar la etiqueta en el contrato ni en el manifiesto.
+
+**Consecuencias.**
+
+- **Para el usuario:** la 0.1.1 aún se llamará `v0.1.1` en GitHub; desde la 0.1.2, sin «v». Una instalación 0.1.0 que no llegue a actualizarse a la 0.1.1 antes de publicar la 0.1.2 verá «No se pudo comprobar» para siempre y tendrá que bajar el instalador a mano. Con la 0.1.0 publicada hace un día, se acepta; cuanto más tiempo pase entre la 0.1.1 y la 0.1.2, menos instalaciones quedan atrás (cuánto esperar lo decide el usuario).
+- Las etiquetas viejas no cambian. `releases/latest` siempre es una sola versión: no hay forma de servir a la vez a la 0.1.0 y a la 0.1.2.
+- Sin cambios en el manifiesto, en la firma, en Go, en los vectores, en el contrato ni en la API.
+- Pruebas: `planRelease` con base mixta (`v0.1.0` y `0.1.2` → base `0.1.2`) y `tag` de la 0.1.1 y la 0.1.2; `parseLatestRelease` con `0.1.2`, `v0.1.2` y rechazo de `V0.1.2` y de URL con la otra forma; `readCache` con caché antigua sin `tag` y con `tag` sin «v»; `releaseNotesUrl("0.1.1")` con «v» y `("0.3.0")` sin ella (cambia la expectativa actual de `updates.test.ts`).
+- `auditor`: revisa el cambio de `release.yml` (variable nueva en `env:`, validación) y de `release.ts` (frontera de confianza).
+- `documentalista`: `docs/release.md` (paso 8).
+
+**Supuestos (5-11-2026):**
+
+- **TV1 (verificado el 5-11-2026):** `release.ts`, `service.ts` y `updates.ts` de `main` son los de `v0.1.0`. La etiqueta `v0.1.0` es el commit 07df48f, idéntico a `main` en `packages/runtime/src/updates`, `apps/web/src/app/updates.ts` y `apps/desktop/update-keys.json`, y su clave `k1` es la correcta. Se comprobó con `git diff v0.1.0 -- packages/runtime/src/updates apps/web/src/app/updates.ts`. Si la 0.1.0 ya aceptara etiquetas sin «v», `LAST_V_TAG` pasa a `"0.1.0"` y la 0.1.1 ya sale sin «v».
+- **TV2:** `gh release create 0.1.2 --target <sha>` crea la etiqueta `0.1.2` al publicar, igual que con «v» (CI2), y `matching-refs/tags/` sin prefijo devuelve todas las etiquetas.
 
 ### 91. Importar las listas de deseos de Steam y GOG a la lista de seguimiento de precios (amplía las decisiones 40, 74, 77 y 86; resuelve la opción 12.1 (c) de la 86 para las tiendas; contrato, cerrojo, errores y volumen revisados por el auditor en su punto 13)
 
@@ -7791,6 +7977,155 @@ Las preguntas del punto 9 siguen abiertas; mientras, rige la recomendada de cada
 - Dos rutas más que pueden romperse sin aviso (Steam no documentada y GOG no oficial): el fallo se muestra en el resumen con el texto de la tienda y el resto del comparador sigue.
 - El `documentalista` actualiza la guía del comparador y la nota de privacidad; el `tester`, las respuestas y la prueba del punto 11; el `auditor` revisa diseño y código.
 
+### 92. Exportar los registros y saber si hay un juego abierto (concreta las decisiones 35 y 55 para el actualizador; revisa la exportación en zip de la 59 y el botón desactivado del punto 7.6 de la 90)
+
+Encargo de la sesión principal (5-11-2026, rama `feature/registros-y-partidas`): las dos piezas que el punto 19 de la 90 deja como «Pendiente», con el mínimo cambio.
+
+#### 1. Qué hay hoy (leído el 5-11-2026)
+
+- **Registros:** `createFileLogger` (`packages/runtime/src/files.ts`) escribe `logs/server.log`, `logs/launcher.log` y `logs/crash.log`, con `redactHome` aplicado al escribir, 512 KiB y un solo fichero rotado (`.log.1`). Es el sustituto provisional de la 59 (sin `pino`). El registro de Inno va a `updates/<v>/install.log`, con rutas completas (90, M6).
+- **Web:** Ajustes > Privacidad y registros ya tiene la fila «Exportar registros», solo en el simulador (`isSimulated`); `real.ts` devuelve `unavailable` en `exportLogs`. El aviso de vuelta atrás (`UpdatesNotice`, `rolledBack`) ya enlaza a `/settings/privacy` con `updates.notice.exportLogs`.
+- **Tiempo de juego:** solo el que informa la tienda (`storePlaytimeMinutes` y `storeLastPlayedAt`, hoy de Steam). **No hay detección de procesos**: ni `ProcessWatcher`, ni tabla `play_sessions`, ni sondeo tras lanzar. `InstalledEntry.executables` existe en el contrato, pero el núcleo no lo usa. `ProcessLauncher` lanza separado y sin guardar el PID; con las URI (Steam, Epic, Ubisoft, EA) el proceso que arranca es `rundll32` y la tienda, nunca el juego.
+
+#### 2. Exportación: qué se exporta
+
+**Decisión: un único fichero de texto, no un zip (revisa la 59).**
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| **(a) Un `.txt` (recomendada)** | Sin dependencias; el usuario puede leerlo antes de adjuntarlo, lo que da confianza en el filtrado; GitHub acepta `.txt` en las incidencias | Algo más grande que un zip (el total ya está acotado) |
+| (b) Zip, como decía la 59 | Más pequeño; ficheros separados | Una dependencia nueva (no hay ninguna de zip instalada) o un escritor de zip propio; el usuario no ve lo que envía sin descomprimir |
+
+- **Nombre:** `ludiary-logs-<versión>-<AAAAMMDD-HHMMSS>.txt` (hora UTC).
+- **Cabecera**, solo valores y códigos:
+  - `Ludiary <versión>`, `os.version()` y `os.release()`, `process.arch`, versión de Node, idioma de la interfaz y la hora de generación.
+  - Estado del actualizador si existe (`mode`, `state`, `current`, `latest`, código de error): es lo que necesita una incidencia tras una vuelta atrás.
+  - Por tienda: `store`, `connection`, `mode` y, de cada estado de sincronización, el tipo, el estado, la última ejecución y el código de error. **Nunca `accountLabel`** ni ningún otro nombre de cuenta.
+- **Cuerpo:** una sección por fichero, con el nombre relativo como título (`===== logs/server.log.1 =====`), primero el rotado y después el actual:
+  - los ficheros normales de `logs/` cuyo nombre cumpla `^[a-z0-9-]+\.log(\.1)?$`;
+  - `updates/<v>/install.log` de cada carpeta cuyo nombre sea una versión válida (M6 de la 90).
+  - Nada más: ni la base de datos, ni `runtime.json`, `state.json`, `versions.json`, copias, tokens o ajustes.
+- **Filtrado:** `redactHome` se aplica **otra vez** a cada fichero al exportar. Es obligatorio para `install.log`, que no pasa por el registrador, y cubre líneas escritas por versiones con un filtro anterior.
+- **Topes:** los últimos 2 MiB de cada fichero y 16 MiB en total. Lo que se corte se indica con una línea `[truncated]`. Fichero ilegible: una línea con el código (`unreadable`), sin ruta ni mensaje del sistema.
+- Las rutas absolutas no salen ni en los títulos de sección ni en la cabecera.
+- `install.log` hoy se borra con `updates/<to>` tras una prueba superada, que es lo correcto. Tras una **vuelta atrás** debe seguir ahí hasta la descarga de otra versión (`cleanOtherFolders`). Es justo cuando hace falta. Se comprueba con una prueba.
+
+#### 3. Exportación: ruta y nivel de acceso
+
+- **`POST /api/logs/export`**, cuerpo `{}` (`EmptyObjectSchema`) y nivel `session+key` (el de por defecto: no se declara nada). Exporta ficheros, así que la 67 y el invariante 4 exigen la clave de origen.
+- Sin `exportLogs`, la respuesta es `409 action-unavailable` aunque la 72 asigne 422 a ese código en otras rutas: la 92 **revisa la 72 solo para esta ruta**.
+- Respuesta `200`, `Content-Type: text/plain; charset=utf-8`, `Content-Disposition: attachment; filename="<nombre>"`, `X-Content-Type-Options: nosniff` y el `Cache-Control: no-store` global.
+- Se usa `POST` y no `GET` porque es una acción con la clave en la cabecera: no se puede pedir con un enlace normal y así ningún navegador lo guarda en caché ni lo carga por adelantado.
+- **Dónde vive:** la compone el papel servidor de `packages/runtime` (`log-export.ts`), que es quien conoce `dataDir`, la versión y `redactHome`. Llega a `createLocalServer` como dependencia opcional `exportLogs?: () => Promise<{ filename: string; body: string }>`, igual que `updates`. Sin ella, la ruta responde `409 action-unavailable`. El estado de las tiendas sale de la fachada del núcleo que ya existe (lista de tiendas); el núcleo no lee ficheros de registro.
+- El registro solo anota «logs exported», con el tamaño en bytes.
+
+#### 4. Exportación: botón y vínculo con el actualizador
+
+- **Botón:** la fila que ya existe en **Ajustes > Privacidad y registros** deja de ser solo del simulador.
+- **`exportLogs()` de `real.ts`:**
+  1. llama a un método nuevo de `http.ts` que hace la misma petición `POST`, con la clave de origen y el mismo tratamiento de errores, y devuelve un `Blob`;
+  2. toma el nombre de `Content-Disposition` (si no lo encuentra, `ludiary-logs.txt`);
+  3. descarga con `URL.createObjectURL`, un `<a download>` temporal y `revokeObjectURL`.
+- Debajo del botón, un enlace **«Abrir una incidencia en GitHub»** a `https://github.com/chamanRMA/Ludiary/issues/new`, que se abre fuera (`target="_blank"`, `rel="noopener noreferrer"`), con el mismo repositorio fijo que `releaseNotesUrl` (90, punto 20). Lo pide la 35 y hoy falta.
+- **Vínculo con el actualizador:** sin cambios. `updates.notice.exportLogs` del aviso `rolledBack` ya lleva a `/settings/privacy`, donde está el botón.
+- **Textos** (es/en): `settings.privacy.issue`; `settings.privacy.exportHint` cambia a «Un fichero de texto para adjuntar a una incidencia. Puedes leerlo antes: no lleva claves ni tu nombre de usuario de Windows.».
+
+#### 5. Partida en curso: qué cuenta como juego
+
+**Decisión: un juego está abierto si hay un proceso cuyo ejecutable está dentro de la carpeta de instalación de un juego instalado de la biblioteca, lo haya lanzado Ludiary, la tienda o un acceso directo.**
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| (a) Seguir el proceso lanzado por Ludiary | Sin sondeo | Con URI, Ludiary nunca ve el proceso del juego (punto 1). Con `exec` (GOG), el PID es el del ejecutable, que puede delegar en otro. No ve los juegos lanzados desde la tienda |
+| **(b) Sondeo bajo demanda por carpeta de instalación (recomendada)** | Cubre todas las tiendas y todos los orígenes; una sola consulta cuando hace falta, sin temporizadores; es la base del `ProcessWatcher` de la 55 | Falsos positivos de procesos auxiliares que viven en la carpeta del juego (solo posponen) |
+| (c) Sondeo continuo, como el de la 55, para el tiempo de juego | Sirve a la vez al tiempo de juego | Depende de las pruebas reales de la 55; no hace falta para el actualizador |
+
+- **Instalaciones que cuentan:** las guardadas de propiedades `kind: 'game'` sin `removed_at`, de cualquier tienda. Se ignoran las `install_path` que sean la raíz de una unidad (`X:\`): una entrada mal formada no puede hacer que cuente cualquier proceso.
+- **Comparación** en el núcleo, pura y sin disco: minúsculas, `/` → `\`, y `install_path` con `\` final. Hay coincidencia si la ruta del proceso empieza por ella; así, `C:\Games\Foo` no coincide con `C:\Games\Foobar\x.exe`.
+- *Atajo:* un juego movido con `mklink /J` no coincide, porque la ruta del proceso es la real (72, punto 11). Es un falso negativo sin daño (punto 6). Se mejora cuando la 55 cierre el tiempo de juego.
+- Sin lista de exclusión en este corte: un auxiliar abierto en la carpeta del juego también pospone. La lista de la 55 llega con el tiempo de juego.
+- **Motivo de contar también lo que lanzó la tienda:** parar el servidor no cierra los juegos (90, punto 7.7). Lo que molesta es que la ventana de progreso de Inno y la web que se abre al terminar roban el foco a un juego a pantalla completa, venga de donde venga.
+
+#### 6. Partida en curso: cómo se consulta y qué hace el actualizador
+
+- **Puerto del SO** (`packages/contracts/src/ports.ts`), opcional en `CoreDeps`; sin él (Docker, pruebas), nunca hay partida:
+
+  ```ts
+  // ADR 92 (and the base of ADR 55's ProcessWatcher)
+  export interface ProcessWatcher {
+    /** Full image paths of the running processes this user can query; the ones it cannot read are left out. Never logged. */
+    listExecutables(signal: AbortSignal): Promise<readonly string[]>;
+  }
+  ```
+
+- **Windows (revisa el último punto de la 55: se elige la llamada nativa, no CIM):** subcomando `ludiary-tray.exe --processes` del auxiliar de Go, con el mismo patrón que `--known-folder` (89):
+  - `CreateToolhelp32Snapshot`, y por cada PID `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` y `QueryFullProcessImageNameW`;
+  - se salta lo que falle;
+  - escribe una línea `{"paths":[…]}` sin repetidos, con un máximo de 8192 rutas, y sale con 0.
+  - `platform-windows` lo lanza con 5 s de tiempo máximo y 4 MiB de salida. Solo acepta cadenas que sean rutas locales absolutas de 32767 caracteres como mucho.
+  - CIM queda descartado: obliga a lanzar PowerShell, que es lento y depende de la política de ejecución (los mismos motivos que en la 64).
+- **Núcleo:** `isGameRunning(): Promise<boolean>` en la fachada (`core.ts`), en un módulo pequeño (`running.ts`).
+  - Lee las rutas de instalación con una consulta del repositorio (nueva si no existe una que sirva) y aplica el punto 5.
+  - Solo sale un booleano: las rutas de los procesos son datos personales y no van ni al registro ni a la API.
+  - Si el puerto falla o se agota el tiempo: `false` y un aviso en el registro, solo con el nombre del error.
+- **Actualizador** (`packages/runtime/src/updates/service.ts`): opción nueva `isGameRunning?: () => Promise<boolean>`, que `server-role.ts` conecta con la fachada.
+  - `restart()` la consulta después de las comprobaciones de `ready` y antes de marcar `restarting`.
+  - Si hay partida: `UpdateError("update.game-running", 409)`. El estado sigue `ready`: la actualización queda **pospuesta**, sin perderse, y se aplica en el próximo arranque en frío (punto 7 de la 90) o al volver a pulsar con el juego cerrado.
+- **Aviso:**
+  - En la web, `POST /api/updates/restart` da `409 update.game-running`. Acerca de y el aviso de versión (`UpdatesNotice`, «Aplicar») muestran el error con su `errorKey`: `core.errors.update.game-running` = «Hay un juego abierto. Ciérralo y vuelve a intentarlo; si no, la actualización se instalará la próxima vez que abras Ludiary.» (es/en).
+  - En la bandeja: «Actualización lista: reiniciar» con una partida en curso abre la web (`createOpenUrl("name")`, como `update-available`) en lugar de no hacer nada. Allí el botón muestra el motivo.
+- **Revisa el punto 7.6 de la 90:** el botón **no** se desactiva por adelantado, porque eso obligaría a consultar los procesos en cada `GET /api/updates`, que la web pide cada 2 s. Responde con el 409 al pulsarlo. `updates.restartConfirm` no cambia.
+- **No se consulta en el arranque en frío** (lanzador interno, código 20): si el servidor no estaba en marcha, el usuario acaba de pulsar el acceso directo y está en el escritorio. El modo `auto` nunca reinicia solo (90, punto 7), así que no necesita nada más.
+- **Fallar abierto es aceptable:** un falso negativo (ruta ilegible, antitrampas, unión) solo reinicia Ludiary con el juego abierto, que sigue abierto (90, punto 7.7). Un falso positivo solo pospone. Ninguno de los dos pierde datos.
+
+#### 7. Pruebas
+
+- `runtime` (`log-export.test.ts`):
+  - solo entran los nombres permitidos, sin `runtime.json` ni `state.json`;
+  - un `install.log` con la carpeta del usuario sale con `~`;
+  - se respetan los topes con `[truncated]`;
+  - la cabecera no lleva `accountLabel` ni rutas absolutas;
+  - fichero ilegible.
+- `runtime` (`updates-service.test.ts`):
+  - `restart` con partida da `update.game-running` y deja `ready`; sin partida, reinicia;
+  - si `isGameRunning` lanza un error, reinicia;
+  - tras una vuelta atrás, `updates/<to>/install.log` sigue ahí.
+- `core` (`running.test.ts`): mayúsculas y barras, el límite `Foo` frente a `Foobar`, raíz de unidad ignorada, DLC y propiedades retiradas ignorados, sin puerto, y puerto que falla.
+- `api`: `POST /api/logs/export` sin clave de origen da `401 origin_key_required`; con ella, `200` con `Content-Disposition`; sin la dependencia, `409`.
+- `web`: `exportLogs` real descarga el `Blob` (la prueba de `real.test.ts` que espera `ApiError` cambia); la fila se ve fuera del simulador.
+- Go (`helper_test.go`): `--processes` incluye la ruta de su propio ejecutable y sale con 0.
+- **Prueba manual** (la prepara el `tester`; la hace el usuario):
+  1. exportar desde Edge, Chrome y Firefox, y abrir el `.txt`: sin el nombre de usuario de Windows (supuesto PR3);
+  2. con un juego de Steam abierto, «Reiniciar y actualizar» da el aviso; al cerrarlo, reinicia;
+  3. lo mismo con un juego de GOG lanzado desde Galaxy.
+
+#### 8. Supuestos
+
+- **PR1 (sin verificar):** con `PROCESS_QUERY_LIMITED_INFORMATION`, un proceso sin elevar lee la ruta de un juego que corre elevado. Si no, es un falso negativo sin daño.
+- **PR2 (sin verificar):** los controladores antitrampas (EAC, BattlEye) no quitan ese permiso. Igual que PR1.
+- **PR3 (sin verificar):** descargar un `blob:` con `<a download>` no lo bloquea la CSP de la 68 en Edge, Chrome y Firefox. Si alguno lo bloquea, la ruta se queda igual y se cambia solo la forma de descargar en la web.
+
+#### 9. Estado de la 55
+
+**No se cierra.** Este diseño cierra lo que el actualizador necesita, que no depende de pruebas reales porque falla sin daño (punto 6). También fija el puerto (`listExecutables`) y la vía nativa en Windows. Sigue en propuesta, y se cierra con el corte 2b (tiempo de juego), lo que sí depende de juegos reales:
+
+1. Juegos con lanzador propio (por ejemplo, Ubisoft o Rockstar): que el proceso del juego, dentro de su carpeta, aparezca antes de que acaben los 3 minutos de búsqueda.
+2. PR1 y PR2 con al menos un juego con antitrampas y uno elevado: si la ruta no se lee, la sesión no se mide, y ahí el fallo sí pierde datos.
+3. Umbrales de 5 s, 3 min, 30 s y 1 min con tres juegos por tienda.
+4. La lista de exclusión (instaladores, actualizadores, auxiliares de antitrampas y de informes de fallos) y el uso de `executables`.
+5. Juegos movidos con `mklink /J`.
+
+**Motivo:** es lo mínimo que cierra los dos «Falta» de la 90. Reutiliza la fila del simulador, el enlace del aviso, `redactHome`, el patrón de subcomandos del auxiliar de Go y el nivel `session+key` por defecto. No añade dependencias, migraciones ni temporizadores. Un `.txt` es más fácil de revisar por el usuario que un zip. Consultar los procesos solo al pulsar «Reiniciar» evita un sondeo que, por ahora, solo necesitaría el tiempo de juego.
+
+**Consecuencias:**
+
+- Rutas nuevas: `POST /api/logs/export` (`session+key`). Error nuevo: `update.game-running` (409). Puerto nuevo: `ProcessWatcher`, opcional, aditivo (`contractVersion` 1). Subcomando nuevo del auxiliar: `--processes`. Sin migración.
+- La 59 queda revisada en la exportación: un fichero de texto en lugar de un zip, sin la base de datos, como ya decía. El resto de la 59 (registrador definitivo, 5 MB × 5) sigue pendiente y no afecta a la ruta.
+- El punto 7.6 de la 90 queda revisado: sin botón desactivado; 409 al pulsar.
+- La 55 sigue en propuesta, con la lista del punto 9.
+- `documentalista`: la guía de solución de problemas (cómo exportar y adjuntar los registros) y una plantilla de incidencias que pida la versión, el sistema y el fichero (35). Hoy no hay `.github/ISSUE_TEMPLATE`.
+- `auditor`: revisa la ruta (nivel, cabeceras, que no se escape nada fuera de la lista) y la salida del auxiliar como entrada no confiable.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -7834,16 +8169,17 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
   - 15.3 (custodia de la clave, que revisa la 58), 15.4 y 15.5 aplicados por defecto con (a); el usuario puede cambiarlos.
   - Antes de publicar la primera versión con actualizador: generar las dos claves, activar las *immutable releases* y 2FA en `chamanRMA/Ludiary`. Quien tenga una compilación anterior instala esa versión a mano una vez.
   - Supuestos por cerrar: GH4, GH5, W1, W3, W4 y N1.
-- Detección del proceso de cada juego: propuesta en la 55. Se cierra en el corte 2b de la 72 (tiempo de juego), que pasa a ir **después** del primer corte de GOG (decisión 76), con al menos tres juegos reales, y se revalida con cada tienda nueva.
+- Detección del proceso de cada juego: propuesta en la 55. Se cierra en el corte 2b de la 72 (tiempo de juego), que pasa a ir **después** del primer corte de GOG (decisión 76), con al menos tres juegos reales, y se revalida con cada tienda nueva. La 92 (5-11-2026) ya fija el puerto `ProcessWatcher`, la vía nativa en Windows (`ludiary-tray.exe --processes`) y lo que necesita el actualizador, que no depende de pruebas reales. Lo que falta probar para el tiempo de juego está en su punto 9.
+- Decisión 92 (exportar los registros y `update.game-running`): falta el código, la revisión del `auditor` y la prueba manual (punto 7), que cierra PR1 a PR3. El `documentalista` escribe la plantilla de incidencias que pide la 35.
 - Puntos de producto de la decisión 72: A y B decididos por el usuario. (C), orden de los cortes, **resuelto** el 22-10-2026: tras la cuenta de Steam (74) el usuario encargó GOG (76), antes del corte 2b.
-- Decisión 76, punto 11.1 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste). El punto 11.2 queda **resuelto** el 22-10-2026: el usuario eligió (b), la cuenta de GOG ahora, pero sin el emparejamiento, que va en su propio corte; el corte 2b va después (decisión 77).
+- Decisión 76, punto 11.1: **resuelto por el usuario el 5-11-2026** (a través de Galaxy por defecto, con ajuste para abrir directo; punto 12). Revisión del `auditor` sobre el diseño incorporada (punto 13, sin críticos ni altos). Falta el código, su revisión y la prueba manual del punto 12.8, que cierra GG1 a GG7. El punto 11.2 queda **resuelto** el 22-10-2026: el usuario eligió (b), la cuenta de GOG ahora, pero sin el emparejamiento, que va en su propio corte; el corte 2b va después (decisión 77).
 - Decisión 77: punto 12 aplicado por defecto («Conectado como <nombre>» y mensaje si no hay Galaxy); el usuario puede cambiarlo. Prueba manual de la cuenta (punto 10) para cerrar los supuestos GA1 a GA13, y revisión del `auditor` antes y después del código.
 - Decisión 78 (Epic): punto 13 aplicado por defecto («Conectado como <nombre>», mensaje si falta el launcher, sin instalados de Epic en «solo carpetas manuales»); el usuario puede cambiarlo. El usuario consigue Home – A Unique Horror Adventure (u otro juego pequeño) **antes del 29-10-2026** para la prueba manual del corte 1 (punto 11), que cierra los supuestos E pendientes (E5 ya comprobado; E7 falso, el corte 1 va sin portadas). La prueba del corte 2 comprueba primero que el catálogo con el token del usuario trae `categories` y `keyImages` (punto 15). El usuario decide si se actualizan las definiciones de los agentes `conectores` y `auditor`, que aún citan `legendary` (punto 14). El corte 2 cierra EA1 a EA10; si la sesión de Epic dura pocas horas (EA5), se decide aparte. Revisión del `auditor` antes y después del código de cada corte.
 - Emparejamiento entre tiendas (decisiones 20, 51 y 76): sin corte asignado. Hasta entonces, un juego poseído en Steam y en GOG sale dos veces (y un juego de Ubisoft comprado en Steam o Epic, previsiblemente también; supuesto U11 de la 79).
 - Decisión 79 (Ubisoft): punto 11.1 aplicado por defecto (mensaje si no está Ubisoft Connect). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código. Prueba manual del 23-10-2026 (punto 13): detección correcta, U4 y U7 confirmados; quedan U1 a U3, U5, U6 y U8 a U11.
 - Decisión 80 (Ubisoft, cuenta con ventana de login integrada): vía C elegida por el usuario el 23-10-2026 y comprobación previa hecha (punto 3); puntos 16.1 a 16.3 aplicados por defecto, que el usuario puede cambiar. Revisión del `auditor` sobre el diseño hecha el 23-10-2026 e incorporada (punto 18, todos los hallazgos aceptados); falta la del código, que incluye comprobar las licencias de `webviewloader` y de las definiciones COM de la copia parcheada (M5). La prueba manual (punto 14) cierra UB2 a UB9, UB13 y UB15. Opción futura de A1: añadir `store` al índice único de `scan_roots` (migración). Si el nombre de la carpeta resulta un mal título (U5) o el destino del acceso directo no lleva `/0` (U6), se ajusta según el punto 3 o 4.
 - Decisión 81 (EA): punto 11.1 aplicado por defecto (mensaje si no está la app de EA); el usuario elige el juego de la prueba manual (11.2, recomendado The Sims 4) y qué va después (11.3). Revisión del `auditor` sobre el diseño hecha el 23-10-2026 (punto 12); falta la del código y la prueba manual (punto 9) para cerrar los supuestos EAD1 a EAD14, la estabilidad del ID (M2; si falla, opción (b) en su propia decisión) y las comas a través de `rundll32` (NV1). Si la URI falla con varios ID (EAD8), se pasa a uno; si falla en general, el `exec` (opción B del punto 4) va en su propia decisión. EAD6 cerrado el 23-10-2026 (punto 13, `downloadinplacedir`, ya implementado); EAD1 confirmado.
-- Decisión 82 (EA, cuenta): el 24-10-2026 el usuario cambió la vía a navegador y pegar (punto 14), porque Google no funciona en la ventana integrada; la ventana deja de usarse en EA y la confirmación de la contraseña en la ventana queda sin objeto. 12.2 (a) decidida por él («Reconectar al caducar»). Puntos 12.1, 12.3 y 12.4 aplicados por defecto, que el usuario puede cambiar. Falta: implementar el punto 14 (paso `open-external`, `authHosts`, `wizard.paste.storeError` en `validate.ts`), la revisión del `auditor` sobre ese cambio y sobre el código, y la prueba manual (puntos 10 y 14) para cerrar EAA2, EAA5 a EAA13 y NV2, con el host de `packArt` (EAA11) y la duración del token (EAA6). `document-json` del auxiliar, sin uso por ahora: decidir si se retira cuando quede claro que ninguna tienda lo necesita. Ubisoft repite el paso 1 de su prueba manual por el cambio del auxiliar (punto 3).
+- Decisión 82 (EA, cuenta): el 24-10-2026 el usuario cambió la vía a navegador y pegar (punto 14), porque Google no funciona en la ventana integrada; la ventana deja de usarse en EA y la confirmación de la contraseña en la ventana queda sin objeto. 12.2 (a) decidida por él («Reconectar al caducar»). Puntos 12.1, 12.3 y 12.4 aplicados por defecto, que el usuario puede cambiar. Falta: implementar el punto 14 (paso `open-external`, `authHosts`, `wizard.paste.storeError` en `validate.ts`), la revisión del `auditor` sobre ese cambio y sobre el código, y la prueba manual (puntos 10 y 14) para cerrar EAA2, EAA5 a EAA13 y NV2, con el host de `packArt` (EAA11) y la duración del token (EAA6). `document-json` del auxiliar: **retirado** (el usuario lo decidió el 5-11-2026; ver decisión 82, punto 14). Ubisoft repite el paso 1 de su prueba manual por el cambio del auxiliar (punto 3).
 - Decisión 83 (DLC en la ficha): punto 10 aplicado por defecto con (a) en todo (huérfanos sin pantalla, EA por el título, solo «Instalado», Steam y Ubisoft fuera); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 13, sin críticos, tres altos). Falta la del código y la prueba manual (punto 12) para cerrar GD1, GD2, ED1 y AD1. La sección de huérfanos de la 52 queda para su propio corte; los DLC de Steam y Ubisoft (punto 9), en la 84.
 - Decisión 84 (DLC de Steam y Ubisoft): punto 8 elegido por el usuario, (a) en todo (punto 11). Revisiones del `auditor` sobre el diseño (punto 10) y el código (punto 11) incorporadas. Falta la prueba manual (punto 9) para cerrar SD2 y SD3. UD2 y UD3 siguen abiertos (Ubisoft sin DLC).
 - Decisión 85 (favoritos, etiquetas y colecciones): punto 11 aplicado por defecto con (a) en todo (sin `hidden`, orden en que se añadieron sin reordenar, etiquetas editadas juego a juego, datos de un juego reclasificado como DLC pasados a su base, favorito solo en la ficha); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada (punto 12); falta la del código y la prueba manual (punto 10).
@@ -7859,5 +8195,6 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
   - Juegos de Steam movidos con `mklink /J` a otro disco, que hoy no se ven (punto 11): dejarlo así y documentarlo (recomendado en este corte) o admitirlos añadiendo el destino real como raíz con permiso explícito.
 - Decisión 89 (copias de seguridad y restauración, para la 0.1): punto 12 aplicado por defecto con (a) en todo (copias manuales sin borrado automático, copias internas en la lista de restaurar, copias de otro sitio eligiendo su carpeta); el usuario puede cambiarlo. Revisión del `auditor` sobre el diseño incorporada el 3-11-2026 (punto 16, sin críticos, todos aceptados; H1 con (a): carpetas de una copia de otra instalación desactivadas hasta que el usuario las confirme). Falta el código, su revisión y la prueba manual (punto 11) para cerrar BK1 a BK6. Al cerrarla, el `documentalista` escribe el punto de restauración documentado que pide la 18.
 - Linux y macOS: propuesta preliminar en la 61. Se cierra al terminar la fase 2.
-- Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44).
+- Comprobar el nombre «Ludiary» en las bases oficiales de marcas (EUIPO, OEPM, USPTO) y la disponibilidad de dominios antes de la primera publicación (decisión 44). **Revisión ligera del 5-11-2026:** una búsqueda web no encuentra ninguna marca, app ni programa llamado «Ludiary» (solo nombres parecidos: Ludi, Ludio, Ludum, Ludy). `ludiary.com` está registrado por un tercero desde el 5-12-2022 (DNS de Squarespace y NS1, sin contenido indexado); `ludiary.org` y `ludiary.app` devuelven 404 en RDAP, es decir, libres; `.es` sin comprobar. No se consultaron directamente EUIPO, OEPM ni USPTO. **El usuario decide el 5-11-2026** no registrar la marca y cambiar el nombre si algún día se lo piden; queda cerrado.
+- Respuestas del usuario del 5-11-2026: cerrar sesiones desde la bandeja, **probado y funciona**; ITAD14 se deja como está (las imágenes que bloquee la CSP salen con el degradado); los supuestos de las listas de deseos (SW1, SW3, GW2, ITAD4) se aceptan con el comportamiento actual, que el usuario probó; el correo a IsThereAnyDeal y hacer público el repositorio, **más adelante**. Sigue abierto el `it.skip` de privacidad.
 - Verificar los supuestos marcados en las decisiones 39 a 82 cuando se implemente cada parte. Del prototipo del instalador quedan: cerrojo de SQLite tras `taskkill /F` (62), secuestro de puerto desde otra cuenta, también en `[::1]` (63 y 66), cuadro en primer plano (64), `execArgvExtension` en Node 24.20 (65), y resolución, proxy y contexto seguro de `ludiary.localhost` en los navegadores (66).

@@ -160,6 +160,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       detection: server.detection,
       scanRoots: server.scanRoots,
       storeCollections: server.storeCollections,
+      storeLaunch: server.storeLaunch,
       ...(server.prices ? { prices: server.prices } : {}),
       // Present in the server answer: use it. Absent (feature not available yet): the simulator's value.
       backups: server.backups ?? local.backups, // the server always sends it (ADR 89)
@@ -170,11 +171,12 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
   }
 
   async function updateSettings(patch: SettingsUpdate): Promise<GeneralSettings> {
-    const { locale, detection, storeCollections, backups, prices, ...rest } = patch;
+    const { locale, detection, storeCollections, storeLaunch, backups, prices, ...rest } = patch;
     const serverPatch: SettingsPatchDto = {
       ...(locale === undefined ? {} : { locale }),
       ...(detection === undefined ? {} : { detection }),
       ...(storeCollections === undefined ? {} : { storeCollections }),
+      ...(storeLaunch === undefined ? {} : { storeLaunch }),
       ...(backups === undefined ? {} : { backups }),
       ...(prices === undefined ? {} : { prices }),
     };
@@ -340,7 +342,17 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       return "cancelled" in answer ? null : answer;
     },
     restoreBackup: async (id) => void (await http.post("/api/backups/restore", { id })),
-    exportLogs: unavailable,
+    exportLogs: async () => {
+      const { blob, filename } = await http.postBlob("/api/logs/export", {});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename ?? "ludiary-logs.txt";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000); // some browsers read the blob after click()
+    },
     getUpdates: () => http.get<UpdateStatusDto>("/api/updates"),
     updateUpdateSettings: (patch) => http.put<UpdateStatusDto>("/api/updates/settings", patch),
     checkUpdates: () => http.post<UpdateStatusDto>("/api/updates/check", {}),

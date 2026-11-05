@@ -54,6 +54,17 @@ describe("parseLatestRelease", () => {
     expect(r.ok && r.release.version).toBe("0.3.0");
     expect(r.ok && r.release.assets).toHaveLength(3);
   });
+  it("point 22: accepts X.Y.Z and vX.Y.Z; the URL must use the tag exactly as it came", () => {
+    const plain = release({ tag_name: "0.1.2", assets: [asset("ludiary-update.json", { browser_download_url: `https://github.com/${repo}/releases/download/0.1.2/ludiary-update.json` }), asset("ludiary-update.json.sig", { browser_download_url: `https://github.com/${repo}/releases/download/0.1.2/ludiary-update.json.sig` })] });
+    const r = parseLatestRelease(plain, repo);
+    expect(r.ok && [r.release.version, r.release.tag]).toEqual(["0.1.2", "0.1.2"]);
+    const withV = parseLatestRelease(release(), repo);
+    expect(withV.ok && [withV.release.version, withV.release.tag]).toEqual(["0.3.0", "v0.3.0"]);
+    // a tag without the v whose assets live under the v form (or the other way round) loses them and is refused
+    expect(parseLatestRelease(release({ tag_name: "0.3.0" }), repo).ok).toBe(false);
+    for (const t of ["V0.1.2", "release-0.1.2", "0.1.2-rc1", "v0.1", "vv0.1.2", " 0.1.2", "0.1.2\n"]) expect(parseLatestRelease(release({ tag_name: t }), repo).ok, t).toBe(false);
+  });
+
   it.each([
     ["draft", { draft: true }],
     ["pre-release", { prerelease: true }],

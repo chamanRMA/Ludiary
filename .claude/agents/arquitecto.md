@@ -34,7 +34,7 @@ La fuente de verdad completa es `docs/adr/ADR.md`. Lo de abajo es la versión co
 ### Tiendas y conexión
 
 - Steam: API oficial. Requiere SteamID (inicio de sesión OpenID), API key del usuario y perfil público.
-- Epic y GOG: solo APIs no oficiales, que pueden romperse. Se usan herramientas externas (`legendary`, `gogdl`) invocadas como procesos.
+- Epic y GOG: solo APIs no oficiales, que pueden romperse. Los conectores las llaman directamente por HTTP o a través de las aplicaciones oficiales (decisiones 76 a 78), sin herramientas externas.
 - Ubisoft y EA: sin API ni login. Solo escaneo de carpetas.
 - La conexión es un **asistente guiado en Ajustes, uno por tienda, incluido en cada conector** (ADR 11). Sin editar ficheros ni pegar claves a mano.
 

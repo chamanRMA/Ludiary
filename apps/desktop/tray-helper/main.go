@@ -80,6 +80,8 @@ func main() {
 			os.Exit(handlePickFolder(os.Stdin, os.Stdout))
 		case "--known-folder": // ADR 89
 			os.Exit(handleKnownFolder(os.Args[2:], os.Stdout))
+		case "--processes": // ADR 92
+			os.Exit(handleProcesses(os.Stdout))
 		case "--embedded-login": // ADR 80
 			os.Exit(handleEmbeddedLogin(os.Stdin, os.Stdout))
 		}

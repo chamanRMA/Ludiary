@@ -80,6 +80,8 @@ export interface Http {
   patch<T>(path: string, body: unknown): Promise<T>;
   put<T>(path: string, body: unknown): Promise<T>;
   delete(path: string): Promise<void>;
+  /** ADR 92. A POST whose answer is a file: the same key, cookie and error handling; `filename` comes from Content-Disposition. */
+  postBlob(path: string, body: unknown): Promise<{ blob: Blob; filename: string | null }>;
 }
 
 export interface KeyStorage {
@@ -107,7 +109,7 @@ export function createHttp(options: HttpOptions = {}): Http {
   const issues = options.issues ?? authIssues;
   const storage = options.storage === undefined ? defaultStorage() : options.storage;
 
-  async function request(method: string, path: string, body?: unknown): Promise<unknown> {
+  async function request(method: string, path: string, body?: unknown, asBlob = false): Promise<unknown> {
     const headers: Record<string, string> = { Accept: "application/json" };
     let key: string | null = null;
     try {
@@ -129,6 +131,11 @@ export function createHttp(options: HttpOptions = {}): Http {
       throw new ApiError(0, "unreachable", "errors.unreachable");
     }
 
+    if (res.ok && asBlob) {
+      issues.set(null);
+      const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? null;
+      return { blob: await res.blob(), filename: name };
+    }
     const text = res.status === 204 ? "" : await res.text();
     if (res.ok) {
       issues.set(null);
@@ -161,5 +168,6 @@ export function createHttp(options: HttpOptions = {}): Http {
     patch: (path, body) => request("PATCH", path, body) as Promise<never>,
     put: (path, body) => request("PUT", path, body) as Promise<never>,
     delete: async (path) => void (await request("DELETE", path)),
+    postBlob: (path, body) => request("POST", path, body, true) as Promise<never>,
   };
 }

@@ -5,7 +5,7 @@ import { DOUBLE_LAUNCH_MS, LAUNCH_ORDER, type Env } from "./env";
 import { asKey, CoreError, toCoreError } from "./errors";
 import type { LaunchTarget } from "./model";
 import { storedActiveRoots } from "./active-roots";
-import { effectiveLocale, readSettings } from "./settings";
+import { effectiveLocale, readLaunchMode, readSettings } from "./settings";
 import { insideAny } from "./validate";
 
 const CONTROL = /\p{Cc}/u;
@@ -66,7 +66,8 @@ export function createLaunchService(env: Env): LaunchService {
   }
 
   /** Rule 5 of ADR 40. Throws launch.rejected; otherwise the spec is safe to hand to ProcessLauncher. */
-  async function checkSpec(c: StoreConnector, spec: unknown, allowedRoots: readonly string[]): Promise<LaunchSpec> {
+  async function checkSpec(c: StoreConnector, spec: unknown, execRoots: readonly string[], client?: ClientRule): Promise<LaunchSpec> {
+    let allowedRoots = execRoots;
     const launcher = deps.launcher;
     if (!launcher) throw new CoreError("action-unavailable", "This mode cannot launch games");
     if (!spec || typeof spec !== "object") return reject(c, "not an object");
@@ -93,6 +94,8 @@ export function createLaunchService(env: Env): LaunchService {
     for (const a of args) {
       if (typeof a !== "string" || a.length > MAX_ARG_LEN || CONTROL.test(a)) return reject(c, "argument with control characters");
     }
+    // ADR 76 point 13.1/13.2: the store client is a separate branch with its own single root, evaluated before the normal rule.
+    if (client && (await isClient(executable, client))) allowedRoots = [client.root];
     if (!(await insideAny(deps.files, executable, allowedRoots))) return reject(c, "executable outside the allowed locations");
     let exists = false;
     try {
@@ -117,6 +120,37 @@ export function createLaunchService(env: Env): LaunchService {
       if (e instanceof CoreError) throw e;
       return reject(c, "path could not be resolved");
     }
+  }
+
+  /** The launcher location of a connector whose declared executable `executable` must equal, after realPath. */
+  interface ClientRule {
+    root: string;
+    expected: string;
+    name: string;
+  }
+  async function isClient(executable: string, rule: ClientRule): Promise<boolean> {
+    try {
+      const real = await deps.files.realPath(executable);
+      const last = real.split(/[\\/]/).pop() ?? "";
+      return deps.files.compareKey(real) === deps.files.compareKey(rule.expected) && last.toLowerCase() === rule.name.toLowerCase() && (await deps.files.isInside(real, rule.root));
+    } catch {
+      return false;
+    }
+  }
+  async function clientRule(c: StoreConnector, launchers: readonly ResolvedLocation[], resolved: boolean): Promise<ClientRule | undefined> {
+    if (!resolved) return undefined;
+    for (const decl of c.locations) {
+      if (decl.purpose !== "launcher" || decl.executable === undefined) continue;
+      for (const l of launchers.filter((x) => x.declarationId === decl.id)) {
+        try {
+          const root = await deps.files.realPath(l.path);
+          return { root, expected: await deps.files.realPath(deps.files.scoped([root]).join(root, decl.executable)), name: decl.executable };
+        } catch {
+          // unreadable: no client rule for this location
+        }
+      }
+    }
+    return undefined;
   }
 
   return {
@@ -159,6 +193,7 @@ export function createLaunchService(env: Env): LaunchService {
           if (!(await insideAny(deps.files, installation.installPath, active))) throw new CoreError("not-installed", "The install folder is no longer scanned");
         }
         const { launchers, resolved } = await resolveLauncherLocations(connector);
+        const launchMode = await readLaunchMode(env, connector.id);
         // Launcher locations are readable by the connector (ctx.fs) but never a destination for exec (ADR 77, audit A1).
         const execRoots = installation ? [installation.installPath] : [];
         const allowedRoots = [...execRoots, ...launchers.map((l) => l.path)];
@@ -172,6 +207,7 @@ export function createLaunchService(env: Env): LaunchService {
           locale: await effectiveLocale(env),
           launchers,
           launchersResolved: resolved,
+          ...(launchMode !== undefined ? { launchMode } : {}),
           fs: deps.files.scoped(allowedRoots),
         };
         let spec: LaunchSpec | null;
@@ -193,7 +229,7 @@ export function createLaunchService(env: Env): LaunchService {
         }
         if (spec === null) throw new CoreError("action-unavailable", `The connector has no ${action} action for this property`);
 
-        const safe = await checkSpec(connector, spec, execRoots);
+        const safe = await checkSpec(connector, spec, execRoots, action === "play" && launchMode === "client" ? await clientRule(connector, launchers, resolved) : undefined);
         try {
           if (safe.kind === "uri") await deps.launcher.openUri(safe.uri);
           else await deps.launcher.exec({ executable: safe.executable, args: safe.args, ...(safe.cwd !== undefined ? { cwd: safe.cwd } : {}) });

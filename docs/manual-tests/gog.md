@@ -65,6 +65,22 @@ reg query "HKLM\SOFTWARE\WOW6432Node\GOG.com\Games" /s
 **Expect (both times):** the game window opens in front and visible (not hidden, not minimized). Galaxy does **not** open by itself in the first run. The toast says "Opening in GOG…".
 **Note:** window visible or hidden (`windowsHide: false` check); whether Galaxy launched; whether the game complains about Galaxy missing (G12); whether the quoted ScummVM arguments worked, meaning the game really started and not only the launcher (G10, G15).
 
+## Step 4b. Play through Galaxy, the default (ADR 76 point 12.8, GG1 to GG7)
+
+Step 4 was written for direct launch. Since 5-11-2026 Play goes through GOG Galaxy by default; the choice is in Settings > Stores > GOG ("Through GOG Galaxy" / "Directly").
+
+**Do:**
+1. Default setting, Galaxy fully closed: press Play. Repeat with Galaxy open.
+2. Use a game whose folder has spaces and `ñ` (for example `F:\GOG Galaxy\Games ñ\Cold Waters`).
+3. If you have a game installed with the offline installer, try it too.
+4. Switch to "Directly" and press Play: the game opens without Galaxy, as in step 4.
+5. Optional: sign out of Galaxy or uninstall it, set the mode back to "Through GOG Galaxy" and press Play: it must open directly.
+6. With a game that has cloud saves, see whether Galaxy syncs before the game starts.
+7. Export the logs: no path and no arguments in them.
+
+**Expect:** step 1, Galaxy opens (if closed) and starts the game; step 4, no Galaxy.
+**Note:** game opened or not with spaces and `ñ` (GG1: if not, through Galaxy is withdrawn); Galaxy took the foreground or not (GG2); closed vs open behaviour (GG3, GG4); offline-installer game (GG5); cloud sync (GG6).
+
 ## Step 5. Only manual folders (ADR 42)
 
 **Do:** Settings > Game folders > set the mode to "only manual folders". Press "Scan now": the automatic entries go away and the game disappears. Press "Add folder" and choose `D:\Juegos GOG Ñ` (the library) and scan.

@@ -296,6 +296,7 @@ export const LocaleSchema = Type.Union([Type.Literal("system"), Type.Literal("es
 const perStore = <T extends TSchema>(s: T) =>
   Type.Object({ steam: Type.Optional(s), gog: Type.Optional(s), epic: Type.Optional(s), ubisoft: Type.Optional(s), ea: Type.Optional(s) }, strict);
 const PriceShopsSchema = Type.Union([Type.Literal("ludiary"), Type.Literal("all")]);
+const LaunchModeSchema = Type.Union([Type.Literal("client"), Type.Literal("direct")]);
 const StoreCollectionsSettingsSchema = Type.Object({ enabled: Type.Boolean(), unverifiedFavorites: Type.Boolean() }, strict);
 
 export const SettingsSchema = Type.Object(
@@ -308,6 +309,8 @@ export const SettingsSchema = Type.Object(
     autoUpdate: Type.Optional(Type.Boolean()), // ADR 32
     /** ADR 88. Only the stores that mirror collections. */
     storeCollections: perStore(StoreCollectionsSettingsSchema),
+    /** ADR 76 point 12. Only the stores that declare launch modes. */
+    storeLaunch: perStore(Type.Object({ mode: LaunchModeSchema }, strict)),
     /** ADR 86. Absent: the feature is not available. country null: not chosen yet. */
     prices: Type.Optional(Type.Object({ country: Type.Union([Country, Type.Null()]), shops: PriceShopsSchema }, strict)),
   },
@@ -321,6 +324,7 @@ export const SettingsPatchSchema = Type.Object(
     detection: Type.Optional(DetectionModeSchema),
     /** ADR 89. The folder never travels here: it only changes through the native dialog. */
     backups: Type.Optional(Type.Object({ periodic: Type.Boolean() }, strict)),
+    storeLaunch: Type.Optional(perStore(Type.Object({ mode: Type.Optional(LaunchModeSchema) }, strict))),
     storeCollections: Type.Optional(perStore(Type.Object({ enabled: Type.Optional(Type.Boolean()), unverifiedFavorites: Type.Optional(Type.Boolean()) }, strict))),
     prices: Type.Optional(Type.Object({ country: Type.Optional(Country), shops: Type.Optional(PriceShopsSchema) }, strict)),
   },

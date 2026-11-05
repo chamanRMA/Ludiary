@@ -51,6 +51,7 @@ export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCor
     detection: "manual-only" as const,
     scanRoots: [{ id: "r1", origin: "user" as const, path: "D:\\Games", enabled: true }],
     storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
+    storeLaunch: {},
   };
   const store = {
     store: "steam" as const,

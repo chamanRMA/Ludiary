@@ -26,6 +26,7 @@ jobs:
     outputs:
       release: ${{ steps.plan.outputs.release }}
       version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
       pr: ${{ steps.plan.outputs.pr }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,7 +40,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" > pulls.json
-          gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v" --jq '.[].ref' > tags.txt
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/" --jq '.[].ref' > tags.txt
       - name: Plan
         id: plan
         run: node apps/desktop/scripts/release-plan.mjs --pulls pulls.json --tags tags.txt --sha "$GITHUB_SHA" --out notes.md
@@ -127,10 +128,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.plan.outputs.version }}
+          TAG: ${{ needs.plan.outputs.tag }}
         run: |
           set -euo pipefail
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::the planned version is not x.y.z"
+            exit 1
+          fi
+          # The tag is VERSION or vVERSION (ADR 90 point 22); anything else is refused before it reaches gh.
+          if ! [[ "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]] || { [ "$TAG" != "$VERSION" ] && [ "$TAG" != "v${VERSION}" ]; }; then
+            echo "::error::the planned tag is not ${VERSION} or v${VERSION}"
             exit 1
           fi
           pending=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft --jq '[.[] | select(.isDraft) | .tagName] | join(", ")')
@@ -138,10 +145,13 @@ jobs:
             echo "::error::there is a pending draft ($pending): publish it or delete it, then use \"Re-run all jobs\" on this run"
             exit 1
           fi
-          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${VERSION}" > /dev/null 2>&1 || gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            echo "::error::v${VERSION} already exists: use \"Re-run all jobs\" so the version is planned again"
-            exit 1
-          fi
-          gh release create "v${VERSION}" --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "Ludiary ${VERSION}" --notes-file notes/notes.md \
+          # Neither form may exist already.
+          for t in "${VERSION}" "v${VERSION}"; do
+            if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${t}" > /dev/null 2>&1 || gh release view "${t}" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              echo "::error::${t} already exists: use \"Re-run all jobs\" so the version is planned again"
+              exit 1
+            fi
+          done
+          gh release create "${TAG}" --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "Ludiary ${VERSION}" --notes-file notes/notes.md \
             "dist/Ludiary-Setup-${VERSION}.exe" "dist/ludiary-update.json" "dist/SHA256SUMS.txt"
-          echo "Draft v${VERSION} created. Sign and publish it with: pnpm --filter @ludiary/desktop release:publish ${VERSION} <key file>" >> "$GITHUB_STEP_SUMMARY"
+          echo "Draft ${TAG} created. Sign and publish it with: pnpm --filter @ludiary/desktop release:publish ${VERSION} <key file>" >> "$GITHUB_STEP_SUMMARY"

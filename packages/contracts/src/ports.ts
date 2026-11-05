@@ -135,6 +135,12 @@ export interface UserFolders {
   documents(): Promise<string | null>;
 }
 
+/** ADR 92 (and the base of ADR 55's ProcessWatcher). */
+export interface ProcessWatcher {
+  /** Full image paths of the running processes this user can query; the ones it cannot read are left out. Never logged. */
+  listExecutables(signal: AbortSignal): Promise<readonly string[]>;
+}
+
 /** Time for the core, which must not use timers or Date directly (ADR 38). */
 export interface Clock {
   now(): number;
@@ -167,7 +173,7 @@ export interface EmbeddedLogin {
       doneUrl: string;
       captureUrl: string;
       allowedHosts: readonly string[];
-      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; maxLength: number }[];
     },
     signal: AbortSignal,
   ): Promise<

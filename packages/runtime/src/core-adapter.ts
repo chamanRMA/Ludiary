@@ -172,6 +172,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
       scanRoots: roots.map(scanRootDto),
       backups: { periodic: settings.backups.periodic, folder },
       storeCollections: structuredClone(settings.storeCollections),
+      storeLaunch: structuredClone(settings.storeLaunch),
       ...(settings.prices ? { prices: { ...settings.prices } } : {}),
     };
   };
@@ -208,6 +209,7 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
           ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
           ...(patch.detection !== undefined ? { detection: patch.detection } : {}),
           ...(patch.storeCollections !== undefined ? { storeCollections: patch.storeCollections } : {}),
+          ...(patch.storeLaunch !== undefined ? { storeLaunch: patch.storeLaunch } : {}),
           ...(patch.backups !== undefined ? { backups: patch.backups } : {}),
           ...(patch.prices !== undefined ? { prices: patch.prices } : {}),
         });

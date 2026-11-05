@@ -47,7 +47,7 @@ El diseño completo está en `docs/adr/ADR.md`. Si una decisión abierta te bloq
 
 ### Proyecto
 
-- Código abierto para el público general, con licencia GPL-3.0-only (ADR 34). Debes **comprobar la licencia de cada herramienta o librería que incluyas en el instalador y cumplir sus avisos** (por ejemplo, `legendary` y `gogdl`, que se prevé que sean GPL, a verificar) (ADR 34).
+- Código abierto para el público general, con licencia GPL-3.0-only (ADR 34). Debes **comprobar la licencia de cada herramienta o librería que incluyas en el instalador y cumplir sus avisos** (ADR 34).
 - El instalador no debe pedir pasos técnicos (ADR 30).
 - El proyecto no está afiliado a ninguna tienda. Cualquier texto del instalador lo respeta.
 

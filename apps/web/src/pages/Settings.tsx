@@ -490,14 +490,15 @@ function Privacy() {
           <li key={k}>{t(`settings.privacy.${k}`)}</li>
         ))}
       </ul>
-      {isSimulated && (
-        <Row title={t("settings.privacy.export")} hint={t("settings.privacy.exportHint")}>
-          <button type="button" className={ui.btn} onClick={() => void mutate(api.exportLogs()).then(() => setExported(true))}>
-            {t("settings.privacy.exportButton")}
-          </button>
-        </Row>
-      )}
-      <SimNote show={exported} />
+      <Row title={t("settings.privacy.export")} hint={t("settings.privacy.exportHint")}>
+        <button type="button" className={ui.btn} onClick={() => void mutate(api.exportLogs()).then(() => setExported(true))}>
+          {t("settings.privacy.exportButton")}
+        </button>
+        <a href="https://github.com/chamanRMA/Ludiary/issues/new" target="_blank" rel="noopener noreferrer">
+          {t("settings.privacy.issue")}
+        </a>
+      </Row>
+      <SimNote show={exported && isSimulated} />
       <Row title={t("settings.privacy.revoke")} hint={t("settings.privacy.revokeHint")}>
         <button type="button" className={ui.btn} onClick={() => window.confirm(t("settings.privacy.revokeConfirm")) && void mutate(api.revokeSessions())}>
           {t("settings.privacy.revokeButton")}

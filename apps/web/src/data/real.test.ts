@@ -32,6 +32,7 @@ function fakeHttp(handler: Handler): { http: Http; log: string[] } {
       patch: (p, b) => run("PATCH", p, b),
       put: (p, b) => run("PUT", p, b),
       delete: async (p) => void (await run("DELETE", p)),
+      postBlob: async (p, b) => ({ blob: await run("POST", p, b), filename: "ludiary-logs-x.txt" }),
     },
   };
 }
@@ -224,6 +225,25 @@ describe("mock API: backups (ADR 89)", () => {
   });
 });
 
+describe("real client: log export (ADR 92)", () => {
+  it("posts {} and downloads the Blob with the server's file name", async () => {
+    const { http, log } = fakeHttp(() => new Blob(["hi"]));
+    const clicked: { download: string; href: string }[] = [];
+    const anchor = { href: "", download: "", click: () => clicked.push({ download: anchor.download, href: anchor.href }), remove: () => {} };
+    vi.stubGlobal("document", { createElement: () => anchor, body: { appendChild: () => {} } });
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    vi.useFakeTimers();
+    await createRealApi(http, createMockApi(memory()), null).exportLogs();
+    await vi.advanceTimersByTimeAsync(1100);
+    vi.useRealTimers();
+    expect(log).toEqual(["POST /api/logs/export {}"]);
+    expect(clicked).toEqual([{ download: "ludiary-logs-x.txt", href: "blob:x" }]);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:x");
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("real client: point B, the rest comes from the simulator", () => {
   it("delegates other stores' wizards without touching the server; RAWG and IGDB stay simulated and simulated-only actions are refused", async () => {
     const { http, log } = fakeHttp(() => []);
@@ -236,7 +256,6 @@ describe("real client: point B, the rest comes from the simulator", () => {
     await api.submitWizard(epic, { kind: "continue" });
     await api.cancelWizard(epic);
     await api.disconnect(epic);
-    await expect(api.exportLogs()).rejects.toBeInstanceOf(ApiError);
     await expect(api.simulateExpiredSession("ubisoft")).rejects.toBeInstanceOf(ApiError);
     await api.revokeSessions();
     for (const name of names) expect(sim[name], name).toHaveBeenCalled();

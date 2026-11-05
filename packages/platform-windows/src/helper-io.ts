@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 
 /** Runs a one-shot mode of ludiary-tray.exe: writes `input` to stdin, returns stdout (UTF-8). */
-export type HelperRunner = (args: readonly string[], input: string, opts?: { timeoutMs?: number; visible?: boolean }) => Promise<string>;
+export type HelperRunner = (args: readonly string[], input: string, opts?: { timeoutMs?: number; visible?: boolean; maxBytes?: number; signal?: AbortSignal }) => Promise<string>;
 
 /** A runner that also owns the processes it started, so the server can end them on shutdown. */
 export interface DisposableHelperRunner extends HelperRunner {
@@ -31,6 +31,7 @@ export function createHelperRunner(helperPath: string): DisposableHelperRunner {
         if (settled) return;
         settled = true;
         running.delete(handle);
+        opts.signal?.removeEventListener("abort", onAbort);
         if (timer) clearTimeout(timer);
         fn();
       };
@@ -46,9 +47,15 @@ export function createHelperRunner(helperPath: string): DisposableHelperRunner {
           }, opts.timeoutMs)
         : null;
       child.stdout.setEncoding("utf8");
+      const onAbort = () => {
+        child.kill();
+        finish(() => reject(new Error("helper aborted")));
+      };
+      if (opts.signal?.aborted) onAbort();
+      else opts.signal?.addEventListener("abort", onAbort, { once: true });
       child.stdout.on("data", (chunk: string) => {
         output += chunk;
-        if (output.length > MAX_OUTPUT_BYTES) {
+        if (output.length > (opts.maxBytes ?? MAX_OUTPUT_BYTES)) {
           child.kill();
           finish(() => reject(new Error("helper output too large")));
         }

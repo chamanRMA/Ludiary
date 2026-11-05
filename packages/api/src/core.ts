@@ -110,7 +110,7 @@ export function statusForCoreError(code: string): number {
   if (code === "backup.not-found") return 404;
   if (code === "update.too-soon") return 429;
   if (code === "update.no-space") return 507;
-  if (code.startsWith("update.")) return ["update.unsupported", "update.nothing-new", "update.bad-version", "update.not-writable", "update.not-ready"].includes(code) ? 409 : 502;
+  if (code.startsWith("update.")) return ["update.unsupported", "update.nothing-new", "update.bad-version", "update.not-writable", "update.not-ready", "update.game-running"].includes(code) ? 409 : 502;
   if (code === "backup.folder-unavailable") return 503;
   if (code === "backup.write-failed") return 500;
   if (code === "internal") return 500;

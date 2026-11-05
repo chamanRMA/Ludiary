@@ -90,6 +90,7 @@ func newEnv(t *testing.T) *testEnv {
 		target:          "windows-x64",
 		mutexName:       fmt.Sprintf("Ludiary-Setup-test-%d", time.Now().UnixNano()),
 		lockWait:        400 * time.Millisecond,
+		shortcutWait:    400 * time.Millisecond,
 		trialTimeout:    1500 * time.Millisecond,
 		stopTimeout:     5 * time.Second,
 		rollbackTimeout: 5 * time.Second,
@@ -734,5 +735,159 @@ func TestInterruptedInstallWithCompleteFolderIsConfirmed(t *testing.T) {
 	v := e.versions()
 	if v.Active != "0.3.0" || v.Previous == nil || *v.Previous != "0.2.0" || v.Applying != nil {
 		t.Fatalf("%+v", v)
+	}
+}
+
+// ADR 92: the installer log is what the user exports after a failed update, so a rollback must leave it where it is.
+// It goes only with the next download (the service sweeps the folders of other versions) or when the trial passes.
+func TestInstallLogSurvivesARollback(t *testing.T) {
+	e := newEnv(t)
+	e.trialSetup(behavior{Codes: map[string]int{"--trial": 1}})
+	logPath := filepath.Join(e.c.updatesDir(), "0.3.0", "install.log")
+	os.MkdirAll(filepath.Dir(logPath), 0o755)
+	os.WriteFile(logPath, []byte("setup log"), 0o644)
+	if code := e.c.run(nil); code != 0 {
+		t.Fatal(code)
+	}
+	if e.versions().Active != "0.2.0" || !e.versions().isBad("0.3.0") {
+		t.Fatalf("%+v", e.versions())
+	}
+	if _, err := os.Stat(e.c.appDir("0.3.0")); err == nil {
+		t.Fatal("app-0.3.0 must be gone")
+	}
+	if data, err := os.ReadFile(logPath); err != nil || string(data) != "setup log" {
+		t.Fatalf("install.log must survive the rollback: %v", err)
+	}
+}
+
+// proc is one simulated process: its own copy of the configuration, so c.held is never shared between goroutines.
+func (e *testEnv) proc() *config {
+	cp := *e.c
+	return &cp
+}
+
+// The manual installation over another version (ADR 90 point 19, the race seen in launcher.log): the installer is still on its
+// last page (it owns SetupMutex) while --commit-update waits for it and the user ticks "Open Ludiary". The shortcut that the box
+// starts must wait for the whole commit and trial, never start the old version in between, and open the new one at the end.
+func TestShortcutDuringAManualInstallWaitsForTheCommitAndTheTrial(t *testing.T) {
+	for i := 0; i < 5; i++ {
+		e := newEnv(t)
+		e.c.lockWait, e.c.shortcutWait = 5*time.Second, 10*time.Second
+		e.app("0.2.0", behavior{})
+		e.app("0.3.0", behavior{SleepMs: 150, SleepOn: "--trial"})
+		e.setVersions(versions{Active: "0.2.0"})
+		release := holdMutex(e.c.mutexName) // Setup is still alive on its finish page
+		commit, shortcut := make(chan int, 1), make(chan int, 1)
+		go func() { commit <- e.proc().run([]string{"--commit-update", "0.3.0", "--no-open"}) }()
+		time.Sleep(100 * time.Millisecond)
+		go func() { shortcut <- e.proc().run(nil) }()
+		time.Sleep(150 * time.Millisecond)
+		release() // the user clicked Finish and Setup left
+		if a, b := <-commit, <-shortcut; a != 0 || b != 0 {
+			t.Fatalf("round %d: exit codes %d, %d", i, a, b)
+		}
+		if got := e.callLines("0.2.0"); len(got) != 0 {
+			t.Fatalf("round %d: the old version must never run: %v", i, got)
+		}
+		got := e.callLines("0.3.0")
+		if len(got) != 2 || got[0] != "--no-open --trial --from-launcher" || got[1] != "--from-launcher" {
+			t.Fatalf("round %d: one trial, then the normal start that opens the browser: %v", i, got)
+		}
+		if v := e.versions(); v.Active != "0.3.0" || v.Trial || v.isBad("0.3.0") || len(e.fatals) != 0 {
+			t.Fatalf("round %d: %+v %v", i, v, e.fatals)
+		}
+	}
+}
+
+// Silent update (/UPDATE=1): the same ordering holds when the user clicks the shortcut while Setup is working.
+func TestShortcutDuringASilentUpdateWaitsToo(t *testing.T) {
+	e := newEnv(t)
+	e.c.lockWait, e.c.shortcutWait = 5*time.Second, 10*time.Second
+	e.app("0.2.0", behavior{})
+	e.app("0.3.0", behavior{})
+	e.setVersions(versions{Active: "0.2.0", Applying: &applying{To: "0.3.0", Attempts: 1}})
+	release := holdMutex(e.c.mutexName)
+	shortcut := make(chan int, 1)
+	go func() { shortcut <- e.proc().run(nil) }()
+	time.Sleep(100 * time.Millisecond)
+	commit := make(chan int, 1)
+	go func() { commit <- e.proc().run([]string{"--commit-update", "0.3.0"}) }()
+	time.Sleep(100 * time.Millisecond)
+	release()
+	if a, b := <-commit, <-shortcut; a != 0 || b != 0 {
+		t.Fatalf("exit codes %d, %d", a, b)
+	}
+	if got := e.callLines("0.2.0"); len(got) != 0 {
+		t.Fatalf("the old version must never run: %v", got)
+	}
+	// One trial (by whoever confirmed) and one normal start: the shortcut may confirm the complete folder itself (M2).
+	got := e.callLines("0.3.0")
+	trials := 0
+	for _, l := range got {
+		if strings.Contains(l, "--trial") {
+			trials++
+		}
+	}
+	if trials != 1 || len(got) != 2 || got[1] != "--from-launcher" {
+		t.Fatalf("one trial, then the normal start: %v", got)
+	}
+	if v := e.versions(); v.Active != "0.3.0" || v.Trial || len(e.fatals) != 0 {
+		t.Fatalf("%+v %v", v, e.fatals)
+	}
+}
+
+// The shortcut wins apply.lock BEFORE --commit-update starts (Setup already gone) and its inner launcher is slow: the confirmation
+// must wait for that start to end. Without the shortcut holding the lock the commit would run its trial in the middle of it.
+func TestCommitWaitsForAShortcutThatAlreadyHoldsTheLock(t *testing.T) {
+	e := newEnv(t)
+	e.c.lockWait, e.c.shortcutWait = 5*time.Second, 10*time.Second
+	e.app("0.2.0", behavior{SleepMs: 500})
+	e.app("0.3.0", behavior{})
+	e.setVersions(versions{Active: "0.2.0"})
+	shortcut, commit := make(chan int, 1), make(chan int, 1)
+	go func() { shortcut <- e.proc().run(nil) }() // takes the lock at once: no Setup mutex
+	time.Sleep(150 * time.Millisecond)
+	started := time.Now()
+	go func() { commit <- e.proc().run([]string{"--commit-update", "0.3.0", "--no-open"}) }()
+	if a, b := <-commit, <-shortcut; a != 0 || b != 0 {
+		t.Fatalf("exit codes %d, %d", a, b)
+	}
+	if took := time.Since(started); took < 250*time.Millisecond {
+		t.Fatalf("the commit ran in %v: it did not wait for the start that held the lock", took)
+	}
+	if got := e.callLines("0.2.0"); len(got) != 1 || got[0] != "--from-launcher" {
+		t.Fatalf("the shortcut started the old version once, before the commit: %v", got)
+	}
+	if got := e.callLines("0.3.0"); len(got) != 1 || got[0] != "--no-open --trial --from-launcher" {
+		t.Fatalf("then exactly one trial: %v", got)
+	}
+	if v := e.versions(); v.Active != "0.3.0" || v.Trial || len(e.fatals) != 0 {
+		t.Fatalf("%+v %v", v, e.fatals)
+	}
+}
+
+// After shortcutWait the shortcut goes on WITHOUT the lock: it only starts the active version, with no --from-launcher, so it can
+// neither commit, run a trial nor ask to apply an update.
+func TestShortcutWithoutTheLockNeverCommitsOrApplies(t *testing.T) {
+	e := newEnv(t)
+	e.c.shortcutWait = 200 * time.Millisecond
+	e.app("0.2.0", behavior{Codes: map[string]int{"--from-launcher": exitApplyUpdate}})
+	e.app("0.3.0", behavior{})
+	e.setVersions(versions{Active: "0.2.0", Applying: &applying{To: "0.3.0", Attempts: 1}}) // a complete folder: M2 would commit
+	e.stageUpdate("0.3.0", nil)
+	lock, err := openExclusive(e.c.lockPath()) // someone else keeps it for good
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	e.c.run(nil)
+	if v := e.versions(); v.Active != "0.2.0" || v.Trial {
+		t.Fatalf("no commit without the lock: %+v", v)
+	}
+	if got := e.callLines("0.2.0"); len(got) != 1 || got[0] != "" {
+		t.Fatalf("a plain start of the active version, no --from-launcher: %v", got)
+	}
+	if got := e.callLines("0.3.0"); len(got) != 0 {
+		t.Fatalf("the new version must not run: %v", got)
 	}
 }

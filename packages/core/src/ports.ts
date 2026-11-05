@@ -41,6 +41,8 @@ export interface LibraryRepository {
   listProperties(store: StoreId): Promise<readonly PropertyRecord[]>;
   /** Installations of this device for one store. */
   listInstallations(store: StoreId): Promise<readonly InstallationRecord[]>;
+  /** ADR 92. Install paths of this device for non-retired `game` properties, of any store. */
+  listGameInstallPaths(): Promise<readonly string[]>;
   /** ADR 73. storeGameId of non-retired games of the store without media resolved, or resolved before `olderThan`. */
   listMediaPending(store: StoreId, olderThan: number, limit: number): Promise<readonly string[]>;
   /** ADR 73. Marks every id of `requested` as resolved at `at`; those missing from `media` get empty media. */

@@ -10,6 +10,7 @@ import {
   HelperProcessDialogs,
   HelperProcessFolderPicker,
   HelperProcessUserFolders,
+  HelperProcessWatcher,
   HelperProcessTrayHost,
   WindowsLocationResolver,
   createHelperRunner,
@@ -118,6 +119,7 @@ function compose(serverRole: boolean): RuntimeDeps {
     createProcessLauncher: (allowedSchemes) => createWindowsProcessLauncher({ allowedSchemes }),
     folderPicker: new HelperProcessFolderPicker(runHelper),
     userFolders: new HelperProcessUserFolders(runHelper),
+    processWatcher: new HelperProcessWatcher(runHelper), // ADR 92
     ...(embeddedLogin ? { embeddedLogin } : {}),
     dispose: () => {
       runHelper.dispose();
