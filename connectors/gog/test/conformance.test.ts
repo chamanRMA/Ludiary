@@ -17,6 +17,9 @@ describe("GOG manifest (ADR 76)", () => {
     expect(checkConnectorManifest(c)).toEqual([]);
     expect(c.access).toBe("unofficial-api");
     expect(c.capabilities).toMatchObject({ library: true, scan: true, dlc: "library-and-scan", actions: ["play", "install"], launchKinds: ["exec", "uri"], uriSchemes: ["goggalaxy"] });
+    expect(c.launchModes?.map((m) => m.id)).toEqual(["client", "direct"]);
+    for (const m of c.launchModes ?? []) for (const k of [m.labelKey, m.hintKey ?? ""]) expect(k in en && k in es, k).toBe(true);
+    expect(c.locations.find((l) => l.id === "gog-galaxy-client")?.executable).toBe("GalaxyClient.exe");
     expect(c.minSyncIntervalMs).toBe(1_800_000);
     expect(c.apiHosts).toEqual(["auth.gog.com", "embed.gog.com", "api.gog.com", "gamesdb.gog.com"]);
     expect(c.mediaHosts).toEqual(["images.gog.com"]);

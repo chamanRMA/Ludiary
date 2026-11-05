@@ -1,6 +1,6 @@
 // Domain types of the core (ADR 72, 74). Plain data; no I/O. The API layer maps them to DTOs.
 import type { Label } from "./labels";
-import type { ConnectorErrorCode, EntryMedia, ExternalIds, GameAction, I18nKey, I18nParams, PriceServiceId, StoreId } from "@ludiary/contracts";
+import type { ConnectorErrorCode, EntryMedia, ExternalIds, GameAction, I18nKey, I18nParams, LaunchModeId, PriceServiceId, StoreId } from "@ludiary/contracts";
 
 export type DetectionMode = "auto-and-manual" | "manual-only" | "later";
 export type SyncOperation = "library" | "scan";
@@ -73,6 +73,8 @@ export interface Settings {
   prices?: PricesSettings;
   /** ADR 88. Only the stores that have the operation. */
   storeCollections: Partial<Record<StoreId, StoreCollectionsSettings>>;
+  /** ADR 76 point 12. Only the stores that declare launchModes. */
+  storeLaunch: Partial<Record<StoreId, { mode: LaunchModeId }>>;
   /** ADR 89. */
   backups: { periodic: boolean };
 }
@@ -80,6 +82,7 @@ export interface SettingsPatch {
   locale?: Settings["locale"];
   detection?: DetectionMode | null;
   storeCollections?: Partial<Record<StoreId, Partial<StoreCollectionsSettings>>>;
+  storeLaunch?: Partial<Record<StoreId, { mode?: LaunchModeId }>>;
   /** ADR 89. The folder never travels here. */
   backups?: { periodic?: boolean };
   prices?: { country?: string; shops?: PriceShops };

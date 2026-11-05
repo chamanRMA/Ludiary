@@ -6,6 +6,7 @@ export const GOG_NAME_KEY = "connectors.gog.name" as I18nKey;
 export const GOG_GALAXY_CLIENT: LocationDeclaration = {
   id: "gog-galaxy-client",
   purpose: "launcher",
+  executable: "GalaxyClient.exe",
   os: ["windows"],
   sources: [{ kind: "registry-value", hive: "HKLM", key: "SOFTWARE\\GOG.com\\GalaxyClient\\paths", value: "client", view: "32" }],
 };

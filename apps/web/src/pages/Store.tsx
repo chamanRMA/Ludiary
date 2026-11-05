@@ -21,6 +21,7 @@ export function Store({ id }: { id: string }) {
   const { data: library, error: libraryError } = useQueryState(() => api.getLibrary());
   const { data: collections } = useQueryState(() => api.getCollections());
   const { data: stores, error: storesError } = useQueryState(() => api.getStores());
+  const { data: settings } = useQueryState(() => api.getSettings());
   const [view, setView] = useState<View>("all");
   const [reconnecting, setReconnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -74,6 +75,21 @@ export function Store({ id }: { id: string }) {
       </section>
 
       <StoreNotices status={status} />
+      {settings?.storeLaunch[id] && (
+        // ADR 76 point 12: how Play opens games. Texts come from the connector's catalog (connectors.<store>.launch.<mode>).
+        <fieldset className={ui.stack}>
+          <legend><b>{t("settings.stores.launchMode")}</b></legend>
+          {(["client", "direct"] as const).map((m) => (
+            <label key={m} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <input type="radio" name="launchMode" checked={settings.storeLaunch[id]?.mode === m} onChange={() => void mutate(api.updateSettings({ storeLaunch: { [id]: { mode: m } } }))} />
+              <span>
+                {t(`connectors.${id}.launch.${m}`)}
+                <small className={ui.muted} style={{ display: "block" }}>{t(`connectors.${id}.launch.${m}Hint`)}</small>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
       {expired && (
         <section className={ui.alert} role="status">
           <div>

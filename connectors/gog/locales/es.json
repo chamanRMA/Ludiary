@@ -12,5 +12,9 @@
   "connectors.gog.error.expired": "GOG ha cerrado la sesión. Vuelve a conectar la cuenta.",
   "connectors.gog.error.wishlist": "GOG no ha dejado leer la lista de deseos. Inténtalo más tarde; tu conexión con GOG sigue activa.",
   "connectors.gog.errors.galaxyMissing": "Para instalar este juego hace falta GOG Galaxy. Instálalo desde gog.com o descarga el instalador desde tu biblioteca de gog.com.",
-  "connectors.gog.disconnect.hint": "Ludiary borra su sesión de GOG de este equipo. Para cerrar todas las sesiones, cambia la contraseña en gog.com."
+  "connectors.gog.disconnect.hint": "Ludiary borra su sesión de GOG de este equipo. Para cerrar todas las sesiones, cambia la contraseña en gog.com.",
+  "connectors.gog.launch.client": "A través de GOG Galaxy",
+  "connectors.gog.launch.clientHint": "Galaxy sincroniza tus partidas en la nube y registra logros. Si Galaxy no está instalado, el juego se abre directamente. Si un juego no se abre así, elige «Directamente».",
+  "connectors.gog.launch.direct": "Directamente, con el ejecutable del juego",
+  "connectors.gog.launch.directHint": "Más rápido y sin abrir Galaxy, pero sin sincronizar las partidas en la nube."
 }

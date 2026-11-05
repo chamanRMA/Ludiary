@@ -50,6 +50,8 @@ export type SettingsUpdate = Partial<Pick<GeneralSettings, "locale" | "autoUpdat
   detection?: DetectionMode;
   /** ADR 88. Per store with collections: the mirror switch and the unverified-favorites switch. */
   storeCollections?: SettingsPatchDto["storeCollections"];
+  /** ADR 76 point 12. How Play opens games, for the stores that offer the choice. */
+  storeLaunch?: SettingsPatchDto["storeLaunch"];
   /** ADR 86. Country (two capital letters) and which shops to compare. */
   prices?: SettingsPatchDto["prices"];
 };

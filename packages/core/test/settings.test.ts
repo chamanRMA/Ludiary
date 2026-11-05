@@ -8,11 +8,11 @@ import { addUserRoot, entry, harness, makeConnector } from "./helpers";
 describe("settings and first run", () => {
   it("defaults, validation and detection change", async () => {
     const h = await harness({ onboarded: false });
-    expect(await h.core.getSettings()).toEqual({ locale: "system", detection: null, storeCollections: {}, backups: { periodic: false } });
+    expect(await h.core.getSettings()).toEqual({ locale: "system", detection: null, storeCollections: {}, storeLaunch: {}, backups: { periodic: false } });
     expect(await h.core.getOnboarding()).toEqual({ completedAt: null, detection: null });
     await expect(h.core.updateSettings({ locale: "fr" as never })).rejects.toBeInstanceOf(CoreError);
     await expect(h.core.updateSettings({ detection: "everything" as never })).rejects.toMatchObject({ code: "invalid-input" });
-    expect(await h.core.updateSettings({ locale: "es", detection: "manual-only" })).toEqual({ locale: "es", detection: "manual-only", storeCollections: {}, backups: { periodic: false } });
+    expect(await h.core.updateSettings({ locale: "es", detection: "manual-only" })).toEqual({ locale: "es", detection: "manual-only", storeCollections: {}, storeLaunch: {}, backups: { periodic: false } });
   });
 
   it("completing the first run stores the mode, scans without waiting, and can be reset", async () => {

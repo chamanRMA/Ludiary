@@ -119,6 +119,13 @@ describe("mock API: Steam collections as a mirror (ADR 88)", () => {
     expect((await api.createCollection(steam.name)).source).toBeNull(); // same name as a mirror: allowed
   });
 
+  it("keeps the launch mode of GOG (ADR 76 point 12)", async () => {
+    const api = createMockApi(memoryStorage());
+    expect((await api.getSettings()).storeLaunch).toEqual({ gog: { mode: "client" } });
+    await api.updateSettings({ storeLaunch: { gog: { mode: "direct" } } });
+    expect((await api.getSettings()).storeLaunch.gog?.mode).toBe("direct");
+  });
+
   it("turning the setting off removes the mirrors, keeps the own collections and turning it on brings them back", async () => {
     const api = createMockApi(memoryStorage());
     const own = (await api.getCollections()).filter((c) => c.source === null).length;
