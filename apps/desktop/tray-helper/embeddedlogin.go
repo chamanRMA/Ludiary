@@ -259,7 +259,7 @@ const (
 	stateCapture                     // captureUrl loaded; the script may run
 )
 
-// captureMachine is start -> done -> capture; it never skips a state (ADR 80, M3; ADR 82, point 3 c and M1).
+// captureMachine is start -> done -> capture; it never skips a state (ADR 80, M3; ADR 82, point 3 c).
 type captureMachine struct {
 	state               captureState
 	doneURL, captureURL string

@@ -67,6 +67,11 @@ func TestRequestRejections(t *testing.T) {
 		"bad name":                func(m map[string]any) { setCap(m, "name", "1bad") },
 		"bad key":                 func(m map[string]any) { setCap(m, "storageKeys", []string{"a b"}) },
 		"four keys":               func(m map[string]any) { setCap(m, "storageKeys", []string{"a", "b", "c", "d"}) },
+		"empty storageKeys":       func(m map[string]any) { setCap(m, "storageKeys", []string{}) },
+		"missing storageKeys":     func(m map[string]any) { delete(m["capture"].([]any)[0].(map[string]any), "storageKeys") },
+		"old source, no keys":     func(m map[string]any) { setCap(m, "source", "document-json"); setCap(m, "storageKeys", []string{}) },
+		"fragment in captureUrl":  func(m map[string]any) { m["captureUrl"] = "https://connect.ubisoft.com/change_domain/#x" },
+		"captureUrl ending in ?":  func(m map[string]any) { m["captureUrl"] = "https://connect.ubisoft.com/change_domain/?" },
 		"bad jsonField":           func(m map[string]any) { setCap(m, "jsonField", "a;b") },
 		"maxLength 0":             func(m map[string]any) { setCap(m, "maxLength", 0) },
 		"maxLength 8193":          func(m map[string]any) { setCap(m, "maxLength", 8193) },
@@ -223,8 +228,6 @@ func TestBlockedHostsHaveNoPathOrQuery(t *testing.T) {
 
 const (
 	ubiDone, ubiCapture = "https://connect.ubisoft.com/ready", "https://connect.ubisoft.com/login"
-	eaDone              = "https://www.ea.com/login_check"
-	eaCapture           = "https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none"
 )
 
 func TestUbisoftFlowStillCaptures(t *testing.T) {
@@ -244,31 +247,31 @@ func TestUbisoftFlowStillCaptures(t *testing.T) {
 }
 
 func TestArmingIsBoundToItsNavigationId(t *testing.T) {
-	m := captureMachine{doneURL: eaDone, captureURL: eaCapture}
-	if m.onCompleted(1, true, eaDone) != actNone {
+	m := captureMachine{doneURL: ubiDone, captureURL: ubiCapture}
+	if m.onCompleted(1, true, ubiDone) != actNone {
 		t.Fatal("without arming no load counts")
 	}
-	m.onStarting("https://accounts.ea.com/connect/auth?other=1", 4) // not doneUrl: does not arm
+	m.onStarting("https://connect.ubisoft.com/other", 4) // not doneUrl: does not arm
 	if m.armed {
 		t.Fatal("a navigation to another page armed")
 	}
-	m.onStarting(eaDone, 5)
-	if m.onCompleted(6, true, eaDone) != actNone || m.state != stateStart {
+	m.onStarting(ubiDone, 5)
+	if m.onCompleted(6, true, ubiDone) != actNone || m.state != stateStart {
 		t.Fatal("a NavigationCompleted with another id must not arm done")
 	}
-	if m.onCompleted(5, false, "https://www.ea.com/x") != actNavigateToCapture || m.state != stateDone {
+	if m.onCompleted(5, false, "https://connect.ubisoft.com/x") != actNavigateToCapture || m.state != stateDone {
 		t.Fatal("the same id, failed and at any URL, passes to done")
 	}
-	if m.onCompleted(5, true, eaDone) != actNone {
+	if m.onCompleted(5, true, ubiDone) != actNone {
 		t.Fatal("the arming is consumed")
 	}
 }
 
 func TestRedirectArms(t *testing.T) {
-	m := captureMachine{doneURL: eaDone, captureURL: eaCapture}
-	m.onStarting("https://accounts.ea.com/connect/auth?x=1", 3)
-	m.onStarting(eaDone, 3) // the redirect to doneUrl (IsRedirected) goes through the same road
-	if m.onCompleted(3, true, "https://www.ea.com/") != actNavigateToCapture {
+	m := captureMachine{doneURL: ubiDone, captureURL: ubiCapture}
+	m.onStarting("https://connect.ubisoft.com/start", 3)
+	m.onStarting(ubiDone, 3) // the redirect to doneUrl (IsRedirected) goes through the same road
+	if m.onCompleted(3, true, "https://connect.ubisoft.com/") != actNavigateToCapture {
 		t.Fatal("a redirect to doneUrl must arm; the load that follows, at another URL, leads to captureUrl")
 	}
 }

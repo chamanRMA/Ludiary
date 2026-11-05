@@ -4389,10 +4389,10 @@ export type WizardStep =
       url: string;
       /** https, host in authHosts, no query or fragment; matched on origin and path. Reached by navigation (ADR 82, point 3 c). */
       doneUrl: string;
-      /** ADR 82, point 3 b: with "document-json", query allowed and exact match. */
+      /** ADR 82, point 3 b: with "document-json", query allowed and exact match. (retirado el 5-11-2026, ver la 82) */
       captureUrl: string;
       /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. ADR 82: `source`, same for every field. */
-      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[]; // (retirado el 5-11-2026, ver la 82)
     };
 
 export type WizardInput =
@@ -4426,7 +4426,7 @@ export interface EmbeddedLogin {
     req: {
       title: string; startUrl: string; doneUrl: string; captureUrl: string;
       allowedHosts: readonly string[];
-      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; maxLength: number }[]; // source: ADR 82
+      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; maxLength: number }[]; // source: ADR 82 // (retirado el 5-11-2026, ver la 82)
     },
     signal: AbortSignal,
   ): Promise<
@@ -4440,7 +4440,7 @@ export interface EmbeddedLogin {
 
 - **Por qué un tipo de paso y no que el conector abra la ventana:** las llamadas al conector tienen 30 s (decisión 74) y un login dura minutos. Además, el conector no hace E/S propia (decisión 40): solo describe la ventana, y la abren el núcleo y la plataforma.
 - **Motor de asistentes (`packages/core/src/wizards.ts`):**
-  - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento (revisado en la 82: consulta en `captureUrl` con `document-json`; `url` y `doneUrl` con el mismo origen y ruta → `internal`); `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión.
+  - **Validación del paso** (se suma a las de la 74): `url`, `doneUrl` y `captureUrl` en `https`, sin usuario ni contraseña y con host en `authHosts`; `doneUrl` y `captureUrl` sin consulta ni fragmento (revisado en la 82: consulta en `captureUrl` con `document-json`; `url` y `doneUrl` con el mismo origen y ruta → `internal`); `capture` de 1 a 4 con los nombres y claves del punto 5, `pattern` que compile y `maxLength` de 1 a 8192. Si algo no cumple: `internal` y se cierra la sesión. (retirado el 5-11-2026, ver la 82)
   - **La web** pinta el paso y su botón envía `submit` con `{ kind: 'continue' }`; la API no cambia (el cuerpo sigue admitiendo solo `continue` y `fields`). El núcleo entonces:
     1. incrementa la época de la tienda (77, A2);
     2. llama a `EmbeddedLogin.run` con `allowedHosts` = `authHosts` **del manifiesto**, nunca del paso; con el título traducido; y con una señal que se aborta con `DELETE /api/wizards/:id`, al abrir otro asistente de la misma tienda o a los **10 minutos**. Mientras espera, la sesión del asistente no caduca. **Revisado en el punto 18, M2:** `AbortController` en la sesión, `busy` hasta el fin de `submit` y comprobación de sesión y época antes de llamar al conector;
@@ -4693,7 +4693,7 @@ Sin críticos. **Se aceptan todos los hallazgos.** Lo que sigue **prevalece sobr
   - antes de llamar al conector con los valores capturados, el núcleo comprueba que `sessions.get(id) === s` y que la época de la tienda no ha cambiado desde el paso 1; si no, `rejected` y los valores se descartan sin llegar al conector.
   - Pruebas: `DELETE`, `cancelStore` y apagado durante la espera → la señal se aborta; captura que llega después de `cancelStore` o con la época cambiada → `rejected` y `submit` del conector no se llama.
 - **M3 (medio). Cuándo y qué se ejecuta.** Revisa «Flujo» y «Guion fijo» del punto 5:
-  - (Revisado en la 82, puntos 3 y 13 M1: `done` por navegación y, con `document-json`, coincidencia exacta con `captureUrl`.) `ExecuteScript` solo se llama tras haber completado la carga en `doneUrl` (máquina de estados: `start` → `done` → `capture`; no se salta estados) y solo si `Source()` está en el origen y la ruta de `captureUrl`, **comprobado antes de cada reintento**; si la página se ha ido a otra ruta, no se ejecuta;
+  - (Revisado en la 82, puntos 3 y 13 M1: `done` por navegación y, con `document-json`, coincidencia exacta con `captureUrl`.) `ExecuteScript` solo se llama tras haber completado la carga en `doneUrl` (máquina de estados: `start` → `done` → `capture`; no se salta estados) y solo si `Source()` está en el origen y la ruta de `captureUrl`, **comprobado antes de cada reintento**; si la página se ha ido a otra ruta, no se ejecuta; (retirado el 5-11-2026, ver la 82)
   - **nunca** `AddScriptToExecuteOnDocumentCreated`;
   - el resultado bruto de `ExecuteScript` se limita a **64 KiB**; de él solo se aceptan cadenas en los nombres pedidos;
   - riesgo aceptado: el valor lo controla la página de Ubisoft. Una página manipulada, como mucho, haría que se conecte **otra cuenta**; no da acceso a nada del equipo.
@@ -5089,9 +5089,9 @@ Fuentes consultadas el 23 de octubre de 2026: [Lutris, `services/ea_app.py`](htt
 
 Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado no cambia (se repite el paso 1 de su prueba manual, punto 10).
 
-**a) Modo de captura `document-json`.**
+**a) Modo de captura `document-json`.** (retirado el 5-11-2026, ver la 82)
 
-- Contrato: cada campo de `capture` admite `source?: 'local-storage' | 'document-json'`, por defecto `'local-storage'` (lo de hoy). Con `'document-json'`, `storageKeys` va vacío o ausente; con `'local-storage'`, de 1 a 3 claves como hoy. Todos los campos de un paso usan el mismo `source`. Lo mismo en el puerto `EmbeddedLogin` y en el protocolo del auxiliar (`"source"` en cada campo).
+- Contrato: cada campo de `capture` admite `source?: 'local-storage' | 'document-json'`, por defecto `'local-storage'` (lo de hoy). Con `'document-json'`, `storageKeys` va vacío o ausente; con `'local-storage'`, de 1 a 3 claves como hoy. Todos los campos de un paso usan el mismo `source`. Lo mismo en el puerto `EmbeddedLogin` y en el protocolo del auxiliar (`"source"` en cada campo). (retirado el 5-11-2026, ver la 82)
 - **Segundo guion fijo**, constante en Go, con los parámetros como literal JSON de `json.Marshal` (igual que el primero):
   - toma el `textContent` del primer `pre` hijo de `body` si existe (Chromium pinta así un documento JSON, supuesto EAA3) y, si no, `document.body.textContent`;
   - si ese texto pasa de 64 KiB, devuelve todo a `null`;
@@ -5100,10 +5100,10 @@ Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado n
   - devuelve un objeto con los nombres pedidos y nada más.
 - No lee cookies, `localStorage`, formularios ni pulsaciones. Siguen el límite de 64 KiB del resultado, la comprobación de `Source()` antes de cada `ExecuteScript` y los reintentos de 500 ms durante 10 s (80, M3).
 
-**b) `captureUrl` con consulta, solo en `document-json`.**
+**b) `captureUrl` con consulta, solo en `document-json`.** (retirado el 5-11-2026, ver la 82)
 
-- El núcleo (`wizards.ts`) y el auxiliar aceptan consulta en `captureUrl` solo si el paso usa `document-json`; con `local-storage` sigue sin consulta. Fragmento, nunca. `doneUrl` sigue sin consulta.
-- Con `document-json`, la coincidencia con `captureUrl` (al llegar a ella y antes de cada `ExecuteScript`) es **exacta** en esquema, host, ruta y consulta, no solo en origen y ruta. Motivo: en EA la ruta `/connect/auth` también aparece durante el login con otro `client_id`; solo se lee la página a la que navegó el propio auxiliar.
+- El núcleo (`wizards.ts`) y el auxiliar aceptan consulta en `captureUrl` solo si el paso usa `document-json`; con `local-storage` sigue sin consulta. Fragmento, nunca. `doneUrl` sigue sin consulta. (retirado el 5-11-2026, ver la 82)
+- Con `document-json`, la coincidencia con `captureUrl` (al llegar a ella y antes de cada `ExecuteScript`) es **exacta** en esquema, host, ruta y consulta, no solo en origen y ruta. Motivo: en EA la ruta `/connect/auth` también aparece durante el login con otro `client_id`; solo se lee la página a la que navegó el propio auxiliar. (retirado el 5-11-2026, ver la 82)
 
 **c) Llegada a `doneUrl` por navegación.**
 
@@ -5114,7 +5114,7 @@ Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado n
   3. sin armar, ninguna carga cuenta. `atDone` se sustituye por esta regla (la cubre) y su prueba se adapta.
 - Sigue sin saltarse estados: `capture` exige `done`, y `done` exige haber navegado a `doneUrl`. La primera visita a una página con la ruta de `captureUrl` nunca se lee.
 
-**Pruebas del auxiliar (Go):** guion `document-json` construido con `json.Marshal` (comillas, barras y saltos de línea escapados); `captureUrl` con otra consulta → no se captura; texto en `pre` y sin `pre`; texto de más de 64 KiB → `capture-missing`; JSON que es una lista, texto o número, y `access_token` ausente o que no es texto → `capture-missing`; campos con `source` mezclado, `storageKeys` con `document-json` o consulta en `captureUrl` con `local-storage` → `bad-request`; armado por un `NavigationStarting` con `IsRedirected` → la siguiente carga, en otro URL, lleva a `captureUrl`; un `NavigationStarting` cancelado por el filtro no arma; sin armar no se captura; el recorrido de Ubisoft (`/ready` con 404 y después `/login`) sigue capturando.
+**Pruebas del auxiliar (Go):** guion `document-json` construido con `json.Marshal` (comillas, barras y saltos de línea escapados); `captureUrl` con otra consulta → no se captura; texto en `pre` y sin `pre`; texto de más de 64 KiB → `capture-missing`; JSON que es una lista, texto o número, y `access_token` ausente o que no es texto → `capture-missing`; campos con `source` mezclado, `storageKeys` con `document-json` o consulta en `captureUrl` con `local-storage` → `bad-request`; armado por un `NavigationStarting` con `IsRedirected` → la siguiente carga, en otro URL, lleva a `captureUrl`; un `NavigationStarting` cancelado por el filtro no arma; sin armar no se captura; el recorrido de Ubisoft (`/ready` con 404 y después `/login`) sigue capturando. (retirado el 5-11-2026, ver la 82)
 
 #### 4. Sesión y errores (decisión 46, mínimo de este corte)
 
@@ -5190,7 +5190,7 @@ Tres cambios pequeños. Valen para cualquier tienda; para Ubisoft el resultado n
 
 - **Auxiliar (Go):** las del punto 3.
 - **Plataforma:** `embedded-login.ts` pasa `source` al auxiliar y valida la respuesta igual que hoy; un campo con `source` desconocido → `failed`.
-- **Núcleo (`wizards.ts`):** `document-json` con `storageKeys` → `internal`; consulta en `captureUrl` con `local-storage` → `internal`; `source` mezclado → `internal`; consulta en `captureUrl` con `document-json` → aceptado; el resto de pruebas de la 80 sigue pasando.
+- **Núcleo (`wizards.ts`):** `document-json` con `storageKeys` → `internal`; consulta en `captureUrl` con `local-storage` → `internal`; `source` mezclado → `internal`; consulta en `captureUrl` con `document-json` → aceptado; el resto de pruebas de la 80 sigue pasando. (retirado el 5-11-2026, ver la 82)
 - **`connectors/ea`:**
   - asistente: paso exacto (`url`, `doneUrl`, `captureUrl`, `capture`); con `embedded`, consulta de identidad con la cabecera como `Secret`; `set` de los dos valores con `accessTokenExpiresAt = now + 50 min`; nombre saneado o ausente; 401 → `auth.invalid`; token con otra forma → rechazado por el núcleo antes de llegar al conector;
   - sesión: `status` `connected` antes de la hora y `expired` después; `listLibrary` caducado → `auth.expired` **sin ninguna petición**; sin token → `auth.required`; 401, 403, 429 y error de red;
@@ -5253,12 +5253,12 @@ Sin críticos. Lo que sigue prevalece sobre los puntos 2 a 9 donde no coincida.
 - **M1 (medio). Armado ligado a su navegación** (punto 3 c):
   - el armado guarda el `NavigationId` del `NavigationStarting` que armó; solo cuenta el `NavigationCompleted` con ese mismo id (otro `NavigationCompleted` no pasa a `done`);
   - «si son la misma» compara `doneUrl` y `captureUrl` del pedido, no el URL al que se llegó;
-  - con `document-json`, el estado `capture` empieza solo con el `NavigationCompleted` de la navegación a `captureUrl` que lanzó el auxiliar tras `done`; cualquier `NavigationStarting` del documento principal durante `capture` da `capture-missing`;
+  - con `document-json`, el estado `capture` empieza solo con el `NavigationCompleted` de la navegación a `captureUrl` que lanzó el auxiliar tras `done`; cualquier `NavigationStarting` del documento principal durante `capture` da `capture-missing`; (retirado el 5-11-2026, ver la 82)
   - prueba de Go para cada regla.
 - **M2 (medio). `blockedHosts` sin URL.** Para un URL sin host (por ejemplo `nucleus:rest#access_token=…`), `blockedHosts` guarda solo el esquema con `:` (`nucleus:`) o nada; nunca el URL ni el fragmento. Pruebas: Go (navegación a `nucleus:rest#access_token=…` → en `blockedHosts` no aparece el token) y plataforma (una entrada sin forma de host se descarta).
 - **M3 (medio). Confirmación del usuario** sobre la contraseña en la ventana: ya dada (punto 12).
 - **Bajos:**
-  - remisiones en la 80 a este cambio: flujo del punto 5 (llegada a `doneUrl`), TS del punto 6 (`doneUrl`, `captureUrl` y `source?: "local-storage" | "document-json"`), validación del paso, `ExecuteScript` del punto 18 y `atDone` del punto 19;
+  - remisiones en la 80 a este cambio: flujo del punto 5 (llegada a `doneUrl`), TS del punto 6 (`doneUrl`, `captureUrl` y `source?: "local-storage" | "document-json"`), validación del paso, `ExecuteScript` del punto 18 y `atDone` del punto 19; (retirado el 5-11-2026, ver la 82)
   - el núcleo rechaza (`internal`) un paso cuyo `url` y `doneUrl` tienen el mismo origen y ruta (armaría en la primera navegación);
   - `captureUrl` se compara tras `url.Parse` por `Scheme`, `Host` en minúsculas, `Path` y `RawQuery` exactos;
   - la constante `ORIGIN_JS_SDK` es un riesgo de condiciones de uso (identifica un cliente de EA), como el `Ubi-AppId` de la 80; se declara así en la guía y en «Riesgos principales»;
