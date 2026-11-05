@@ -56,6 +56,9 @@ const UBI_HEADER = /\b(?:Ubi_v1|rm_v1) t=\S+/gi;
 // form (adds + / = .). Replaces the ADR 77 pattern. Accepted false positives: long paths, hashes and texts without spaces.
 const LONG_TOKEN = /(?<![A-Za-z0-9+/=_.-])[A-Za-z0-9+/=_.-]{64,}/g;
 
+// 8.3 form of the user folder (C:\Users\EXAMPL~1), whatever the user name is.
+const SHORT_HOME = /(?:[A-Za-z]:)?[\\/]+Users[\\/]+[^\\/\s]{1,6}~\d+/gi;
+
 const EPIC_TOKEN = /eg1~[A-Za-z0-9._-]+/g;
 
 /** Builds the redaction patterns for one home folder and user name (exported for tests). */
@@ -69,6 +72,7 @@ export function makeRedactor(home: string, user: string): (text: string) => stri
   const userPattern = user.length >= 3 ? new RegExp(`(?<!${NAME_CHAR})${escapeRegExp(user)}(?!${NAME_CHAR})`, "giu") : null;
   return (text) => {
     let out = homePattern ? text.replace(homePattern, "~") : text;
+    out = out.replace(SHORT_HOME, "~");
     if (userPattern) out = out.replace(userPattern, "<user>");
     // ADR 74 point 6: the net under Secret. A Steam Web API key (32 hex) and a SteamID64 are never written to a log.
     // Long tokens first: a hex run inside one must not split it below the 64-char threshold.
@@ -79,7 +83,7 @@ export function makeRedactor(home: string, user: string): (text: string) => stri
 
 /**
  * Replaces the user's home folder with "~" and the user name with "<user>" so logs never carry it (ADR 35, invariant 5).
- * shortcut: 8.3 short paths (C:\Users\EXAMPL~1) are not covered; revisit with the real logger of decision 59.
+ * 8.3 short forms of the user folder are covered by SHORT_HOME.
  */
 export const redactHome = makeRedactor(homedir(), userName());
 

@@ -81,14 +81,14 @@ const settings: SettingsRepository = {
 
 let service: UpdateService;
 let restarted = 0;
-function make(over: { version?: string; installRoot?: string | null; keys?: Record<string, string> } = {}): UpdateService {
+function make(over: { version?: string; installRoot?: string | null; keys?: Record<string, string>; isGameRunning?: () => Promise<boolean> } = {}): UpdateService {
   const config: UpdateConfig = {
     platform: { target: "windows-x64", installRoot: over.installRoot === undefined ? root : over.installRoot, freeBytes: async () => freeBytes, restartIntoLauncher: async () => void restarted++ },
     keys: over.keys ?? { k1: rawPublic },
     repo: REPO,
     downloader: net,
   };
-  service = createUpdateService({ version: over.version ?? current, dataDir, config, settings, log: () => {}, restart: async () => void restarted++ });
+  service = createUpdateService({ version: over.version ?? current, dataDir, config, settings, log: () => {}, restart: async () => void restarted++, ...(over.isGameRunning ? { isGameRunning: over.isGameRunning } : {}) });
   return service;
 }
 const choose = (mode: UpdateMode) => void settingsMap.set("updates.mode", mode);
@@ -625,6 +625,53 @@ describe("restart and notices", () => {
     expect(restarted).toBe(0);
     await vi.advanceTimersByTimeAsync(400);
     expect(restarted).toBe(1);
+  });
+
+  it("with a game open restart answers update.game-running and the update stays ready (ADR 92)", async () => {
+    publish("0.3.0");
+    let open = true;
+    const svc = make({ isGameRunning: async () => open });
+    await svc.checkNow();
+    await svc.download();
+    await expect(svc.restart()).rejects.toMatchObject({ code: "update.game-running", status: 409, key: "core.errors.update.game-running" });
+    expect((await svc.status()).state).toBe("ready");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(restarted).toBe(0);
+    open = false;
+    await svc.restart();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(restarted).toBe(1);
+  });
+
+  it("two simultaneous restarts with a slow game check restart once", async () => {
+    publish("0.3.0");
+    const svc = make({ isGameRunning: () => new Promise((r) => setTimeout(() => r(false), 50)) });
+    await svc.checkNow();
+    await svc.download();
+    const both = Promise.all([svc.restart(), svc.restart()]);
+    await vi.advanceTimersByTimeAsync(60);
+    await both;
+    await vi.advanceTimersByTimeAsync(400);
+    expect(restarted).toBe(1);
+  });
+
+  it("restarts if the game check throws (fail open)", async () => {
+    publish("0.3.0");
+    const svc = make({ isGameRunning: async () => { throw new Error("boom"); } });
+    await svc.checkNow();
+    await svc.download();
+    await svc.restart();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(restarted).toBe(1);
+  });
+
+  it("after a rollback updates/<to>/install.log is still there at the next start (ADR 92)", async () => {
+    const folder = updateFolder(dataDir, "0.3.0");
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, "install.log"), "log");
+    writeState(dataDir, { state: "rolled-back", from: "0.2.0", to: "0.3.0", code: "1" });
+    await make().start();
+    expect(existsSync(join(folder, "install.log"))).toBe(true);
   });
 
   it("the notices of the last update are shown until acknowledged", async () => {

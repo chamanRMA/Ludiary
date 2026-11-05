@@ -270,6 +270,9 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
   async listInstallations(store: StoreId) {
     return [...this.installs.values()].filter((i) => this.properties.get(i.propertyId)?.store === store);
   }
+  async listGameInstallPaths() {
+    return [...this.installs.values()].filter((i) => { const p = this.properties.get(i.propertyId); return p?.kind === "game" && p.removedAt === null; }).map((i) => i.installPath);
+  }
   /** ADR 73: resolved media per storeGameId: [media, resolvedAt]. */
   resolved = new Map<string, { media: EntryMedia; at: number }>();
   async listMediaPending(store: StoreId, olderThan: number, limit: number) {
@@ -565,6 +568,8 @@ export async function harness(
     /** ADR 86. */
     prices?: CoreDeps["prices"];
     priceServices?: CoreDeps["priceServices"];
+    /** ADR 92. */
+    processes?: CoreDeps["processes"];
   } = {},
 ): Promise<Harness> {
   const store = new MemoryStore();
@@ -640,6 +645,7 @@ export async function harness(
     ...(opts.backups ? { backups: opts.backups } : {}),
     ...(opts.userFolders ? { userFolders: opts.userFolders } : {}),
     ...(opts.lastRestore ? { lastRestore: opts.lastRestore } : {}),
+    ...(opts.processes ? { processes: opts.processes } : {}),
     ...(opts.prices ? { prices: opts.prices } : {}),
     ...(opts.priceServices ? { priceServices: opts.priceServices } : {}),
     cipher: opts.cipher ?? fakeCipher(),

@@ -61,6 +61,8 @@ export interface LocalServerDeps {
   core: LudiaryCoreFacade;
   /** ADR 90. Absent (Docker): the routes answer 409 `update.unsupported`. */
   updates?: UpdatesFacade;
+  /** ADR 92. Composes the log text file. Absent: the route answers 409 `action-unavailable`. */
+  exportLogs?: () => Promise<{ filename: string; body: string }>;
   /** SPA files by absolute URL path ('/index.html', '/assets/x.js'), read once by the runtime. May be empty. */
   webAssets: WebAssets;
   /** Union of the connectors' mediaHosts (ADR 71): bare host names, they become img-src entries. */
@@ -410,6 +412,17 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     if (!updates) throw noUpdates();
     await updates.restart();
     return reply.code(202).send({ restarting: true });
+  });
+
+  // ADR 92 point 3. Exports files, so it is 'session+key' (the default).
+  app.post("/api/logs/export", { schema: { querystring: noQuery, body: EmptyObjectSchema } }, async (_req, reply) => {
+    if (!deps.exportLogs) return reply.code(409).send({ error: "action-unavailable", detail: { code: "action-unavailable", key: "core.errors.action-unavailable" } });
+    const { filename, body } = await deps.exportLogs();
+    return reply
+      .header("Content-Type", "text/plain; charset=utf-8")
+      .header("Content-Disposition", `attachment; filename="${filename}"`)
+      .header("X-Content-Type-Options", "nosniff")
+      .send(body);
   });
 
   app.patch<{ Params: IdParams; Body: ScanRootPatchDto }>(

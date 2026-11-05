@@ -102,6 +102,7 @@ export async function composeCore(
       ...(locations ? { locations } : {}),
       ...(launcher ? { launcher } : {}),
       ...(deps.folderPicker ? { folderPicker: deps.folderPicker } : {}),
+      ...(deps.processWatcher ? { processes: deps.processWatcher } : {}),
       ...(deps.embeddedLogin ? { embeddedLogin: deps.embeddedLogin } : {}),
       ...(deps.userFolders ? { userFolders: deps.userFolders } : {}),
       ...(extra.backups ? { backups: extra.backups } : {}),

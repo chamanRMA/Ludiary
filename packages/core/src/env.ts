@@ -1,5 +1,5 @@
 // Public facade types of the core (ADR 72, point 4) and the shared environment of its use-case modules.
-import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, PriceService, PriceServiceId, ProcessLauncher, SecretCipher, SecretVault, StoreConnector, StoreId, UserFolders, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
+import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, PriceService, PriceServiceId, ProcessLauncher, ProcessWatcher, SecretCipher, SecretVault, StoreConnector, StoreId, UserFolders, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
 import type {
   CoreErrorInfo,
   CoreLogger,
@@ -100,6 +100,8 @@ export interface CoreDeps {
   locations?: LocationResolver;
   /** Absent: the mode cannot launch games. */
   launcher?: ProcessLauncher;
+  /** ADR 92. Absent (Docker, tests): there is never a game running. */
+  processes?: ProcessWatcher;
   /** Absent: the mode cannot open a native folder dialog. */
   folderPicker?: FolderPicker;
   /** ADR 73, 74. Factory of the HttpClient of one connector (its apiHosts). maxBytes: the core passes 16 MiB for listLibrary, 2 MiB otherwise. Absent: no network, no media step. */
@@ -189,6 +191,8 @@ export interface LudiaryCore {
   pickBackupFolder(): Promise<BackupsState | null>;
   /** Prepares the restoration (point 6.1); the caller then restarts the server. */
   restoreBackup(id: string): Promise<void>;
+  /** ADR 92. True if a process runs from the install folder of a stored game. Never throws; only a boolean leaves. */
+  isGameRunning(): Promise<boolean>;
   /** Called by the runtime after startup and every hour. Never throws. */
   backupTick(): Promise<void>;
   /** ADR 86. Registered price services with their state, derived without network. */

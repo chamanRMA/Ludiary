@@ -47,7 +47,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 32 | Actualización de la aplicación en modo localhost | Vigente |
 | 33 | Idiomas de la interfaz | Vigente |
 | 34 | Licencia del proyecto: GPL-3.0 | Vigente (confirmada por el usuario) |
-| 35 | Diagnóstico de fallos | Vigente |
+| 35 | Diagnóstico de fallos | Vigente; exportación y enlace a GitHub concretados en la 92 |
 | 36 | Organización de la biblioteca en el MVP | Vigente; favoritos, etiquetas y colecciones concretados en la 85 |
 | 37 | Métodos de entrada de la interfaz | Vigente |
 | 38 | Estructura del repositorio y fronteras entre paquetes | Vigente (confirmada por el usuario) |
@@ -67,11 +67,11 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 52 | DLC cuyo juego base no está en la biblioteca | Vigente (confirmada por el usuario); sección de Ajustes aplazada en la 83 |
 | 53 | Puerto: dónde se guarda y rango permitido | Vigente (confirmada por el usuario) |
 | 54 | Sesión del navegador: duración y revocación | Vigente (confirmada por el usuario); sesión ligada al puerto en la 63; segundo factor y cookie de la dirección alternativa en la 67 |
-| 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales) |
+| 55 | Detección del proceso de cada juego | Propuesta (se cierra con pruebas reales); puerto `ProcessWatcher`, vía nativa en Windows y uso por el actualizador concretados en la 92, con la lista de lo que falta probar en su punto 9 |
 | 56 | Tiempo de juego propio y tiempo informado por las tiendas | Vigente (confirmada por el usuario) |
 | 57 | Copias de seguridad: frecuencia y retención | Vigente (confirmada por el usuario; revisa la 18); concretada en la 89 |
 | 58 | Actualización y firma de las versiones | Vigente (confirmada por el usuario); hereda de la 45 el requisito de validar la actualización con vuelta atrás; concretada en la 90 (custodia de la clave privada revisada en la 90 si se mantiene su 15.3 (a)) |
-| 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario) |
+| 59 | Registros: tamaño y rotación | Vigente (confirmada por el usuario); exportación revisada en la 92 (un `.txt` en lugar de un zip) |
 | 60 | Contribuciones y licencias de terceros | Vigente (confirmada por el usuario); ampliada en la 70 |
 | 61 | Tiendas y funciones en Linux y macOS | Propuesta preliminar (se cierra en la fase 2) |
 | 62 | Instancia única: cerrojo del sistema en la carpeta de datos | Vigente (recomendada; concreta la 26); el lanzador interno lo toma también fuera del servidor para las actualizaciones (decisión 90, punto 18, B6) |
@@ -103,7 +103,8 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 | 87 | Importar las colecciones de Steam | Propuesta (encargada el 2-11-2026; amplía las 40, 72 y 85; operación opcional `importCollections` del conector, aditiva, `contractVersion` 1, sin migración; lee `userdata\<accountid>\config\cloudstorage\cloud-storage-namespace-1.json` bajo `steam-root` solo a petición del usuario y con autodetección; bajo demanda con resumen previo (`dryRun`), solo aditiva y por `name_key`; punto 11 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 13, sin críticos: errores sin texto del fichero, cuenta sin verificar sin favoritos, plan dentro de la transacción, lector estrechado a `userdata`; falta la del código y la prueba manual). La 86 (precios) se escribe en otra rama. **Revisada en la 88**: deja de ser bajo demanda y aditiva |
 | 88 | Colecciones de Steam que se cargan y se refrescan solas al sincronizar | Propuesta (encargada por el usuario el 2-11-2026; revisa las 85 y 87, amplía las 40 y 50; paso al final del bucle de sincronización de cada tienda con `importCollections`; espejo de solo lectura por `source_id` con la migración 0005 e índice único parcial de `name_key` solo entre propias; favoritos solo añadidos y solo los nuevos en Steam; ajustes persistentes `collections.<store>.enabled` y `unverifiedFavorites`; `sourceId` aditivo, `contractVersion` 1; se retiran la ruta de importación y su diálogo; punto 14 aplicado por defecto con (a) salvo 14.3 (b); revisión del `auditor` sobre el diseño incorporada el 2-11-2026 en el punto 15, que prevalece: sin adopción, sin huella ni `stat`, ajuste releído y guardas de espejos dentro de la transacción, guardián de borrado explícito, cambio de cuenta, 200 propias + 200 espejos, migración `0005_collection_source` con id `0006`; falta el código, su revisión y la prueba manual) |
 | 89 | Copias de seguridad periódicas, manuales y restauración | Propuesta (encargada por el usuario el 3-11-2026 para la 0.1; concreta la 57 y amplía la 62; copia completa de la base con `db.backup()`, sin la clave; puerto `BackupStore` en `db` y `UserFolders` en `platform-windows`; restauración preparada en caliente y aplicada al rearrancar, con copia previa y vuelta atrás; validación con esquema idéntico al de sus migraciones; sin migración; punto 12 aplicado por defecto con (a) en todo; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 16, que prevalece: carpetas de una copia ajena desactivadas, comparación de esquema sin patrones, máquina de estados por `restore-pending.json`, `installId` en el nombre, reinicio desde `api` con `--after-restart`, `pre-restore` con `-origin` y `-raw`; falta el código, su revisión y la prueba manual) |
-| 90 | Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás | Propuesta (encargada por el usuario el 3-11-2026; concreta las 32 y 58, amplía las 45, 57, 64, 65 y 69; el paquete es el instalador de Inno en silencio; lanzador estable en Go con `app-<versión>` y `versions.json`; `releases/latest` sin token con ETag, solo estable; manifiesto firmado con Ed25519 y verificado otra vez justo antes de ejecutar; se aplica solo en un arranque en frío o con «Reiniciar y actualizar»; copia previa y restauración siempre en la vuelta atrás; código de salida 20; punto 15 aplicado por defecto con (a) salvo 15.1 y 15.2, resueltos por el usuario el 4-11-2026 en el punto 20 (`notify` por defecto sin puerta ni tarjeta, invariante 9 con la excepción de GitHub, aviso firmado con Aplicar / Más tarde / Ignorar y banner tras actualizar); 15.3 revisa la custodia de la clave de la 58; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 18, que prevalece: sin críticos y 3 altos (vuelta atrás reanudable, restauración de la 89 bajo el cerrojo de la 62, cerrojo de aplicación y prueba autenticada con la acción `version`); revisa la 62 y amplía la 63; se implementa después de integrar la 89; falta el código, su revisión y la prueba manual) |
+| 90 | Actualizador: comprobación en GitHub Releases, descarga en segundo plano y aplicación con vuelta atrás | Propuesta (encargada por el usuario el 3-11-2026; concreta las 32 y 58, amplía las 45, 57, 64, 65 y 69; el paquete es el instalador de Inno en silencio; lanzador estable en Go con `app-<versión>` y `versions.json`; `releases/latest` sin token con ETag, solo estable; manifiesto firmado con Ed25519 y verificado otra vez justo antes de ejecutar; se aplica solo en un arranque en frío o con «Reiniciar y actualizar»; copia previa y restauración siempre en la vuelta atrás; código de salida 20; punto 15 aplicado por defecto con (a) salvo 15.1 y 15.2, resueltos por el usuario el 4-11-2026 en el punto 20 (`notify` por defecto sin puerta ni tarjeta, invariante 9 con la excepción de GitHub, aviso firmado con Aplicar / Más tarde / Ignorar y banner tras actualizar); 15.3 revisa la custodia de la clave de la 58; revisión del `auditor` sobre el diseño incorporada el 3-11-2026 en el punto 18, que prevalece: sin críticos y 3 altos (vuelta atrás reanudable, restauración de la 89 bajo el cerrojo de la 62, cerrojo de aplicación y prueba autenticada con la acción `version`); revisa la 62 y amplía la 63; se implementa después de integrar la 89; falta el código, su revisión y la prueba manual); exportación de registros y `update.game-running` en la 92, que revisa su punto 7.6 |
+| 92 | Exportar los registros y saber si hay un juego abierto | Propuesta (encargada el 5-11-2026; concreta las 35 y 55 para el actualizador; revisa la exportación de la 59 y el punto 7.6 de la 90; un `.txt` filtrado con `POST /api/logs/export` `session+key`; `ProcessWatcher` opcional con `ludiary-tray.exe --processes`; `restart` da `409 update.game-running` y la actualización queda pospuesta; sin migración ni dependencias; la 55 sigue abierta para el tiempo de juego; falta el código, la revisión del `auditor` y la prueba manual) |
 
 ## Decisiones
 
@@ -456,7 +457,7 @@ Página web y servidor para gestionar en un solo sitio las bibliotecas de videoj
 - Hay que comprobar la licencia de cada herramienta o librería incluida en el instalador y cumplir sus avisos.
 - Cambiar de licencia más adelante exigiría el acuerdo de los colaboradores, lo que afecta a la política de contribuciones.
 
-### 35. Diagnóstico de fallos
+### 35. Diagnóstico de fallos (concretada en la decisión 92)
 
 **Decisión:** la aplicación guarda registros locales y ofrece en Ajustes un botón para exportarlos, junto con un enlace al repositorio de GitHub para abrir una incidencia (issue).
 
@@ -1184,7 +1185,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** con un solo usuario en local, una sesión larga evita molestias, y la revocación cubre el caso de perder el control del navegador. Alternativa descartada: una sesión que muere al cerrar el navegador (obligaría a pasar siempre por el acceso directo).
 
-### 55. Detección del proceso de cada juego (propuesta; se cierra con pruebas reales)
+### 55. Detección del proceso de cada juego (propuesta; se cierra con pruebas reales; puerto, vía nativa en Windows y uso por el actualizador concretados en la decisión 92)
 
 **Decisión (propuesta):**
 
@@ -1234,7 +1235,7 @@ El botón manual respeta el suelo. Tras un error, el siguiente intento automáti
 
 **Motivo:** las carpetas versionadas dan vuelta atrás de forma natural (decisión 32), y la verificación propia no depende del certificado comercial. Alternativas descartadas: Velopack (no admite volver atrás, según su documentación); un certificado comercial (coste anual; el usuario prefiere publicar sin firma si SignPath no acepta el proyecto).
 
-### 59. Registros: tamaño y rotación
+### 59. Registros: tamaño y rotación (exportación revisada en la decisión 92)
 
 **Decisión (confirmada por el usuario el 21 de octubre de 2026):**
 
@@ -7043,7 +7044,7 @@ Ajuste `updates.mode` (clave-valor, sin migración):
    - Sale con 0 (servidor arrancado, comprobación de estado superada y enlace obtenido, 64): `trial: false`, se borran las `app-*` que no sean `active` ni `previous` y se borra el instalador.
    - Otro código o tiempo agotado: vuelta atrás (punto 8).
    - El usuario ve unos segundos la ventana de progreso de Inno (en su idioma) y luego se abre la web como siempre.
-6. **«Reiniciar y actualizar»** (bandeja y Acerca de): el servidor lanza en segundo plano `<raíz>\Ludiary.exe --after-stop` y se para. El lanzador estable con `--after-stop` ejecuta `--stop` (espera a que se libere el cerrojo, 15 s) y sigue como en el paso 1. Cuando exista la detección de procesos de la 55, el botón se desactiva con una partida en curso (`409 update.game-running`). Hasta entonces, el diálogo avisa de que los juegos abiertos siguen abiertos.
+6. **«Reiniciar y actualizar»** (bandeja y Acerca de): el servidor lanza en segundo plano `<raíz>\Ludiary.exe --after-stop` y se para. El lanzador estable con `--after-stop` ejecuta `--stop` (espera a que se libere el cerrojo, 15 s) y sigue como en el paso 1. Cuando exista la detección de procesos de la 55, el botón se desactiva con una partida en curso (`409 update.game-running`). Hasta entonces, el diálogo avisa de que los juegos abiertos siguen abiertos. *Revisado en la decisión 92: el botón no se desactiva; al pulsarlo con un juego abierto responde `409 update.game-running` y la actualización queda lista para el próximo arranque.*
 7. **Nunca:** instalar con el servidor en marcha; instalar al apagar Windows; instalar al pulsar «Salir» sin preguntar (15.4). Los juegos lanzados son procesos independientes (URI a través de la tienda o `exec` separado, 72 y 76): parar el servidor no los cierra.
 8. **Disposición en plano (instalaciones previas a esta decisión):** el instalador nuevo borra con `[InstallDelete]` `{app}\native`, `{app}\web`, `{app}\bin`, `{app}\licenses` y `{app}\version.txt`, y el `Ludiary.exe` viejo queda sustituido por el lanzador estable. `[UninstallDelete]` añade `{app}\app-*` y `{app}\versions.json`. El servidor viejo responde a `--stop` porque es el mismo SEA.
 9. **Sin `versions.json` o inválido:** el lanzador estable usa la `app-*` de versión más alta. Sin ninguna, muestra «Ludiary está dañado; vuelve a instalarlo», desde un pequeño fichero de mensajes es/en incrustado y elegido por el idioma del sistema (invariante 6).
@@ -7842,6 +7843,155 @@ Las preguntas del punto 9 siguen abiertas; mientras, rige la recomendada de cada
 - Dos rutas más que pueden romperse sin aviso (Steam no documentada y GOG no oficial): el fallo se muestra en el resumen con el texto de la tienda y el resto del comparador sigue.
 - El `documentalista` actualiza la guía del comparador y la nota de privacidad; el `tester`, las respuestas y la prueba del punto 11; el `auditor` revisa diseño y código.
 
+### 92. Exportar los registros y saber si hay un juego abierto (concreta las decisiones 35 y 55 para el actualizador; revisa la exportación en zip de la 59 y el botón desactivado del punto 7.6 de la 90)
+
+Encargo de la sesión principal (5-11-2026, rama `feature/registros-y-partidas`): las dos piezas que el punto 19 de la 90 deja como «Pendiente», con el mínimo cambio.
+
+#### 1. Qué hay hoy (leído el 5-11-2026)
+
+- **Registros:** `createFileLogger` (`packages/runtime/src/files.ts`) escribe `logs/server.log`, `logs/launcher.log` y `logs/crash.log`, con `redactHome` aplicado al escribir, 512 KiB y un solo fichero rotado (`.log.1`). Es el sustituto provisional de la 59 (sin `pino`). El registro de Inno va a `updates/<v>/install.log`, con rutas completas (90, M6).
+- **Web:** Ajustes > Privacidad y registros ya tiene la fila «Exportar registros», solo en el simulador (`isSimulated`); `real.ts` devuelve `unavailable` en `exportLogs`. El aviso de vuelta atrás (`UpdatesNotice`, `rolledBack`) ya enlaza a `/settings/privacy` con `updates.notice.exportLogs`.
+- **Tiempo de juego:** solo el que informa la tienda (`storePlaytimeMinutes` y `storeLastPlayedAt`, hoy de Steam). **No hay detección de procesos**: ni `ProcessWatcher`, ni tabla `play_sessions`, ni sondeo tras lanzar. `InstalledEntry.executables` existe en el contrato, pero el núcleo no lo usa. `ProcessLauncher` lanza separado y sin guardar el PID; con las URI (Steam, Epic, Ubisoft, EA) el proceso que arranca es `rundll32` y la tienda, nunca el juego.
+
+#### 2. Exportación: qué se exporta
+
+**Decisión: un único fichero de texto, no un zip (revisa la 59).**
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| **(a) Un `.txt` (recomendada)** | Sin dependencias; el usuario puede leerlo antes de adjuntarlo, lo que da confianza en el filtrado; GitHub acepta `.txt` en las incidencias | Algo más grande que un zip (el total ya está acotado) |
+| (b) Zip, como decía la 59 | Más pequeño; ficheros separados | Una dependencia nueva (no hay ninguna de zip instalada) o un escritor de zip propio; el usuario no ve lo que envía sin descomprimir |
+
+- **Nombre:** `ludiary-logs-<versión>-<AAAAMMDD-HHMMSS>.txt` (hora UTC).
+- **Cabecera**, solo valores y códigos:
+  - `Ludiary <versión>`, `os.version()` y `os.release()`, `process.arch`, versión de Node, idioma de la interfaz y la hora de generación.
+  - Estado del actualizador si existe (`mode`, `state`, `current`, `latest`, código de error): es lo que necesita una incidencia tras una vuelta atrás.
+  - Por tienda: `store`, `connection`, `mode` y, de cada estado de sincronización, el tipo, el estado, la última ejecución y el código de error. **Nunca `accountLabel`** ni ningún otro nombre de cuenta.
+- **Cuerpo:** una sección por fichero, con el nombre relativo como título (`===== logs/server.log.1 =====`), primero el rotado y después el actual:
+  - los ficheros normales de `logs/` cuyo nombre cumpla `^[a-z0-9-]+\.log(\.1)?$`;
+  - `updates/<v>/install.log` de cada carpeta cuyo nombre sea una versión válida (M6 de la 90).
+  - Nada más: ni la base de datos, ni `runtime.json`, `state.json`, `versions.json`, copias, tokens o ajustes.
+- **Filtrado:** `redactHome` se aplica **otra vez** a cada fichero al exportar. Es obligatorio para `install.log`, que no pasa por el registrador, y cubre líneas escritas por versiones con un filtro anterior.
+- **Topes:** los últimos 2 MiB de cada fichero y 16 MiB en total. Lo que se corte se indica con una línea `[truncated]`. Fichero ilegible: una línea con el código (`unreadable`), sin ruta ni mensaje del sistema.
+- Las rutas absolutas no salen ni en los títulos de sección ni en la cabecera.
+- `install.log` hoy se borra con `updates/<to>` tras una prueba superada, que es lo correcto. Tras una **vuelta atrás** debe seguir ahí hasta la descarga de otra versión (`cleanOtherFolders`). Es justo cuando hace falta. Se comprueba con una prueba.
+
+#### 3. Exportación: ruta y nivel de acceso
+
+- **`POST /api/logs/export`**, cuerpo `{}` (`EmptyObjectSchema`) y nivel `session+key` (el de por defecto: no se declara nada). Exporta ficheros, así que la 67 y el invariante 4 exigen la clave de origen.
+- Sin `exportLogs`, la respuesta es `409 action-unavailable` aunque la 72 asigne 422 a ese código en otras rutas: la 92 **revisa la 72 solo para esta ruta**.
+- Respuesta `200`, `Content-Type: text/plain; charset=utf-8`, `Content-Disposition: attachment; filename="<nombre>"`, `X-Content-Type-Options: nosniff` y el `Cache-Control: no-store` global.
+- Se usa `POST` y no `GET` porque es una acción con la clave en la cabecera: no se puede pedir con un enlace normal y así ningún navegador lo guarda en caché ni lo carga por adelantado.
+- **Dónde vive:** la compone el papel servidor de `packages/runtime` (`log-export.ts`), que es quien conoce `dataDir`, la versión y `redactHome`. Llega a `createLocalServer` como dependencia opcional `exportLogs?: () => Promise<{ filename: string; body: string }>`, igual que `updates`. Sin ella, la ruta responde `409 action-unavailable`. El estado de las tiendas sale de la fachada del núcleo que ya existe (lista de tiendas); el núcleo no lee ficheros de registro.
+- El registro solo anota «logs exported», con el tamaño en bytes.
+
+#### 4. Exportación: botón y vínculo con el actualizador
+
+- **Botón:** la fila que ya existe en **Ajustes > Privacidad y registros** deja de ser solo del simulador.
+- **`exportLogs()` de `real.ts`:**
+  1. llama a un método nuevo de `http.ts` que hace la misma petición `POST`, con la clave de origen y el mismo tratamiento de errores, y devuelve un `Blob`;
+  2. toma el nombre de `Content-Disposition` (si no lo encuentra, `ludiary-logs.txt`);
+  3. descarga con `URL.createObjectURL`, un `<a download>` temporal y `revokeObjectURL`.
+- Debajo del botón, un enlace **«Abrir una incidencia en GitHub»** a `https://github.com/chamanRMA/Ludiary/issues/new`, que se abre fuera (`target="_blank"`, `rel="noopener noreferrer"`), con el mismo repositorio fijo que `releaseNotesUrl` (90, punto 20). Lo pide la 35 y hoy falta.
+- **Vínculo con el actualizador:** sin cambios. `updates.notice.exportLogs` del aviso `rolledBack` ya lleva a `/settings/privacy`, donde está el botón.
+- **Textos** (es/en): `settings.privacy.issue`; `settings.privacy.exportHint` cambia a «Un fichero de texto para adjuntar a una incidencia. Puedes leerlo antes: no lleva claves ni tu nombre de usuario de Windows.».
+
+#### 5. Partida en curso: qué cuenta como juego
+
+**Decisión: un juego está abierto si hay un proceso cuyo ejecutable está dentro de la carpeta de instalación de un juego instalado de la biblioteca, lo haya lanzado Ludiary, la tienda o un acceso directo.**
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| (a) Seguir el proceso lanzado por Ludiary | Sin sondeo | Con URI, Ludiary nunca ve el proceso del juego (punto 1). Con `exec` (GOG), el PID es el del ejecutable, que puede delegar en otro. No ve los juegos lanzados desde la tienda |
+| **(b) Sondeo bajo demanda por carpeta de instalación (recomendada)** | Cubre todas las tiendas y todos los orígenes; una sola consulta cuando hace falta, sin temporizadores; es la base del `ProcessWatcher` de la 55 | Falsos positivos de procesos auxiliares que viven en la carpeta del juego (solo posponen) |
+| (c) Sondeo continuo, como el de la 55, para el tiempo de juego | Sirve a la vez al tiempo de juego | Depende de las pruebas reales de la 55; no hace falta para el actualizador |
+
+- **Instalaciones que cuentan:** las guardadas de propiedades `kind: 'game'` sin `removed_at`, de cualquier tienda. Se ignoran las `install_path` que sean la raíz de una unidad (`X:\`): una entrada mal formada no puede hacer que cuente cualquier proceso.
+- **Comparación** en el núcleo, pura y sin disco: minúsculas, `/` → `\`, y `install_path` con `\` final. Hay coincidencia si la ruta del proceso empieza por ella; así, `C:\Games\Foo` no coincide con `C:\Games\Foobar\x.exe`.
+- *Atajo:* un juego movido con `mklink /J` no coincide, porque la ruta del proceso es la real (72, punto 11). Es un falso negativo sin daño (punto 6). Se mejora cuando la 55 cierre el tiempo de juego.
+- Sin lista de exclusión en este corte: un auxiliar abierto en la carpeta del juego también pospone. La lista de la 55 llega con el tiempo de juego.
+- **Motivo de contar también lo que lanzó la tienda:** parar el servidor no cierra los juegos (90, punto 7.7). Lo que molesta es que la ventana de progreso de Inno y la web que se abre al terminar roban el foco a un juego a pantalla completa, venga de donde venga.
+
+#### 6. Partida en curso: cómo se consulta y qué hace el actualizador
+
+- **Puerto del SO** (`packages/contracts/src/ports.ts`), opcional en `CoreDeps`; sin él (Docker, pruebas), nunca hay partida:
+
+  ```ts
+  // ADR 92 (and the base of ADR 55's ProcessWatcher)
+  export interface ProcessWatcher {
+    /** Full image paths of the running processes this user can query; the ones it cannot read are left out. Never logged. */
+    listExecutables(signal: AbortSignal): Promise<readonly string[]>;
+  }
+  ```
+
+- **Windows (revisa el último punto de la 55: se elige la llamada nativa, no CIM):** subcomando `ludiary-tray.exe --processes` del auxiliar de Go, con el mismo patrón que `--known-folder` (89):
+  - `CreateToolhelp32Snapshot`, y por cada PID `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` y `QueryFullProcessImageNameW`;
+  - se salta lo que falle;
+  - escribe una línea `{"paths":[…]}` sin repetidos, con un máximo de 8192 rutas, y sale con 0.
+  - `platform-windows` lo lanza con 5 s de tiempo máximo y 4 MiB de salida. Solo acepta cadenas que sean rutas locales absolutas de 32767 caracteres como mucho.
+  - CIM queda descartado: obliga a lanzar PowerShell, que es lento y depende de la política de ejecución (los mismos motivos que en la 64).
+- **Núcleo:** `isGameRunning(): Promise<boolean>` en la fachada (`core.ts`), en un módulo pequeño (`running.ts`).
+  - Lee las rutas de instalación con una consulta del repositorio (nueva si no existe una que sirva) y aplica el punto 5.
+  - Solo sale un booleano: las rutas de los procesos son datos personales y no van ni al registro ni a la API.
+  - Si el puerto falla o se agota el tiempo: `false` y un aviso en el registro, solo con el nombre del error.
+- **Actualizador** (`packages/runtime/src/updates/service.ts`): opción nueva `isGameRunning?: () => Promise<boolean>`, que `server-role.ts` conecta con la fachada.
+  - `restart()` la consulta después de las comprobaciones de `ready` y antes de marcar `restarting`.
+  - Si hay partida: `UpdateError("update.game-running", 409)`. El estado sigue `ready`: la actualización queda **pospuesta**, sin perderse, y se aplica en el próximo arranque en frío (punto 7 de la 90) o al volver a pulsar con el juego cerrado.
+- **Aviso:**
+  - En la web, `POST /api/updates/restart` da `409 update.game-running`. Acerca de y el aviso de versión (`UpdatesNotice`, «Aplicar») muestran el error con su `errorKey`: `core.errors.update.game-running` = «Hay un juego abierto. Ciérralo y vuelve a intentarlo; si no, la actualización se instalará la próxima vez que abras Ludiary.» (es/en).
+  - En la bandeja: «Actualización lista: reiniciar» con una partida en curso abre la web (`createOpenUrl("name")`, como `update-available`) en lugar de no hacer nada. Allí el botón muestra el motivo.
+- **Revisa el punto 7.6 de la 90:** el botón **no** se desactiva por adelantado, porque eso obligaría a consultar los procesos en cada `GET /api/updates`, que la web pide cada 2 s. Responde con el 409 al pulsarlo. `updates.restartConfirm` no cambia.
+- **No se consulta en el arranque en frío** (lanzador interno, código 20): si el servidor no estaba en marcha, el usuario acaba de pulsar el acceso directo y está en el escritorio. El modo `auto` nunca reinicia solo (90, punto 7), así que no necesita nada más.
+- **Fallar abierto es aceptable:** un falso negativo (ruta ilegible, antitrampas, unión) solo reinicia Ludiary con el juego abierto, que sigue abierto (90, punto 7.7). Un falso positivo solo pospone. Ninguno de los dos pierde datos.
+
+#### 7. Pruebas
+
+- `runtime` (`log-export.test.ts`):
+  - solo entran los nombres permitidos, sin `runtime.json` ni `state.json`;
+  - un `install.log` con la carpeta del usuario sale con `~`;
+  - se respetan los topes con `[truncated]`;
+  - la cabecera no lleva `accountLabel` ni rutas absolutas;
+  - fichero ilegible.
+- `runtime` (`updates-service.test.ts`):
+  - `restart` con partida da `update.game-running` y deja `ready`; sin partida, reinicia;
+  - si `isGameRunning` lanza un error, reinicia;
+  - tras una vuelta atrás, `updates/<to>/install.log` sigue ahí.
+- `core` (`running.test.ts`): mayúsculas y barras, el límite `Foo` frente a `Foobar`, raíz de unidad ignorada, DLC y propiedades retiradas ignorados, sin puerto, y puerto que falla.
+- `api`: `POST /api/logs/export` sin clave de origen da `401 origin_key_required`; con ella, `200` con `Content-Disposition`; sin la dependencia, `409`.
+- `web`: `exportLogs` real descarga el `Blob` (la prueba de `real.test.ts` que espera `ApiError` cambia); la fila se ve fuera del simulador.
+- Go (`helper_test.go`): `--processes` incluye la ruta de su propio ejecutable y sale con 0.
+- **Prueba manual** (la prepara el `tester`; la hace el usuario):
+  1. exportar desde Edge, Chrome y Firefox, y abrir el `.txt`: sin el nombre de usuario de Windows (supuesto PR3);
+  2. con un juego de Steam abierto, «Reiniciar y actualizar» da el aviso; al cerrarlo, reinicia;
+  3. lo mismo con un juego de GOG lanzado desde Galaxy.
+
+#### 8. Supuestos
+
+- **PR1 (sin verificar):** con `PROCESS_QUERY_LIMITED_INFORMATION`, un proceso sin elevar lee la ruta de un juego que corre elevado. Si no, es un falso negativo sin daño.
+- **PR2 (sin verificar):** los controladores antitrampas (EAC, BattlEye) no quitan ese permiso. Igual que PR1.
+- **PR3 (sin verificar):** descargar un `blob:` con `<a download>` no lo bloquea la CSP de la 68 en Edge, Chrome y Firefox. Si alguno lo bloquea, la ruta se queda igual y se cambia solo la forma de descargar en la web.
+
+#### 9. Estado de la 55
+
+**No se cierra.** Este diseño cierra lo que el actualizador necesita, que no depende de pruebas reales porque falla sin daño (punto 6). También fija el puerto (`listExecutables`) y la vía nativa en Windows. Sigue en propuesta, y se cierra con el corte 2b (tiempo de juego), lo que sí depende de juegos reales:
+
+1. Juegos con lanzador propio (por ejemplo, Ubisoft o Rockstar): que el proceso del juego, dentro de su carpeta, aparezca antes de que acaben los 3 minutos de búsqueda.
+2. PR1 y PR2 con al menos un juego con antitrampas y uno elevado: si la ruta no se lee, la sesión no se mide, y ahí el fallo sí pierde datos.
+3. Umbrales de 5 s, 3 min, 30 s y 1 min con tres juegos por tienda.
+4. La lista de exclusión (instaladores, actualizadores, auxiliares de antitrampas y de informes de fallos) y el uso de `executables`.
+5. Juegos movidos con `mklink /J`.
+
+**Motivo:** es lo mínimo que cierra los dos «Falta» de la 90. Reutiliza la fila del simulador, el enlace del aviso, `redactHome`, el patrón de subcomandos del auxiliar de Go y el nivel `session+key` por defecto. No añade dependencias, migraciones ni temporizadores. Un `.txt` es más fácil de revisar por el usuario que un zip. Consultar los procesos solo al pulsar «Reiniciar» evita un sondeo que, por ahora, solo necesitaría el tiempo de juego.
+
+**Consecuencias:**
+
+- Rutas nuevas: `POST /api/logs/export` (`session+key`). Error nuevo: `update.game-running` (409). Puerto nuevo: `ProcessWatcher`, opcional, aditivo (`contractVersion` 1). Subcomando nuevo del auxiliar: `--processes`. Sin migración.
+- La 59 queda revisada en la exportación: un fichero de texto en lugar de un zip, sin la base de datos, como ya decía. El resto de la 59 (registrador definitivo, 5 MB × 5) sigue pendiente y no afecta a la ruta.
+- El punto 7.6 de la 90 queda revisado: sin botón desactivado; 409 al pulsar.
+- La 55 sigue en propuesta, con la lista del punto 9.
+- `documentalista`: la guía de solución de problemas (cómo exportar y adjuntar los registros) y una plantilla de incidencias que pida la versión, el sistema y el fichero (35). Hoy no hay `.github/ISSUE_TEMPLATE`.
+- `auditor`: revisa la ruta (nivel, cabeceras, que no se escape nada fuera de la lista) y la salida del auxiliar como entrada no confiable.
+
 ## Arquitectura resultante
 
 - **Núcleo (backend):** API, base de datos SQLite y sincronización periódica.
@@ -7885,7 +8035,8 @@ Revisado con el usuario el 21 de octubre de 2026. Quedan abiertos:
   - 15.3 (custodia de la clave, que revisa la 58), 15.4 y 15.5 aplicados por defecto con (a); el usuario puede cambiarlos.
   - Antes de publicar la primera versión con actualizador: generar las dos claves, activar las *immutable releases* y 2FA en `chamanRMA/Ludiary`. Quien tenga una compilación anterior instala esa versión a mano una vez.
   - Supuestos por cerrar: GH4, GH5, W1, W3, W4 y N1.
-- Detección del proceso de cada juego: propuesta en la 55. Se cierra en el corte 2b de la 72 (tiempo de juego), que pasa a ir **después** del primer corte de GOG (decisión 76), con al menos tres juegos reales, y se revalida con cada tienda nueva.
+- Detección del proceso de cada juego: propuesta en la 55. Se cierra en el corte 2b de la 72 (tiempo de juego), que pasa a ir **después** del primer corte de GOG (decisión 76), con al menos tres juegos reales, y se revalida con cada tienda nueva. La 92 (5-11-2026) ya fija el puerto `ProcessWatcher`, la vía nativa en Windows (`ludiary-tray.exe --processes`) y lo que necesita el actualizador, que no depende de pruebas reales. Lo que falta probar para el tiempo de juego está en su punto 9.
+- Decisión 92 (exportar los registros y `update.game-running`): falta el código, la revisión del `auditor` y la prueba manual (punto 7), que cierra PR1 a PR3. El `documentalista` escribe la plantilla de incidencias que pide la 35.
 - Puntos de producto de la decisión 72: A y B decididos por el usuario. (C), orden de los cortes, **resuelto** el 22-10-2026: tras la cuenta de Steam (74) el usuario encargó GOG (76), antes del corte 2b.
 - Decisión 76, punto 11.1 (usuario): cómo se abre un juego de GOG (directo, a través de Galaxy o con un ajuste). El punto 11.2 queda **resuelto** el 22-10-2026: el usuario eligió (b), la cuenta de GOG ahora, pero sin el emparejamiento, que va en su propio corte; el corte 2b va después (decisión 77).
 - Decisión 77: punto 12 aplicado por defecto («Conectado como <nombre>» y mensaje si no hay Galaxy); el usuario puede cambiarlo. Prueba manual de la cuenta (punto 10) para cerrar los supuestos GA1 a GA13, y revisión del `auditor` antes y después del código.

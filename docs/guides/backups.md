@@ -126,4 +126,4 @@ If nothing works, export the logs and report it (see below).
 | The backup folder is not available. Check that the drive is connected. | The folder does not exist or its drive is unplugged. |
 | The backup could not be written. Check the free space and the permissions of the folder. | Disk full or no permission. |
 
-If something is not clear, export the logs from Settings and open an issue on GitHub. [POR VERIFICAR: name of the logs button and issue template, not in this branch] Logs never contain folder paths.
+If something is not clear, press **Export** under **Export logs** in **Settings > Privacy and logs** and open an issue on GitHub. See [troubleshooting](troubleshooting.md). Logs hide your Windows user name.

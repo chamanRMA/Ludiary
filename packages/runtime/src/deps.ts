@@ -6,6 +6,7 @@ import type {
   LocationResolver,
   PlatformInfo,
   ProcessLauncher,
+  ProcessWatcher,
   StoreConnector,
   TrayHost,
   UserDialogs,
@@ -91,6 +92,8 @@ export interface RuntimeDeps {
   createProcessLauncher?: (allowedSchemes: readonly string[]) => ProcessLauncher;
   /** Absent: this mode cannot open a native folder dialog. */
   folderPicker?: FolderPicker;
+  /** ADR 92. Absent: there is never a game running (Docker, tests). */
+  processWatcher?: ProcessWatcher;
   /** ADR 89. Absent: activating the periodic backups asks for a folder. */
   userFolders?: UserFolders;
   /** ADR 80. Absent (Docker, Linux): the embedded-login step is rejected as unavailable. */

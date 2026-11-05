@@ -357,6 +357,25 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
         .map((r) => toInstallation(r.i));
     },
 
+    async listGameInstallPaths() {
+      const s = need();
+      return db
+        .select({ p: installations.installPath })
+        .from(installations)
+        .innerJoin(gameProperties, eq(gameProperties.id, installations.propertyId))
+        .where(
+          and(
+            eq(installations.userId, s.userId),
+            eq(gameProperties.userId, s.userId),
+            eq(installations.deviceId, s.deviceId),
+            eq(gameProperties.kind, "game"),
+            isNull(gameProperties.removedAt),
+          ),
+        )
+        .all()
+        .map((r) => r.p);
+    },
+
     async listMediaPending(store, olderThan, limit) {
       const s = need();
       const resolvedAt = sql`json_extract(${gameProperties.storeMetadata}, '$.mediaResolvedAt')`;

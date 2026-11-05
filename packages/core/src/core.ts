@@ -6,6 +6,7 @@ import { CoreError, limitReached, toErrorInfo } from "./errors";
 import { COLLECTION_MAX_LENGTH, LIMITS, normalizeLabel, TAG_MAX_LENGTH, type Label } from "./labels";
 import { withTimeout } from "./timeout";
 import { createLaunchService } from "./launch";
+import { createRunningCheck } from "./running";
 import type { GameDataPatch, GameDetail, GameSummary, ScanRootRecord } from "./model";
 import {
   completeOnboarding,
@@ -265,6 +266,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     },
     restoreBackup: (id) => backups.restore(id),
     backupTick: () => backups.tick(),
+    isGameRunning: createRunningCheck(env),
     getOnboarding: () => readOnboarding(env),
     async completeOnboarding(mode) {
       await completeOnboarding(env, mode);

@@ -75,6 +75,7 @@
   "core.errors.update.bad-version": "Esa versión ya falló al arrancar en este equipo. Usa «Buscar ahora» para volver a intentarlo.",
   "core.errors.update.not-writable": "No se puede escribir en la carpeta de instalación. Descarga el instalador a mano desde la página de versiones.",
   "core.errors.update.not-ready": "Todavía no hay una actualización lista para instalar.",
+  "core.errors.update.game-running": "Hay un juego abierto. Ciérralo y vuelve a intentarlo; si no, la actualización se instalará la próxima vez que abras Ludiary.",
   "core.errors.update.too-soon": "Acabas de buscar actualizaciones. Espera un minuto.",
   "core.errors.update.no-space": "No hay espacio libre suficiente para descargar la actualización.",
   "core.errors.update.check-failed": "No se pudo comprobar si hay una versión nueva.",

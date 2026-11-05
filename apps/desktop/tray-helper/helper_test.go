@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -191,5 +192,33 @@ func TestKnownFolder(t *testing.T) {
 		if code := handleKnownFolder(args, &out); code != 2 || strings.TrimSpace(out.String()) != `{"error":"bad-request"}` {
 			t.Errorf("args %q: exit %d, %q", args, code, out.String())
 		}
+	}
+}
+
+func TestProcessesIncludesTheOwnExecutable(t *testing.T) {
+	var out bytes.Buffer
+	if code := handleProcesses(&out); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	var got struct{ Paths []string }
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil || strings.Count(out.String(), "\n") != 1 {
+		t.Fatalf("bad output %.200q", out.String())
+	}
+	self, _ := os.Executable()
+	seen := map[string]int{}
+	found := false
+	for _, p := range got.Paths {
+		seen[strings.ToLower(p)]++
+		if strings.EqualFold(p, self) {
+			found = true
+		}
+	}
+	for p, n := range seen {
+		if n > 1 {
+			t.Errorf("%q repeated", p)
+		}
+	}
+	if !found || len(got.Paths) > maxProcessPaths {
+		t.Fatalf("own executable %q missing in %d paths", self, len(got.Paths))
 	}
 }

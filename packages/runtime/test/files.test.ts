@@ -15,6 +15,11 @@ describe("log redaction (ADR 35)", () => {
     expect(redact("at C:/Users/ana/c.js")).toBe("at ~/c.js");
   });
 
+  it("removes the 8.3 short form of any user folder", () => {
+    expect(redact("at C:\\Users\\EXAMPL~1\\AppData\\x.log")).toBe("at ~\\AppData\\x.log");
+    expect(redact("at C:/Users/JANEDO~2/x")).toBe("at ~/x");
+  });
+
   it("does not treat a longer user folder as the same one", () => {
     expect(redact("C:\\Users\\anabel\\x")).toBe("C:\\Users\\anabel\\x");
   });
