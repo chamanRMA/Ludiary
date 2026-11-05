@@ -144,7 +144,8 @@ export function createUpdateService(o: UpdateServiceOptions): UpdateService {
     if (!isCache(c)) return {};
     const rel = c.release;
     // Stored data is re-validated like anything else: the URLs must still be the ones of this repository and tag.
-    const checked = rel && parseLatestRelease({ draft: false, prerelease: false, tag_name: `v${String(rel.version)}`, assets: (rel.assets ?? []).map((a) => ({ name: a.name, size: a.size, state: "uploaded", browser_download_url: a.url })) }, config.repo, downloadBase);
+    const checked = rel && parseLatestRelease({ draft: false, prerelease: false, tag_name: typeof rel.tag === "string" ? rel.tag : `v${String(rel.version)}`, // a cache written by 0.1.0 has no tag, and its tags had the v (ADR 90 point 22)
+      assets: (rel.assets ?? []).map((a) => ({ name: a.name, size: a.size, state: "uploaded", browser_download_url: a.url })) }, config.repo, downloadBase);
     return { ...(typeof c.etag === "string" ? { etag: c.etag } : {}), ...(typeof c.checkedAt === "number" ? { checkedAt: c.checkedAt } : {}), ...(typeof c.blockedUntil === "number" ? { blockedUntil: c.blockedUntil } : {}), ...(checked?.ok ? { release: checked.release } : {}), ...(checked?.ok && isVersion(c.verifiedVersion) && c.verifiedVersion === checked.release.version ? { verifiedVersion: c.verifiedVersion } : {}) };
   }
   const writeCache = (c: Cache) => settings.set(K_CACHE, c);

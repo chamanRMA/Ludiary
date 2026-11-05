@@ -51,7 +51,7 @@ Never put a private key here. Until two real keys are in this file, `release:bui
 
 1. Before merging, add **one** label to the pull request: `release:patch` (X.Y.Z+1), `release:minor` (X.Y+1.0) or `release:major` (X+1.0.0). Write the release notes in the pull request description: they become the notes of the release.
 2. Merge the pull request into `main`.
-3. In the **Actions** tab, wait for the `release` workflow. It must be green. The summary says `Draft vX.Y.Z created`.
+3. In the **Actions** tab, wait for the `release` workflow. It must be green. The summary says `Draft <tag> created`, where the tag is `X.Y.Z` (only `v0.1.0` and `v0.1.1` carry a "v").
 4. Open the draft under **Releases**. Check the notes, and that it has exactly `Ludiary-Setup-X.Y.Z.exe`, `ludiary-update.json` and `SHA256SUMS.txt`. Review the commit and the run.
 5. In your copy, check out that commit (`git fetch`, then the commit shown by the script) and run:
 
@@ -78,7 +78,7 @@ There is only **one pending draft at a time**. Publish (or delete) it before the
 | `plan` fails: "has more than one release:* label" | Remove the extra label, then **Re-run all jobs**. |
 | `build` fails: "`release:build` failed… no release can be built" | `apps/desktop/update-keys.json` does not have the two real public keys. Add them in a normal pull request. Then **Re-run all jobs** on the run that failed (or label a new pull request). |
 | `release` fails: "there is a pending draft (vA.B.C)" | Publish the draft with `release:publish`, or delete it on GitHub. Then **Re-run all jobs** (not only the failed job) so the version is planned again. |
-| `release` fails: "vX.Y.Z already exists" | You re-ran only the failed job with an old version. Use **Re-run all jobs**. Nothing was overwritten. |
+| `release` fails: "<tag> already exists" (`X.Y.Z` or `vX.Y.Z`) | You re-ran only the failed job with an old version. Use **Re-run all jobs**. Nothing was overwritten. |
 | The run shows "cancelled" | A third merge arrived while the second waited. Re-run it. Rare. |
 | `release:publish`: "is not a draft" | It is already published. Immutable: publish a new version instead. |
 | `release:publish`: "differs from the one in the draft commit" | Check out the commit shown by the script and run it again. |
@@ -96,8 +96,10 @@ $env:LUDIARY_VERSION = "X.Y.Z"
 corepack pnpm --filter @ludiary/desktop release:build
 corepack pnpm --filter @ludiary/desktop release:manifest
 corepack pnpm --filter @ludiary/desktop release:sign <path>\k1.pem --id k1
-gh release create vX.Y.Z --draft --title "Ludiary X.Y.Z" --notes-file <notes file> apps/desktop/dist/installer/Ludiary-Setup-X.Y.Z.exe apps/desktop/dist/installer/ludiary-update.json apps/desktop/dist/installer/SHA256SUMS.txt apps/desktop/dist/installer/ludiary-update.json.sig
+gh release create X.Y.Z --draft --title "Ludiary X.Y.Z" --notes-file <notes file> apps/desktop/dist/installer/Ludiary-Setup-X.Y.Z.exe apps/desktop/dist/installer/ludiary-update.json apps/desktop/dist/installer/SHA256SUMS.txt apps/desktop/dist/installer/ludiary-update.json.sig
 ```
+
+The tag is `X.Y.Z` except for the bridge version: use `v0.1.1` for 0.1.1 (installed 0.1.0 copies only accept tags with `v`).
 
 Then review the draft and publish it from GitHub. The version must be greater than the last published one: publish in order.
 
