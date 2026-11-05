@@ -33,7 +33,10 @@ describe("updates texts", () => {
 
   it("notices of the last update and the link to the notes (outside the app)", () => {
     expect(updateNotices({ ...base, updated: "0.3.0", rolledBack: { from: "0.2.0", to: "0.4.0", code: "1" }, downgraded: true }).map((n) => n.kind)).toEqual(["updated", "rolledBack", "downgraded"]);
-    expect(releaseNotesUrl("0.3.0")).toBe("https://github.com/chamanRMA/Ludiary/releases/tag/v0.3.0");
+    expect(releaseNotesUrl("0.3.0")).toBe("https://github.com/chamanRMA/Ludiary/releases/tag/0.3.0");
+    expect(releaseNotesUrl("0.1.0")).toBe("https://github.com/chamanRMA/Ludiary/releases/tag/v0.1.0");
+    expect(releaseNotesUrl("0.1.1")).toBe("https://github.com/chamanRMA/Ludiary/releases/tag/v0.1.1");
+    expect(releaseNotesUrl("0.1.2")).toBe("https://github.com/chamanRMA/Ludiary/releases/tag/0.1.2");
   });
 
   it("polls only while something is moving", () => {

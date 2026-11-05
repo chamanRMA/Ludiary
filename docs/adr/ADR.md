@@ -6971,7 +6971,7 @@ Se aplica **A**. El lanzador estable es un ejecutable aparte del auxiliar de ban
 2. **Petición:** `GET https://api.github.com/repos/chamanRMA/Ludiary/releases/latest` con `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2026-03-10` (GH7), `User-Agent: Ludiary/<versión>` (GH4) e `If-None-Match` con la ETag guardada. Sin token, sin cookies y sin nada más. El repositorio es una constante de compilación (`__LUDIARY_UPDATE_REPO__`), no un ajuste. Solo la variante de pruebas admite `LUDIARY_UPDATE_FEED` (se añade a `TEST_HOOK_VARS`, 65).
 3. **Respuesta:** tiempo máximo 15 s y cuerpo de 1 MiB como mucho.
    - `304`: nada nuevo.
-   - `200`: se exige `draft: false`, `prerelease: false`, `tag_name` = `v<semver>`, y dos recursos con nombre exacto `ludiary-update.json` y `ludiary-update.json.sig` en estado `uploaded`, de 64 KiB como mucho. Se guardan la ETag y el resultado en el ajuste interno `updates.cache`. Si la versión de la etiqueta no es mayor que la actual: `up-to-date`.
+   - `200`: se exige `draft: false`, `prerelease: false`, `tag_name` = `v<semver>` (*revisado en el punto 22: `v<semver>` o `<semver>`*), y dos recursos con nombre exacto `ludiary-update.json` y `ludiary-update.json.sig` en estado `uploaded`, de 64 KiB como mucho. Se guardan la ETag y el resultado en el ajuste interno `updates.cache`. Si la versión de la etiqueta no es mayor que la actual: `up-to-date`.
    - `404` (sin versiones publicadas): `up-to-date`.
    - `403` o `429` con `x-ratelimit-remaining: 0` o `retry-after`: el siguiente intento espera hasta `x-ratelimit-reset` o `retry-after`, y como mínimo 1 h, en silencio.
    - Otro error o sin red: `check-failed` con su código, y se reintenta en el siguiente ciclo.
@@ -7395,7 +7395,7 @@ Encargo del usuario: «Por defecto debería ser ir al repo validar si hay una nu
    - **Solo tras verificar la firma.** Hoy `available` sale de `releases/latest` sin el manifiesto. Cambia: cuando `check()` encuentra una versión mayor que no esté ya verificada, descarga el manifiesto y su `.sig` (los mismos dos recursos de 64 KiB y el mismo cliente; no gastan cupo de la API, van a `github.com` y la CDN) y ejecuta `verifyManifest` con `badVersions: []` (una versión mala se verifica igual; la marca `latestFailedBefore` sigue saliendo de `versions.json`). Se extrae de `download()` la parte «bajar manifiesto y firma y verificar» a una función interna que usan los dos; `download()` sigue verificando otra vez antes de bajar el instalador, y Go una tercera antes de ejecutar (punto 7.3).
    - `updates.cache` gana `verifiedVersion`; `readCache` solo lo conserva si es una versión válida e igual a `release.version`. Una versión ya verificada no se vuelve a bajar en cada ciclo.
    - El estado `available` (y `latest`, y la entrada «Hay una versión nueva» de la bandeja, que sale de `status()`) exige `verifiedVersion === release.version`. Si la verificación falla: `lastError = "manifest-invalid"` (o `manual-required` con `schema` distinto), estado `failed`, sin aviso; Acerca de lo muestra como hoy. Fallo de red al bajar el manifiesto: `check-failed`, se reintenta en el ciclo siguiente.
-   - **Enlace a las notas de la versión:** `releaseNotesUrl(version)` de `apps/web/src/app/updates.ts`, que ya existe: `https://github.com/chamanRMA/Ludiary/releases/tag/v<versión>`, con la versión validada por el contrato (`^\d+\.\d+\.\d+$`), y se abre fuera (`target="_blank"`, `rel="noopener noreferrer"`; la SPA no pinta el texto remoto, CSP de la 68). **No se usa `html_url` de la respuesta**: para una versión publicada es la misma página, pero componerla no depende de un campo de la red, no necesita validar prefijos y vale igual para el banner del punto 4, cuando ya no hay respuesta guardada de esa versión. *Atajo anotado:* el repositorio está escrito en la web y en `UPDATE_REPO` de `build.mjs`; si un día se compila con otro repositorio, se pasa al contrato.
+   - **Enlace a las notas de la versión:** `releaseNotesUrl(version)` de `apps/web/src/app/updates.ts`, que ya existe: `https://github.com/chamanRMA/Ludiary/releases/tag/v<versión>` (*revisado en el punto 22: `tag/<tagFor(versión)>`, sin «v» desde la 0.1.2*), con la versión validada por el contrato (`^\d+\.\d+\.\d+$`), y se abre fuera (`target="_blank"`, `rel="noopener noreferrer"`; la SPA no pinta el texto remoto, CSP de la 68). **No se usa `html_url` de la respuesta**: para una versión publicada es la misma página, pero componerla no depende de un campo de la red, no necesita validar prefijos y vale igual para el banner del punto 4, cuando ya no hay respuesta guardada de esa versión. *Atajo anotado:* el repositorio está escrito en la web y en `UPDATE_REPO` de `build.mjs`; si un día se compila con otro repositorio, se pasa al contrato.
    - **Cuándo se ve:** `showPrompt(s)` (función pura nueva en `updates.ts`) = `mode === "notify"` y no `snoozed` y (`state === "available"` sin `latestFailedBefore`, o `state === "ready"`). Una versión que ya falló no avisa: se reintenta desde Acerca de, con la confirmación de M4 que ya existe. En `auto` no hay aviso: se descarga sola y se ve el banner del punto 4.
    - **Aplicar:** `window.confirm` con `updates.restartConfirm` (ya existe: «Ludiary se reiniciará… los juegos abiertos seguirán abiertos»). Si el estado es `available`, `POST /api/updates/download` y el aviso muestra la barra de progreso (sondeo cada 2 s con `isBusy`, como `UpdatesPanel`); al pasar a `ready`, la web llama a `POST /api/updates/restart` y `setRestarting()`, el flujo actual de «Reiniciar y actualizar». Si ya estaba `ready`, va directo a `restart`. Si la descarga acaba en `failed`, el aviso muestra el error con `errorKey` y no reinicia. Si se cierra la pestaña a medias, la versión queda `ready`: se instala en el próximo arranque en frío (punto 7) y el aviso vuelve a ofrecer Aplicar.
    - **Más tarde:** `PUT /api/updates/settings { later: true }`. El servidor guarda **en memoria** `snooze = { version, until: now + 24 h }` (no en la base). `status()` devuelve `snoozed: true` mientras `latest` sea esa versión y no haya pasado el plazo. Vuelve a avisar en el siguiente arranque del servidor, tras 24 h (el mismo ritmo que la comprobación) o si sale una versión más nueva. Motivo de las 24 h: el servidor puede pasar días en la bandeja sin reiniciarse.
@@ -7453,7 +7453,7 @@ Se reutilizan `updates.notes`, `updates.restartConfirm`, `updates.state.download
 - `documentalista`: guía de privacidad (comprobación activa por defecto, qué sale, cómo desactivarla) y guía de actualizaciones (los tres botones y el banner).
 - Coste: bajo (unas 150 líneas con pruebas).
 
-#### 21. Publicación semiautomática: borrador desde la CI y firma en local (4 de noviembre de 2026; concreta 11.3 y 11.6 con 15.3 (a); revisa 11.1 y 11.6)
+#### 21. Publicación semiautomática: borrador desde la CI y firma en local (4 de noviembre de 2026; concreta 11.3 y 11.6 con 15.3 (a); revisa 11.1 y 11.6; forma de la etiqueta revisada en el punto 22)
 
 Encargo del usuario (modo semiautomático): al fusionar un PR en `main`, GitHub Actions compila en `windows-latest`, genera el instalador y `ludiary-update.json` sin firmar y crea una versión en **borrador** `v<versión>` con la descripción del PR como notas. El mantenedor firma en su equipo con `release:sign`, sube la `.sig` y publica. La clave privada nunca va a GitHub. Versión según la etiqueta del PR (`release:patch`, `release:minor`, `release:major`); sin etiqueta, no hay versión.
 
@@ -7485,7 +7485,7 @@ Encargo del usuario (modo semiautomático): al fusionar un PR en `main`, GitHub 
    | **A. La última etiqueta `v*` más la subida; solo se etiqueta** (elegida) | Ningún commit del robot en `main`: sin choque con la protección de la rama, sin bucles de `push` y sin `contents: write` en `plan`. Los guiones ya aceptan `LUDIARY_VERSION` (`version()` de `release-lib.mjs`). | `package.json` no dice la versión publicada (la dice la etiqueta). |
    | B. `version` de `apps/desktop/package.json`, subida con un commit | La versión está en el árbol. | El robot empuja a `main` (protección de rama, un `push` más que vuelve a disparar el flujo y permisos de escritura antes de compilar). |
 
-   - **Base:** la mayor versión entre las etiquetas `refs/tags/vX.Y.Z` del repositorio (`gh api --paginate repos/{repo}/git/matching-refs/tags/v`). Solo valen las que cumplen `^v\d+\.\d+\.\d+$`; el resto se ignoran. Sin ninguna, la base es `0.0.0`. La etiqueta de un borrador no existe hasta publicarlo (supuesto CI2), así que un borrador sin publicar no consume versión.
+   - **Base** (*revisada en el punto 22: entre `vX.Y.Z` y `X.Y.Z`, y la etiqueta nueva la da `tagFor`*): la mayor versión entre las etiquetas `refs/tags/vX.Y.Z` del repositorio (`gh api --paginate repos/{repo}/git/matching-refs/tags/v`). Solo valen las que cumplen `^v\d+\.\d+\.\d+$`; el resto se ignoran. Sin ninguna, la base es `0.0.0`. La etiqueta de un borrador no existe hasta publicarlo (supuesto CI2), así que un borrador sin publicar no consume versión.
    - **Subida:** `release:patch` da X.Y.(Z+1); `release:minor`, X.(Y+1).0; `release:major`, (X+1).0.0. Sin etiqueta `release:*`: `plan` termina en verde con «sin etiqueta release:*, no hay versión» en el resumen, y `build` y `release` se saltan. Con más de una: falla con un mensaje claro y nada más se ejecuta.
    - **PR del commit:** de la respuesta de `commits/{sha}/pulls`, el único PR con `merged_at` no nulo, `base.ref == "main"` y `merge_commit_sha == GITHUB_SHA`. Vale para fusión, *squash* y *rebase*. Si no hay ninguno (`push` directo), no hay versión.
    - **Sin commit:** `apps/desktop/package.json` se queda en `0.0.0`, la marca de las compilaciones de desarrollo (`0.0.0-proto`, `unsupported`, punto 19). La versión llega a `build` como salida de `plan`, ya validada con `^\d+\.\d+\.\d+$`, y se pasa en `env: LUDIARY_VERSION` (nunca escrita dentro de `run:`). `release-build.mjs` y `release-manifest.mjs` ya la leen de ahí. La etiqueta la crea GitHub al publicar, sobre `--target <GITHUB_SHA>`. Para una publicación a mano sin CI, el mantenedor pasa `LUDIARY_VERSION`.
@@ -7589,6 +7589,57 @@ Encargo del usuario (modo semiautomático): al fusionar un PR en `main`, GitHub 
 - **CI3 (sin verificar):** el cuerpo de una versión de GitHub admite unos 125 000 caracteres. El tope de 30 000 deja margen de sobra.
 - **CI4 (sin verificar):** Node 24 incluye corepack y sabe activar `pnpm@11` desde `packageManager`. Si no, se instala con `npm i -g pnpm@<versión de packageManager>`, sin acción de terceros.
 - **CI5 (sin verificar en el README de la imagen):** `windows-latest` (`windows-2025`) no trae Inno Setup. Hay una petición abierta en `actions/runner-images` (#11644). Si lo trajera, se usa igualmente la versión fijada.
+
+#### 22. Etiquetas sin «v» a partir de la 0.1.2, con la 0.1.1 de puente (5 de noviembre de 2026; revisa el punto 3 (forma de `tag_name`), el 21.2 (base), el 21.5, el 21.6 y el enlace a las notas del punto 20)
+
+Encargo del usuario: las etiquetas pasan de `vX.Y.Z` a `X.Y.Z`. La `v0.1.0` ya está publicada como *immutable release* y no se puede renombrar.
+
+**Lo que acepta la 0.1.0 (comprobado en el código de `main`; supuesto TV1).**
+
+- `parseLatestRelease` (`packages/runtime/src/updates/release.ts`, l. 26) rechaza cualquier `tag_name` que no empiece por `v`: `!tag.startsWith("v") || !isVersion(tag.slice(1))`. La URL de cada recurso se exige igual a `${downloadBase}/${tag}/${name}` (l. 33), así que esa parte ya vale para cualquier etiqueta.
+- `readCache` (`service.ts`, l. 147) revalida la versión guardada rehaciendo la etiqueta como `` `v${version}` ``: con una etiqueta sin «v», las URL guardadas dejarían de coincidir y la caché se descartaría en cada ciclo.
+- `releaseNotesUrl` (`apps/web/src/app/updates.ts`) compone `…/releases/tag/v<versión>`.
+- La verificación del manifiesto no mira la etiqueta: `tagVersion` es `release.version`, ya sin prefijo (TS), y en Go `verifyManifest` compara `version` con `to`, que sale de `versions.json`. El lanzador Go no compone URL ni lee etiquetas. Ni el punto 18 (M1) ni los vectores (`tag` ya es `X.Y.Z`) cambian.
+
+Consecuencia: **una 0.1.0 que lea en `releases/latest` una etiqueta `0.1.1` la da por inválida (`check-failed`) y nunca se actualiza sola**.
+
+**Decisión.**
+
+| Opción | Ventajas | Costes |
+|---|---|---|
+| A. Sin «v» desde la 0.1.1 | Corte inmediato. | Toda instalación 0.1.0 se queda sin actualizaciones para siempre: falla la comprobación y hay que reinstalar a mano. |
+| **B. Puente: la 0.1.1 sale como `v0.1.1` y ya acepta las dos formas; sin «v» desde la 0.1.2** (elegida) | La 0.1.0 se actualiza a la 0.1.1 con el código que ya lleva. Desde la 0.1.1, cualquier forma vale. Cambio pequeño y acotado. | Una versión más con «v». Una 0.1.0 que no se actualice antes de que se publique la 0.1.2 se queda atascada (ver Consecuencias). |
+| C. Seguir con «v» siempre | Ningún riesgo. | Lo que el usuario no quiere. |
+
+1. **Regla única de etiqueta.** `LAST_V_TAG = "0.1.1"`. `tagFor(version)` = `` `v${version}` `` si `version` ≤ `LAST_V_TAG`; si no, `version`. Va en `apps/desktop/scripts/release-lib.mjs` (la usan `release-plan.mjs` y `release-publish.mjs`) y, copiada con el mismo nombre y constante, en `apps/web/src/app/updates.ts` (la web no importa guiones). Las dos copias llevan una prueba con `0.1.0`, `0.1.1` y `0.1.2`.
+2. **Cálculo de la versión (`planRelease`, revisa 21.2).** `TAG` pasa a `^refs\/tags\/v?(\d+\.\d+\.\d+)$`: la base es la mayor entre `vX.Y.Z` y `X.Y.Z`. El resto (subidas, `0.0.0` sin etiquetas, etiquetas no semver ignoradas) no cambia. `planRelease` devuelve también `tag: tagFor(version)`, y `main()` escribe `tag=<tag>` en `$GITHUB_OUTPUT` y lo usa en el resumen y en el mensaje (hoy dicen `v${version}` a mano).
+3. **`release.yml`.**
+   - `plan`: `gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/" --jq '.[].ref'` (sin la `v` final, para traer las dos formas). Nueva salida `tag`.
+   - `release`: recibe `TAG` por `env:` y lo valida con `^v?[0-9]+\.[0-9]+\.[0-9]+$` y, además, que sea `VERSION` o `v$VERSION`. La comprobación de existencia mira **las dos** formas (`git/ref/tags/${VERSION}`, `git/ref/tags/v${VERSION}` y `gh release view` de ambas). `gh release create "$TAG"`. El título sigue siendo `Ludiary ${VERSION}`; el resumen dice `release:publish ${VERSION}`.
+4. **`release-publish.mjs` (revisa 21.6).** `const tag = tagFor(version)` en lugar de `` `v${version}` ``. Los mensajes de `checkDraft` usan la etiqueta. El uso sigue siendo `release:publish X.Y.Z`.
+5. **Cliente (`release.ts`, revisa el punto 3).**
+   - `tag_name` debe cumplir `^v?(\d+\.\d+\.\d+)$` (con `isVersion` sobre la captura); la versión es la captura. La regla B3 de la URL no cambia: sigue exigiendo la etiqueta **tal como llega**.
+   - `LatestRelease` gana `tag: string`. `readCache` revalida con `tag_name: typeof rel.tag === "string" ? rel.tag : \`v${rel.version}\`` (una caché escrita por la 0.1.0 no tiene `tag`, y sus etiquetas tenían «v»). Si no supera `parseLatestRelease`, se descarta como hoy.
+   - No se acepta ninguna otra forma (`V1.2.3`, `release-1.2.3`, sufijos): mismas reglas de confianza que antes.
+6. **Enlace a las notas (revisa el punto 20).** `releaseNotesUrl(version)` = `…/releases/tag/${tagFor(version)}`. Sigue sin usar `html_url`, y vale para el banner tras actualizar.
+7. **Secuencia.** El PR que implementa este punto lleva `release:patch` y da `v0.1.1` (base `v0.1.0`, `tagFor("0.1.1")` con «v»). El siguiente PR con etiqueta `release:*` da `0.1.2`, sin «v». **Antes de publicar la 0.1.2**, el mantenedor comprueba en una 0.1.0 real que se actualiza a la 0.1.1 (prueba del punto 19 que ya estaba pendiente).
+8. **`docs/release.md`** (documentalista): `vX.Y.Z` pasa a «la etiqueta (`X.Y.Z`; `v0.1.0` y `v0.1.1` son las únicas con "v")» en el resumen, en la tabla de fallos y en la publicación a mano (`gh release create X.Y.Z …`).
+
+**Motivo.** Solo el código ya publicado decide qué acepta la 0.1.0, y exige la «v». La única forma de no dejar atrás esas instalaciones sin reinstalar es que la siguiente versión aún lleve «v» y ya entienda la forma nueva. Una constante y una función compartida bastan; no hace falta guardar la etiqueta en el contrato ni en el manifiesto.
+
+**Consecuencias.**
+
+- **Para el usuario:** la 0.1.1 aún se llamará `v0.1.1` en GitHub; desde la 0.1.2, sin «v». Una instalación 0.1.0 que no llegue a actualizarse a la 0.1.1 antes de publicar la 0.1.2 verá «No se pudo comprobar» para siempre y tendrá que bajar el instalador a mano. Con la 0.1.0 publicada hace un día, se acepta; cuanto más tiempo pase entre la 0.1.1 y la 0.1.2, menos instalaciones quedan atrás (cuánto esperar lo decide el usuario).
+- Las etiquetas viejas no cambian. `releases/latest` siempre es una sola versión: no hay forma de servir a la vez a la 0.1.0 y a la 0.1.2.
+- Sin cambios en el manifiesto, en la firma, en Go, en los vectores, en el contrato ni en la API.
+- Pruebas: `planRelease` con base mixta (`v0.1.0` y `0.1.2` → base `0.1.2`) y `tag` de la 0.1.1 y la 0.1.2; `parseLatestRelease` con `0.1.2`, `v0.1.2` y rechazo de `V0.1.2` y de URL con la otra forma; `readCache` con caché antigua sin `tag` y con `tag` sin «v»; `releaseNotesUrl("0.1.1")` con «v» y `("0.3.0")` sin ella (cambia la expectativa actual de `updates.test.ts`).
+- `auditor`: revisa el cambio de `release.yml` (variable nueva en `env:`, validación) y de `release.ts` (frontera de confianza).
+- `documentalista`: `docs/release.md` (paso 8).
+
+**Supuestos (5-11-2026):**
+
+- **TV1 (verificado el 5-11-2026):** `release.ts`, `service.ts` y `updates.ts` de `main` son los de `v0.1.0`. La etiqueta `v0.1.0` es el commit 07df48f, idéntico a `main` en `packages/runtime/src/updates`, `apps/web/src/app/updates.ts` y `apps/desktop/update-keys.json`, y su clave `k1` es la correcta. Se comprobó con `git diff v0.1.0 -- packages/runtime/src/updates apps/web/src/app/updates.ts`. Si la 0.1.0 ya aceptara etiquetas sin «v», `LAST_V_TAG` pasa a `"0.1.0"` y la 0.1.1 ya sale sin «v».
+- **TV2:** `gh release create 0.1.2 --target <sha>` crea la etiqueta `0.1.2` al publicar, igual que con «v» (CI2), y `matching-refs/tags/` sin prefijo devuelve todas las etiquetas.
 
 ### 91. Importar las listas de deseos de Steam y GOG a la lista de seguimiento de precios (amplía las decisiones 40, 74, 77 y 86; resuelve la opción 12.1 (c) de la 86 para las tiendas; contrato, cerrojo, errores y volumen revisados por el auditor en su punto 13)
 

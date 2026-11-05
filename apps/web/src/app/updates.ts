@@ -2,8 +2,18 @@
 import type { UpdateModeDto, UpdateStatusDto } from "@ludiary/api-contract";
 
 export const UPDATE_MODES: readonly UpdateModeDto[] = ["auto", "notify", "off"];
+/** ADR 90 point 22. Same constant and function as apps/desktop/scripts/release-lib.mjs (the web imports no scripts); a test pins both. */
+export const LAST_V_TAG = "0.1.1";
+const cmp = (a: string, b: string): number => {
+  const x = a.split(".").map(Number);
+  const y = b.split(".").map(Number);
+  return (x[0]! - y[0]!) || (x[1]! - y[1]!) || (x[2]! - y[2]!);
+};
+/** The tag of a version: `v0.1.1` up to the bridge version, plain `0.1.2` from then on. */
+export const tagFor = (version: string): string => (cmp(version, LAST_V_TAG) <= 0 ? `v${version}` : version);
+
 /** Where "Novedades" opens (outside the app: the SPA never paints remote text, CSP of ADR 68 and invariant 9). */
-export const releaseNotesUrl = (version: string): string => `https://github.com/chamanRMA/Ludiary/releases/tag/v${version}`;
+export const releaseNotesUrl = (version: string): string => `https://github.com/chamanRMA/Ludiary/releases/tag/${tagFor(version)}`;
 
 export interface StatusLine {
   key: string;

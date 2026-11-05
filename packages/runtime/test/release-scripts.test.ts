@@ -138,6 +138,25 @@ describe("planRelease", () => {
     expect(v("release:major", [])).toBe("1.0.0");
   });
 
+  it("point 22: the base counts both forms; 0.1.1 keeps the v, 0.1.2 and later do not", () => {
+    const patchOf = (tags: string[]) => plan([pull()], tags.map((t) => ({ ref: `refs/tags/${t}` })));
+    expect(patchOf(["v0.1.0"])).toMatchObject({ version: "0.1.1", tag: "v0.1.1" });
+    expect(patchOf(["v0.1.0", "v0.1.1"])).toMatchObject({ version: "0.1.2", tag: "0.1.2" });
+    expect(patchOf(["v0.1.0", "0.1.2"])).toMatchObject({ version: "0.1.3", tag: "0.1.3" });
+    expect(patchOf(["v0.1.1", "0.1.2", "V9.9.9", "release-5.0.0", "0.1.3-rc1"])).toMatchObject({ version: "0.1.3", tag: "0.1.3" });
+    expect(patchOf([])).toMatchObject({ version: "0.0.1", tag: "v0.0.1" });
+  });
+
+  it("point 22: tagFor in the scripts and in the web agree on 0.1.0, 0.1.1 and 0.1.2", async () => {
+    const lib = (await import(pathToFileURL(join(scripts, "release-lib.mjs")).href)) as { tagFor(v: string): string; LAST_V_TAG: string };
+    const web = await import("../../../apps/web/src/app/updates");
+    expect(lib.LAST_V_TAG).toBe(web.LAST_V_TAG);
+    for (const [v, tag] of [["0.1.0", "v0.1.0"], ["0.1.1", "v0.1.1"], ["0.1.2", "0.1.2"], ["0.2.0", "0.2.0"], ["0.10.0", "0.10.0"]] as const) {
+      expect(lib.tagFor(v)).toBe(tag);
+      expect(web.tagFor(v)).toBe(tag);
+    }
+  });
+
   it("notes: the description, the title when it is empty or null, and a footer with the PR and the short commit", () => {
     expect(plan([pull()]).notes).toBe(`Some notes\n\n---\nPR #7 · ${SHA.slice(0, 7)}\n`);
     expect(plan([pull({ body: null })]).notes).toContain("Add things");

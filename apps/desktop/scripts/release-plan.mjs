@@ -4,9 +4,10 @@
 //   node release-plan.mjs --pulls pulls.json --tags tags.json --sha <commit> --out notes.md
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { tagFor } from "./release-lib.mjs";
 
 const VERSION = /^\d+\.\d+\.\d+$/;
-const TAG = /^refs\/tags\/v(\d+\.\d+\.\d+)$/;
+const TAG = /^refs\/tags\/v?(\d+\.\d+\.\d+)$/; // both forms count for the base (ADR 90 point 22)
 const SHA = /^[0-9a-f]{40}$/;
 const LABELS = { "release:patch": "patch", "release:minor": "minor", "release:major": "major" };
 export const NOTES_LIMIT = 30_000;
@@ -18,8 +19,8 @@ const cmp = (a, b) => {
 };
 
 /**
- * @param {{ pulls: unknown, tags: unknown, sha: string }} input  responses of commits/{sha}/pulls and git/matching-refs/tags/v
- * @returns {{ release: false, reason: string } | { release: true, version: string, pr: number, notes: string }}
+ * @param {{ pulls: unknown, tags: unknown, sha: string }} input  responses of commits/{sha}/pulls and git/matching-refs/tags/
+ * @returns {{ release: false, reason: string } | { release: true, version: string, tag: string, pr: number, notes: string }}
  * Throws when the pull request has more than one release:* label (the run must fail, nothing else runs).
  */
 export function planRelease({ pulls, tags, sha }) {
@@ -48,7 +49,7 @@ export function planRelease({ pulls, tags, sha }) {
   const raw = typeof pr.body === "string" && pr.body.trim() !== "" ? pr.body : title;
   const chars = Array.from(raw);
   const body = chars.length > NOTES_LIMIT ? `${chars.slice(0, NOTES_LIMIT).join("")}\n\n… (notas recortadas, ver el PR #${pr.number})` : raw;
-  return { release: true, version, pr: pr.number, notes: `${body}\n\n---\nPR #${pr.number} · ${sha.slice(0, 7)}\n` };
+  return { release: true, version, tag: tagFor(version), pr: pr.number, notes: `${body}\n\n---\nPR #${pr.number} · ${sha.slice(0, 7)}\n` };
 }
 
 /** The tags file has one `refs/tags/...` per line (`gh api --paginate --jq '.[].ref'`); no JSON is rebuilt from pages. */
@@ -75,11 +76,11 @@ function main() {
   const tags = parseRefLines(readFileSync(a["--tags"], "utf8"));
   const plan = planRelease({ pulls, tags, sha: a["--sha"] });
   const out = process.env.GITHUB_OUTPUT;
-  const lines = plan.release ? [`release=true`, `version=${plan.version}`, `pr=${plan.pr}`] : [`release=false`];
+  const lines = plan.release ? [`release=true`, `version=${plan.version}`, `tag=${plan.tag}`, `pr=${plan.pr}`] : [`release=false`];
   if (out) appendFileSync(out, lines.join("\n") + "\n");
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, plan.release ? `Draft v${plan.version} for PR #${plan.pr}\n` : `${plan.reason}\n`);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, plan.release ? `Draft ${plan.tag} for PR #${plan.pr}\n` : `${plan.reason}\n`);
   if (plan.release) writeFileSync(a["--out"], plan.notes);
-  console.log(plan.release ? `release v${plan.version} for PR #${plan.pr}` : plan.reason);
+  console.log(plan.release ? `release ${plan.tag} for PR #${plan.pr}` : plan.reason);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

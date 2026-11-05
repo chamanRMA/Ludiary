@@ -8,7 +8,7 @@ import { createInterface } from "node:readline/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { arg, desktop, insideRepo, repoRoot } from "./release-lib.mjs";
+import { arg, desktop, insideRepo, repoRoot, tagFor } from "./release-lib.mjs";
 
 const VERSION = /^\d+\.\d+\.\d+$/;
 const KEYS = "apps/desktop/update-keys.json";
@@ -16,7 +16,7 @@ const sha256 = (file) => createHash("sha256").update(readFileSync(file)).digest(
 
 /** The draft must hold exactly the three files of the CI and no signature yet. `view` is `gh release view --json ...`. */
 export function checkDraft(view, version) {
-  if (view?.isDraft !== true) throw new Error(`v${version} is not a draft: it is published already and cannot be changed`);
+  if (view?.isDraft !== true) throw new Error(`${tagFor(version)} is not a draft: it is published already and cannot be changed`);
   const names = (view.assets ?? []).map((a) => a?.name).sort();
   const expected = [`Ludiary-Setup-${version}.exe`, "SHA256SUMS.txt", "ludiary-update.json"].sort();
   if (names.some((n) => n === "ludiary-update.json.sig")) throw new Error("the draft already has a .sig");
@@ -61,7 +61,7 @@ async function main() {
   const [version, keyFile] = process.argv.slice(2);
   const id = arg("--id", "k1");
   if (!version || !VERSION.test(version) || !keyFile) throw new Error("usage: release:publish <X.Y.Z> <private key file> [--id k1]");
-  const tag = `v${version}`;
+  const tag = tagFor(version);
 
   const view = JSON.parse(run("gh", ["release", "view", tag, "--json", "isDraft,targetCommitish,assets,url,databaseId"]));
   checkDraft(view, version);

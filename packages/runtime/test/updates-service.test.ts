@@ -29,17 +29,18 @@ let current = "0.2.0";
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 const rawPublic = Buffer.from(publicKey.export({ format: "jwk" }).x!, "base64url").toString("base64");
 
-function release(version: string, over: { signWith?: typeof privateKey; size?: number } = {}) {
+function release(version: string, over: { signWith?: typeof privateKey; size?: number; plainTag?: boolean } = {}) {
+  const tag = over.plainTag ? version : `v${version}`;
   const name = `Ludiary-Setup-${version}.exe`;
   const manifest = Buffer.from(
     JSON.stringify({ schema: 1, product: "ludiary", channel: "stable", version, publishedAt: "2026-11-20T10:00:00Z", files: { "windows-x64": { name, size: INSTALLER.length, sha256: createHash("sha256").update(INSTALLER).digest("hex") } } }),
   );
   const sig = `ludiary-sig-v1 k1 ${sign(null, Buffer.concat([Buffer.from(SIGNATURE_CONTEXT), manifest]), over.signWith ?? privateKey).toString("base64")}\n`;
-  const url = (n: string) => `https://github.com/${REPO}/releases/download/v${version}/${n}`;
+  const url = (n: string) => `https://github.com/${REPO}/releases/download/${tag}/${n}`;
   const body = {
     draft: false,
     prerelease: false,
-    tag_name: `v${version}`,
+    tag_name: tag,
     assets: [
       { name: "ludiary-update.json", size: manifest.length, state: "uploaded", browser_download_url: url("ludiary-update.json") },
       { name: "ludiary-update.json.sig", size: sig.length, state: "uploaded", browser_download_url: url("ludiary-update.json.sig") },
@@ -234,6 +235,36 @@ describe("a new version is announced only after its signature verifies (point 20
     await svc.checkNow();
     const cache = settingsMap.get("updates.cache") as { verifiedVersion?: string };
     settingsMap.set("updates.cache", { ...cache, verifiedVersion: "0.9.9" });
+    expect((await svc.status()).state).not.toBe("available");
+  });
+});
+
+describe("tags without the v (ADR 90 point 22)", () => {
+  it("a release tagged 0.3.0 is announced, kept in the cache with its tag, and downloaded", async () => {
+    publish("0.3.0", { plainTag: true });
+    const svc = make();
+    await svc.checkNow();
+    expect(await svc.status()).toMatchObject({ state: "available", latest: "0.3.0" });
+    expect((settingsMap.get("updates.cache") as { release: { tag: string } }).release.tag).toBe("0.3.0");
+    await svc.download();
+    expect((await svc.status()).state).toBe("ready");
+  });
+
+  it("a cache written by 0.1.0 (no tag field, tags with v) is still valid", async () => {
+    publish("0.3.0");
+    const svc = make();
+    await svc.checkNow();
+    const cache = settingsMap.get("updates.cache") as { release: Record<string, unknown> };
+    delete cache.release["tag"];
+    expect((await svc.status()).state).toBe("available");
+  });
+
+  it("a cache whose tag has no v but whose URLs do is discarded, as any inconsistent cache", async () => {
+    publish("0.3.0");
+    const svc = make();
+    await svc.checkNow();
+    const cache = settingsMap.get("updates.cache") as { release: Record<string, unknown> };
+    cache.release["tag"] = "0.3.0";
     expect((await svc.status()).state).not.toBe("available");
   });
 });
