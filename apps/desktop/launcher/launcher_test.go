@@ -736,3 +736,25 @@ func TestInterruptedInstallWithCompleteFolderIsConfirmed(t *testing.T) {
 		t.Fatalf("%+v", v)
 	}
 }
+
+// ADR 92: the installer log is what the user exports after a failed update, so a rollback must leave it where it is.
+// It goes only with the next download (the service sweeps the folders of other versions) or when the trial passes.
+func TestInstallLogSurvivesARollback(t *testing.T) {
+	e := newEnv(t)
+	e.trialSetup(behavior{Codes: map[string]int{"--trial": 1}})
+	logPath := filepath.Join(e.c.updatesDir(), "0.3.0", "install.log")
+	os.MkdirAll(filepath.Dir(logPath), 0o755)
+	os.WriteFile(logPath, []byte("setup log"), 0o644)
+	if code := e.c.run(nil); code != 0 {
+		t.Fatal(code)
+	}
+	if e.versions().Active != "0.2.0" || !e.versions().isBad("0.3.0") {
+		t.Fatalf("%+v", e.versions())
+	}
+	if _, err := os.Stat(e.c.appDir("0.3.0")); err == nil {
+		t.Fatal("app-0.3.0 must be gone")
+	}
+	if data, err := os.ReadFile(logPath); err != nil || string(data) != "setup log" {
+		t.Fatalf("install.log must survive the rollback: %v", err)
+	}
+}

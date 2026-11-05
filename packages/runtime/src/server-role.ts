@@ -11,10 +11,11 @@ import { unionMediaHosts } from "./connectors";
 import { APP_ID, EXIT, INSTALL_TOKEN_NAME, MAX_MASTER_KEY_ID, localeOf, masterKeyName, type RuntimeDeps } from "./deps";
 import { restartSequence, spawnAfterRestartLauncher } from "./launcher";
 import { startDatabase } from "./restore-startup";
+import { createLogExporter } from "./log-export";
 import { createFileLogger, readRuntimeInfo, writeRuntimeInfo, type Logger } from "./files";
 import { candidatePorts } from "./ports";
 import { createUpdatesFacade } from "./updates/facade";
-import { createUpdateService, type UpdateService } from "./updates/service";
+import { createUpdateService, UpdateError, type UpdateService } from "./updates/service";
 import { loadWebAssets } from "./web-assets";
 
 const KEY_BYTES = 32;
@@ -152,6 +153,7 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         config: cfg,
         settings,
         log,
+        isGameRunning: () => core.isGameRunning(),
         onChange: () => void refreshUpdateEntry(),
         restart: async () => {
           await cfg.platform.restartIntoLauncher();
@@ -178,6 +180,14 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
     let backupTimer: NodeJS.Timeout | undefined;
     let stopping = false;
 
+    const exportLogFile = createLogExporter({
+      dataDir: platform.dataDir,
+      version: deps.version,
+      locale,
+      stores: () => core.storeStatus(),
+      ...(updates ? { updates: () => updates!.status() } : {}),
+    });
+
     const makeServer = () =>
       createLocalServer({
         appId: APP_ID,
@@ -197,6 +207,11 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         onRestartRequested: () => restartSequence(() => spawnAfterRestartLauncher(deps, log), () => void shutdown()),
         core: facade,
         ...(updates ? { updates: createUpdatesFacade(updates) } : {}),
+        exportLogs: async () => {
+          const out = await exportLogFile();
+          log("info", `logs exported (${Buffer.byteLength(out.body)} bytes)`);
+          return out;
+        },
         webAssets,
         mediaHosts,
         // Name and stack frames only: the message of an unknown exception may quote store data (ADR 87 point 13).
@@ -247,7 +262,15 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
       const host = deps.createTray();
       host.onClick((id) => {
         if (id === "quit") void shutdown();
-        else if (id === "update-restart") void updates?.restart().catch((e: Error) => log("warn", `update restart refused: ${e.message}`));
+        else if (id === "update-restart") {
+          void updates?.restart().catch((e: Error) => {
+            log("warn", `update restart refused: ${e.message}`);
+            // ADR 92: with a game open the web explains why; the tray has no way to say it.
+            if (e instanceof UpdateError && e.code === "update.game-running") {
+              platform.openUrl(server.createOpenUrl("name")).catch((err: Error) => log("error", `open failed: ${err.message}`));
+            }
+          });
+        }
         else if (id === "open" || id === "@default" || id === "open-alt" || id === "update-available") {
           const url = server.createOpenUrl(id === "open-alt" ? "ip" : "name");
           platform.openUrl(url).catch((e: Error) => log("error", `open failed: ${e.message}`));

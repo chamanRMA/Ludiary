@@ -157,6 +157,6 @@ To stop everything, press **Disconnect** in **Settings > Services**. Ludiary del
 - **Wrong game:** use **This is not the game**.
 - **A price differs from the store:** Ludiary shows what IsThereAnyDeal reports at the time it was checked; see the date. Press **Update prices**.
 - **Offer links do not appear:** the offer points to an address Ludiary does not recognize and hides the link for safety. Report it.
-- **Reporting:** export the logs from Settings and open an issue on GitHub. [POR VERIFICAR: name of the logs button and issue template, not in this branch]
+- **Reporting:** press **Export** under **Export logs** in **Settings > Privacy and logs** and open an issue on GitHub. See [troubleshooting](troubleshooting.md).
 
 [POR VERIFICAR: before publishing this guide, confirm that IsThereAnyDeal accepts an open source application where each user brings their own key (ADR 86 point 13). If they refuse, the comparator is removed from the release.]

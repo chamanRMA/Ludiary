@@ -84,6 +84,8 @@ export interface UpdateServiceOptions {
   onChange?: () => void;
   /** Called to restart into the stable launcher: starts it, then stops the server. Absent: restart is unavailable. */
   restart?: () => Promise<void>;
+  /** ADR 92. True if a game is open: `restart` then answers `update.game-running` and the update stays `ready`. */
+  isGameRunning?: () => Promise<boolean>;
   now?: () => number;
 }
 
@@ -420,7 +422,7 @@ export function createUpdateService(o: UpdateServiceOptions): UpdateService {
       }
       reconcileState(dataDir, root, o.version, log);
       const st0 = readState(dataDir);
-      cleanOtherFolders(st0.state === "applying" ? (st0.to ?? null) : (st0.version ?? null)); // an update in flight keeps its folder
+      cleanOtherFolders(st0.state === "applying" || st0.state === "rolled-back" ? (st0.to ?? null) : (st0.version ?? null)); // an update in flight keeps its folder; so does a rolled-back one (its install.log, ADR 92)
       if (await mayCheckAutomatically()) arm(FIRST_CHECK_MS);
     },
 
@@ -479,6 +481,12 @@ export function createUpdateService(o: UpdateServiceOptions): UpdateService {
       if (st.state !== "ready" || !st.version || compareVersions(st.version, o.version) <= 0) throw new UpdateError("update.not-ready", 409);
       if (!o.restart) throw new UpdateError("update.unsupported", 409);
       if (restarting) return; // a second click while the first is on its way: same 202, one restart
+      // ADR 92 point 6: a failing check counts as no game (fail open); the update is postponed, not lost.
+      if (await o.isGameRunning?.().catch(() => false)) throw new UpdateError("update.game-running", 409);
+      // The check is slow: re-validate what it let pass (a concurrent call may have started the restart, or the state changed).
+      if (restarting) return;
+      const again = readState(dataDir);
+      if (again.state !== "ready" || !again.version || compareVersions(again.version, o.version) <= 0) throw new UpdateError("update.not-ready", 409);
       restarting = true;
       const go = o.restart;
       // A moment after the 202 has been sent, so the reply is not cut by the shutdown.
