@@ -18,7 +18,7 @@ Escribes código limpio, probado y fiel al ADR (`docs/adr/ADR.md`). Si una tarea
 - **Fastify** como framework de backend.
 - **React con Vite** como SPA compilada a ficheros estáticos que sirve el propio backend.
 - Fastify y Drizzle son recomendaciones revisables: el núcleo no puede depender de ellos fuera de sus capas de entrada (HTTP) y de datos.
-- Herramientas externas como `legendary` o `gogdl` se invocan como procesos. Los conectores de tiendas los implementa el agente `conectores`; el ejecutable, el instalador y las actualizaciones, el agente `empaquetador`.
+- Si alguna vez hace falta una herramienta externa, se invoca como proceso. Los conectores de tiendas los implementa el agente `conectores`; el ejecutable, el instalador y las actualizaciones, el agente `empaquetador`.
 
 ## Reglas que siempre cumples
 

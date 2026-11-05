@@ -321,10 +321,10 @@ export type WizardStep =
       url: string;
       /** https, host in authHosts, no query or fragment; matched on origin and path. */
       doneUrl: string;
-      /** https, host in authHosts, no fragment; a query only with source 'document-json' (ADR 82). */
+      /** https, host in authHosts, no query or fragment. */
       captureUrl: string;
       /** 1 to 4. The core checks each captured value with its anchored pattern and maxLength. */
-      capture: readonly { name: string; source?: "local-storage" | "document-json"; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
+      capture: readonly { name: string; storageKeys: readonly string[]; jsonField: string; pattern: string; maxLength: number }[];
     };
 
 export interface WizardField {

@@ -134,9 +134,6 @@ function checkStep(step: unknown, c: WizardSubject): asserts step is WizardStep 
 function checkEmbedded(s: Record<string, unknown>, c: WizardSubject, key: (v: unknown, what: string) => void, bad: (why: string) => never): void {
   key(s.windowTitleKey, "windowTitleKey");
   const capture = s.capture;
-  const sources = Array.isArray(capture) ? (capture as Record<string, unknown>[]).map((f) => (f && typeof f === "object" ? (f.source ?? "local-storage") : null)) : [];
-  if (!sources.every((x) => x === "local-storage" || x === "document-json") || new Set(sources).size > 1) bad("capture source");
-  const json = sources[0] === "document-json";
   const httpsAuth = (v: unknown, what: string, plain: boolean): void => {
     let url: URL | null = null;
     try {
@@ -149,7 +146,7 @@ function checkEmbedded(s: Record<string, unknown>, c: WizardSubject, key: (v: un
   };
   httpsAuth(s.url, "url", false);
   httpsAuth(s.doneUrl, "doneUrl", true);
-  httpsAuth(s.captureUrl, "captureUrl", !json);
+  httpsAuth(s.captureUrl, "captureUrl", true);
   const same = (a: unknown, b: unknown): boolean => {
     try {
       const x = new URL(String(a));
@@ -166,9 +163,7 @@ function checkEmbedded(s: Record<string, unknown>, c: WizardSubject, key: (v: un
     if (!f || typeof f !== "object" || typeof f.name !== "string" || !FIELD_NAME.test(f.name) || names.has(f.name)) return bad("capture name");
     names.add(f.name);
     const keys = f.storageKeys;
-    if (json) {
-      if (keys !== undefined && !(Array.isArray(keys) && keys.length === 0)) bad("capture storageKeys");
-    } else if (!Array.isArray(keys) || keys.length < 1 || keys.length > 3 || !keys.every((k) => typeof k === "string" && CAPTURE_KEY.test(k))) bad("capture storageKeys");
+    if (!Array.isArray(keys) || keys.length < 1 || keys.length > 3 || !keys.every((k) => typeof k === "string" && CAPTURE_KEY.test(k))) bad("capture storageKeys");
     if (typeof f.jsonField !== "string" || !CAPTURE_KEY.test(f.jsonField)) bad("capture jsonField");
     if (!Number.isInteger(f.maxLength) || (f.maxLength as number) < 1 || (f.maxLength as number) > MAX_CAPTURE_LENGTH) bad("capture maxLength");
     if (typeof f.pattern !== "string") bad("capture pattern");
@@ -408,7 +403,7 @@ export function createWizardEngine(env: Env, onConnected: (store: StoreId) => Pr
             doneUrl: step.doneUrl,
             captureUrl: step.captureUrl,
             allowedHosts: [...s.subject.authHosts],
-            capture: step.capture.map(({ name, source, storageKeys, jsonField, maxLength }) => ({ name, ...(source ? { source } : {}), storageKeys: [...(storageKeys ?? [])], jsonField, maxLength })),
+            capture: step.capture.map(({ name, storageKeys, jsonField, maxLength }) => ({ name, storageKeys: [...storageKeys], jsonField, maxLength })),
           },
           abort.signal,
         );

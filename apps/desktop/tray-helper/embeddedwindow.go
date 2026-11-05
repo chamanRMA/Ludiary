@@ -146,7 +146,7 @@ func handleEmbeddedLogin(in io.Reader, out io.Writer) int {
 	defer windows.CoUninitialize()
 
 	run = &loginRun{req: req, script: script, machine: captureMachine{
-		doneURL: req.DoneURL, captureURL: req.CaptureURL, exact: req.Capture[0].Source == srcDocumentJSON}}
+		doneURL: req.DoneURL, captureURL: req.CaptureURL}}
 	res := run.execute(reader)
 	return writeResult(out, res)
 }
@@ -318,10 +318,7 @@ func (r *loginRun) onMainNavigation(uri string, _ bool, navID uint64) bool {
 		r.blocked.add(uri)
 		return false
 	}
-	if r.machine.onStarting(uri, navID) == actFail { // document-json: the page being read navigated away
-		r.finish(loginResult{Error: "capture-missing"})
-		return false
-	}
+	r.machine.onStarting(uri, navID)
 	r.setTitleHost(uri)
 	return true
 }
@@ -359,10 +356,6 @@ func (r *loginRun) onNavigationCompleted(success bool, navID uint64) {
 func (r *loginRun) attemptCapture() {
 	src, err := r.browser.Source()
 	if err != nil || !r.machine.mayExecute(src) {
-		if r.machine.exact { // nothing launched a new navigation to wait for
-			r.finish(loginResult{Error: "capture-missing"})
-			return
-		}
 		r.machine.leftCapture()
 		return
 	}
