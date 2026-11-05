@@ -1,7 +1,7 @@
 // Settings, first-run state and scan folders (ADR 42, 69, 72). Plain functions over the persistence ports.
 import type { Env } from "./env";
 import { CoreError } from "./errors";
-import type { StoreId } from "@ludiary/contracts";
+import type { LaunchModeId, StoreId } from "@ludiary/contracts";
 import type { DetectionMode, Onboarding, PriceShops, PricesSettings, ScanRootRecord, Settings, SettingsPatch, StoreCollectionsSettings } from "./model";
 
 const K_LOCALE = "ui.locale";
@@ -14,6 +14,9 @@ const isMode = (v: unknown): v is DetectionMode => typeof v === "string" && (MOD
 
 /** ADR 88. Settings key of a store's collections step: enabled, unverifiedFavorites, favoritesSeen, mirrorAccountSource. */
 export const collectionsKey = (store: StoreId, name: "enabled" | "unverifiedFavorites" | "favoritesSeen" | "mirrorAccountSource"): string => `collections.${store}.${name}`;
+
+/** ADR 76 point 12. Settings key of a store's launch mode. */
+export const launchKey = (store: StoreId): string => `launch.${store}.mode`;
 
 const K_PRICES_COUNTRY = "prices.country";
 const K_PRICES_SHOPS = "prices.shops";
@@ -33,14 +36,28 @@ export async function readStoreCollections(env: Env, store: StoreId): Promise<St
   return { enabled: enabled !== false, unverifiedFavorites: unverified === true };
 }
 
+/** ADR 76 points 12 and 13.5: a stored value counts only if the connector lists it (typeof + some, never `in`); else the first. */
+export async function readLaunchMode(env: Env, store: StoreId): Promise<LaunchModeId | undefined> {
+  const modes = env.connectors.get(store)?.launchModes;
+  if (!modes || modes.length === 0) return undefined;
+  const v = await env.deps.settings.get(launchKey(store));
+  return typeof v === "string" && modes.some((m) => m.id === v) ? (v as LaunchModeId) : modes[0]!.id;
+}
+
 export async function readSettings(env: Env): Promise<Settings> {
   const [locale, mode] = await Promise.all([env.deps.settings.get(K_LOCALE), env.deps.settings.get(K_DETECTION)]);
   const storeCollections: Settings["storeCollections"] = {};
   for (const id of mirrored(env)) storeCollections[id] = await readStoreCollections(env, id);
+  const storeLaunch: Settings["storeLaunch"] = {};
+  for (const c of env.connectors.values()) {
+    const mode = await readLaunchMode(env, c.id);
+    if (mode !== undefined) storeLaunch[c.id] = { mode };
+  }
   return {
     locale: (LOCALES as readonly unknown[]).includes(locale) ? (locale as Settings["locale"]) : "system",
     detection: isMode(mode) ? mode : null,
     storeCollections,
+    storeLaunch,
     backups: { periodic: (await env.deps.settings.get("backups.periodic")) === true },
     ...(env.services.size > 0 ? { prices: await readPriceSettings(env) } : {}),
   };
@@ -62,6 +79,16 @@ export function validatePatch(env: Env, patch: SettingsPatch): [StoreId, Partial
     if (v === null || typeof v !== "object") throw new CoreError("invalid-input", "Invalid collections settings");
     for (const k of ["enabled", "unverifiedFavorites"] as const) {
       if (v[k] !== undefined && typeof v[k] !== "boolean") throw new CoreError("invalid-input", `${k} must be a boolean`);
+    }
+  }
+  if (patch.storeLaunch !== undefined) {
+    if (patch.storeLaunch === null || typeof patch.storeLaunch !== "object") throw new CoreError("invalid-input", "storeLaunch must be an object");
+    for (const [store, v] of Object.entries(patch.storeLaunch)) {
+      const modes = [...env.connectors.values()].find((c) => c.id === store)?.launchModes;
+      if (!modes) throw new CoreError("invalid-input", "This store has no launch modes");
+      if (v === null || typeof v !== "object") throw new CoreError("invalid-input", "Invalid launch settings");
+      const mode = (v as { mode?: unknown }).mode;
+      if (mode !== undefined && !(typeof mode === "string" && modes.some((m) => m.id === mode))) throw new CoreError("invalid-input", "Unknown launch mode");
     }
   }
   if (patch.backups !== undefined && (patch.backups === null || typeof patch.backups !== "object" || (patch.backups.periodic !== undefined && typeof patch.backups.periodic !== "boolean"))) {
@@ -89,6 +116,9 @@ export async function writeSettings(
   if (patch.detection !== undefined) {
     if (patch.detection === null) await env.deps.settings.delete(K_DETECTION);
     else await env.deps.settings.set(K_DETECTION, patch.detection);
+  }
+  for (const [store, v] of Object.entries(patch.storeLaunch ?? {})) {
+    if (v?.mode !== undefined) await env.deps.settings.set(launchKey(store as StoreId), v.mode);
   }
   for (const [store, v] of wanted) {
     if (v.enabled !== undefined) await env.deps.settings.set(collectionsKey(store, "enabled"), v.enabled);

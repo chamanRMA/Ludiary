@@ -12,5 +12,9 @@
   "connectors.gog.error.expired": "GOG has signed you out. Reconnect the account.",
   "connectors.gog.error.wishlist": "GOG did not let Ludiary read your wishlist. Try again later; your GOG connection is still active.",
   "connectors.gog.errors.galaxyMissing": "GOG Galaxy is needed to install this game. Install it from gog.com or download the installer from your gog.com library.",
-  "connectors.gog.disconnect.hint": "Ludiary deletes its GOG session from this computer. To sign out everywhere, change your password at gog.com."
+  "connectors.gog.disconnect.hint": "Ludiary deletes its GOG session from this computer. To sign out everywhere, change your password at gog.com.",
+  "connectors.gog.launch.client": "Through GOG Galaxy",
+  "connectors.gog.launch.clientHint": "Galaxy syncs your cloud saves and tracks achievements. If Galaxy is not installed, the game opens directly. If a game does not open this way, choose \"Directly\".",
+  "connectors.gog.launch.direct": "Directly, with the game's executable",
+  "connectors.gog.launch.directHint": "Faster and without opening Galaxy, but cloud saves are not synced."
 }

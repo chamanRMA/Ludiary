@@ -24,3 +24,22 @@ export const tokenBody = (refresh = REFRESH_2, access = ACCESS) => ({
 });
 export const readJson = (...parts: string[]): unknown =>
   JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures", ...parts), "utf8"));
+
+// libuv quote_cmd_arg, reimplemented: the inverse of the CRT rules (ADR 76).
+export function quote(arg: string): string {
+  if (arg === "") return '""';
+  if (!/[	 "]/.test(arg)) return arg;
+  let out = '"';
+  let n = 0;
+  for (const ch of arg) {
+    if (ch === "\\") n++;
+    else if (ch === '"') {
+      out += "\\".repeat(n * 2 + 1) + '"';
+      n = 0;
+    } else {
+      out += "\\".repeat(n) + ch;
+      n = 0;
+    }
+  }
+  return out + "\\".repeat(n * 2) + '"';
+}

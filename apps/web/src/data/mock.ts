@@ -279,6 +279,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     syncOnStart: true,
     prices: { country: null, shops: "ludiary" },
     storeCollections: { steam: { enabled: true, unverifiedFavorites: false } },
+    storeLaunch: { gog: { mode: "client" } },
   };
   let onboarding: OnboardingDto = (() => {
     try {
@@ -420,7 +421,10 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       settings = { ...settings, scanRoots: settings.scanRoots.filter((r) => r.id !== id || r.origin !== "user") };
     },
     updateSettings: async (patch) => {
-      const { storeCollections, backups, prices, ...plain } = patch;
+      const { storeCollections, storeLaunch, backups, prices, ...plain } = patch;
+      for (const [store, v] of Object.entries(storeLaunch ?? {}) as [StoreId, { mode?: "client" | "direct" }][]) {
+        if (settings.storeLaunch[store] && v.mode) settings = { ...settings, storeLaunch: { ...settings.storeLaunch, [store]: { mode: v.mode } } };
+      }
       settings = { ...settings, ...plain, ...(backups ? { backups: { ...settings.backups, periodic: backups.periodic } } : {}) };
       if (prices) settings = { ...settings, prices: { country: prices.country ?? settings.prices?.country ?? null, shops: prices.shops ?? settings.prices?.shops ?? "ludiary" } };
       for (const [store, v] of Object.entries(storeCollections ?? {}) as [StoreId, { enabled?: boolean; unverifiedFavorites?: boolean }][]) {

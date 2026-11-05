@@ -1,24 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { splitWindowsArgs } from "../src/args";
-
-// libuv quote_cmd_arg, reimplemented: the inverse of the CRT rules (ADR 76).
-function quote(arg: string): string {
-  if (arg === "") return '""';
-  if (!/[	 "]/.test(arg)) return arg;
-  let out = '"';
-  let n = 0;
-  for (const ch of arg) {
-    if (ch === "\\") n++;
-    else if (ch === '"') {
-      out += "\\".repeat(n * 2 + 1) + '"';
-      n = 0;
-    } else {
-      out += "\\".repeat(n) + ch;
-      n = 0;
-    }
-  }
-  return out + "\\".repeat(n * 2) + '"';
-}
+import { quote } from "./helpers";
 
 const TABLE: [string, string[]][] = [
   ["", []],

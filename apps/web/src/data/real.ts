@@ -160,6 +160,7 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       detection: server.detection,
       scanRoots: server.scanRoots,
       storeCollections: server.storeCollections,
+      storeLaunch: server.storeLaunch,
       ...(server.prices ? { prices: server.prices } : {}),
       // Present in the server answer: use it. Absent (feature not available yet): the simulator's value.
       backups: server.backups ?? local.backups, // the server always sends it (ADR 89)
@@ -170,11 +171,12 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
   }
 
   async function updateSettings(patch: SettingsUpdate): Promise<GeneralSettings> {
-    const { locale, detection, storeCollections, backups, prices, ...rest } = patch;
+    const { locale, detection, storeCollections, storeLaunch, backups, prices, ...rest } = patch;
     const serverPatch: SettingsPatchDto = {
       ...(locale === undefined ? {} : { locale }),
       ...(detection === undefined ? {} : { detection }),
       ...(storeCollections === undefined ? {} : { storeCollections }),
+      ...(storeLaunch === undefined ? {} : { storeLaunch }),
       ...(backups === undefined ? {} : { backups }),
       ...(prices === undefined ? {} : { prices }),
     };
