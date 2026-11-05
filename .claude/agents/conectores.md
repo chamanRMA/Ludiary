@@ -28,8 +28,8 @@ Lo que sigue son las decisiones del ADR y las pistas técnicas que tenemos. **La
 | Tienda | Biblioteca | Conexión | Lanzamiento (pistas) |
 |---|---|---|---|
 | **Steam** | API oficial | OpenID para el SteamID, más API key del usuario y perfil público. El asistente guía la creación de la clave. | `steam://rungameid/ID` |
-| **Epic** | API no oficial, vía `legendary` como proceso externo | El asistente abre el login oficial y recoge el código de autorización. El flujo no es oficial y puede cambiar. | Protocolo del launcher de Epic (`com.epicgames.launcher://apps/...`) |
-| **GOG** | API no oficial, vía `gogdl` como proceso externo | Igual que Epic. | Según un hilo del foro de GOG (a verificar), Galaxy no registra protocolo de lanzamiento: se usa línea de comandos de su cliente. |
+| **Epic** | API no oficial, con llamadas HTTP del propio conector (decisión 78) | El asistente abre el login oficial y el usuario pega el código de autorización. El flujo no es oficial y puede cambiar. | Protocolo del launcher de Epic (`com.epicgames.launcher://apps/...`) |
+| **GOG** | API no oficial, con llamadas HTTP del propio conector (decisiones 76 y 77) | Igual que Epic: login oficial en el navegador y código pegado (decisión 77). | Línea de comandos: el ejecutable del juego o GOG Galaxy (decisión 76). |
 | **Ubisoft** | Sin API | Sin login. Solo escaneo de carpetas. Solo se muestran los juegos instalados que se detecten. | `uplay://launch/ID/0` (reportado por la comunidad) |
 | **EA** | Sin API | Sin login. Solo escaneo de carpetas. Solo se muestran los instalados detectados. | URI del launcher de EA, con fallos reportados en algunos juegos: validar con juegos reales. |
 
@@ -37,7 +37,7 @@ Notas:
 
 - En modo localhost el **ejecutable lanza directamente** (ADR 22). En modo servidor LAN sin agente, la web puede abrir URI desde el navegador como alternativa limitada, solo para tiendas que las admiten (no GOG).
 - Usa siempre las **vías oficiales** cuando existan. Las no oficiales se aíslan tras el conector y se marcan como frágiles.
-- Antes de depender de una herramienta de terceros (`legendary`, `gogdl`), comprueba su licencia (`legendary` y `heroic-gogdl` son GPL-3.0, comprobado; ADR 60) y que se pueda incluir en el instalador cumpliendo sus avisos.
+- Los conectores no usan herramientas externas: hablan con las tiendas por HTTP o a través de sus aplicaciones oficiales. Antes de depender de cualquier librería o herramienta de terceros, comprueba su licencia (ADR 60) y que se pueda incluir en el instalador cumpliendo sus avisos.
 
 ## Reglas que siempre cumples
 
