@@ -31,20 +31,20 @@ Costs are approximate and `[POR VERIFICAR]`.
 ### SignPath Foundation (free for open source)
 
 - Free code signing for open-source projects, with the certificate issued to SignPath Foundation. Windows then shows **SignPath Foundation** as the publisher, not your name. `[POR VERIFICAR]`
-- Requirements as understood: an OSI-approved license (GPL-3.0 qualifies), a public repository, no proprietary components, an active project, a build done by a supported CI (GitHub Actions) from the public source, MFA on the accounts, and a page in the repository stating the signing policy and roles. `[POR VERIFICAR]`
+- Requirements: an OSI-approved license (GPL-3.0 qualifies) and a **public** repository; MFA for every team member on SignPath and on GitHub; a code signing policy page in the project, usually with the line "Free code signing provided by SignPath.io, certificate by SignPath Foundation". Checked on 5-11-2026 on [signpath.org/terms](https://signpath.org/terms) and in published policies of approved projects (Pandoc, Lyrion). Quotas and other details: `[POR VERIFICAR]` on the application page.
 - Signing happens in their cloud: the key never leaves their HSM. The CI uploads the unsigned file as an artifact and downloads the signed one. An approval step by the maintainer can be required. `[POR VERIFICAR]`
 - Cost to you: zero money, a one-time application, and some CI work (below).
 - Risk: they may refuse the project or ask for changes; publisher name and certificate belong to them.
 
 ### Azure Artifact Signing (formerly Trusted Signing)
 
-- Microsoft's cloud signing service. About 10 USD/month for the basic plan. `[POR VERIFICAR]`
+- Microsoft's cloud signing service. About 9.99 USD/month; billing starts when the account is created (Microsoft's [code signing options](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options), checked 5-11-2026).
 - Short-lived certificates, managed by Azure; works with `signtool` through a plugin, or from GitHub Actions. `[POR VERIFICAR]`
-- Requires identity validation. ADR 90 notes (a secondary source from February 2026) that it did not seem available to individuals outside the USA and Canada. Check the current eligibility list for your country and whether individuals are accepted. `[POR VERIFICAR]`
+- Requires identity validation. **Individuals only in the USA and Canada**; organizations also in the EU and the UK (same Microsoft page, checked 5-11-2026). A maintainer in Spain can only use it through an organization.
 
 ### OV certificate from a CA, with a hardware token
 
-- An Organization/Individual Validation certificate from a commercial CA. Typical price: roughly 100 to 400 EUR/USD per year, more for multi-year. `[POR VERIFICAR]`
+- An Organization/Individual Validation certificate from a commercial CA. Typical price: about 150 to 300 USD per year according to Microsoft's page above; check the CA.
 - Since 1 June 2023 (CA/B Forum Baseline Requirements) the private key must be generated and kept on certified hardware (FIPS 140-2 level 2 or Common Criteria EAL4+): a USB token the CA ships, or a cloud HSM. You cannot keep it as a `.pfx` file. `[POR VERIFICAR]`
 - The maximum validity of new certificates is being shortened (a reduction to about 460 days was scheduled for 2026), so expect yearly renewal. `[POR VERIFICAR]`
 - Individuals can usually be validated with an ID document; some CAs sell cheaper certificates for open-source developers. `[POR VERIFICAR]`
@@ -59,7 +59,7 @@ An Extended Validation certificate used to be treated as trusted by SmartScreen 
 For a personal open-source project:
 
 1. **Apply to SignPath Foundation first.** It costs nothing, matches ADR 90 point 11.7, and its certificate is shared, which may help reputation. Prepare: the signing-policy page, MFA on GitHub, and the CI changes below.
-2. If refused, or if the CI constraints are unacceptable: **Azure Artifact Signing** if your country and status are accepted; otherwise an **OV certificate** (cheapest reliable one, from a CA that sells to individuals).
+2. If refused, or if the CI constraints are unacceptable: **Azure Artifact Signing** only if you act as an organization (individuals in Spain are not accepted); otherwise an **OV certificate** (cheapest reliable one, from a CA that sells to individuals).
 3. If none is practical: publish unsigned, as the ADR already allows (decision of the user), and keep the SmartScreen explanation in the install guide ([release.md](release.md#smartscreen)).
 
 ## Fit with the current release flow
