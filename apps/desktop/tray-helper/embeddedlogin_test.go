@@ -241,13 +241,10 @@ func TestUbisoftFlowStillCaptures(t *testing.T) {
 	if m.onCompleted(8, true, ubiCapture) != actCapture || !m.mayExecute(ubiCapture) {
 		t.Fatal("capture on /login")
 	}
-	if m.onStarting("https://connect.ubisoft.com/elsewhere", 9) != actNone {
-		t.Fatal("local-storage does not fail on a navigation during capture")
-	}
 }
 
 func TestArmingIsBoundToItsNavigationId(t *testing.T) {
-	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
+	m := captureMachine{doneURL: eaDone, captureURL: eaCapture}
 	if m.onCompleted(1, true, eaDone) != actNone {
 		t.Fatal("without arming no load counts")
 	}
@@ -268,7 +265,7 @@ func TestArmingIsBoundToItsNavigationId(t *testing.T) {
 }
 
 func TestRedirectArms(t *testing.T) {
-	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
+	m := captureMachine{doneURL: eaDone, captureURL: eaCapture}
 	m.onStarting("https://accounts.ea.com/connect/auth?x=1", 3)
 	m.onStarting(eaDone, 3) // the redirect to doneUrl (IsRedirected) goes through the same road
 	if m.onCompleted(3, true, "https://www.ea.com/") != actNavigateToCapture {
@@ -281,50 +278,6 @@ func TestSamePageCapturesAtDone(t *testing.T) {
 	m.onStarting(ubiCapture, 1)
 	if m.onCompleted(1, true, ubiCapture) != actCapture {
 		t.Fatal("doneUrl equal to captureUrl must capture at once")
-	}
-}
-
-func TestDocumentJSONCaptureStartsOnItsOwnNavigation(t *testing.T) {
-	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
-	m.onStarting(eaCapture, 2) // the first visit to captureUrl, before done, is never read
-	if m.onCompleted(2, true, eaCapture) != actNone || m.mayExecute(eaCapture) {
-		t.Fatal("captureUrl before done must do nothing")
-	}
-	m.onStarting(eaDone, 3)
-	m.onCompleted(3, true, eaDone)
-	if m.onCompleted(2, true, eaCapture) != actNone {
-		t.Fatal("an old id must not start capture")
-	}
-	m.onStarting(eaCapture, 10) // the one the helper launched
-	if m.onCompleted(11, true, eaCapture) != actNone {
-		t.Fatal("another id must not start capture")
-	}
-	if m.onCompleted(10, true, eaCapture) != actCapture || !m.mayExecute(eaCapture) {
-		t.Fatal("the NavigationCompleted of the helper's own navigation starts capture")
-	}
-	if m.onStarting("https://accounts.ea.com/anything", 12) != actFail {
-		t.Fatal("any navigation during capture is capture-missing")
-	}
-}
-
-func TestDocumentJSONCaptureUrlMatchesExactly(t *testing.T) {
-	for uri, want := range map[string]bool{
-		eaCapture: true,
-		"HTTPS://ACCOUNTS.EA.COM/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none": true,
-		"https://accounts.ea.com/connect/auth?response_type=token&client_id=ORIGIN_JS_SDK&redirect_uri=nucleus:rest&prompt=none": false, // other order
-		"https://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus%3Arest&prompt=none": false, // re-encoded
-		"https://accounts.ea.com/connect/auth?client_id=OTHER&response_type=token&redirect_uri=nucleus:rest&prompt=none":           false,
-		"https://accounts.ea.com/connect/auth":                                                                                      false,
-		"https://accounts.ea.com/connect/auth/?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none":   false,
-		"http://accounts.ea.com/connect/auth?client_id=ORIGIN_JS_SDK&response_type=token&redirect_uri=nucleus:rest&prompt=none":     false,
-	} {
-		if got := exactURL(uri, eaCapture); got != want {
-			t.Errorf("%s: got %v want %v", uri, got, want)
-		}
-	}
-	m := captureMachine{state: stateCapture, doneURL: eaDone, captureURL: eaCapture, exact: true}
-	if m.mayExecute("https://accounts.ea.com/connect/auth?client_id=x") {
-		t.Fatal("the same path with another query must not execute")
 	}
 }
 
@@ -367,73 +320,15 @@ func TestBlockedHostsOfURLWithoutHostKeepOnlyTheScheme(t *testing.T) {
 	}
 }
 
-func docRequest(t *testing.T, mutate func(m map[string]any)) error {
+func TestQueryInCaptureUrlIsRejected(t *testing.T) {
 	m, root := goodRequest(t)
 	m["captureUrl"] = "https://connect.ubisoft.com/auth?client_id=x"
-	m["capture"] = []any{map[string]any{"name": "accessToken", "source": "document-json", "jsonField": "access_token", "maxLength": 8192}}
-	if mutate != nil {
-		mutate(m)
-	}
-	return parseMap(t, m, root)
-}
-
-func TestCaptureSourceValidation(t *testing.T) {
-	if err := docRequest(t, nil); err != nil {
-		t.Fatalf("valid document-json rejected: %v", err)
-	}
-	if err := docRequest(t, func(m map[string]any) { setCap(m, "storageKeys", []string{}) }); err != nil {
-		t.Fatalf("document-json with empty storageKeys rejected: %v", err)
-	}
-	for name, mutate := range map[string]func(m map[string]any){
-		"storageKeys with document-json": func(m map[string]any) { setCap(m, "storageKeys", []string{"a"}) },
-		"unknown source":                 func(m map[string]any) { setCap(m, "source", "cookies") },
-		"mixed sources": func(m map[string]any) {
-			m["capture"] = append(m["capture"].([]any), map[string]any{"name": "b", "source": "local-storage", "storageKeys": []string{"k"}, "jsonField": "b", "maxLength": 5})
-		},
-		"query in captureUrl with local-storage": func(m map[string]any) {
-			setCap(m, "source", "local-storage")
-			setCap(m, "storageKeys", []string{"k"})
-		},
-	} {
-		if docRequest(t, mutate) == nil {
-			t.Errorf("%s accepted", name)
-		}
-	}
-	// local-storage is the default and keeps its rules.
-	m, root := goodRequest(t)
-	req, err := parseLoginRequest(mustJSON(m), root)
-	if err != nil || req.Capture[0].Source != srcLocalStorage {
-		t.Errorf("default source: %v %q", err, req.Capture[0].Source)
+	if parseMap(t, m, root) == nil {
+		t.Error("query in captureUrl accepted")
 	}
 }
 
 func mustJSON(v any) []byte { b, _ := json.Marshal(v); return b }
-
-func TestDocumentScriptIsAConstantWithAJSONLiteral(t *testing.T) {
-	fields := []captureField{{Name: "tok", Source: srcDocumentJSON, JSONField: `a"});alert(1);//`, MaxLength: 10}}
-	s, err := buildCaptureScript(fields)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.HasPrefix(s, documentScript) || !strings.HasSuffix(s, ")") || strings.HasPrefix(s, captureScript) {
-		t.Fatal("script is not the document constant plus a literal")
-	}
-	lit := strings.TrimSuffix(strings.TrimPrefix(s, documentScript), ")")
-	var back []map[string]any
-	if json.Unmarshal([]byte(lit), &back) != nil || back[0]["field"] != `a"});alert(1);//` {
-		t.Errorf("literal does not round-trip: %s", lit)
-	}
-	for _, banned := range []string{"cookie", "localStorage", "sessionStorage", "querySelector", "addEventListener", "keydown", "password", "innerHTML", "fetch", "XMLHttpRequest"} {
-		if strings.Contains(documentScript, banned) {
-			t.Errorf("script mentions %q", banned)
-		}
-	}
-	for _, need := range []string{`tagName==="PRE"`, "document.body", "b.textContent", "65536", "Array.isArray", "hasOwnProperty", `typeof o[f.field]==="string"`, "try{"} {
-		if !strings.Contains(documentScript, need) {
-			t.Errorf("script lacks %q", need)
-		}
-	}
-}
 
 func TestCaptureScriptIsAConstantWithAJSONLiteral(t *testing.T) {
 	fields := []captureField{{Name: "ticket", StorageKeys: []string{"a", `b"});alert(1);//`, "c"}, JSONField: "t", MaxLength: 10}}
@@ -508,17 +403,6 @@ func TestHandleEmbeddedLoginRejectsBadInputWithoutOpeningAnything(t *testing.T) 
 	out.Reset()
 	if code := handleEmbeddedLogin(strings.NewReader(""), &out); code != 2 {
 		t.Errorf("empty stdin: code=%d", code)
-	}
-}
-
-func TestOnlyTheFirstStartingAfterNavigateIsTheCaptureNavigation(t *testing.T) {
-	m := captureMachine{doneURL: eaDone, captureURL: eaCapture, exact: true}
-	m.onStarting(eaDone, 1)
-	m.onCompleted(1, true, eaDone)
-	m.onStarting("https://accounts.ea.com/other", 2) // first one is not captureUrl: it is not ours, nothing is kept
-	m.onStarting(eaCapture, 3)
-	if m.hasCapID || m.onCompleted(3, true, eaCapture) != actNone {
-		t.Fatal("a later NavigationStarting to captureUrl must be ignored")
 	}
 }
 
