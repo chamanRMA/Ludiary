@@ -48,6 +48,7 @@ func newConfig() (*config, error) {
 		target:          "windows-x64",
 		mutexName:       "Ludiary-Setup",
 		lockWait:        120 * time.Second,
+		shortcutWait:    10 * time.Minute,  // > 120 s Setup + 2 x 120 s trials + 20 s stop + 120 s rollback
 		trialTimeout:    120 * time.Second, // START_TIMEOUT_MS (60 s) of launcher.ts plus 60 s of margin (M4); a test keeps them in step
 		stopTimeout:     20 * time.Second,
 		rollbackTimeout: 120 * time.Second,

@@ -79,7 +79,8 @@ Name: "{autodesktop}\Ludiary"; Filename: "{app}\Ludiary.exe"; WorkingDir: "{app}
 [Run]
 ; The launcher makes the new folder the active one and starts the trial (ADR 90 point 18, M2/M8). nowait: it waits for
 ; this installer to leave (SetupMutex), so waiting for it here would be a deadlock. By hand it does not open the browser:
-; the optional entry below does, if the user leaves it ticked.
+; the optional entry below does, if the user leaves it ticked. That entry runs after the Finish click, while Setup may still hold
+; its mutex: the launcher it starts waits for the commit and its trial (it holds apply.lock), then opens the new version.
 Filename: "{app}\Ludiary.exe"; Parameters: "--commit-update {#AppFolderVersion}"; Flags: nowait runhidden; Check: IsUpdate
 Filename: "{app}\Ludiary.exe"; Parameters: "--commit-update {#AppFolderVersion} --no-open"; Flags: nowait runhidden; Check: not IsUpdate
 Filename: "{app}\Ludiary.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent; Check: not IsUpdate

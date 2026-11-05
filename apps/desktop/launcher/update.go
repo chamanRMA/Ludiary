@@ -25,8 +25,11 @@ type config struct {
 	target        string
 	mutexName     string
 	// Timeouts and polling are fields so tests do not wait for real time.
-	lockWait, trialTimeout, stopTimeout, rollbackTimeout, poll time.Duration
-	fatal                                                      func(key string)
+	// shortcutWait is how long a shortcut waits for a confirmation to end: Setup (lockWait) + two trials + their stop + a rollback.
+	lockWait, shortcutWait, trialTimeout, stopTimeout, rollbackTimeout, poll time.Duration
+	fatal                                                                    func(key string)
+	// held is apply.lock while this process owns it (a shortcut start, a commit, an apply); the inner steps use it instead of reopening.
+	held *os.File
 }
 
 func (c *config) updatesDir() string { return filepath.Join(c.dataDir, "updates") }
@@ -70,23 +73,21 @@ func runExe(exe string, args []string, timeout time.Duration) int {
 	return -1
 }
 
-// lockFree reports whether apply.lock can be taken (nobody holds it) and no installer of ours is running.
-func (c *config) busy() bool {
-	if mutexExists(c.mutexName) {
-		return true
-	}
-	f, err := openExclusive(c.lockPath())
-	if err != nil {
-		return true
-	}
-	f.Close()
-	return false
-}
-
-// waitFree: a launcher that starts while an update is being applied waits, and after lockWait goes on as normal (A3).
-func (c *config) waitFree() {
-	for deadline := time.Now().Add(c.lockWait); c.busy() && time.Now().Before(deadline); {
-		time.Sleep(c.poll)
+// waitAndHold is what every shortcut start does first (A3): wait until no installer of ours is running and apply.lock is free,
+// and HOLD the lock while the start goes on. Holding it is what keeps a commit-update, an apply or another start from
+// interleaving with this one (ADR 90 point 19, the race of the manual installation). After lockWait it goes on without the
+// lock, as before. Returns nil in that case.
+func (c *config) waitAndHold() *os.File {
+	for deadline := time.Now().Add(c.shortcutWait); ; time.Sleep(c.poll) {
+		if f, err := openExclusive(c.lockPath()); err == nil {
+			if !mutexExists(c.mutexName) {
+				return f
+			}
+			f.Close()
+		}
+		if time.Now().After(deadline) {
+			return nil
+		}
 	}
 }
 
@@ -102,7 +103,13 @@ func (c *config) run(args []string) int {
 		args = rest
 	}
 	if isShortcut(args) {
-		c.waitFree()
+		if f := c.waitAndHold(); f != nil {
+			c.held = f
+			defer func() {
+				f.Close()
+				c.held = nil
+			}()
+		}
 	}
 	return c.start(args)
 }
@@ -144,8 +151,13 @@ func (c *config) start(args []string) int {
 		return runExe(c.appExe(v.Active), args, 0)
 	}
 	// M2: Inno was cut after it wrote .complete but before --commit-update ran: confirm now, as that would have.
+	// Everything that changes versions.json or applies an update needs apply.lock (waitAndHold gave up after shortcutWait
+	// otherwise): without it the active version just starts, with no --from-launcher so it can neither ask to apply nor run a trial.
+	if c.held == nil {
+		return runExe(c.appExe(v.Active), args, 0)
+	}
 	if v.Applying != nil && v.Applying.To != v.Active && !v.isBad(v.Applying.To) && c.isComplete(v.Applying.To) && c.readVersions() != nil {
-		return c.commitUpdate(v.Applying.To, args)
+		return c.commitLocked(v.Applying.To, args)
 	}
 	if v.Trial {
 		return c.trial(v, args)
@@ -270,11 +282,13 @@ func (c *config) applyUpdate(v *versions, args []string) int {
 		return plain()
 	}
 	defer installer.file.Close()
-	lock, err := openExclusive(c.lockPath())
-	if err != nil {
-		return plain()
+	if c.held == nil { // a shortcut start already holds it
+		lock, err := openExclusive(c.lockPath())
+		if err != nil {
+			return plain()
+		}
+		defer lock.Close()
 	}
-	defer lock.Close()
 	v.Applying = &applying{To: to, Attempts: attempts}
 	if c.writeVersions(v) != nil {
 		return plain()
@@ -337,20 +351,28 @@ func (c *config) commitUpdate(to string, args []string) int {
 	if !isVersion(to) || !isShortcut(args) {
 		return 1
 	}
+	// Take apply.lock FIRST and keep it while the installer finishes: a shortcut that someone clicks (or the "Open Ludiary"
+	// box of the installer) then waits for the whole commit and trial instead of starting the old version in between.
 	var lock *os.File
-	for deadline := time.Now().Add(c.lockWait); ; {
-		var err error
-		if lock, err = openExclusive(c.lockPath()); err == nil && !mutexExists(c.mutexName) {
-			break
-		} else if err == nil {
-			lock.Close()
+	for deadline := time.Now().Add(c.shortcutWait); lock == nil; time.Sleep(c.poll) {
+		lock, _ = openExclusive(c.lockPath())
+		if lock == nil && time.Now().After(deadline) {
+			return 1
 		}
+	}
+	defer lock.Close()
+	c.held = lock
+	defer func() { c.held = nil }()
+	for deadline := time.Now().Add(c.lockWait); mutexExists(c.mutexName); time.Sleep(c.poll) {
 		if time.Now().After(deadline) {
 			return 1
 		}
-		time.Sleep(c.poll)
 	}
-	defer lock.Close()
+	return c.commitLocked(to, args)
+}
+
+// commitLocked needs apply.lock held and the installer gone. It makes the new folder the active one and starts the trial.
+func (c *config) commitLocked(to string, args []string) int {
 	if !c.isComplete(to) {
 		return 1 // the installation did not finish: whatever was active stays active
 	}
