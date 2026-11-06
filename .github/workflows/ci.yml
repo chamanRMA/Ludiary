@@ -35,7 +35,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
-        run: pnpm test
+        # The runner's disk is far slower than a PC: SQLite tests go past the 5 s default there.
+        run: pnpm test --testTimeout=30000
       - name: Licenses (ADR 60, 70)
         run: |
           pnpm licenses list --json --prod -r > "$RUNNER_TEMP/licenses.json"
