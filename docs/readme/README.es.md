@@ -130,6 +130,10 @@ Las contribuciones son bienvenidas. Lee antes [CONTRIBUTING.md](../../CONTRIBUTI
 
 Comunica las vulnerabilidades en privado. Mira [SECURITY.md](../../SECURITY.md).
 
+## Política de firma de código
+
+Mira la [política de firma de código](../code-signing-policy.md) (en inglés). El proyecto ha solicitado la firma gratuita del programa [SignPath Foundation](https://signpath.org).
+
 ## Licencia
 
 [GPL-3.0-only](../../LICENSE).
