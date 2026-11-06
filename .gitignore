@@ -20,8 +20,13 @@ logs/
 .env.*
 !.env.example
 
-# Claude Code local settings
+# Claude Code local settings and worktrees
 .claude/settings.local.json
+.claude/worktrees/
+.remember/
+
+# Recorded traffic may hold tokens
+*.har
 
 # Editor and OS
 .DS_Store
@@ -36,3 +41,5 @@ Thumbs.db
 
 # Helper build output
 apps/desktop/tray-helper/*.exe
+apps/desktop/launcher/*.exe
+Ludiary-Setup*.exe
