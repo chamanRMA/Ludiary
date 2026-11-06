@@ -1,0 +1,76 @@
+# ADR 60: every change comes in through a pull request with CI green, license check and DCO included.
+# No secrets are used. Never add pull_request_target, workflow_run or secrets.*. Nothing that comes from the pull request
+# (title, body, branch, SHA) may be written inside a `run:` block: pass it through `env:`.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: apps/desktop/launcher/go.mod
+          cache: false
+      - name: Install pnpm and the dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Licenses (ADR 60, 70)
+        run: |
+          pnpm licenses list --json --prod -r > "$RUNNER_TEMP/licenses.json"
+          node apps/desktop/scripts/check-licenses.mjs "$RUNNER_TEMP/licenses.json"
+      - name: Go launcher
+        working-directory: apps/desktop/launcher
+        run: |
+          go vet ./...
+          go test ./...
+      - name: Go tray helper
+        working-directory: apps/desktop/tray-helper
+        run: |
+          go vet ./...
+          go test ./...
+
+  dco:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit has a Signed-off-by (ADR 60)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          missing=0
+          # Merge commits add no authored change of their own.
+          for sha in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            if ! git log -1 --format=%B "$sha" | grep -Eq '^Signed-off-by: .+ <.+>$'; then
+              echo "::error::commit $sha has no Signed-off-by: use git commit -s"
+              missing=1
+            fi
+          done
+          exit "$missing"
