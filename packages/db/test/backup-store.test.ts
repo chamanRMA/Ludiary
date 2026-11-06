@@ -200,7 +200,10 @@ describe("prepareRestore (ADR 89 point 6.1, 16 H2 M5 M6)", () => {
       await makeLudiaryDb(f, {});
       const db = new Database(f);
       db.pragma("journal_mode = DELETE");
-      for (let i = 0; i < 400; i++) db.prepare("INSERT INTO settings (user_id, key, value) VALUES (NULL, ?, ?)").run(`k${i}`, "x".repeat(1500));
+      // One transaction: 400 separate commits take over 5 s on the CI disks.
+      db.transaction(() => {
+        for (let i = 0; i < 400; i++) db.prepare("INSERT INTO settings (user_id, key, value) VALUES (NULL, ?, ?)").run(`k${i}`, "x".repeat(1500));
+      })();
       db.close();
       // Zero a page in the middle of the file: the first page (the schema) stays readable.
       const bytes = readFileSync(f);

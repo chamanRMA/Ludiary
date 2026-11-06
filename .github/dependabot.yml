@@ -8,3 +8,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Types follow the Node major in .node-version.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
