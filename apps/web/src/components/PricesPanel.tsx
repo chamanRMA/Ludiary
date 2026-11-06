@@ -6,6 +6,7 @@ import { Link } from "../app/Link";
 import { api } from "../data/api";
 import { mutate, useQuery, useQueryState } from "../data/hooks";
 import { formatMoney, formatWhen } from "../data/prices";
+import { safeExternalUrl } from "../data/validate";
 import ui from "../styles/ui.module.css";
 import { cx } from "./bits";
 
@@ -14,8 +15,10 @@ export const ITAD_URL = "https://isthereanydeal.com/";
 /** An external link in the style of the chips and buttons (never underlined), in a new tab (ADR 68). */
 export function ExternalLink({ href, children, small }: { href: string; children: string; small?: boolean }) {
   const { t } = useTranslation();
+  const url = safeExternalUrl(href);
+  if (!url) return null;
   return (
-    <a className={cx(ui.btn, small && ui.small)} href={href} target="_blank" rel="noopener noreferrer">
+    <a className={cx(ui.btn, small && ui.small)} href={url} target="_blank" rel="noopener noreferrer">
       {children}
       <span className="sr-only">{t("wizard.newTab")}</span>
     </a>

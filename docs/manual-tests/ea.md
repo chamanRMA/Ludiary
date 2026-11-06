@@ -10,7 +10,7 @@ Texts: Spanish interface texts are quoted from `packages/i18n/locales/web/es.jso
 ## Rules for the notes
 
 - Write notes in a scratch file **outside the repository** (for example `%TEMP%\ea-notes.txt`).
-- Before copying anything into the ADR, sanitize it: replace the Windows user name with `<user>`, remove the EA account name, e-mail and account IDs, keep only relative paths. Example: `F:\Juegos EA ñ\The Sims 4`. Never paste tokens, cookies, session data or the full log.
+- Before copying anything into the ADR, sanitize it: replace the Windows user name with `<user>`, remove the EA account name, e-mail and account IDs, keep only relative paths. Example: `X:\Juegos EA ñ\The Sims 4`. Never paste tokens, cookies, session data or the full log.
 - Do not commit screenshots that show your EA account name or e-mail.
 - Each step ends with a result: **OK**, **FAIL** or **NOT CHECKED**, plus the assumption it closes.
 - Offer IDs (`contentID`) are product identifiers, not personal: write them. Account IDs are personal: never.
@@ -20,10 +20,10 @@ Texts: Spanish interface texts are quoted from `packages/i18n/locales/web/es.jso
 1. Download the EA app from ea.com and install it with defaults (it does not let you choose a folder; EAD7). Create a free EA account if you have none, and sign in.
 2. Add **The Sims 4** (free base game) to your account. Alternative: a small old game already in your account.
 3. Install **the first game in the default folder** (`C:\Program Files\EA Games`) when the app proposes it. This is the one used by steps 1 to 7.
-4. If you have disk for a second game (or a small one), install it with a custom folder with spaces and an "ñ": in the EA app go to Settings > Downloads (wording may vary) and set the library folder to `F:\Juegos EA ñ` (use another drive letter if you have no `F:`). Create the folder first if asked. If you can only install one game, install it in `F:\Juegos EA ñ` instead and use that folder wherever the steps say "default folder", noting that step 6 then tests the manual folder.
+4. If you have disk for a second game (or a small one), install it with a custom folder with spaces and an "ñ": in the EA app go to Settings > Downloads (wording may vary) and set the library folder to `X:\Juegos EA ñ` (use another drive letter if you have no `F:`). Create the folder first if asked. If you can only install one game, install it in `X:\Juegos EA ñ` instead and use that folder wherever the steps say "default folder", noting that step 6 then tests the manual folder.
 5. Wait until the downloads finish. Close the game if it opens by itself, and leave the EA app signed in.
 
-**Expect:** `C:\Program Files\EA Games\<game folder>` (and, if installed, `F:\Juegos EA ñ\<game folder>`) exists with the game files.
+**Expect:** `C:\Program Files\EA Games\<game folder>` (and, if installed, `X:\Juegos EA ñ\<game folder>`) exists with the game files.
 **Note:** the real default installation path the app proposed (sanitized) and the exact folder names it created.
 
 ## Step 1. EA app in the registry and on disk (EAD7)
@@ -91,7 +91,7 @@ reg query "HKLM\SOFTWARE\WOW6432Node\Origin Games" /s
 
 If they exist, open them read only and look for `downloadinplacedir`.
 **Expect:** unknown (EAD6 has no source tested on a machine).
-**Note:** only: which files exist; whether the key `downloadinplacedir` exists (yes/no, exact key name); the **shape** of the path value (for example `F:\Juegos EA ñ`, drive and form only). Do not copy the rest of the file: it may hold account data.
+**Note:** only: which files exist; whether the key `downloadinplacedir` exists (yes/no, exact key name); the **shape** of the path value (for example `X:\Juegos EA ñ`, drive and form only). Do not copy the rest of the file: it may hold account data.
 
 ## Step 6. Automatic detection in Ludiary (EAD1, EAD5)
 
@@ -101,7 +101,7 @@ If they exist, open them read only and look for `downloadinplacedir`.
 - Settings > "Ubicaciones" lists `C:\Program Files\EA Games` as "Detectada automáticamente" (EAD5).
 - The library shows the game under EA with the **title of the file** (not the folder name) and the gradient fallback, **not** a cover (covers are out of this cut, point 5; EAD14).
 - One EA entry per game. No extra EA entry that is not a game, and no DLC entry (EAD10).
-- If the second game is in `F:\Juegos EA ñ`, it does **not** appear yet (not a default folder).
+- If the second game is in `X:\Juegos EA ñ`, it does **not** appear yet (not a default folder).
 
 **Note:** the title as shown (a game name is not personal); gradient yes/no; number of EA entries against the number of games installed; the folder path shown by Settings, sanitized. The title is the one from `en_US` even if the interface is in Spanish.
 
@@ -132,11 +132,11 @@ Write which works and which fails, and whether the order of the IDs matters. If 
 
 ## Step 9. Only manual folders (ADR 42)
 
-**Do:** Settings > "Carpetas de juegos" > choose "Solo las carpetas que yo indique". Press "Escanear ahora". Look at the Library. Then press "Añadir carpeta" and add the folder with the game (`C:\Program Files\EA Games`, or `F:\Juegos EA ñ` for the second game), and scan again. Finally go back to "Automática y carpetas manuales" and scan.
+**Do:** Settings > "Carpetas de juegos" > choose "Solo las carpetas que yo indique". Press "Escanear ahora". Look at the Library. Then press "Añadir carpeta" and add the folder with the game (`C:\Program Files\EA Games`, or `X:\Juegos EA ñ` for the second game), and scan again. Finally go back to "Automática y carpetas manuales" and scan.
 **Expect:**
 
 - After the first scan the default-folder game **disappears**. No warning about automatic detection appears on the EA card (it does not apply to EA, unlike Ubisoft).
-- After adding the folder by hand the game **comes back** with the same title. With `F:\Juegos EA ñ` the second game also appears (spaces and "ñ" in the path work).
+- After adding the folder by hand the game **comes back** with the same title. With `X:\Juegos EA ñ` the second game also appears (spaces and "ñ" in the path work).
 - After going back to automatic, the games appear again, without duplicates.
 
 **Note:** game gone yes/no; game back with the manual folder yes/no (default and `ñ` folders separately); duplicates yes/no; any warning shown. Also try "Configurarlo más tarde" (the onboarding option) if you can reach it: expect no EA games.
@@ -155,7 +155,7 @@ Write which works and which fails, and whether the order of the IDs matters. If 
 
 ## Step 11. Exported log has no paths or titles
 
-**Do:** after steps 6 to 10, go to Settings > "Privacidad y registros" > "Exportar registros" > "Exportar". If the web export is still simulated, read the real files in `%LOCALAPPDATA%\Ludiary\logs` instead, read-only, in a text editor. Search for: the game title, the folder name, `EA Games`, `Origin Games`, `Juegos EA`, `ñ`, `F:\`, `F:/`, `C:\Program Files`, `C:\Users`, the Windows user name, `EA Desktop`, `EADesktop.exe`, `EALauncher.exe`, `.exe`, `installerdata`, `origin2://`.
+**Do:** after steps 6 to 10, go to Settings > "Privacidad y registros" > "Exportar registros" > "Exportar". If the web export is still simulated, read the real files in `%LOCALAPPDATA%\Ludiary\logs` instead, read-only, in a text editor. Search for: the game title, the folder name, `EA Games`, `Origin Games`, `Juegos EA`, `ñ`, `X:\`, `F:/`, `C:\Program Files`, `C:\Users`, the Windows user name, `EA Desktop`, `EADesktop.exe`, `EALauncher.exe`, `.exe`, `installerdata`, `origin2://`.
 **Expect:** none of those appear. Only numbers and codes: offer IDs, counters (`invalidFiles`, `invalidIds`, `duplicates`), result codes. The Play entry names the connector and the result, never a path or a title (ADR 81, point 3 and 4).
 **Note:** OK or FAIL. If FAIL, report the file name pattern (`ludiary-YYYYMMDD`), the line number and the kind of leak (path, title, user name), never the leaked text. Do not share the file. Closes the log privacy requirement (ADR 35).
 

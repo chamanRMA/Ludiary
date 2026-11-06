@@ -276,8 +276,9 @@ for (const l of pkgDirs) {
   }
 }
 // The Go standard library is linked into ludiary-tray.exe but has no module, so `go list` above skips it.
-const goRoot = execFileSync("go", ["env", "GOROOT"], { env: goEnv, encoding: "utf8" }).trim();
-const goVersion = execFileSync("go", ["env", "GOVERSION"], { env: goEnv, encoding: "utf8" }).trim();
+// From the module folder: outside it, `go` would report the installed toolchain, not the one of go.mod.
+const goRoot = execFileSync("go", ["env", "GOROOT"], { cwd: trayDir, env: goEnv, encoding: "utf8" }).trim();
+const goVersion = execFileSync("go", ["env", "GOVERSION"], { cwd: trayDir, env: goEnv, encoding: "utf8" }).trim();
 lines.push("=".repeat(70), `go: standard library ${goVersion} (linked into bin/ludiary-tray.exe and Ludiary.exe, the stable launcher)`, "", readFileSync(join(goRoot, "LICENSE"), "utf8").trim(), "");
 // The Windows MSI of Node does not ship its LICENSE, so the text for the pinned version (.node-version) is kept in the repo.
 const nodeLicense = join(desktop, "licenses/node-LICENSE.txt");

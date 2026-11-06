@@ -42,7 +42,7 @@ What each connector does today. Details change as the stores change. See [stores
 | Steam | Yes (`steam://`) | Yes: sign-in plus your own API key | Covers, play time, DLC, collections, wishlist import (undocumented endpoint) |
 | GOG | Yes, through GOG Galaxy or directly | Yes: official login page, you paste the code (unofficial API) | DLC, wishlist import (unofficial API) |
 | Epic Games | Yes | Yes: official login page, you paste the code (unofficial API) | Install button for games you own |
-| Ubisoft Connect | Yes (`uplay://`), found in the Windows registry | Yes: sign-in in a built-in window (unofficial API) | Covers from the local cache |
+| Ubisoft Connect | Yes (`uplay://`), found in the Windows registry | Optional: sign-in in a built-in window (unofficial API; Ubisoft's terms do not allow unauthorized third-party tools, [use it at your own risk](docs/guides/stores-and-risks.md)) | Covers from the local cache |
 | EA app | Yes (`origin2://`), found from the EA app's files | Yes: sign-in in your browser and paste a token (unofficial API) | |
 
 Each store is an isolated connector: if one fails, the others keep working.

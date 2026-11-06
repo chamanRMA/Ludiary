@@ -2,6 +2,8 @@ module github.com/ludiary/tray-helper
 
 go 1.25.0
 
+toolchain go1.27.3
+
 require (
 	github.com/gogpu/systray v0.3.0
 	golang.org/x/sys v0.47.0

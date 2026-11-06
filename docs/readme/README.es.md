@@ -42,7 +42,7 @@ Lo que hace hoy cada conector. Los detalles cambian cuando cambian las tiendas. 
 | Steam | Sí (`steam://`) | Sí: inicio de sesión y tu propia API key | Portadas, tiempo de juego, DLC, colecciones, importar lista de deseos (punto de acceso sin documentar) |
 | GOG | Sí, a través de GOG Galaxy o directo | Sí: página de login oficial, pegas el código (API no oficial) | DLC, importar lista de deseos (API no oficial) |
 | Epic Games | Sí | Sí: página de login oficial, pegas el código (API no oficial) | Botón Instalar en los juegos que tienes |
-| Ubisoft Connect | Sí (`uplay://`), detectados en el registro de Windows | Sí: inicio de sesión en una ventana integrada (API no oficial) | Portadas de la caché local |
+| Ubisoft Connect | Sí (`uplay://`), detectados en el registro de Windows | Opcional: inicio de sesión en una ventana integrada (API no oficial; las condiciones de Ubisoft no permiten herramientas de terceros sin autorización, [úsala bajo tu responsabilidad](../guides/stores-and-risks.md), en inglés) | Portadas de la caché local |
 | App de EA | Sí (`origin2://`), detectados por los ficheros de la app de EA | Sí: inicio de sesión en tu navegador y pegas un token (API no oficial) | |
 
 Cada tienda es un conector aislado: si una falla, las demás siguen funcionando.

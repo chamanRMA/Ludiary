@@ -8,7 +8,7 @@ Time: about 1 hour. Needs: a GOG account (free), internet, Ludiary built and run
 ## Rules for the notes
 
 - Write notes in a scratch file **outside the repository** (for example `%TEMP%\gog-notes.txt`).
-- Before copying anything into the ADR, sanitize it: replace the Windows user name with `<user>`, the account name and e-mail with nothing, and keep only relative paths. Example: `D:\Juegos GOG Ñ\Beneath a Steel Sky`. Never paste tokens, cookies, account IDs or the full log.
+- Before copying anything into the ADR, sanitize it: replace the Windows user name with `<user>`, the account name and e-mail with nothing, and keep only relative paths. Example: `X:\Juegos GOG Ñ\Beneath a Steel Sky`. Never paste tokens, cookies, account IDs or the full log.
 - Do not commit screenshots that show your account name.
 - Each step ends with a result: **OK**, **FAIL** or **NOT CHECKED**, plus the assumption it closes.
 
@@ -16,11 +16,11 @@ Time: about 1 hour. Needs: a GOG account (free), internet, Ludiary built and run
 
 1. Download GOG Galaxy from gog.com and install it with defaults. Sign in.
 2. In the GOG store, add **Beneath a Steel Sky** (product 1207658695, free) to your account.
-3. In Galaxy, go to Settings > Games > Default installation folder (wording may vary) and set it to `D:\Juegos GOG Ñ` (a folder with spaces and an "Ñ"; use another drive letter if you have no `D:`). Create the folder first if Galaxy asks.
+3. In Galaxy, go to Settings > Games > Default installation folder (wording may vary) and set it to `X:\Juegos GOG Ñ` (a folder with spaces and an "Ñ"; use another drive letter if you have no `D:`). Create the folder first if Galaxy asks.
 4. Install the game from Galaxy. Wait until it finishes. Close the game if it opens by itself.
 5. Optional, to test a console program (step 11): also add and install any free GOG game that uses DOSBox.
 
-**Expect:** the folder `D:\Juegos GOG Ñ\Beneath a Steel Sky` exists and contains the game files.
+**Expect:** the folder `X:\Juegos GOG Ñ\Beneath a Steel Sky` exists and contains the game files.
 **Note:** the real default library path Galaxy proposed (sanitized) for G2.
 
 ## Step 1. Registry (G1)
@@ -71,7 +71,7 @@ Step 4 was written for direct launch. Since 5-11-2026 Play goes through GOG Gala
 
 **Do:**
 1. Default setting, Galaxy fully closed: press Play. Repeat with Galaxy open.
-2. Use a game whose folder has spaces and `ñ` (for example `F:\GOG Galaxy\Games ñ\Cold Waters`).
+2. Use a game whose folder has spaces and `ñ` (for example `X:\Games ñ\My Game`).
 3. If you have a game installed with the offline installer, try it too.
 4. Switch to "Directly" and press Play: the game opens without Galaxy, as in step 4.
 5. Optional: sign out of Galaxy or uninstall it, set the mode back to "Through GOG Galaxy" and press Play: it must open directly.
@@ -83,7 +83,7 @@ Step 4 was written for direct launch. Since 5-11-2026 Play goes through GOG Gala
 
 ## Step 5. Only manual folders (ADR 42)
 
-**Do:** Settings > Game folders > set the mode to "only manual folders". Press "Scan now": the automatic entries go away and the game disappears. Press "Add folder" and choose `D:\Juegos GOG Ñ` (the library) and scan.
+**Do:** Settings > Game folders > set the mode to "only manual folders". Press "Scan now": the automatic entries go away and the game disappears. Press "Add folder" and choose `X:\Juegos GOG Ñ` (the library) and scan.
 **Expect:** the game appears again, same title. Play works.
 **Note:** whether it worked also by adding the game folder itself instead of the library. Then set the mode back to automatic.
 
@@ -97,7 +97,7 @@ Step 4 was written for direct launch. Since 5-11-2026 Play goes through GOG Gala
 
 ## Step 7. Offline installer without Galaxy (G2, optional)
 
-**Do:** from gog.com, library, download the offline installer of the game. Install it to another folder, for example `D:\Offline GOG Ñ`, with Galaxy not involved. Press "Scan now" in Ludiary.
+**Do:** from gog.com, library, download the offline installer of the game. Install it to another folder, for example `X:\Offline GOG Ñ`, with Galaxy not involved. Press "Scan now" in Ludiary.
 **Expect (G2):** either it appears by itself, or only after adding its folder (step 5). Both are acceptable, we just need to know which.
 **Note:** did it appear alone? Did `reg query` (step 1) show a new subkey for it? Did it use `C:\Program Files (x86)\GOG Galaxy\Games` as default?
 
@@ -109,7 +109,7 @@ Step 4 was written for direct launch. Since 5-11-2026 Play goes through GOG Gala
 
 ## Step 9. Exported log has no paths or arguments
 
-**Do:** after steps 3 to 6, go to Settings > "Privacy and logs", export the log, and open the file in a text editor. Search for: `Juegos GOG`, `Ñ`, `Beneath`, the Windows user name, `scummvm`, `.exe`, `--`, `D:\`, `C:\Users`.
+**Do:** after steps 3 to 6, go to Settings > "Privacy and logs", export the log, and open the file in a text editor. Search for: `Juegos GOG`, `Ñ`, `Beneath`, the Windows user name, `scummvm`, `.exe`, `--`, `X:\`, `C:\Users`.
 **Expect:** none of those appear. Only IDs (`1207658695`), counters and codes. The Play entry names the connector and the result, never the path.
 **Note:** OK or FAIL. If FAIL, report the line number and the kind of leak, not the leaked text. Do not share the file.
 

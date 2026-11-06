@@ -5,7 +5,7 @@
   "connectors.ubisoft.errors.noCache": "Install Ubisoft Connect and open it once to see your Ubisoft games here.",
   "connectors.ubisoft.needsAutoDetection": "Ubisoft Connect keeps its games in the Windows registry. To see them, turn on automatic detection.",
   "connectors.ubisoft.login.title": "Sign in to Ubisoft",
-  "connectors.ubisoft.login.body": "A window with the official Ubisoft page will open. Sign in there, also with the verification code if it asks for one, and tick “Remember me”; the window closes by itself. Ludiary does not store your password.",
+  "connectors.ubisoft.login.body": "Warning: this connection is unofficial and Ubisoft's terms do not allow unauthorized third-party tools, so using it is at your own risk and could affect your account. Scanning your games and Play work without signing in. If you continue, a window with the official Ubisoft page will open. Sign in there, also with the verification code if it asks for one, and tick “Remember me”; the window closes by itself. Ludiary does not store your password.",
   "connectors.ubisoft.login.window": "Sign in to Ubisoft",
   "connectors.ubisoft.error.login": "Ubisoft did not accept the sign-in. Try again.",
   "connectors.ubisoft.error.expired": "You need to sign in to Ubisoft again.",

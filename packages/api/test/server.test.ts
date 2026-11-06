@@ -190,7 +190,36 @@ describe("local server guards (ADR 23)", () => {
   });
 });
 
+describe("detection from a web page", () => {
+  it("marks every answer as same-origin and refuses cross-site requests", async () => {
+    const port = await start();
+    expect((await send(port, "/api/health")).headers["cross-origin-resource-policy"]).toBe("same-origin");
+    const res = await send(port, "/api/health", { headers: { "sec-fetch-site": "cross-site", "sec-fetch-mode": "no-cors", "sec-fetch-dest": "image" } });
+    expect(res.status).toBe(403);
+    expect(res.headers["cross-origin-resource-policy"]).toBe("same-origin");
+    for (const site of ["same-origin", "none"]) expect((await send(port, "/api/health", { headers: { "sec-fetch-site": site } })).status).toBe(200);
+  });
+
+  it("only lets a cross-site request through as the top-level return of an OpenID login", async () => {
+    const port = await start();
+    const nav = { "sec-fetch-site": "cross-site", "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" };
+    expect((await send(port, "/connect/return?w=1", { headers: nav })).status).not.toBe(403);
+    expect((await send(port, "/connect/return?w=1", { headers: { ...nav, "sec-fetch-dest": "iframe" } })).status).toBe(403);
+    expect((await send(port, "/open?t=x", { headers: nav })).json()).toEqual({ error: "cross_site" });
+  });
+});
+
 describe("launcher protocol (ADR 63)", () => {
+  it("refuses a browser on the launcher routes, also with an encoded path", async () => {
+    const port = await start();
+    const origin = `http://127.0.0.1:${port}`;
+    for (const path of ["/api/launcher/challenge", "/api/%6cauncher/challenge", "/api/launcher/open-link", "/api/%6cauncher/open-link"]) {
+      const res = await send(port, path, { method: "POST", body: {}, headers: { origin } });
+      expect(res.status, path).toBe(403);
+      expect(res.json(), path).toEqual({ error: "bad_origin" });
+    }
+  });
+
   it("answers a correct proof with a result the launcher can verify", async () => {
     const port = await start();
     const nonce = await challenge(port);

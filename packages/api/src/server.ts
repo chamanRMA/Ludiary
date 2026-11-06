@@ -145,11 +145,16 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     reply.header("Cache-Control", "no-store");
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("X-Content-Type-Options", "nosniff");
+    reply.header("Cross-Origin-Resource-Policy", "same-origin");
     const hosts = allowedHosts();
     if (!hosts.includes(req.headers.host ?? "")) return deny(reply, 421, "bad_host");
+    // A page of another site must learn nothing from here. Only exception: the store sends the browser back after an OpenID login (ADR 74).
+    const openIdReturn = req.headers["sec-fetch-mode"] === "navigate" && req.headers["sec-fetch-dest"] === "document" && req.url.split("?", 1)[0] === "/connect/return";
+    if (req.headers["sec-fetch-site"] === "cross-site" && !openIdReturn) return deny(reply, 403, "cross_site");
     const origin = req.headers.origin;
     // The launcher protocol is for Ludiary.exe only: a browser always sends Origin on these POSTs.
-    if (origin !== undefined && req.url.startsWith("/api/launcher/")) return deny(reply, 403, "bad_origin");
+    // The matched route, not req.url: "/api/%6cauncher/..." reaches the same handler.
+    if (origin !== undefined && req.routeOptions.url?.startsWith("/api/launcher/")) return deny(reply, 403, "bad_origin");
     if (origin !== undefined && !hosts.some((h) => origin === `http://${h}`)) return deny(reply, 403, "bad_origin");
     return undefined;
   });
@@ -247,7 +252,7 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     reply.header("Content-Type", "text/javascript; charset=utf-8").header("Content-Security-Policy", OPEN_CSP).send(openJs),
   );
 
-  // The only route with level 'session' (ADR 67): no personal data.
+  // Level 'session' (ADR 67): no personal data.
   app.get("/api/status", { config: { access: "session" } }, async () => ({
     app: deps.appId.toLowerCase(),
     version: deps.version,

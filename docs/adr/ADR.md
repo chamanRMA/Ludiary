@@ -1851,7 +1851,7 @@ export function checkConnectorManifest(c: StoreConnector): readonly string[];
     - `steam-root` (`scan`): `HKCU\Software\Valve\Steam` → `SteamPath`; then `HKLM\SOFTWARE\Valve\Steam` → `InstallPath` with the 32-bit view; then the known folder `ProgramFilesX86` + `Steam`.
     - `steam-client` (`launcher`): `HKCU\Software\Valve\Steam` → `SteamExe`.
 - **Steam connector logic:**
-  - `discoverRoots` reads `<steam-root>\steamapps\libraryfolders.vdf`, with the new format (`"0" { "path" … }`) and with the old one (`"1" "D:\\SteamLibrary"`). It returns each library with `declarationId: 'steam-root'` and `tag: 'library'`, including the Steam folder itself.
+  - `discoverRoots` reads `<steam-root>\steamapps\libraryfolders.vdf`, with the new format (`"0" { "path" … }`) and with the old one (`"1" "X:\\SteamLibrary"`). It returns each library with `declarationId: 'steam-root'` and `tag: 'library'`, including the Steam folder itself.
   - `scanInstalled` accepts as a root a library (it contains `steamapps\`) or the `steamapps` folder itself. It reads each `appmanifest_<id>.acf` and extracts `appid`, `name` and `installdir`. It reports the entry only if `steamapps\common\<installdir>` exists. `installPath` is that folder, `kind: 'game'` and `media` with the two URLs from decision 71. It excludes a list of tools maintained in the code and covered by tests (at least `228980`, Steamworks Common Redistributables). If `name` is missing, the title is `Steam <appId>`: it is data, not a UI text.
   - `resolveAction('play')` requires a `storeGameId` of digits only (1 to 10). If `launchersResolved` is `true` and there is no existing `steam-client`, it throws `launch.launcher-missing`. Otherwise it returns `{ kind: 'uri', uri: 'steam://rungameid/<appId>' }`. Any other action returns `null`.
   - Own VDF parser (text KeyValues), in `connectors/steam/src/vdf.ts`:
@@ -1879,7 +1879,7 @@ export interface LocalFiles {
   /** Absolute, OS separators, no trailing separator; keeps the original case. */
   normalize(path: string): string;
   isAbsolute(path: string): boolean;
-  /** True if `path` is `root` or below it, after realpath; case-insensitive on Windows; 'D:\\Games2' is not inside 'D:\\Games'. */
+  /** True if `path` is `root` or below it, after realpath; case-insensitive on Windows; 'X:\\Games2' is not inside 'X:\\Games'. */
   isInside(path: string, root: string): Promise<boolean>;
   /** Equality key for uniqueness (lower-case on Windows). */
   compareKey(path: string): string;
@@ -2179,7 +2179,7 @@ What was fixed while implementing and what the developer corrected following the
   - Fixtures: check of decision 48 extended with `LastOwner`, the SteamID64 pattern `7656119\d{10}` and `C:\Users\…` paths.
   - `platform-node`:
     - `..`, absolute paths outside, junction or link that escapes (with `realpath`), size and entry limits.
-    - Case-insensitive `isInside` and the prefix trap (`D:\Games2`), `normalize` with `/`.
+    - Case-insensitive `isInside` and the prefix trap (`X:\Games2`), `normalize` with `/`.
   - `platform-windows`:
     - `--registry` protocol with a double helper.
     - `openUri` validation (scheme, control characters, spaces, quotes, `%`, length) before launching anything.
@@ -3099,7 +3099,7 @@ export class ExecError extends Error {
   - `gog-library` (`scan`): `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'GOG Galaxy\\Games' }`, Galaxy's default library (assumption G2). It covers an empty or unreadable registry.
   - No `launcher` location in this slice: direct launch does not need it.
 - **`discoverRoots`** turns game folders into roots visible in Settings, one per library and not one per game (which would fill Settings and collide with the cap of 64 discovered roots in 72). No I/O, text only:
-  - From `gog-games`: the **parent** folder of each game, with `tag: 'library'`. Exception: if the parent is a drive root (`D:\`), the game's own folder is returned with `tag: 'game'`, so as not to walk an entire drive.
+  - From `gog-games`: the **parent** folder of each game, with `tag: 'library'`. Exception: if the parent is a drive root (`X:\`), the game's own folder is returned with `tag: 'game'`, so as not to walk an entire drive.
   - From `gog-library`: the folder itself, with `tag: 'library'`.
   - No duplicates (lowercase key, like Steam). The core validates as usual: absolute, local, existing and at most 64.
 - **`scanInstalled`**, for each root (discovered or the user's), with depth 1:
@@ -3241,7 +3241,7 @@ Out of this slice (slice 2b). `executables` is not reported (the core does not s
 
 #### 8. Automated tests
 
-**Invented** fixtures: fictitious product IDs (`1000000001`, `1000000002`…), invented titles and paths under `C:\Games` or `D:\GOG Games`, never `C:\Users\…`. The fixture check of decision 48 applies the same way. The only real recorded response is the public GamesDB one for 1207658695 (catalog data, no account data).
+**Invented** fixtures: fictitious product IDs (`1000000001`, `1000000002`…), invented titles and paths under `C:\Games` or `X:\GOG Games`, never `C:\Users\…`. The fixture check of decision 48 applies the same way. The only real recorded response is the public GamesDB one for 1207658695 (catalog data, no account data).
 
 - **`connectors/gog`:**
   - `.info`: with and without BOM, broken JSON, no `gameId`, `gameId` different from the file name, `rootGameId` equal, different (DLC) and absent, no `name`, non-ASCII title.
@@ -3259,7 +3259,7 @@ Out of this slice (slice 2b). `executables` is not reported (the core does not s
 
 #### 9. Manual test (prepared by the tester; done by the user)
 
-- **Preparation:** install GOG Galaxy from gog.com, sign in, add **Beneath a Steel Sky** to the account (product 1207658695, free: "Free Game" tag in GOG's API on October 22, 2026) and install it from Galaxy into a library with spaces and a non-ASCII character, for example `D:\Juegos GOG Ñ`. It is chosen because it is free and, presumably, opens with ScummVM with quoted arguments, which tests `splitWindowsArgs` (assumption G15).
+- **Preparation:** install GOG Galaxy from gog.com, sign in, add **Beneath a Steel Sky** to the account (product 1207658695, free: "Free Game" tag in GOG's API on October 22, 2026) and install it from Galaxy into a library with spaces and a non-ASCII character, for example `X:\Juegos GOG Ñ`. It is chosen because it is free and, presumably, opens with ScummVM with quoted arguments, which tests `splitWindowsArgs` (assumption G15).
 - **What to check:**
   1. `reg query "HKLM\SOFTWARE\WOW6432Node\GOG.com\Games" /s`: the subkey `1207658695` exists with `path` pointing to the folder (G1).
   2. The folder contains `goggame-1207658695.info`. Copy into the ADR, sanitized, its fields `gameId`, `rootGameId`, `name` and the main task (`type`, `path`, `arguments`, `workingDir`) to close G3 to G5 and G15.
@@ -3305,7 +3305,7 @@ Out of this slice (slice 2b). `executables` is not reported (the core does not s
 ```
 
 - `id` is the already validated `storeGameId` (`^\d{1,20}$`); `installPath` is that of the saved installation, without a trailing separator (except for a drive root).
-- Quotes: Playnite writes `/path="<path>"` in a single string; Node passes the list and quotes the whole argument (`"/path=F:\GOG Galaxy\Games ñ\Cold Waters"`). With the rules of `CommandLineToArgvW` (those of `splitWindowsArgs`) both forms give the same `argv`: `/path=F:\GOG Galaxy\Games ñ\Cold Waters`. This resolves the cost of option B of point 4 **if Galaxy parses its line with those rules** (assumption GG1). `windowsVerbatimArguments` is still not used.
+- Quotes: Playnite writes `/path="<path>"` in a single string; Node passes the list and quotes the whole argument (`"/path=X:\Games ñ\My Game"`). With the rules of `CommandLineToArgvW` (those of `splitWindowsArgs`) both forms give the same `argv`: `/path=X:\Games ñ\My Game`. This resolves the cost of option B of point 4 **if Galaxy parses its line with those rules** (assumption GG1). `windowsVerbatimArguments` is still not used.
 - It is checked beforehand, the same as Install: with `ctx.launchersResolved`, the `gog-galaxy-client` location and `ctx.fs.exists(<folder>\GalaxyClient.exe)`.
 
 **12.2. Where `GalaxyClient.exe` is looked for.** Only in the `gog-galaxy-client` location that already exists (`HKLM\SOFTWARE\WOW6432Node\GOG.com\GalaxyClient\paths`, value `client`; GA9 confirmed on the user's machine) plus the fixed name `GalaxyClient.exe`. No default paths added: if the registry does not give it, as far as Ludiary is concerned there is no Galaxy.
@@ -3371,7 +3371,7 @@ Pressing Play still gives `game.launching` with `{store}` = GOG. The existing `c
 **12.8. Manual test** (added to that of point 9; the user's machine, Cold Waters):
 
 1. With the default setting and Galaxy **closed**: Play opens Galaxy and Galaxy opens the game (GG1, GG3). Repeat with Galaxy open (GG4).
-2. The path has spaces and `ñ` (`F:\GOG Galaxy\Games ñ\Cold Waters`): if the game does not open or Galaxy says it cannot find it, GG1 is false (point 12.9).
+2. The path has spaces and `ñ` (`X:\Games ñ\My Game`): if the game does not open or Galaxy says it cannot find it, GG1 is false (point 12.9).
 3. If there is a game installed with the offline installer (G2), test whether Galaxy opens it (GG5).
 4. Switch to "Directly": Play opens the game without Galaxy, as in the 22-10-2026 test.
 5. Optional: sign out of Galaxy or uninstall it and check 12.3 (opens directly).
@@ -3435,7 +3435,7 @@ No critical or high findings. All findings are accepted; **what follows takes pr
 - **G15 (unverified):** Beneath a Steel Sky opens with ScummVM and a task with quoted arguments.
 - **G16 (unverified):** with `detached: true`, a console executable (DOSBox) may start without a visible console window. If so, a separate decision with the Go helper and `CREATE_NEW_CONSOLE`; never a command interpreter.
 
-**User's manual test (October 22, 2026, Windows 11, Galaxy installed, game Cold Waters 1512372112 in `F:\GOG Galaxy\Games ñ\Cold Waters`):** "works like a charm". Ludiary detected it on its own, with the library on a drive and a non-standard folder with "ñ". Cover and Play: included in that "works", with no step-by-step detail. Also checked, by reading only:
+**User's manual test (October 22, 2026, Windows 11, Galaxy installed, game Cold Waters 1512372112 in `X:\Games ñ\My Game`):** "works like a charm". Ludiary detected it on its own, with the library on a drive and a non-standard folder with "ñ". Cover and Play: included in that "works", with no step-by-step detail. Also checked, by reading only:
 - **G1, confirmed:** the subkey `1512372112` is in `HKLM\SOFTWARE\WOW6432Node\GOG.com\Games` (`HKLM\SOFTWARE\GOG.com\Games` without `WOW6432Node` does not exist), with `path`, `gameID`, `gameName`, `exe`, `launchCommand`, `launchParam`, `workingDir`, `dependsOn` and `DLC`, among others.
 - **G3, confirmed:** `goggame-1512372112.info` is at the root of the game folder, next to `.hashdb`, `.ico` and `.script`.
 - **G4, confirmed:** the main task is `{"type":"FileTask","isPrimary":true,"category":"game","path":"ColdWaters.exe"}`, relative and with no `arguments` or `workingDir`. There are also document `FileTask` tasks (a PDF) and `URLTask`, without `isPrimary`, which the connector does not use.
@@ -3784,7 +3784,7 @@ Sources consulted on October 22, 2026: [gogapidocs, authentication](https://goga
 
 **Decision (recommended, October 22, 2026):** on October 22, 2026 the user commissions "get on with the Epic connector". It is done in **two slices within this decision**, with the same shape as GOG: slice 1 is equivalent to 76 (installed games, Play and covers, no account) and slice 2 to 77 (login, encrypted session, not-installed games and Install). It reuses everything from Steam and GOG: locations, `discoverRoots`, scanning with confined `ctx.fs`, `resolveAction` with `uri`, `resolveMedia` with `HttpClient` and `apiHosts`, CSP derived from `mediaHosts`, a wizard with an `open-external` step with a field and Paste, only the encrypted refresh token, epoch per store, gray veil and `install`. Slice 2 starts when slice 1 passes the manual test.
 
-**Starting point (checked on 22-10-2026 on the user's computer, read-only):** launcher at `E:\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe`; scheme `com.epicgames.launcher` registered with the command `"…\EpicGamesLauncher.exe" %1`; `C:\ProgramData\Epic\UnrealEngineLauncher\LauncherInstalled.dat` exists with an empty `InstallationList` and `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests` exists without any `.item`. There are no Epic games installed: the manual test requires installing one (point 11). The rest comes from public sources and remains as assumptions (lists at the end).
+**Starting point (checked on 22-10-2026 on the user's computer, read-only):** launcher at `X:\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe`; scheme `com.epicgames.launcher` registered with the command `"…\EpicGamesLauncher.exe" %1`; `C:\ProgramData\Epic\UnrealEngineLauncher\LauncherInstalled.dat` exists with an empty `InstallationList` and `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests` exists without any `.item`. There are no Epic games installed: the manual test requires installing one (point 11). The rest comes from public sources and remains as assumptions (lists at the end).
 
 #### 1. Scope
 
@@ -3973,7 +3973,7 @@ export function createEpicConnector(): StoreConnector {
 - **Invented fixtures.** The privacy check (`packages/connector-testkit/src/privacy.ts`) rejects any 32-character hexadecimal, and Epic's namespaces, catalog IDs, `client_id`, `client_secret` and codes are such. That is why there is **no real recorded response** from Epic, not even from the public catalog, and:
   - `ALLOWED` admits as fictional the 32-character hexadecimals that start with 24 zeros: `(?<![0-9A-Za-z])0{24}[0-9a-f]{8}(?![0-9A-Za-z])`. No real ID has that shape. The namespace `000000000000000000000000000000a1`…, catalog ID `00000000000000000000000000000001`…, `appName` `TestGame01`…, code `00000000000000000000000000c0de01` and `account_id` `00000000000000000000000000000a01` are used;
   - slice 2: `FICTIONAL_EPIC_VALUES` with `eg1~epic-test.access.token`, `eg1~epic-test.refresh.token`, `eg1~epic-test.refresh.token-2` and `eg1~epic-test.client.token` (they match the acceptance pattern). `displayName` `TestUser`;
-  - images with the shape `https://cdn1.epicgames.com/offer/000000000000000000000000000000a1/test-cover_1200x1600-0000`; paths under `C:\Games` or `D:\Epic Games`, never `C:\Users\…`;
+  - images with the shape `https://cdn1.epicgames.com/offer/000000000000000000000000000000a1/test-cover_1200x1600-0000`; paths under `C:\Games` or `X:\Epic Games`, never `C:\Users\…`;
   - the tests compare the `basic` header with the one computed from the constants of `auth.ts`; the `client_secret` appears in no file under `fixtures/` or in tests. A repository test checks that its value is only in `connectors/epic/src/auth.ts` (like B1 of 77). **Clarified after the auditor:** the test walks **all** the files of `git ls-files`, including `docs/` and `.claude/`, and searches for both the secret and `base64(client_id:client_secret)`.
   - `privacy.ts` adds a rule of its own, "Epic eg1 token", which rejects any `eg1~` followed by token characters that is not one of `FICTIONAL_EPIC_VALUES` (revised after the auditor).
 - **Slice 1, `connectors/epic`:**
@@ -3989,7 +3989,7 @@ export function createEpicConnector(): StoreConnector {
 
 #### 11. Manual test (slice 1, and "Account" section for slice 2)
 
-- **Preparation:** sign in to the Epic launcher, get **Home – A Unique Horror Adventure** (free on the Epic store from 22-10-2026 at 17:00 to 29-10-2026 at 16:00, peninsular Spanish time, according to the public promotions feed consulted on 22-10-2026; it is a small 2D game) and install it in a folder with spaces and an "ñ", for example `E:\Epic Games ñ`. If the user already has another small Epic game in their account, that one will do. It has to be obtained **before 29-10-2026**.
+- **Preparation:** sign in to the Epic launcher, get **Home – A Unique Horror Adventure** (free on the Epic store from 22-10-2026 at 17:00 to 29-10-2026 at 16:00, peninsular Spanish time, according to the public promotions feed consulted on 22-10-2026; it is a small 2D game) and install it in a folder with spaces and an "ñ", for example `X:\Epic Games ñ`. If the user already has another small Epic game in their account, that one will do. It has to be obtained **before 29-10-2026**.
 - **Slice 1, what to check:**
   1. A `.item` appears in `C:\ProgramData\Epic\EpicGamesLauncher\Data\Manifests`. Copy into the ADR, sanitized (without user paths), the names of its fields and the values of `AppCategories`, `bIsIncompleteInstall`, `MainGameAppName` and the shape (length and characters, not the value) of `CatalogNamespace`, `CatalogItemId` and `AppName` (E2, E6). Look whether the game folder has `.egstore\*.mancpn` and which fields it carries (E10).
   2. ~~`reg query "HKCU\Software\Epic Games\EOS" /v ModSdkCommand`: note whether it exists and whether it points to the `EpicGamesLauncher.exe` on `E:` (E5).~~ Already checked on 22-10-2026 (E5). Only check that Settings shows the data folder resolved by `AppDataPath` (E1).
@@ -4105,7 +4105,7 @@ Sources consulted on October 22, 2026: [`legendary`, `api/egs.py`](https://githu
 - Before closing each slice, the `auditor` reviews: the client constants and their single appearance in `auth.ts`, the application token, the root and error rule of `scanInstalled`, the limit of 160, and in slice 2 the save order, the `bearer` header as a `Secret`, the tolerant `json-field`, the `eg1~` redactor and the fixtures.
 - The `tester` prepares `docs/manual-tests/epic.md` (point 11); the `docs-writer`, the guides of steps 4 and 5 of point 12.
 
-#### 16. User's manual test (October 23, 2026, Windows 11, launcher in `E:\Epic Games\Launcher`, real account)
+#### 16. User's manual test (October 23, 2026, Windows 11, launcher in `X:\Epic Games\Launcher`, real account)
 
 The user: "it comes out perfect". Before connecting the account only the installed game appeared, without a cover (as point 15 foresees: no `resolveMedia`); on connecting, all the account's games appeared, with covers. Review of the real logs, read-only:
 - **Scan (slice 1):** `games=1 incomplete=0 dlc=0 notGame=0 outsideRoots=0 missing=0 invalid=0`: the real `.item` is read with the expected fields (E1, E2 as far as used) and the Play URI works (E3, according to the user).
@@ -4198,7 +4198,7 @@ resolve(decl: LocationDeclaration): Promise<readonly ResolvedLocation[]>;
   - `ubisoft-launcher` (`launcher`): `{ kind: 'registry-value', hive: 'HKLM', key: 'SOFTWARE\\Ubisoft\\Launcher', value: 'InstallDir', view: '32' }` and `{ kind: 'known-folder', folder: 'ProgramFilesX86', relative: 'Ubisoft\\Ubisoft Game Launcher' }`. This is the Ubisoft Connect folder (assumption U3).
 - **`discoverRoots`** (`connectors/ubisoft/src/scan.ts`), no I/O, text only. For each location of `ubisoft-installs`:
   1. `subkey` must match `^[1-9][0-9]{0,9}$`. If not (or missing), it is skipped and counted.
-  2. The path is treated as untrusted input even though the platform already filtered it: `/` is turned into `\`, trailing slashes are removed and the strict local path rule of `localPath` (`packages/platform-windows/src/process-launcher.ts`) is required: drive letter and `\`, no control characters, none of `"<>|?*/`, no `:` after position 1, no component that is a reserved device name, ends in a dot or space, or is `..`. Also, at least one component after the drive: a drive root (`D:\`) is not a game folder. If it does not comply, it is skipped and counted; it is never `internal`.
+  2. The path is treated as untrusted input even though the platform already filtered it: `/` is turned into `\`, trailing slashes are removed and the strict local path rule of `localPath` (`packages/platform-windows/src/process-launcher.ts`) is required: drive letter and `\`, no control characters, none of `"<>|?*/`, no `:` after position 1, no component that is a reserved device name, ends in a dot or space, or is `..`. Also, at least one component after the drive: a drive root (`X:\`) is not a game folder. If it does not comply, it is skipped and counted; it is never `internal`.
      - The rule is copied into `connectors/ubisoft/src/paths.ts` (a connector does not import `platform-windows`, decision 38), with the same tests. The Epic branch has its own in `item.ts` (confirmed by the auditor): they are unified on merge.
   3. No duplicates by path (lowercase key): if two IDs point to the same folder, the lower number is kept and the other ID is logged. It is sorted by numeric ID so the result is stable.
   4. Returns `{ declarationId: 'ubisoft-installs', path, tag: 'game-<gameId>' }`.
@@ -4287,7 +4287,7 @@ Outside this slice (slice 2b). For 55, Ubisoft is the hard case: the process tha
 
 #### 8. Automated tests
 
-**Invented** fixtures: fictitious IDs (`900001`, `900002`…), invented titles and paths under `D:\Ubisoft Games`, never `C:\Users\…`. The fixture check of decision 48 applies the same way. There are no recorded responses: the connector does not use the network. That is why there is no `fixtures/` folder: the registry and folder trees are built in memory inside the tests (noted after the code audit, 23-10-2026). With no Playwright in the repository, the three Playwright cases of this point remain pending together with those of decisions 72 to 78.
+**Invented** fixtures: fictitious IDs (`900001`, `900002`…), invented titles and paths under `X:\Ubisoft Games`, never `C:\Users\…`. The fixture check of decision 48 applies the same way. There are no recorded responses: the connector does not use the network. That is why there is no `fixtures/` folder: the registry and folder trees are built in memory inside the tests (noted after the code audit, 23-10-2026). With no Playwright in the repository, the three Playwright cases of this point remain pending together with those of decisions 72 to 78.
 
 - **`connectors/ubisoft`:**
   - Strict path rule (`paths.ts`): table with `/` and trailing slash (accepted after normalizing), UNC, `\\?\`, `\\.\`, relative path, `C:` without slash, drive root, `"` or `|`, `:` after position 1, `CON`, `nul.txt`, `COM1`, `LPT9`, component ending in a dot or space, `..`, control characters.
@@ -4304,7 +4304,7 @@ Outside this slice (slice 2b). For 55, Ubisoft is the hard case: the process tha
 
 #### 9. Manual test (prepared by the `tester` in `docs/manual-tests/ubisoft.md`; done by the user)
 
-- **Preparation:** install Ubisoft Connect from ubisoft.com, create or use a free Ubisoft account and install **Trackmania** (free with the "Starter" access, from Ubisoft and with its launcher, so it is the representative case) in a folder with spaces and a non-ASCII character, for example `F:\Juegos Ubisoft ñ`. Smaller alternative if space is short: **Brawlhalla**, free on Ubisoft Connect (about 1 to 2 GB according to low-quality sources; unverified). The size of Trackmania could not be checked.
+- **Preparation:** install Ubisoft Connect from ubisoft.com, create or use a free Ubisoft account and install **Trackmania** (free with the "Starter" access, from Ubisoft and with its launcher, so it is the representative case) in a folder with spaces and a non-ASCII character, for example `X:\Juegos Ubisoft ñ`. Smaller alternative if space is short: **Brawlhalla**, free on Ubisoft Connect (about 1 to 2 GB according to low-quality sources; unverified). The size of Trackmania could not be checked.
 - **What to check** (copy to the ADR, sanitized, the values that are requested):
   1. `reg query "HKLM\SOFTWARE\WOW6432Node\Ubisoft\Launcher" /s`: the launcher's `InstallDir` and the `Installs\<id>` subkey with `InstallDir` (format: separators and trailing slash). Note the ID (U1, U2, U3).
   2. `upc.exe` and `UbisoftConnect.exe` exist in the Ubisoft Connect folder (U3).
@@ -4942,7 +4942,7 @@ Sources added for route C, consulted on October 23, 2026: [Lutris, `util/ubisoft
   - `ea-desktop` (`launcher`): `{ kind: 'known-folder', folder: 'ProgramFiles', relative: 'Electronic Arts\\EA Desktop\\EA Desktop' }`. The EA app installer does not let you choose a folder (EA forum) and `EADesktop.exe` and `EALauncher.exe` are there (assumption EAD7).
   - `ea-settings` (`scan`, added in point 13): EA app settings folders, read by `discoverRoots` and never scanned.
   - There are no registry sources, so `LocationsUnreadableError` does not appear for EA. The rules of 79 ("absent versus unreadable" per declaration, roots not stolen between stores, caps that do not delete) apply unchanged because they live in the core and the platform.
-- **Manual folders and "manual folders only":** they work, because the scan does not depend on the registry. A user who installs in `D:\EA Games` adds that folder in Settings; the guide explains it. The Ubisoft `needsAutoDetection` notice is **not** needed. With "configure it later" there are no folders and nothing appears, as the first-run wizard already says (decision 69).
+- **Manual folders and "manual folders only":** they work, because the scan does not depend on the registry. A user who installs in `X:\EA Games` adds that folder in Settings; the guide explains it. The Ubisoft `needsAutoDetection` notice is **not** needed. With "configure it later" there are no folders and nothing appears, as the first-run wizard already says (decision 69).
 - **`scanInstalled`** (`connectors/ea/src/scan.ts`), for each root (discovered or the user's), with depth 1 like GOG:
   1. Candidates: the root itself and its direct subfolders (`readDir`), at most 2,000 per root.
   2. In each candidate, `ctx.fs.exists(join(candidate, '__Installer', 'installerdata.xml'))`. If it does not exist, it is not an EA game and the next one is processed without reading anything else.
@@ -5038,7 +5038,7 @@ Outside this slice (slice 2b). Same case as Ubisoft for 55: the process that ope
 
 #### 8. Automated tests
 
-**Invented** fixtures: fictitious IDs (`9000001`, `9000002`, `OFB-TEST:900001`), invented titles and paths under `D:\EA Games` or `C:\Program Files\EA Games`, never `C:\Users\…`. The test `installerdata.xml` files are written by hand (current and old format), not copied from a real game. No recorded responses (there is no network). The fixture check of decision 48 applies the same way.
+**Invented** fixtures: fictitious IDs (`9000001`, `9000002`, `OFB-TEST:900001`), invented titles and paths under `X:\EA Games` or `C:\Program Files\EA Games`, never `C:\Users\…`. The test `installerdata.xml` files are written by hand (current and old format), not copied from a real game. No recorded responses (there is no network). The fixture check of decision 48 applies the same way.
 
 - **`connectors/ea`:**
   - `parseInstallerData`: current format with one ID and with several; `<contentIDs>` and `<gameTitles>` do not count as stand-alone elements; ID with surrounding spaces (trimmed), empty, starting with `.`, with `/`, `?`, `&`, `%`, `,`, an inner space or of 65 characters → rejected without cleaning; duplicates; more than 16; no valid ID → `null`; preference `en_US`, other `en_*`, first; entities (`&amp;`, `&#8482;`, `&#x2122;`, an unknown one that stays as is, a numeric control one that is not decoded); comment with a `<contentID>` inside (ignored); `<!DOCTYPE>` or `<!ENTITY>` → `null`; NUL character → `null`; old `<game>` format with `localeInfo`/`title`; unknown root → `null`; title empty, only spaces, with control characters or of more than 300.
@@ -5116,11 +5116,11 @@ No critical findings. What follows takes precedence over points 2, 3 and 4 where
 
 Takes precedence over points 3 and 11 and over EAD6 where they differ.
 
-- **Checked on the user's machine** (read-only, without copying names): `%LOCALAPPDATA%\Electronic Arts\EA Desktop\user_<number>.ini` carries `user.downloadinplacedir=F:\` and `C:\ProgramData\EA Desktop\machine.ini` carries `machine.downloadinplacedir=C:\Program Files\EA Games\`. The real game `F:\SteamWorld Dig\__Installer\installerdata.xml` is a UTF-8 `DiPManifest` with a single `contentID` (confirms EAD1; EAD3 in part: UTF-8 yes, UTF-16 not seen).
+- **Checked on the user's machine** (read-only, without copying names): `%LOCALAPPDATA%\Electronic Arts\EA Desktop\user_<number>.ini` carries `user.downloadinplacedir=X:\` and `C:\ProgramData\EA Desktop\machine.ini` carries `machine.downloadinplacedir=C:\Program Files\EA Games\`. The real game `X:\My Game\__Installer\installerdata.xml` is a UTF-8 `DiPManifest` with a single `contentID` (confirms EAD1; EAD3 in part: UTF-8 yes, UTF-16 not seen).
 - **Implemented in the connector:**
   - new location `ea-settings` (purpose `scan`): `LocalAppData\Electronic Arts\EA Desktop` and `ProgramData\EA Desktop`;
   - `discoverRoots` reads `machine.ini` and `user_<n>.ini` in them (16 files at most, 64 KiB each), looks for the key with `indexOf` per line, without expressions of unbounded cost, and adds the value as an `ea-libraries` root (no duplicates);
-  - the value is validated with `isStrictLocalPath` (strict rule of 79); a drive root (`F:\`) is valid as a library;
+  - the value is validated with `isStrictLocalPath` (strict rule of 79); a drive root (`X:\`) is valid as a library;
   - the settings folders are **never** a root: they are only read;
   - the `user_<n>.ini` name carries the account ID: it **never** goes to the log, only counters (`files`, `unreadable`, `invalidPaths`).
 - **Revises from point 3** "No path comes from a file or the registry": now a root comes from a file of the EA app, and that is why it goes through `isStrictLocalPath`. The `Origin Games` registry key remains discarded.
@@ -8189,6 +8189,8 @@ Reviewed with the user on October 21, 2026. The following remain open:
   - Steam games moved with `mklink /J` to another disk, which are not seen today (point 11): leave it so and document it (recommended in this slice) or support them by adding the real destination as a root with explicit permission.
 - Decision 89 (backups and restore, for 0.1): point 12 applied by default with (a) in everything (manual backups without automatic deletion, internal backups in the restore list, backups from elsewhere by choosing their folder); the user can change it. `auditor` review of the design incorporated on 3-11-2026 (point 16, no criticals, all accepted; H1 with (a): folders of a backup from another installation disabled until the user confirms them). Missing the code, its review and the manual test (point 11) to close BK1 to BK6. When closing it, the `docs-writer` writes the documented restore point that 18 asks for.
 - Linux and macOS: preliminary proposal in 61. Closed when phase 2 ends.
-- Check the name "Ludiary" in the official trademark databases (EUIPO, OEPM, USPTO) and domain availability before the first publication (decision 44). **Light review of 5-11-2026:** a web search finds no trademark, app or program called "Ludiary" (only similar names: Ludi, Ludio, Ludum, Ludy). `ludiary.com` has been registered by a third party since 5-12-2022 (Squarespace and NS1 DNS, no indexed content); `ludiary.org` and `ludiary.app` return 404 in RDAP, that is, free; `.es` unchecked. EUIPO, OEPM and USPTO were not queried directly. **The user decides on 5-11-2026** not to register the trademark and to change the name if one day they are asked to; closed.
+- Check the name "Ludiary" in the official trademark databases (EUIPO, OEPM, USPTO) and domain availability before the first publication (decision 44). **Light review of 5-11-2026:** a web search finds no trademark, app or program called "Ludiary" (only similar names: Ludi, Ludio, Ludum, Ludy). `ludiary.com` has been registered by a third party since 5-12-2022 (Squarespace and NS1 DNS, no indexed content); `ludiary.org` and `ludiary.app` return 404 in RDAP, that is, free; `.es` unchecked. EUIPO, OEPM and USPTO were not queried directly. **The user decides on 5-11-2026** not to register the trademark and to change the name if one day they are asked to; closed. On 6-11-2026 the user reports that there was a "Ludiary" trademark, now ended.
+- Pre-publication security audit of 6-11-2026 (no critical or high findings). Changes: `Cross-Origin-Resource-Policy: same-origin` on every response and `Sec-Fetch-Site: cross-site` rejected with 403, except a top-level document navigation to `/connect/return`, which Steam's OpenID return needs. Decision 67 discarded `Sec-Fetch-Site` against a local process that chooses its headers; this is only a defense against web pages and does not revise it. `/api/status` no longer exposes `masterKey`; sections that describe it are out of date. `pid` stays in `/api/health`, which `findRunningServer` uses. Deal links are checked again on read. `checkSpec` rejects non-local paths before touching the disk; UNC scan folders chosen by the user stay allowed (decision 72). The installer no longer offers a folder choice (`DisableDirPage=yes`). Binaries build with Go 1.27.3.
+- Decision 80, user decision of 6-11-2026 before making the repository public: Ubisoft's terms forbid unauthorized third-party tools, so the account connection stays with a clear warning in the wizard (`connectors.ubisoft.login.body`), the README and `docs/guides/stores-and-risks.md`. Scanning and Play work without an account.
 - User's answers of 5-11-2026: closing sessions from the tray, **tested and works**; ITAD14 is left as is (images that the CSP blocks appear with the gradient); the wishlist assumptions (SW1, SW3, GW2, ITAD4) are accepted with the current behavior, which the user tested; the email to IsThereAnyDeal and making the repository public, **later**. The privacy `it.skip` remains open.
 - Verify the assumptions marked in decisions 39 to 82 when each part is implemented. From the installer prototype remain: SQLite lock after `taskkill /F` (62), port hijacking from another account, also on `[::1]` (63 and 66), foreground dialog (64), `execArgvExtension` in Node 24.20 (65), and resolution, proxy and secure context of `ludiary.localhost` in browsers (66).
