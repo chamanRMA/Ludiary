@@ -130,6 +130,10 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 Please report vulnerabilities privately. See [SECURITY.md](SECURITY.md).
 
+## Code signing policy
+
+See the [code signing policy](docs/code-signing-policy.md). The project has applied to the [SignPath Foundation](https://signpath.org) program for free code signing.
+
 ## License
 
 [GPL-3.0-only](LICENSE).
