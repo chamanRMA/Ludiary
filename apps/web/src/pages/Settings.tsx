@@ -513,7 +513,20 @@ function About() {
   return (
     <>
       <p>{t("settings.about.what")}</p>
-      <p className={ui.muted}>{t("settings.about.license")}</p>
+      <p className={ui.muted}>{t("settings.about.copyright")}</p>
+      <p className={ui.muted}>
+        {t("settings.about.license")} {t("settings.about.warranty")}
+      </p>
+      <p className={ui.muted}>
+        <a href="/licenses/LICENSE.txt" target="_blank" rel="noopener noreferrer">
+          {t("settings.about.licenseLink")}
+        </a>
+      </p>
+      <p className={ui.muted}>
+        <a href="/licenses/THIRD-PARTY-NOTICES.txt" target="_blank" rel="noopener noreferrer">
+          {t("settings.about.noticesLink")}
+        </a>
+      </p>
       <p className={ui.muted}>{t("settings.about.affiliation")}</p>
       <UpdatesPanel />
     </>

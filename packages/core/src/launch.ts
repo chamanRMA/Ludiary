@@ -90,6 +90,8 @@ export function createLaunchService(env: Env): LaunchService {
     const { executable, args, cwd } = s;
     if (typeof executable !== "string" || executable === "" || CONTROL.test(executable)) return reject(c, "bad executable");
     if (!deps.files.isAbsolute(executable)) return reject(c, "executable is not absolute");
+    // Before anything touches the disk: a stat or realpath of a UNC path opens an SMB connection (ADR 72).
+    if (!deps.files.isLocalPath(executable) || (typeof cwd === "string" && !deps.files.isLocalPath(cwd))) return reject(c, "path is not local");
     if (!Array.isArray(args) || args.length > MAX_ARGS) return reject(c, "bad args");
     for (const a of args) {
       if (typeof a !== "string" || a.length > MAX_ARG_LEN || CONTROL.test(a)) return reject(c, "argument with control characters");

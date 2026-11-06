@@ -1,7 +1,7 @@
 // Shared by the release scripts (ADR 90 point 11). Nothing here prints a key.
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,6 +11,14 @@ export const repoRoot = resolve(desktop, "../..");
 // the maintainer machine or the CI, never in the product.
 export const installerDir = process.env.LUDIARY_INSTALLER_DIR ?? join(desktop, "dist/installer");
 export const SIGNATURE_CONTEXT = "ludiary-update-v1\n";
+
+/** License file of a package, or the text kept in `keptDir` as <name>-LICENSE.txt when it ships none; null if there is neither. */
+export const findLicense = (dir, name, keptDir = join(desktop, "licenses")) => {
+  const own = readdirSync(dir).find((f) => /^(licen[sc]e|copying)/i.test(f));
+  if (own) return join(dir, own);
+  const kept = join(keptDir, `${name}-LICENSE.txt`);
+  return existsSync(kept) ? kept : null;
+};
 
 /** True when `file` is inside the repository: a private key must never be there (CLAUDE.md invariant 5). */
 export const insideRepo = (file) => {

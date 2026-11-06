@@ -1,5 +1,5 @@
 import { ConnectorError, ExecError, LocationsUnreadableError, type LaunchContext, type LaunchSpec, type StoreId } from "@ludiary/contracts";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CoreError } from "../src";
 import { addUserRoot, harness, makeConnector, resolver, type Harness } from "./helpers";
 
@@ -186,6 +186,20 @@ describe("exec checks (not used by any platform yet)", () => {
     seed(h, "steam", "1");
     expect(await h.core.launch("c1")).toEqual({ status: "started" });
     expect(h.execs).toEqual([{ executable: `${GAME}\\g.exe`, args: ["--a", "b c"], cwd: GAME }]);
+  });
+
+  it.each([
+    [{ executable: "\\\\server\\share\\g.exe" }],
+    [{ executable: "\\\\?\\D:\\Games\\Portal\\g.exe" }],
+    [{ executable: `${GAME}\\g.exe`, cwd: "\\\\server\\share" }],
+  ])("rejects a non-local path before touching the disk: %j", async (paths) => {
+    const h = await execHarness(() => ({ kind: "exec", args: [], ...paths }) as LaunchSpec);
+    seed(h, "steam", "1");
+    h.files.isAbsolute = () => true; // as on Windows, where a UNC path is absolute
+    const realPath = vi.spyOn(h.files, "realPath");
+    expect((await rejection(h.core.launch("c1"))).code).toBe("launch.rejected");
+    expect(realPath).not.toHaveBeenCalled();
+    expect(h.execs).toEqual([]);
   });
 
   it("never runs a file inside a launcher location: it is readable, not an exec destination (ADR 77, audit A1)", async () => {

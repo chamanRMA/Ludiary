@@ -291,13 +291,20 @@ export function createPriceFeature(
     }
   }
 
-  const view = (r: PriceSnapshotRecord): PricesView => ({
-    country: r.country,
-    fetchedAt: r.fetchedAt,
-    stale: deps.clock.now() - r.fetchedAt >= PRICE_TTL_MS,
-    deals: r.data.deals,
-    historyLow: r.data.historyLow,
-  });
+  // Point 7 again on every read: a restored backup is as untrusted as the service. The deal stays, only its link goes.
+  const view = (r: PriceSnapshotRecord): PricesView => {
+    const hosts = env.services.get(ID)?.linkHosts ?? [];
+    return {
+      country: r.country,
+      fetchedAt: r.fetchedAt,
+      stale: deps.clock.now() - r.fetchedAt >= PRICE_TTL_MS,
+      deals: r.data.deals.map(({ url, ...deal }) => {
+        const link = checkLink(url, hosts, new Set());
+        return link === undefined ? deal : { ...deal, url: link };
+      }),
+      historyLow: r.data.historyLow,
+    };
+  };
 
   async function boardState(): Promise<PriceBoardState & { country: string | null; shops: PriceShops }> {
     const [service, { country, shops }] = await Promise.all([state(), readPriceSettings(env)]);

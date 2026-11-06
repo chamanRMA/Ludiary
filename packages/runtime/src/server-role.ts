@@ -199,7 +199,6 @@ export async function runServer(deps: RuntimeDeps): Promise<number> {
         getStatus: () => ({
           locale,
           db: dbStatus,
-          masterKey: { id: masterKey.id, origin: masterKey.origin },
           tray: tray !== null,
         }),
         onShutdownRequested: () => void shutdown(),

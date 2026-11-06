@@ -3,7 +3,7 @@
 Goal: close assumptions E1 to E11 (cut 1) and EA1 to EA10 (cut 2, account) of ADR 78 on a real Windows PC. Automatic tests cannot do this: there is no recorded Epic response in the repository on purpose (ADR 78, point 10).
 Same format as `gog.md`: one section per step with **Do**, **Expect** and **Note** (what to write down). Quotes in "..." are the Spanish texts of the web UI; switch Ludiary to English if you prefer.
 
-Time: cut 1 about 1 hour (plus the game download); cut 2 about 1 hour plus waits (A6 needs 30 minutes, and one check the next day). Needs: an Epic account, internet, Ludiary built and running, the Epic launcher (here in `E:\Epic Games\Launcher`, no game installed yet), about 2 GB of disk.
+Time: cut 1 about 1 hour (plus the game download); cut 2 about 1 hour plus waits (A6 needs 30 minutes, and one check the next day). Needs: an Epic account, internet, Ludiary built and running, the Epic launcher (here in `X:\Epic Games\Launcher`, no game installed yet), about 2 GB of disk.
 
 **Do cut 2 only after cut 1 passes** (ADR 78, point 1).
 
@@ -18,12 +18,12 @@ Time: cut 1 about 1 hour (plus the game download); cut 2 about 1 hour plus waits
 
 ## Step 0. Get and install the test game
 
-1. Open the Epic launcher (`E:\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe`) and sign in.
+1. Open the Epic launcher (`X:\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe`) and sign in.
 2. Get **Home - A Unique Horror Adventure** (free in the Epic store from 22-10-2026 17:00 to 29-10-2026 16:00, Spanish mainland time; small 2D game). **Do it before 29-10-2026.** If you already own another small Epic game, use that one and write down the substitute.
-3. Install it in a folder with spaces and an "ñ", for example `E:\Epic Games ñ` (the launcher asks for the install folder in the install dialog; create the folder first if needed).
+3. Install it in a folder with spaces and an "ñ", for example `X:\Epic Games ñ` (the launcher asks for the install folder in the install dialog; create the folder first if needed).
 4. Wait until it finishes. If the game opens by itself, close it. Close the launcher fully (also from the tray) when the step says so.
 
-**Expect:** the folder `E:\Epic Games ñ\<game folder>` exists with the game files.
+**Expect:** the folder `X:\Epic Games ñ\<game folder>` exists with the game files.
 **Note:** nothing yet beyond the game's folder name shape.
 
 ## Step 1. The `.item` manifest (E1, E2, E6)
@@ -48,15 +48,15 @@ reg query "HKCU\Software\Epic Games\EOS" /v ModSdkCommand
 reg query "HKCU\Software\Classes\com.epicgames.launcher\shell\open\command"
 ```
 
-**Expect (E5):** `ModSdkCommand` exists and points to `EpicGamesLauncher.exe` in `E:\Epic Games\Launcher\...`. The second query shows the launcher with `%1`.
-**Note:** whether `ModSdkCommand` exists (yes/no), whether it points to the `EpicGamesLauncher.exe` of `E:` (yes/no; write only `E:\...\EpicGamesLauncher.exe`). If the value is missing or points elsewhere, E5 is FALSE and cut 2 will not check for the launcher on Install. Also list which other values exist in `HKCU\Software\Epic Games\EOS` (names only).
+**Expect (E5):** `ModSdkCommand` exists and points to `EpicGamesLauncher.exe` in `X:\Epic Games\Launcher\...`. The second query shows the launcher with `%1`.
+**Note:** whether `ModSdkCommand` exists (yes/no), whether it points to the `EpicGamesLauncher.exe` of `E:` (yes/no; write only `X:\...\EpicGamesLauncher.exe`). If the value is missing or points elsewhere, E5 is FALSE and cut 2 will not check for the launcher on Install. Also list which other values exist in `HKCU\Software\Epic Games\EOS` (names only).
 
 ## Step 3. Automatic detection and cover (E1, E7, E8, E11)
 
 **Do:** close the launcher. Start Ludiary. In Ajustes > "Carpetas de juegos", make sure "Cómo se detectan los juegos instalados" is "Automática y carpetas manuales". Press "Escanear ahora". Then open "Biblioteca" and use "Filtrar por tienda".
 **Expect:**
 
-- Ajustes > "Ubicaciones" lists, as "Detectada automáticamente", the Epic data folder (`C:\ProgramData\Epic\EpicGamesLauncher\Data`) and the parent library folder of the game (`E:\Epic Games ñ`): one entry, not one per game.
+- Ajustes > "Ubicaciones" lists, as "Detectada automáticamente", the Epic data folder (`C:\ProgramData\Epic\EpicGamesLauncher\Data`) and the parent library folder of the game (`X:\Epic Games ñ`): one entry, not one per game.
 - The game shows under Epic with its title and a **tall cover** (vertical image), not the gradient fallback.
 - The Epic card in Ajustes > "Tiendas" shows "Se detecta lo instalado" (or "Solo instalados") and the "Vía no oficial: más información" icon.
 
@@ -73,7 +73,7 @@ reg query "HKCU\Software\Classes\com.epicgames.launcher\shell\open\command"
 
 ## Step 5. Disable the library folder
 
-**Do:** Ajustes > "Carpetas de juegos" > "Ubicaciones": turn off "Usar E:\Epic Games ñ" (the library folder of the game). Press "Escanear ahora" and look at the Library. Then turn it back on and scan again.
+**Do:** Ajustes > "Carpetas de juegos" > "Ubicaciones": turn off "Usar X:\Epic Games ñ" (the library folder of the game). Press "Escanear ahora" and look at the Library. Then turn it back on and scan again.
 **Expect:** with it off, the game disappears from the library (it is skipped, not an error). With it on, it comes back with the same title.
 **Note:** result. Also: turn off the **Epic data folder** entry instead, scan, and write whether the game disappears (it should: no manifests, no detection). Turn it back on.
 
@@ -160,7 +160,7 @@ Run A1 in Chrome, Edge and Firefox if you can (at least your default browser). D
 **Do:**
 1. Close the Epic launcher completely. Press "Instalar" on a not installed game.
 2. Repeat with the launcher already open.
-3. Optional, E5 branch: rename the launcher folder `E:\Epic Games\Launcher` temporarily (or close it and rename `Portal`), press "Instalar" again, and **undo the rename afterwards**.
+3. Optional, E5 branch: rename the launcher folder `X:\Epic Games\Launcher` temporarily (or close it and rename `Portal`), press "Instalar" again, and **undo the rename afterwards**.
 
 **Expect:** the toast says "Abriendo Epic Games para instalar…" (store name as shown). The launcher opens (or comes to front) with **its own install dialog** for that game. Nothing installs without your confirmation in the launcher (E4). Ludiary shows no error. In step 3, if E5 holds, Ludiary says: "Para instalar este juego hace falta el launcher de Epic Games. Descárgalo de epicgames.com" with no crash.
 **Note:** launcher opened on the right game yes/no; install dialog shown yes/no, or what happened instead (opened the store page, the library, nothing); whether it was closed or running before; what Ludiary and Windows showed in step 3. Do not confirm the install unless you want a game on disk.

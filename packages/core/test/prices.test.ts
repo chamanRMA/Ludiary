@@ -263,6 +263,20 @@ describe("cache and errors", () => {
 });
 
 describe("validation of the output (point 7)", () => {
+  it("checks the links again when reading: a restored snapshot cannot show another scheme or host", async () => {
+    const { h, mem } = await setup({ answers: { store: { "steam:10": U1 } } });
+    game(h, "c1", "Portal", [["steam", "10"]]);
+    await h.core.refreshPrices({ canonicalIds: ["c1"] });
+    const record = [...mem.snaps.values()][0]!;
+    const good = record.data.deals[0]!;
+    const bad = ["steam://run/10", "https://evil.example.com/x", "http://itad.link/x"].map((url) => ({ ...good, url }));
+    await mem.repo.putSnapshots([{ ...record, data: { ...record.data, deals: [good, ...bad] } }]);
+    const deals = (await h.core.getGamePrices("c1")).prices!.deals;
+    expect(deals.length).toBe(4);
+    expect(deals[0]!.url).toBe(good.url);
+    for (const d of deals.slice(1)) expect(d).not.toHaveProperty("url");
+  });
+
   it("drops bad deals and links outside linkHosts, never alters the rest, and logs no titles or ids", async () => {
     const good = deal({ expiresAt: "2030-01-01T00:00:00Z", voucher: "CODE" });
     const out: PriceSnapshot[] = [

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
 //go:build windows
 
 // Ludiary patch (ADR 80, points 5 and 18: A1, A3, M3, M5). Not part of upstream.

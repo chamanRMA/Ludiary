@@ -10,7 +10,7 @@ Texts: Spanish interface texts are quoted from `packages/i18n/locales/web/es.jso
 ## Rules for the notes
 
 - Write notes in a scratch file **outside the repository** (for example `%TEMP%\ubisoft-notes.txt`).
-- Before copying anything into the ADR, sanitize it: replace the Windows user name with `<user>`, remove the account name and e-mail, keep only relative paths. Example: `F:\Juegos Ubisoft ñ\Trackmania`. Never paste tokens, cookies, session data or the full log.
+- Before copying anything into the ADR, sanitize it: replace the Windows user name with `<user>`, remove the account name and e-mail, keep only relative paths. Example: `X:\Juegos Ubisoft ñ\Trackmania`. Never paste tokens, cookies, session data or the full log.
 - Do not commit screenshots that show your Ubisoft account name or e-mail.
 - Each step ends with a result: **OK**, **FAIL** or **NOT CHECKED**, plus the assumption it closes.
 - Game IDs are numbers and are not personal: write them.
@@ -19,10 +19,10 @@ Texts: Spanish interface texts are quoted from `packages/i18n/locales/web/es.jso
 
 1. Download Ubisoft Connect from ubisoft.com and install it with defaults. Create a free account if you have none, and sign in.
 2. Add **Trackmania** (free "Starter" access) to your account. Alternative if disk space matters: **Brawlhalla** (free).
-3. In Ubisoft Connect, go to Settings > Downloads (wording may vary) and set the game installation folder to `F:\Juegos Ubisoft ñ` (a folder with spaces and an "ñ"; use another drive letter if you have no `F:`). Create the folder first if asked.
+3. In Ubisoft Connect, go to Settings > Downloads (wording may vary) and set the game installation folder to `X:\Juegos Ubisoft ñ` (a folder with spaces and an "ñ"; use another drive letter if you have no `F:`). Create the folder first if asked.
 4. Install the game from Ubisoft Connect. Wait until it finishes. Close the game if it opens by itself, and leave Ubisoft Connect signed in.
 
-**Expect:** the folder `F:\Juegos Ubisoft ñ\<game folder>` exists and contains the game files.
+**Expect:** the folder `X:\Juegos Ubisoft ñ\<game folder>` exists and contains the game files.
 **Note:** the real default installation path Ubisoft Connect proposed (sanitized), and the exact folder name it created (needed for U5).
 
 ## Step 1. Registry: launcher and installed game (U1, U2, U3)
@@ -82,7 +82,7 @@ reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\
 **Do:** start Ludiary. In Settings > "Carpetas de juegos", under "Cómo se detectan los juegos instalados" choose "Automática y carpetas manuales". Press "Escanear ahora". Open the Library.
 **Expect:**
 
-- Settings > "Ubicaciones" lists the game folder (`F:\Juegos Ubisoft ñ\<game folder>`) as "Detectada automáticamente". One entry per Ubisoft game (ADR 79, point 2).
+- Settings > "Ubicaciones" lists the game folder (`X:\Juegos Ubisoft ñ\<game folder>`) as "Detectada automáticamente". One entry per Ubisoft game (ADR 79, point 2).
 - The library shows the game under Ubisoft with the **name of its folder** as title and the gradient fallback, **not** a cover (covers are out of this cut, point 5).
 - There is no extra Ubisoft entry that is not a game (U10). The Ubisoft card in Settings > "Tiendas" shows no warning about automatic detection.
 
@@ -122,7 +122,7 @@ reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\
 
 ## Step 10. Exported log has no paths or titles
 
-**Do:** after steps 6 to 9, go to Settings > "Privacidad y registros" > "Exportar registros" > "Exportar". If the web export is still simulated, read the real files in `%LOCALAPPDATA%\Ludiary\logs` instead, read-only, in a text editor. Search for: the game title, the folder name, `Juegos Ubisoft`, `ñ`, `F:\`, `F:/`, `C:\Users`, the Windows user name, `Ubisoft Game Launcher`, `upc.exe`, `UbisoftConnect.exe`, `.exe`, `uplay://`.
+**Do:** after steps 6 to 9, go to Settings > "Privacidad y registros" > "Exportar registros" > "Exportar". If the web export is still simulated, read the real files in `%LOCALAPPDATA%\Ludiary\logs` instead, read-only, in a text editor. Search for: the game title, the folder name, `Juegos Ubisoft`, `ñ`, `X:\`, `F:/`, `C:\Users`, the Windows user name, `Ubisoft Game Launcher`, `upc.exe`, `UbisoftConnect.exe`, `.exe`, `uplay://`.
 **Expect:** none of those appear. Only numbers: game IDs, counters (`invalidIds`, `invalidPaths`, `duplicates`), result codes. The Play entry names the connector and the result, never a path or a title (ADR 79, point 3 and 4).
 **Note:** OK or FAIL. If FAIL, report the file name pattern (`ludiary-YYYYMMDD`), the line number and the kind of leak (path, title, user name), never the leaked text. Do not share the file. Closes the log privacy requirement (ADR 35).
 

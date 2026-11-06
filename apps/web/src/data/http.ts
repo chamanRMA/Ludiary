@@ -2,7 +2,7 @@ import type { I18nParams, TranslatedErrorDto } from "@ludiary/api-contract";
 
 /** `/open.js` (served by the local server) stores the origin key here after the one-time link is redeemed (ADR 67). */
 export const ORIGIN_KEY_STORAGE = "ludiary.originKey";
-/** Header the server checks together with the session cookie on every route except /api/status (ADR 67, 72). */
+/** Header the server checks together with the session cookie on every route of level 'session+key' (ADR 67, 72). */
 export const ORIGIN_KEY_HEADER = "X-Ludiary-Origin-Key";
 
 /** What the UI must tell the user when the server refuses us with a 401. */
