@@ -159,4 +159,3 @@ To stop everything, press **Disconnect** in **Settings > Services**. Ludiary del
 - **Offer links do not appear:** the offer points to an address Ludiary does not recognize and hides the link for safety. Report it.
 - **Reporting:** press **Export** under **Export logs** in **Settings > Privacy and logs** and open an issue on GitHub. See [troubleshooting](troubleshooting.md).
 
-[POR VERIFICAR: before publishing this guide, confirm that IsThereAnyDeal accepts an open source application where each user brings their own key (ADR 86 point 13). If they refuse, the comparator is removed from the release.]

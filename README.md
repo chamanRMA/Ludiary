@@ -17,7 +17,7 @@ Ludiary runs on your own PC. A small tray app starts a local server, and you use
 ## Why Ludiary
 
 - **Local-first and private.** No telemetry and no Ludiary server. Nothing leaves your PC except calls to the stores, to services you configure yourself, and the check for new versions on GitHub, which you can switch off in Settings. See [privacy](docs/privacy.md).
-- **Official store paths where they exist.** Steam's account connection is official. GOG, Epic, Ubisoft and EA have no official way for an app like this, so their account connections use unofficial APIs, and Steam's wishlist import uses an undocumented endpoint. Ludiary marks them as such. They can break if the store changes, and using them may go against a store's terms, at your own risk. Accounts are optional: scanning and Play work without one. See [stores and risks](docs/guides/stores-and-risks.md).
+- **Official store paths where they exist.** Steam's account connection is official. GOG, Epic, Ubisoft and EA have no official way for an app like this, so their account connections use unofficial APIs, and Steam's wishlist import uses an undocumented endpoint. Ludiary marks them as such. They can break if the store changes, and you use them at your own risk. Accounts are optional: scanning and Play work without one. See [stores and risks](docs/guides/stores-and-risks.md).
 - **Not affiliated with any store.** It is an independent open-source project.
 - **Your secrets stay encrypted.** Tokens, sessions and API keys are stored encrypted; the key lives outside the database, in the Windows key store.
 
@@ -42,7 +42,7 @@ What each connector does today. Details change as the stores change. See [stores
 | Steam | Yes (`steam://`) | Yes: sign-in plus your own API key | Covers, play time, DLC, collections, wishlist import (undocumented endpoint) |
 | GOG | Yes, through GOG Galaxy or directly | Yes: official login page, you paste the code (unofficial API) | DLC, wishlist import (unofficial API) |
 | Epic Games | Yes | Yes: official login page, you paste the code (unofficial API) | Install button for games you own |
-| Ubisoft Connect | Yes (`uplay://`), found in the Windows registry | Optional: sign-in in a built-in window (unofficial API; Ubisoft's terms do not allow unauthorized third-party tools, [use it at your own risk](docs/guides/stores-and-risks.md)) | Covers from the local cache |
+| Ubisoft Connect | Yes (`uplay://`), found in the Windows registry | Yes: sign-in in a built-in window (unofficial API) | Covers from the local cache |
 | EA app | Yes (`origin2://`), found from the EA app's files | Yes: sign-in in your browser and paste a token (unofficial API) | |
 
 Each store is an isolated connector: if one fails, the others keep working.

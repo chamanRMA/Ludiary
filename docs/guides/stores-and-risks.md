@@ -37,7 +37,7 @@ What the sign-in looks like:
 
 **A connection can stop working.** A store can change an unofficial API without notice. If that happens, that store's connection fails and shows an error. The other stores keep working, and so do scanning and Play. Your library and your data are not touched.
 
-**It may go against a store's terms.** Using an unofficial API may go against that store's terms of use. Using these connections is your own decision and is at your own risk. Read the store's terms if this matters to you.
+**It is your decision.** Using these unofficial connections is your own choice and at your own risk.
 
 If you prefer to avoid this, do not connect those accounts. Steam and local scanning cover the rest.
 

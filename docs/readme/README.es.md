@@ -17,7 +17,7 @@ Ludiary funciona en tu propio PC. Una pequeña aplicación de la bandeja arranca
 ## Por qué Ludiary
 
 - **Local y privado.** Sin telemetría y sin servidor de Ludiary. Nada sale de tu PC salvo las llamadas a las tiendas, a los servicios que configures tú y la comprobación de nuevas versiones en GitHub, que puedes desactivar en Ajustes. Mira la [privacidad](../privacy.md) (en inglés).
-- **Vías oficiales de las tiendas donde existen.** La conexión de cuenta de Steam es oficial. GOG, Epic, Ubisoft y EA no ofrecen una vía oficial para una aplicación como esta, así que sus conexiones de cuenta usan API no oficiales, y la importación de la lista de deseos de Steam usa un punto de acceso sin documentar. Ludiary las marca como tales. Pueden dejar de funcionar si la tienda cambia, y usarlas puede ir contra las condiciones de una tienda, bajo tu responsabilidad. Las cuentas son opcionales: el escaneo y Jugar funcionan sin ninguna. Mira [tiendas y riesgos](../guides/stores-and-risks.md) (en inglés).
+- **Vías oficiales de las tiendas donde existen.** La conexión de cuenta de Steam es oficial. GOG, Epic, Ubisoft y EA no ofrecen una vía oficial para una aplicación como esta, así que sus conexiones de cuenta usan API no oficiales, y la importación de la lista de deseos de Steam usa un punto de acceso sin documentar. Ludiary las marca como tales. Pueden dejar de funcionar si la tienda cambia, y las usas bajo tu responsabilidad. Las cuentas son opcionales: el escaneo y Jugar funcionan sin ninguna. Mira [tiendas y riesgos](../guides/stores-and-risks.md) (en inglés).
 - **Sin afiliación con ninguna tienda.** Es un proyecto independiente de código abierto.
 - **Tus secretos van cifrados.** Los tokens, sesiones y claves de API se guardan cifrados; la clave de cifrado vive fuera de la base de datos, en el almacén de claves de Windows.
 
@@ -42,7 +42,7 @@ Lo que hace hoy cada conector. Los detalles cambian cuando cambian las tiendas. 
 | Steam | Sí (`steam://`) | Sí: inicio de sesión y tu propia API key | Portadas, tiempo de juego, DLC, colecciones, importar lista de deseos (punto de acceso sin documentar) |
 | GOG | Sí, a través de GOG Galaxy o directo | Sí: página de login oficial, pegas el código (API no oficial) | DLC, importar lista de deseos (API no oficial) |
 | Epic Games | Sí | Sí: página de login oficial, pegas el código (API no oficial) | Botón Instalar en los juegos que tienes |
-| Ubisoft Connect | Sí (`uplay://`), detectados en el registro de Windows | Opcional: inicio de sesión en una ventana integrada (API no oficial; las condiciones de Ubisoft no permiten herramientas de terceros sin autorización, [úsala bajo tu responsabilidad](../guides/stores-and-risks.md), en inglés) | Portadas de la caché local |
+| Ubisoft Connect | Sí (`uplay://`), detectados en el registro de Windows | Sí: inicio de sesión en una ventana integrada (API no oficial) | Portadas de la caché local |
 | App de EA | Sí (`origin2://`), detectados por los ficheros de la app de EA | Sí: inicio de sesión en tu navegador y pegas un token (API no oficial) | |
 
 Cada tienda es un conector aislado: si una falla, las demás siguen funcionando.

@@ -5,7 +5,7 @@ Same format as `gog.md` and `epic.md`: one section per step with **Do**, **Expec
 
 Time: about 1 hour. Needs: Ludiary built and running with the library already synced, internet, an e-mail account you can read, and a library that has at least: one Steam game, one GOG game (Cold Waters if it is still there), and one game each from Epic, Ubisoft and EA (if a store has none, mark its step NOT CHECKED).
 
-This guide does not need the reply from `api@isthereanydeal.com` (point 13). That reply only gates publishing a version with the comparator.
+This guide does not need any reply from `api@isthereanydeal.com` (point 13, revised on 6-11-2026).
 
 ## Rules for the notes
 
