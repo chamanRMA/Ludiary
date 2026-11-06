@@ -15,3 +15,8 @@ strictDepBuilds: true
 # ADR 39: minimum age of a published version, in MINUTES (default 1440 since pnpm 11).
 # Urgent security fixes: add the exact version to minimumReleaseAgeExclude with a comment.
 minimumReleaseAge: 1440
+
+# drizzle-kit (dev only) pulls esbuild 0.18.20 through the deprecated @esbuild-kit/core-utils; Dependabot asks for >= 0.25.0.
+# Remove when drizzle-kit drops @esbuild-kit.
+overrides:
+  "@esbuild-kit/core-utils>esbuild": 0.28.2
