@@ -186,7 +186,9 @@ describe("prepareRestore (ADR 89 point 6.1, 16 H2 M5 M6)", () => {
       const db = new Database(f);
       db.pragma("journal_mode = DELETE");
       db.exec("CREATE TABLE big (x TEXT)");
-      for (let i = 0; i < 200; i++) db.prepare("INSERT INTO big VALUES (?)").run("x".repeat(2000));
+      db.transaction(() => {
+        for (let i = 0; i < 200; i++) db.prepare("INSERT INTO big VALUES (?)").run("x".repeat(2000));
+      })();
       db.close();
       truncateSync(f, Math.floor(statSync(f).size / 2));
     }, "backup.corrupt"));
