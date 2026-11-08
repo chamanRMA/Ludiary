@@ -7,7 +7,7 @@ Architecture decision record · October 14, 2026 · Status: accepted (initial ve
 Web page and server to manage, in one place, the video game libraries of several platforms: Steam, GOG, Ubisoft, EA and Epic.
 
 - **MVP:** a web page from which to launch games, regardless of the platform where they are.
-- **Nice to have:** a store comparator to search and buy where the game is cheapest. In the future, price history and detection of historical lows.
+- **Nice to have:** a store comparator to search and buy where the game is cheapest. In the future, alerts for historical lows.
 
 ## Decision index
 
@@ -1442,7 +1442,7 @@ Discarded alternatives:
 
 **Consequences:**
 
-- Assumption to verify by running the exe: that Node 24.20 honors `execArgvExtension`. It appears in the line 24 documentation without saying since which version. If it does not honor it, it is noted here that the process itself still reads `NODE_OPTIONS` and the environment cleanup is kept for the children.
+- Assumption to verify by running the exe: that Node 24 honors `execArgvExtension`. It appears in the line 24 documentation without saying since which version. If it does not honor it, it is noted here that the process itself still reads `NODE_OPTIONS` and the environment cleanup is kept for the children.
 - CI builds both variants; only the published one is signed (decision 58) and uploaded.
 
 ### 66. Web address: `ludiary.localhost` (extends decisions 23, 28 and 29; revises the link URL of decision 63; scope of the port-bound session and cookie of the alternative address corrected in decision 67)
@@ -7304,7 +7304,7 @@ It is the validation of the full cycle that 45 and 58 require.
 - **W1 (unverified):** what Node downloads has no `Zone.Identifier`, so SmartScreen does not act on the silent installation. Step 2 of the test checks it.
 - **W2 (verified in 45):** silent per-user installation without UAC, with a prior `--stop`.
 - **W3 (unverified):** Inno can replace `{app}\Ludiary.exe` because the stable launcher has already exited. If Defender blocks the file for a moment, Inno fails, `versions.json` does not change and the old version continues (point 8).
-- **N1 (unverified inside the SEA):** `crypto.verify(null, …)` with Ed25519 keys in Node 24.20.
+- **N1 (verified on 8-11-2026 by the real update from 0.1.1 to 0.1.2):** `crypto.verify(null, …)` with Ed25519 keys in Node 24 inside the SEA.
 - **W4 (unverified, added in point 18):** real behavior of Inno Setup 6.7 with `/UPDATE=1`: that it replaces the stable launcher that has just exited, the language it uses in silent mode (the one saved from the previous installation or the system's) and that `SetupMutex` exists and can be queried from Go with `OpenMutex`.
 
 #### 18. Auditor review of the design (November 3, 2026)
@@ -8377,7 +8377,7 @@ No critical or high findings. All accepted.
 1. **MVP:** library connectors, folder scanning, interface with a game grid and direct launching from the executable, in localhost mode.
 2. **Phase 2:** Docker mode (home server), local agent and preparation for multi-user.
 3. **Phase 3:** price comparator with IsThereAnyDeal, plus direct store prices where it does not cover.
-4. **Phase 4:** price history and alerts for lows.
+4. **Phase 4:** alerts for lows. Price history is dropped: IsThereAnyDeal already gives the historical low, which the comparator shows (user decision of 8-11-2026).
 
 No assigned phase: user customization of metadata. Manual games: decision 93.
 
@@ -8423,4 +8423,5 @@ Reviewed with the user on October 21, 2026. The following remain open:
 - Decision 80, user decision of 6-11-2026 before making the repository public: the Ubisoft account connection stays, presented like EA and Epic as an unofficial path (the "unofficial API" mark, the README and `docs/guides/stores-and-risks.md`). Scanning and Play work without an account.
 - Decision 86, point 13, resolved by the user on 6-11-2026: the email to IsThereAnyDeal is not a condition for publishing. The API is public, Ludiary hosts nothing and shares no key, and each user registers their own. The terms in ITAD9 still apply. If IsThereAnyDeal objects, the comparator is removed without touching the rest.
 - User's answers of 5-11-2026: closing sessions from the tray, **tested and works**; ITAD14 is left as is (images that the CSP blocks appear with the gradient); the wishlist assumptions (SW1, SW3, GW2, ITAD4) are accepted with the current behavior, which the user tested; the email to IsThereAnyDeal and making the repository public, **later**. The privacy `it.skip` remains open.
-- Verify the assumptions marked in decisions 39 to 82 when each part is implemented. From the installer prototype remain: SQLite lock after `taskkill /F` (62), port hijacking from another account, also on `[::1]` (63 and 66), foreground dialog (64), `execArgvExtension` in Node 24.20 (65), and resolution, proxy and secure context of `ludiary.localhost` in browsers (66).
+- Verify the assumptions marked in decisions 39 to 82 when each part is implemented. From the installer prototype remain: SQLite lock after `taskkill /F` (62), port hijacking from another account, also on `[::1]` (63 and 66), foreground dialog (64), `execArgvExtension` in Node 24 (65), and resolution, proxy and secure context of `ludiary.localhost` in browsers (66).
+- Roadmap, user decision of 8-11-2026: price history is dropped from phase 4. IsThereAnyDeal already returns the historical low, which the comparator shows, so Ludiary does not keep or chart a history of its own. Phase 4 keeps only the alerts for lows (decision 86, "Phase 4" consequence).
