@@ -30,6 +30,8 @@ Costs are approximate and `[POR VERIFICAR]`.
 
 ### SignPath Foundation (free for open source)
 
+**Status:** Ludiary applied in November 2026 and was declined. The project can apply again when it has more history and users.
+
 - Free code signing for open-source projects, with the certificate issued to SignPath Foundation. Windows then shows **SignPath Foundation** as the publisher, not your name. `[POR VERIFICAR]`
 - Requirements: an OSI-approved license (GPL-3.0 qualifies) and a **public** repository; MFA for every team member on SignPath and on GitHub; a code signing policy page in the project, usually with the line "Free code signing provided by SignPath.io, certificate by SignPath Foundation". Checked on 5-11-2026 on [signpath.org/terms](https://signpath.org/terms) and in published policies of approved projects (Pandoc, Lyrion). Quotas and other details: `[POR VERIFICAR]` on the application page.
 - Signing happens in their cloud: the key never leaves their HSM. The CI uploads the unsigned file as an artifact and downloads the signed one. An approval step by the maintainer can be required. `[POR VERIFICAR]`

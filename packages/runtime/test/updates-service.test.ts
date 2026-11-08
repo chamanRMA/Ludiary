@@ -81,6 +81,7 @@ const settings: SettingsRepository = {
 
 let service: UpdateService;
 let restarted = 0;
+const logged: string[] = [];
 function make(over: { version?: string; installRoot?: string | null; keys?: Record<string, string>; isGameRunning?: () => Promise<boolean> } = {}): UpdateService {
   const config: UpdateConfig = {
     platform: { target: "windows-x64", installRoot: over.installRoot === undefined ? root : over.installRoot, freeBytes: async () => freeBytes, restartIntoLauncher: async () => void restarted++ },
@@ -88,7 +89,7 @@ function make(over: { version?: string; installRoot?: string | null; keys?: Reco
     repo: REPO,
     downloader: net,
   };
-  service = createUpdateService({ version: over.version ?? current, dataDir, config, settings, log: () => {}, restart: async () => void restarted++, ...(over.isGameRunning ? { isGameRunning: over.isGameRunning } : {}) });
+  service = createUpdateService({ version: over.version ?? current, dataDir, config, settings, log: (_level: string, msg: string) => void logged.push(msg), restart: async () => void restarted++, ...(over.isGameRunning ? { isGameRunning: over.isGameRunning } : {}) });
   return service;
 }
 const choose = (mode: UpdateMode) => void settingsMap.set("updates.mode", mode);
@@ -349,8 +350,10 @@ describe("checking (point 3)", () => {
 
   it("404 (nothing published) and an older or equal version are `up-to-date`", async () => {
     const svc = make();
+    logged.length = 0;
     await svc.checkNow();
     expect((await svc.status()).state).toBe("up-to-date");
+    expect(logged).toContain("update check: no release visible (nothing published or private repository)");
     publish("0.2.0");
     await vi.advanceTimersByTimeAsync(61_000);
     await svc.checkNow();

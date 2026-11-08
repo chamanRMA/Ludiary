@@ -1,8 +1,6 @@
 # Code signing policy
 
-Ludiary has applied to the [SignPath Foundation](https://signpath.org) program for its Windows releases. Until the application is approved, the installers are not code-signed. Once approved, this applies:
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+The Windows installers are **not code-signed** yet, so Windows SmartScreen may warn on the first install. An application to the [SignPath Foundation](https://signpath.org) free program was declined in November 2026; the project may apply again later. The options are compared in [docs/code-signing.md](code-signing.md).
 
 Every release is also signed with the project's own Ed25519 keys, which Ludiary checks before it installs an update. See [docs/release.md](release.md).
 

@@ -185,6 +185,7 @@ export function createUpdateService(o: UpdateServiceOptions): UpdateService {
     checkAbort = new AbortController();
     const signal = checkAbort.signal;
     let cache = await readCache();
+    let noRelease = false;
     if (!manual && cache.blockedUntil !== undefined && cache.blockedUntil > now()) return;
     checking = true;
     changed();
@@ -216,6 +217,7 @@ export function createUpdateService(o: UpdateServiceOptions): UpdateService {
         cache = { ...(etag ? { etag } : {}), checkedAt: now(), release: parsed.release, ...(cache.verifiedVersion === parsed.release.version ? { verifiedVersion: parsed.release.version } : {}) };
       } else if (res.status === 404) {
         cache = { checkedAt: now() };
+        noRelease = true;
       } else if ((res.status === 403 || res.status === 429) && (header("x-ratelimit-remaining") === "0" || header("retry-after") !== null)) {
         const reset = Number(header("x-ratelimit-reset")) * 1000;
         const after = Number(header("retry-after")) * 1000;
@@ -242,7 +244,8 @@ export function createUpdateService(o: UpdateServiceOptions): UpdateService {
           else throw e;
         }
       }
-      log("info", `update check: ${announced(cache) ? `version ${announced(cache)!.version} available` : "up to date"}`);
+      // A 404 is not "up to date": nothing is published, or the repository is private (unauthenticated requests see nothing).
+      log("info", `update check: ${noRelease ? "no release visible (nothing published or private repository)" : announced(cache) ? `version ${announced(cache)!.version} available` : "up to date"}`);
     } catch (e) {
       if (signal.aborted) return; // switched off on purpose: not a failure
       lastError = "check-failed";
