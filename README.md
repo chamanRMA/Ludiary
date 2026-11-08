@@ -52,7 +52,7 @@ Each store is an isolated connector: if one fails, the others keep working.
 Windows only for now.
 
 1. Go to the [latest release](https://github.com/chamanRMA/Ludiary/releases/latest).
-2. Download `Ludiary-Setup-X.Y.Z.exe` (the current version is 0.1.1).
+2. Download `Ludiary-Setup-X.Y.Z.exe`.
 3. Run it and follow the installer.
 4. Open **Ludiary** from the shortcut. It starts the tray app and the server if they are not running, and opens the web in your default browser.
 
@@ -115,7 +115,7 @@ docs/
 ## Roadmap
 
 - **Phase 2:** home-server mode in Docker, a local agent, and groundwork for several users.
-- **Phase 4:** price history and alerts for lows. (Phase 3, the price comparator, is already available.)
+- **Phase 4:** alerts for lows. (Phase 3, the price comparator, is already available.)
 - **No phase yet:** manual games added from the interface, and editing game metadata yourself.
 
 ## Contributing

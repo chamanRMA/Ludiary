@@ -52,7 +52,7 @@ Cada tienda es un conector aislado: si una falla, las demás siguen funcionando.
 Solo para Windows por ahora.
 
 1. Ve a la [última versión](https://github.com/chamanRMA/Ludiary/releases/latest).
-2. Descarga `Ludiary-Setup-X.Y.Z.exe` (la versión actual es la 0.1.1).
+2. Descarga `Ludiary-Setup-X.Y.Z.exe`.
 3. Ejecútalo y sigue el instalador.
 4. Abre **Ludiary** desde el acceso directo. Arranca la aplicación de la bandeja y el servidor si no están en marcha, y abre la web en tu navegador predeterminado.
 
@@ -115,7 +115,7 @@ docs/
 ## Hoja de ruta
 
 - **Fase 2:** modo servidor casero en Docker, agente local y preparación para varios usuarios.
-- **Fase 4:** histórico de precios y alertas de mínimos. (La fase 3, el comparador de precios, ya está disponible.)
+- **Fase 4:** alertas de mínimos. (La fase 3, el comparador de precios, ya está disponible.)
 - **Sin fase asignada:** juegos manuales desde la interfaz y edición de metadatos por el usuario.
 
 ## Contribuir

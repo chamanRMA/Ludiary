@@ -9,7 +9,7 @@ The source of truth for the design is the **ADR** (`docs/adr/ADR.md`). This file
 - **MVP:** localhost mode on **Windows**. A lightweight executable with a tray icon starts the server, and a shortcut opens the web in the default browser. It includes the unified library, folder scanning, direct launching from the executable, favorites, tags, collections, play time, a Spanish and English interface, backups and exportable logs.
 - **Phase 2:** home server mode in Docker, local agent and preparation for multi-user.
 - **Phase 3:** price comparator with IsThereAnyDeal (plus direct store prices where it does not cover).
-- **Phase 4:** price history and lowest-price alerts.
+- **Phase 4:** lowest-price alerts (price history is dropped: IsThereAnyDeal already gives the historical low).
 - **No phase assigned:** manual games (interface) and user customization of metadata.
 
 ## Invariants
