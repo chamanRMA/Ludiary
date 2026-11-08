@@ -29,7 +29,7 @@ Web page and server to manage, in one place, the video game libraries of several
 | 14 | Custody of the encryption key | In force (confirmed by the user); extended in 46 |
 | 15 | Backend framework and data access | In force (recommended); driver made concrete in 41 |
 | 16 | Scope of the library shown | In force |
-| 17 | Manual games | In force |
+| 17 | Manual games | In force; made concrete in 93 |
 | 18 | Backups | Revised in 57 |
 | 19 | Connector tests | In force |
 | 20 | Matching games across stores | In force (confirmed by the user); made concrete in 51 |
@@ -105,6 +105,7 @@ Web page and server to manage, in one place, the video game libraries of several
 | 89 | Periodic and manual backups and restore | Proposed (commissioned by the user on 3-11-2026 for 0.1; makes 57 concrete and extends 62; full database backup with `db.backup()`, without the key; `BackupStore` port in `db` and `UserFolders` in `platform-windows`; restore prepared hot and applied on restart, with a prior backup and rollback; validation with a schema identical to that of its migrations; no migration; point 12 applied by default with (a) throughout; `auditor` review of the design incorporated on 3-11-2026 in point 16, which prevails: folders from a foreign backup disabled, schema comparison without patterns, state machine through `restore-pending.json`, `installId` in the name, restart from `api` with `--after-restart`, `pre-restore` with `-origin` and `-raw`; the code, its review and the manual test are missing) |
 | 90 | Updater: check on GitHub Releases, background download and apply with rollback | Proposed (commissioned by the user on 3-11-2026; makes 32 and 58 concrete, extends 45, 57, 64, 65 and 69; the package is the silent Inno installer; stable launcher in Go with `app-<version>` and `versions.json`; `releases/latest` without token with ETag, stable only; manifest signed with Ed25519 and verified again right before running; applied only on a cold start or with "Restart and update"; prior backup and restore always on rollback; exit code 20; point 15 applied by default with (a) except 15.1 and 15.2, resolved by the user on 4-11-2026 in point 20 (`notify` by default without gate or card, invariant 9 with the GitHub exception, signed notice with Apply / Later / Ignore and banner after updating); 15.3 revises the key custody of 58; `auditor` review of the design incorporated on 3-11-2026 in point 18, which prevails: no critical and 3 high findings (resumable rollback, restore of 89 under the lock of 62, apply lock and authenticated trial with the `version` action); revises 62 and extends 63; implemented after integrating 89; the code, its review and the manual test are missing); log export and `update.game-running` in 92, which revises its point 7.6 |
 | 92 | Export the logs and know whether a game is open | Proposed (commissioned on 5-11-2026; makes 35 and 55 concrete for the updater; revises the export of 59 and point 7.6 of 90; a filtered `.txt` with `POST /api/logs/export` `session+key`; optional `ProcessWatcher` with `ludiary-tray.exe --processes`; `restart` returns `409 update.game-running` and the update is postponed; no migration or dependencies; 55 remains open for play time; the code, the `auditor` review and the manual test are missing) |
+| 93 | Manual games: an executable chosen with the native dialog and Play by game ID | Proposed (commissioned by the user on 8-11-2026; makes 17 concrete; extends 40 rule 5 for a source without a connector, 72 and point C of 89; `.exe` only from `ludiary-tray.exe --pick-file`, checked and stored on the server, never a path through the API; no arguments, working folder = the `.exe`'s folder; the same `checkSpec` and `ProcessLauncher.exec`; no migration (`detected_by = 'library'`); routes `session+key`; a restored manual installation survives only if the same `.exe` is in the replaced database; manual games out of automatic matching; point 13 applied by default with (a) throughout; `auditor` review of the design incorporated on 8-11-2026 in point 15, which prevails, with no critical or high findings (restore and launch tied to `install_path`, real path rechecked against mapped drives, `isStrictLocalPath`, Ludiary's own folders excluded, checks repeated inside the transaction, `compareKey`, `detected_by = 'library'` required); the code, its review and the manual test are missing) |
 
 ## Decisions
 
@@ -242,7 +243,7 @@ Web page and server to manage, in one place, the video game libraries of several
 - Ubisoft and EA, being dependent on scanning, only show the installed games that are detected.
 - There are filters by store and by installation status.
 
-### 17. Manual games
+### 17. Manual games (made concrete in decision 93)
 
 **Decision:** manual games (from other platforms, with no store or with their own executable) are added in a later phase, not in the MVP.
 
@@ -6746,7 +6747,7 @@ Commission: the user has tried the comparator and asks for each game's image in 
 - Dependence on a third party that can revoke access: if it does, the comparator shows the error and what is stored, and the rest of the application carries on as before.
 - The `docs-writer` writes the guide for creating the key (with screenshots), the privacy note and the non-affiliation notice; the `tester`, the responses and the test of point 11; the `auditor` reviews design and code.
 
-### 89. Periodic and manual backups, and restore (makes decision 57 concrete; extends 62)
+### 89. Periodic and manual backups, and restore (makes decision 57 concrete; extends 62; point C extended for manual games in decision 93)
 
 Commission (3-11-2026, branch `feature/copias-seguridad`): the next thing missing for MVP 0.1. Today in `main` only the pre-migration backup exists (`packages/db/src/migrator.ts`, `db.backup()` in `%LOCALAPPDATA%\Ludiary\backups`, keeps 3). The Settings > Backups section is hidden outside the simulator (`SETTINGS_SECTIONS` in `Settings.tsx`), `createBackup` in `real.ts` is `unavailable`, `getMaintenance` returns `lastBackupAt: null` and `SettingsDto.backups` does not come from the server. Browser sessions live in memory (`SessionStore`), not in the database.
 
@@ -8120,6 +8121,232 @@ Assignment from the main session (5-11-2026, branch `feature/registros-y-partida
 - `docs-writer`: the troubleshooting guide (how to export and attach the logs) and an issue template that asks for the version, the system and the file (35). Today there is no `.github/ISSUE_TEMPLATE`.
 - `auditor`: reviews the route (level, headers, that nothing leaks outside the list) and the helper's output as untrusted input.
 
+### 93. Manual games: an executable chosen with the native dialog and Play by game ID (makes decision 17 concrete; extends 40 rule 5 for a source without a connector, 72 and 89 point C)
+
+Commission from the user (8-11-2026, branch `feature/juegos-manuales`): games outside the five stores (another launcher, DRM-free, an emulator) added by hand, shown in the library and launched with Play. The user's manual test uses Farming Simulator; nothing on their PC was inspected: the design targets a typical game `.exe`.
+
+#### 1. What exists today (read on 8-11-2026)
+
+- **Model:** `game_properties.store` already accepts `'manual'` (CHECK), `store_game_id` may be any text, `installations` has `install_path`, `launch_data` (JSON) and `detected_by` (`'scan' | 'library'`; `'library'` is never written). No migration is needed.
+- **Repository:** `summary()` builds `stores` only from the five stores, so a manual-only game has `stores: []`; the web already treats that as "Local" (`GameCard`, the `local` filter, the `Local` page, the `local.chip` text, the mock). `unsynced` and the DLC list already skip `manual`. `listGameInstallPaths` (92) takes every `game` installation, whatever the store.
+- **Core:** `launch()` throws `action-unavailable` for `manual` (`launch.ts`, line "Manual entries cannot be launched yet"); `pickTarget` only walks `LAUNCH_ORDER`, which has no `manual`; `withMainAction` drops the action of a game without stores; `withActions` gives a `manual` property no actions.
+- **Native dialog:** `pickScanRoot` and `pickBackupFolder` call `FolderPicker.pick` (`ludiary-tray.exe --pick-folder`, `IFileOpenDialog`), share the `picking` flag, check the result on the server and store it; the browser only sends `{}`.
+- **Store syncs** create one canonical game per store entry and only touch rows of their own store (`listInstallations(store)`, `applyPlan`, `applyLibrary`): a manual row is never seen by them. Cross-store matching (20, 51) has no slice yet.
+- **Restore (89, point C, `applyRestoreAdjustments`):** deletes **all** `installations` rows; the scan rebuilds the store ones. A manual installation would be lost and nothing would rebuild it.
+
+#### 2. Invariant 3: where the executable comes from (checks on the dialog result revised in point 15: A2 to A4)
+
+**Decision: the same pattern as the backup folder. The browser asks; the local app opens a native "Open file" dialog; the server checks the result and stores it; Play goes only by the stored game ID.**
+
+| Option | Advantages | Costs |
+|---|---|---|
+| **(a) Native file dialog through the helper (recommended)** | The path never travels through the API; it reuses `--pick-folder`, the `picking` flag and the checks of `pickScanRoot` | A small Go change (file mode) |
+| (b) The user types or pastes the path in the web | No Go | Breaks invariant 3 (a path received through the API becomes a launch target) |
+| (c) Drag and drop the `.exe` onto the web | Comfortable | The browser does not give the real path; it would be (b) in disguise |
+
+- **What the API receives:** `{}` to add or to change the executable; `{ title }` to rename; nothing to remove or to play. **Never** a path, an executable name, arguments or a working folder. The strict schemas (`additionalProperties: false`) reject a body with `path`, `executable`, `args` or `cwd` with 400.
+- **What the API returns:** the `GameDetail`, which already shows `installPath` (the folder) in "Where you own it", as for the stores. The full executable path is not returned (it is not needed to show anything).
+- **Checks on the dialog result, on the server** (`core`, in this order; any failure is `invalid-input` with key `core.errors.manual-bad-file`):
+  1. a string, absolute (`files.isAbsolute`), **local** (`files.isLocalPath`: a UNC path is rejected before touching the disk, as in 72) and at most 32 767 characters;
+  2. it ends in `.exe` (case-insensitive). `.bat`, `.cmd`, `.lnk`, `.url` and scripts are refused: `.bat`/`.cmd` need a shell (CVE-2024-27980, the same rule as `checkExec`), and a shortcut can carry arguments that Ludiary would not see;
+  3. it exists and is a regular file (`exists` and not `isDirectory`);
+  4. `files.realPath` of it is what is stored, and its parent folder (also real) is the `install_path`. Storing the real path avoids junctions making the launch check (`realPath` again, point 4) fail later.
+- **Arguments and working folder: none in this slice (a).**
+  - **Working folder:** always the executable's folder (`cwd = install_path`), not configurable. It is what a shortcut created by an installer usually does, and many games load their data relative to it.
+  - **Arguments:** not allowed. Typed arguments would be text received through the API that becomes part of a command line, against the spirit of invariant 3, and for an emulator the useful argument is a ROM **path**, which is invariant 3 itself.
+  - (b), for a later decision if it is asked for: a second native dialog that picks one file (the ROM) passed as the only argument, with the same checks. A typed list (at most 8 arguments of at most 256 characters, no control characters, no shell) would still be typed in the browser, which is why it is not recommended.
+  - Emulators work today by pointing at the emulator's own `.exe` (or a frontend), not at a game.
+- **Shortcut:** a game whose `.exe` requires elevation (`requireAdministrator`) fails as today with `launch.denied` (point 4); there is no "run as administrator". Assumption MG2.
+
+#### 3. Data model (no migration; writes and comparison revised in point 15: A6 to A8)
+
+- **One manual game = one canonical game + one `game_properties` row + one `installations` row**, created in a single transaction (`library.addManualGame`):
+  - `canonical_games`: new UUID, `user_id`, `title`, `normalized_title` (`normalizeTitle`), `media` null, `metadata_source = 'manual'`.
+  - `game_properties`: `store = 'manual'`, `store_game_id` = a new UUID (stable key `manual:<uuid>` for the future `match_decisions` of 47; never the path, which is personal data), `kind = 'game'`, `owned = 1` (the user says they have it), same `title`/`normalized_title`, `store_metadata` null.
+  - `installations`: current `device_id`, `install_path` = real folder of the executable, `launch_data = { "executable": "<real path>" }`, `detected_by = 'library'` (meaning "registered, not found by a scan"; comment in `schema.ts`; no CHECK change, so no migration), `last_seen_at = now`.
+  - Everything carries `user_id` (invariant 7). The executable lives in the installation because it is **per device**: with the agent or several PCs, the same manual game may be in another folder on each one.
+- **Same executable twice:** if a manual installation of this device already has the same `executable` (compared with `files.compareKey`), nothing is created and that game is returned (200), as `pickScanRoot` does with a known folder.
+- **Title:** from the path, then editable (point 5). Rule (pure function `manualTitle(path)` in `core`, with a test): the name of the executable's folder, unless it is a drive root or a generic name (`bin`, `bin32`, `bin64`, `binaries`, `x64`, `x86`, `win32`, `win64`, `game`; case-insensitive), in which case the file name without `.exe`. Example: `…\Farming Simulator 2025\FarmingSimulator2025.exe` → "Farming Simulator 2025"; `…\Game\bin\x64\game.exe` → "game". Reading the `.exe` version information (`ProductName`) is left out: it needs native code and is often empty or wrong.
+- **Rename:** `normalizeLabel(title, 200).name` (the trust boundary of 85: no control or format characters, trimmed, not empty), then `title` and `normalized_title` of the canonical **and** of the property. Only for a canonical whose properties are all `manual`; otherwise `action-unavailable`. Decision 17 said it would reuse the customization of 6, which does not exist: when it arrives, this title becomes the first override.
+- **Change the executable:** the same dialog and checks; it replaces `install_path` and `launch_data` of the installation of this device (upsert on `(property_id, device_id)`), or creates it if missing (point 6). The title does not change.
+- **Remove:** in one transaction, the property (its installation goes by the existing cascade) and the canonical game (its favorites, tags and collection links go by the cascade of 85), then `deleteOrphanTags`. The files on disk are never touched. Only for manual-only canonicals.
+- **Coexistence with stores:**
+  - Store syncs and scans never touch manual rows (point 1). A game the user also has on Steam appears twice, as Steam and GOG do today (open question of 20/51).
+  - **Matching (20, 51), for when its slice arrives:** manual properties are **left out of the automatic merge** (by name or by ID); only a manual merge by the user joins them, recorded with the `manual:<uuid>` key. Reason: the user added it by hand precisely because it is not the store one (another edition, a mod, an emulator), and a wrong merge hides a Play (20). The matching slice must respect this rule.
+  - **DLC (21, 83):** a manual game has no DLC (`kind` is always `game`; the DLC queries already skip `manual`).
+  - **Prices (86):** a manual game goes through the comparator by title, like Ubisoft or EA. No change.
+
+#### 4. Play (manual branch revised in point 15: A1 and A8)
+
+- **`pickTarget`:** `manual` goes after the five stores (`[...LAUNCH_ORDER, 'manual']`): a store installation, if a future merge brings one, is preferred.
+- **Manual branch in `launch()`** (replaces the `throw`), after the existing checks (game ID, property of this game, `kind`, installed):
+  1. `action` must be `play`; `install` gives `action-unavailable`.
+  2. The spec is built by the core from stored data only: `{ kind: 'exec', executable: launch_data.executable, args: [], cwd: install_path }`. A `launch_data` without a string `executable` is `launch.rejected`.
+  3. It goes through **`checkSpec` unchanged** (40 rule 5, 72, 76 points 13.1 and 13.2) with `execRoots = [install_path]` and no client rule. Its first parameter narrows to what it reads (`{ id, capabilities: { launchKinds, uriSchemes } }`); manual passes the constant `MANUAL_SOURCE = { id: 'manual', capabilities: { launchKinds: ['exec'], uriSchemes: [] } }`. So: absolute, local, no control characters, inside its folder after `realPath`, exists and is not a folder; and then `ProcessLauncher.exec` repeats its own barrier (`.exe`, local, `stat`), with no shell.
+  4. The scan-roots check (`storedActiveRoots`) **does not apply**: a manual game does not depend on scanned folders.
+  5. The double-click guard (`DOUBLE_LAUNCH_MS`) and the mapping of `ExecError` are the same code as the stores (moved to a shared helper, not copied). `denied` → `launch.denied` with key `game.launchDeniedLocal` (no store name). Logs carry `connector: 'manual'` and never the path.
+- **Main action:** the repository already proposes `play` for an installed game. `withMainAction` also accepts it when `game.stores` is empty and `deps.launcher` exists. *Shortcut:* "no stores = only manual properties" holds while there is no matching; the matching slice replaces it with a flag from the repository. `withActions` gives an installed manual property `['play']` when there is a launcher; a non-installed one, none (the page shows "Choose its executable", point 5).
+- **Missing file:** if the `.exe` was moved or deleted, `checkSpec` rejects (`launch.rejected`) and the web shows its message plus "Change executable". The game is not marked as not installed on its own (no scan for manual games).
+
+#### 5. Interface (small)
+
+- **Add game:** a button on the existing **Local** page (`Local` in `Simple.tsx`), which replaces the text `local.addLater`. It calls `POST /api/manual-games/pick`. On cancel nothing happens; on success it navigates to the game's page. Error with its `errorKey`. While the dialog is open the button shows "Waiting for the window…"; the Windows dialog comes to the front through the owner window of `--pick-folder`.
+- **Game page** (`Game.tsx`), only when every property is `manual`, a "Local game" panel instead of the extra actions:
+  - **Rename:** an inline field with Save (`PATCH /api/games/:id` with `{ title }`), same `save()` as 85.
+  - **Change executable** (`POST /api/games/:id/executable/pick`). If the game is not installed on this computer (point 6), the same button reads "Choose its executable" with the text `game.manual.notHere`.
+  - **Remove from Ludiary** (`DELETE /api/games/:id`), after a confirmation that says the files are not touched and that its tags, collections and favorite are lost. Then back to Local.
+- **Play:** the existing button. `useLaunch` shows `game.launchingLocal` ("Opening {title}…") when there is no store name, instead of "Opening in …".
+- **Covers (a): none; the existing placeholder.** `Cover` already paints the gradient with the title when there is no `coverUrl` (as with Ubisoft and EA without an account).
+  - (b), discarded for now: an image chosen with the same dialog and served by the local server. It needs a file-serving route with `img-src 'self'` and its own checks (75 was discarded for downloaded covers for the same reason: the browser's cache was enough there; here there is no URL). (c) IGDB/RAWG (6) arrives with its own slice and would cover manual games by title.
+- **Simulator:** `mock.ts` implements the four calls (pick returns a sample game; no path from the web either).
+
+#### 6. Backups and another computer (89 point C, H1 pattern; revised in point 15: A1 and A7)
+
+- The manual game itself (canonical, property, user data) is already in the backup: nothing changes there. Only its installation (the path) is per computer.
+- **Point C of 89 is extended:** `DELETE FROM installations` keeps the rows of `manual` properties **whose `launch_data.executable` is also a manual installation in the database being replaced** (compared lowercase in JS, like `activeUserRoots`). The kept values of step A get `activeManualExecutables: string[]` (read from the current database; empty in the `-raw` case, which drops them all).
+- Any other manual installation from the backup is **deleted**: the game appears "Not installed" with "Choose its executable". That is the "disabled until confirmed" of H1, and the confirmation is the native dialog, so a `launch_data` from another computer or from a tampered file is **never** used to launch (the rule of 89 point C holds).
+- (a) No notice in Settings for this (the game page explains it). (b) Count them in `lastRestore` with the folders' notice: more schema for a rare case.
+
+#### 7. Running game and play time (92, 55)
+
+- Nothing new: `listGameInstallPaths` already includes the manual installation (`kind = 'game'`, not removed), so `isGameRunning` counts a manual game as open and "Restart and update" gives `update.game-running` while it runs.
+- A `.exe` at a drive root has `X:\` as its folder, which 92 point 5 ignores: such a game does not count (harmless false negative). A `.exe` in a shared folder (Desktop, Downloads) makes any program in it count (harmless false positive: it only postpones).
+- Play time: 55 is still open. When slice 2b arrives, manual games are measured by the same `install_path` with no change here; `exec` even gives the real PID.
+
+#### 8. Contract, ports and helper (dialog flags revised in point 15: A5)
+
+- **Port** (`packages/contracts/src/ports.ts`), optional in `CoreDeps` (`filePicker`); without it (Docker, tests), the pick routes answer `picker-unavailable`:
+
+  ```ts
+  // ADR 93. Native "Open file" dialog for one .exe on the user's desktop (localhost only). null if cancelled. Texts arrive translated.
+  export interface FilePicker {
+    pickExecutable(opts: { title: string; filterName: string }): Promise<string | null>;
+  }
+  ```
+
+- **Windows:** `HelperProcessFilePicker` in `platform-windows/src/folder-picker.ts`, same class shape as the folder one (one dialog at a time, joins the open one, 15 min), runs `ludiary-tray.exe --pick-file` and reuses `parsePickFolderResponse`.
+- **Go helper:** `--pick-file`, the same protocol as `--pick-folder` (`{"title","filterName"}` in, `{"path"} | {"cancelled":true} | {"error"}` out). `newFolderDialog` becomes `newDialog(title, file, filterName)`: in file mode, no `FOS_PICKFOLDERS`, with `FOS_FILEMUSTEXIST` and `FOS_FORCEFILESYSTEM`, and `SetFileTypes` (vtable slot 4) with one filter whose **pattern is fixed in Go** (`*.exe`), never taken from the request. `filterName` is capped like `title` (512).
+- **Core:** the dialogs share the `picking` flag (`busy` if another one is open). The `title` and `filterName` come from `deps.t`.
+- No connector changes and no `contractVersion` change; `manual` is not a connector.
+
+#### 9. HTTP API (all `session+key`, the default level: they change data or touch the desktop; invariant 4 and 67)
+
+| Route | Body | Answer |
+|---|---|---|
+| `POST /api/manual-games/pick` | `{}` (`EmptyObjectSchema`) | `201` `GameDetail` (new), `200` `GameDetail` (same `.exe` already added) or `200 { cancelled: true }` |
+| `POST /api/games/:id/executable/pick` | `{}` | `200` `GameDetail` or `{ cancelled: true }` |
+| `PATCH /api/games/:id` | adds `title?: string` (`maxLength: 200`) to `GamePatchSchema` | `200` `GameDetail`; `action-unavailable` (422) if the game is not manual-only |
+| `DELETE /api/games/:id` | none | `204`; `action-unavailable` (422) if not manual-only; `404` if it does not exist |
+| `POST /api/games/:id/launch` | unchanged | unchanged |
+
+- `GamePatchSchema` keeps `minProperties: 1`; `title` together with other fields is allowed and is applied in the same transaction.
+- No `GET` route returns the executable path.
+
+#### 10. Texts (es/en, `packages/i18n`; `core.errors.manual-bad-file` revised in point 15: A2 and A4)
+
+| Key | en | es |
+|---|---|---|
+| `core.pickExecutable.title` | Choose the game's program (.exe) | Elige el programa del juego (.exe) |
+| `core.pickExecutable.filter` | Programs | Programas |
+| `core.errors.manual-bad-file` | Choose an .exe file on a local disk of this computer. Shortcuts, scripts, network folders, mapped network drives and Ludiary's own files are not allowed. | Elige un archivo .exe de un disco local de este equipo. No se admiten accesos directos, scripts, carpetas de red, unidades de red asignadas ni los archivos del propio Ludiary. |
+| `local.add` | Add game | Añadir juego |
+| `local.addHint` | Choose the game's .exe file. Ludiary opens it when you press Play. | Elige el archivo .exe del juego. Ludiary lo abre cuando pulsas Jugar. |
+| `local.picking` | Waiting for the window… | Esperando a la ventana… |
+| `local.empty` | You have not added any game yet. | Aún no has añadido ningún juego. |
+| `game.manual.title` | Local game | Juego local |
+| `game.manual.name` | Name | Nombre |
+| `game.manual.save` | Save | Guardar |
+| `game.manual.changeExe` | Change executable | Cambiar ejecutable |
+| `game.manual.chooseExe` | Choose its executable | Elegir su ejecutable |
+| `game.manual.notHere` | This game is not set up on this computer. Choose its executable to play it. | Este juego no está configurado en este equipo. Elige su ejecutable para jugar. |
+| `game.manual.remove` | Remove from Ludiary | Quitar de Ludiary |
+| `game.manual.removeConfirm` | Remove {title} from Ludiary? Its files are not touched, but its tags, collections and favorite are lost. | ¿Quitar {title} de Ludiary? Sus archivos no se tocan, pero se pierden sus etiquetas, colecciones y favorito. |
+| `game.launchingLocal` | Opening {title}… | Abriendo {title}… |
+| `game.launchDeniedLocal` | Windows did not allow the game to open. It may ask for administrator rights: open it from its own shortcut. | Windows no ha dejado abrir el juego. Puede que pida permisos de administrador: ábrelo desde su propio acceso directo. |
+
+`local.addLater` is removed (es/en). The parity check of 49 covers the rest.
+
+#### 11. Tests (extended in point 15)
+
+- `core`:
+  - `addManualGame`: cancelled → `null`; relative, UNC, folder, `.bat`, `.lnk`, missing file → `manual-bad-file` (UNC without any disk call); without `filePicker` → `picker-unavailable`; another dialog open → `busy`; the same `.exe` twice → the same game; the stored paths are the `realPath` ones.
+  - `manualTitle`: folder name, generic folder, drive root.
+  - Rename with `normalizeLabel` (empty, too long, control characters); rename, change and remove of a store game → `action-unavailable`.
+  - Launch: the spec handed to `ProcessLauncher.exec` is `{ executable, args: [], cwd: install_path }`; moved file and `realPath` outside the folder → `launch.rejected`; `install` → `action-unavailable`; double click → `already-starting`; `denied` → `game.launchDeniedLocal`; a library card without `propertyId` reaches the manual property (`pickTarget`).
+  - `mainAction` `play` with a launcher and null without one; `withActions`.
+  - `running.test.ts`: a running process inside a manual installation counts.
+- `db`: the add, rename, change and remove transactions (cascade of user data and orphan tags); a Steam scan and a GOG library plan leave the manual rows intact; `applyRestoreAdjustments` keeps a manual installation whose `.exe` is in `activeManualExecutables` and deletes the others.
+- `api`: the four routes without the origin key → `401 origin_key_required`; a body with `path`, `executable`, `args` or `cwd` → `400`; cancelled `200`, created `201`; `title` over 200 → `400`.
+- `platform-windows`: `HelperProcessFilePicker` calls `--pick-file` and joins a second call.
+- Go (`helper_test.go`): the request parser of `--pick-file` (title and filter caps); the pattern is not read from the request.
+- `web`: the Local button (cancel, success navigates), the "Local game" panel (rename, change, remove with confirmation), `game.launchingLocal`; the mock implements the calls.
+
+#### 12. Manual test (prepared by the `tester`; done by the user, with Farming Simulator)
+
+1. Library > Local > "Add game": the Windows dialog opens in front of the browser and shows only `.exe` files. Choose the game's main `.exe` in its installation folder. The game appears in Local, with the folder's name and the placeholder cover.
+2. Rename it to the name you prefer; the name is kept after reloading.
+3. Press Play on the card and on the page: the game opens and loads (it runs from its own folder). A second fast click does not open it twice.
+4. With the game open, if an update is ready, "Restart and update" says that a game is open (92). Close the game.
+5. "Change executable" and cancel: nothing changes. Choose a shortcut (`.lnk`) or a file on a network drive: the error says it is not allowed.
+6. Mark it as a favorite, add a tag and put it in a collection.
+7. Rename the game's `.exe` (or move it), press Play: a clear error appears; "Change executable" with the new name fixes it. Undo the change in the game's folder.
+8. Make a manual backup and restore it: the game is still there, installed, with its tag and collection (same computer, point 6).
+9. "Remove from Ludiary": it disappears from Local and from its collection; the game's folder is untouched.
+10. Add the same `.exe` twice: only one game appears.
+
+#### 13. What the user decides (product; applied by default with (a))
+
+1. Arguments and working folder: (a) none, the working folder is the `.exe`'s folder; (b) a second dialog to choose one file passed as the argument (emulators), in its own decision.
+2. Cover: (a) the placeholder; (b) an image file chosen with the dialog, in its own decision.
+3. Title: (a) the folder's name (or the file's, for generic folders), editable; (b) always the file name.
+4. A manual game restored from another computer: (a) "Not installed" with "Choose its executable", no notice; (b) also a notice in Settings with the count.
+5. Future matching: (a) manual games never merge automatically, only by hand; (b) they merge by name like the stores.
+
+#### 14. Assumptions
+
+- **MG1 (unverified):** in file mode with `SetFileTypes` and `*.exe`, `IFileOpenDialog` returns the `.exe` path with `SIGDN_FILESYSPATH`, and a shortcut chosen by typing its name is dereferenced to its target (if it returns the target `.exe`, it passes the checks like any `.exe`; if it returns the `.lnk`, it is rejected).
+- **MG2 (unverified):** `spawn` of an executable that requires elevation fails with an error that `ExecError` maps to `denied` (`EACCES`/`EPERM`); if Node gives another code, it is `failed`, with the generic message. Same behavior as GOG today.
+- **MG3 (unverified):** a typical game started with its folder as the working folder and no arguments behaves as when started from its installer's shortcut. Some games need arguments (`-dx11`, a profile): out of this slice (point 13.1).
+
+#### 15. Auditor review of the design (8-11-2026; takes precedence over points 2 to 11 where they differ)
+
+No critical or high findings. All accepted.
+
+- **A1 [medium], restore and launch (revises points 4 and 6):**
+  - In `applyRestoreAdjustments`, a manual installation is kept only if its `executable` is in `activeManualExecutables` **and** `compareKey(install_path) === compareKey(dirname(executable))`. Its `install_path` is then rewritten with the value of the current database for that executable. A row that fails either check is deleted.
+  - In the manual branch of `launch()`: only `launch_data.executable` is read and any other key is ignored. The core computes `cwd = dirname(realPath(executable))`. If `compareKey(cwd) !== compareKey(realPath(install_path))`, the result is `launch.rejected`. `checkSpec` still runs, with `execRoots = [install_path]`.
+- **A2 [medium], mapped drives and SUBST (revises point 2, check 4):** after `realPath`, `isStrictLocalPath` and the `.exe` check run again on the real path, and that real path is what gets stored. A real path that comes out UNC (a mapped network drive, or SUBST over a share) is rejected with `manual-bad-file`, whose text now names that case (point 10).
+- **A3 [low], checks at pick time (revises point 2, checks 1 and 3):**
+  - Check 1 is `isStrictLocalPath` (contracts), which also rejects alternate data streams (`:` after the drive), reserved device names, a trailing dot or space, and `..`.
+  - The existence check is `files.scoped([dirname]).exists(path)` plus `!isDirectory`, a regular file. A `ConnectorError` or any other error from those calls maps to `manual-bad-file`, never to `internal`.
+- **A4 [low], Ludiary's own files (adds a check 5 to point 2):** a path whose real path is inside Ludiary's install folder or its data folder is rejected with `manual-bad-file`. `runtime` passes both folders to the core as `CoreDeps.ownFolders?: readonly string[]` (already resolved), and the check uses `files.isInside` on the real paths.
+- **A5 [low], dialog flags (revises point 8):** file mode uses `FOS_FILEMUSTEXIST | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR`, **without** `FOS_NODEREFERENCELINKS`. A shortcut is resolved to its target by the dialog, and that target goes through all the checks (assumption MG1).
+- **A6 [low], writes after the dialog (revises point 3):** for Add and for Change executable, the dialog opens first. The write transaction then checks again that the game exists and that all its properties are `manual` (Change), and looks for the same executable (Add). If the game disappeared in the meantime, the result is `not-found` and nothing is written. The check before the dialog stays only as a quick check.
+- **A7 [low], path comparison (revises points 3 and 6):** `files.compareKey` everywhere: deduplication and restore. No ad-hoc lowercasing. `applyRestoreAdjustments` receives `compareKey` and `dirname` from `runtime`, which has the platform's `LocalFiles`. `activeManualExecutables` stores the already computed keys.
+- **A8 [low], `detected_by = 'library'` (revises points 3 and 4):**
+  - Only `addManualGame` and `setManualInstallation` write `detected_by = 'library'`.
+  - The manual branch of `launch()` requires it: a manual property whose installation has another value gives `launch.rejected`.
+  - Store syncs and scans never write or delete those rows.
+- **Tests added to point 11:**
+  - `core`: an alternate data stream path (`C:\Games\x.exe:evil`) and a path with a trailing dot give `manual-bad-file` without touching the disk. A `realPath` that comes out UNC gives `manual-bad-file`, simulating a mapped drive. A path inside `ownFolders` is rejected. A `launch_data` with extra keys launches using only `executable`. A `cwd` that does not match `install_path` gives `launch.rejected`, and so does an installation with `detected_by = 'scan'`. If the game is deleted while the dialog is open, the result is `not-found` with nothing written.
+  - `db`: a restore with a matching executable but a different `install_path` deletes the row; with both matching, the row is kept with the current `install_path`. Full Steam, GOG and EA scan plans and library plans, including deletions and retirements, leave the `detected_by = 'library'` rows unchanged.
+  - Go: the file-mode options include `FOS_PATHMUSTEXIST` and do not include `FOS_NODEREFERENCELINKS`.
+
+**Reason:** it is the smallest change that gives Play to a game without a store while keeping invariant 3: the path only comes from a native dialog of the local app, checked and stored on the server, and the launch goes through the same `checkSpec` and `ProcessLauncher.exec` as GOG. It reuses the `manual` value already allowed in the model, the "Local" view that the web already has, the helper's dialog, the `picking` flag, `normalizeLabel`, the user-data cascade, the running check of 92 and the H1 pattern of 89. No migration, no dependency and no connector.
+
+**Consequences:**
+
+- New routes (all `session+key`): `POST /api/manual-games/pick`, `POST /api/games/:id/executable/pick`, `DELETE /api/games/:id`; `PATCH /api/games/:id` accepts `title` for manual-only games. New error key: `core.errors.manual-bad-file`. New optional port: `FilePicker`. New helper subcommand: `--pick-file`. No migration; `detected_by = 'library'` is used for the first time, for manual installations.
+- 17 is made concrete: manual games enter now, without a phase, with the interface reduced to adding, renaming, changing the executable and removing; the metadata customization of 6 remains pending.
+- 89 point C is extended: manual installations survive a restore only when the same `.exe` is a manual installation of the database being replaced.
+- 20 and 51 receive a rule for their slice: manual properties do not merge automatically.
+- Implementers:
+  - `packager`: `--pick-file` in `apps/desktop/tray-helper` (`pickfolder.go` with `newDialog`, case in `main.go`), `HelperProcessFilePicker` in `platform-windows` and its wiring in `runtime` (`deps.ts`, `compose.ts`).
+  - `developer`: `contracts` (`FilePicker`), `core` (`env.ts` with `filePicker`; `core.ts` with `addManualGame`, `pickManualExecutable`, `removeGame` and `title` in `updateGame`; `launch.ts` with the manual branch, `pickTarget` and the shared guard; `withMainAction`/`withActions`; `manualTitle`), `db` (`repositories.ts`: `addManualGame`, `findManualByExecutable`, `setManualInstallation`, `renameManual`, `removeManual`; `restore.ts`: `activeManualExecutables` in the kept values and the narrower `DELETE`), `api-contract` and `api` (point 9), `web` (`Simple.tsx` Local, `Game.tsx`, `useLaunch.ts`, `real.ts`, `http.ts`, `mock.ts`), `i18n` (point 10).
+  - `tester`: point 11 and the guide of point 12 in `docs/manual-tests/manual-games.md`.
+  - `auditor`: before closing, the four routes (level and strict schemas), the helper's answer as untrusted input, the manual branch of `launch()` and the restore change.
+  - `docs-writer`: a short user guide section ("Add a game that is not in a store") and the README feature list; the Local page text.
+
 ## Resulting architecture
 
 - **Core (backend):** API, SQLite database and periodic sync.
@@ -8152,7 +8379,7 @@ Assignment from the main session (5-11-2026, branch `feature/registros-y-partida
 3. **Phase 3:** price comparator with IsThereAnyDeal, plus direct store prices where it does not cover.
 4. **Phase 4:** alerts for lows. Price history is dropped: IsThereAnyDeal already gives the historical low, which the comparator shows (user decision of 8-11-2026).
 
-No assigned phase: manual games and user customization of metadata.
+No assigned phase: user customization of metadata. Manual games: decision 93.
 
 ## Open questions
 
@@ -8188,6 +8415,7 @@ Reviewed with the user on October 21, 2026. The following remain open:
   - "Simulated" notice in production in the parts that the real client delegates to the simulator (point 7). Auditor's proposal, which the architect recommends: remove `&& isSimulated` from `SimNote` in `bits.tsx` and have `getMaintenance` in `real.ts` return `lastBackupAt: null`.
   - Steam games moved with `mklink /J` to another disk, which are not seen today (point 11): leave it so and document it (recommended in this slice) or support them by adding the real destination as a root with explicit permission.
 - Decision 89 (backups and restore, for 0.1): point 12 applied by default with (a) in everything (manual backups without automatic deletion, internal backups in the restore list, backups from elsewhere by choosing their folder); the user can change it. `auditor` review of the design incorporated on 3-11-2026 (point 16, no criticals, all accepted; H1 with (a): folders of a backup from another installation disabled until the user confirms them). Missing the code, its review and the manual test (point 11) to close BK1 to BK6. When closing it, the `docs-writer` writes the documented restore point that 18 asks for.
+- Decision 93 (manual games): point 13 applied by default with (a) throughout (no arguments, placeholder cover, folder name as title, a game restored from another computer asks for its executable, no automatic merge); the user can change it. `auditor` review of the design incorporated on 8-11-2026 (point 15, no critical or high findings). Missing the code, its review and the manual test with Farming Simulator (point 12), which closes MG1 to MG3.
 - Linux and macOS: preliminary proposal in 61. Closed when phase 2 ends.
 - Check the name "Ludiary" in the official trademark databases (EUIPO, OEPM, USPTO) and domain availability before the first publication (decision 44). **Light review of 5-11-2026:** a web search finds no trademark, app or program called "Ludiary" (only similar names: Ludi, Ludio, Ludum, Ludy). `ludiary.com` has been registered by a third party since 5-12-2022 (Squarespace and NS1 DNS, no indexed content); `ludiary.org` and `ludiary.app` return 404 in RDAP, that is, free; `.es` unchecked. EUIPO, OEPM and USPTO were not queried directly. **The user decides on 5-11-2026** not to register the trademark and to change the name if one day they are asked to; closed. On 6-11-2026 the user reports that there was a "Ludiary" trademark, now ended.
 - Pre-publication security audit of 6-11-2026 (no critical or high findings). Changes: `Cross-Origin-Resource-Policy: same-origin` on every response and `Sec-Fetch-Site: cross-site` rejected with 403, except a top-level document navigation to `/connect/return`, which Steam's OpenID return needs. Decision 67 discarded `Sec-Fetch-Site` against a local process that chooses its headers; this is only a defense against web pages and does not revise it. `/api/status` no longer exposes `masterKey`; sections that describe it are out of date. `pid` stays in `/api/health`, which `findRunningServer` uses. Deal links are checked again on read. `checkSpec` rejects non-local paths before touching the disk; UNC scan folders chosen by the user stay allowed (decision 72). The installer no longer offers a folder choice (`DisableDirPage=yes`). Binaries build with Go 1.27.3.

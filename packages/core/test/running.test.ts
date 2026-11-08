@@ -37,6 +37,14 @@ describe("isGameRunning (ADR 92)", () => {
     expect(await h.core.isGameRunning()).toBe(false);
   });
 
+  it("counts a manual installation", async () => {
+    const h = await harness({ processes: running(["D:\\Games\\Farm\\farm.exe"]) });
+    add(h, "1", "D:\\Games\\Farm");
+    h.store.properties.set("p1", { ...h.store.properties.get("p1")!, store: "manual" });
+    h.store.installs.set("i1", { ...h.store.installs.get("i1")!, launchData: { executable: "D:\\Games\\Farm\\farm.exe" }, detectedBy: "library" });
+    expect(await h.core.isGameRunning()).toBe(true);
+  });
+
   it("is false without a port", async () => {
     const h = await harness();
     add(h, "1", "C:\\Games\\Foo");

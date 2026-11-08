@@ -1,5 +1,6 @@
 import type {
   EmbeddedLogin,
+  FilePicker,
   FolderPicker,
   KeyStore,
   LocalFiles,
@@ -92,6 +93,8 @@ export interface RuntimeDeps {
   createProcessLauncher?: (allowedSchemes: readonly string[]) => ProcessLauncher;
   /** Absent: this mode cannot open a native folder dialog. */
   folderPicker?: FolderPicker;
+  /** ADR 93. Absent: manual games cannot be added in this mode. */
+  filePicker?: FilePicker;
   /** ADR 92. Absent: there is never a game running (Docker, tests). */
   processWatcher?: ProcessWatcher;
   /** ADR 89. Absent: activating the periodic backups asks for a folder. */

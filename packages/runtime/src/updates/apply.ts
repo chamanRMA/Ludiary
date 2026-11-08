@@ -2,6 +2,7 @@
 // take the copy of the database, and put that copy back on a rollback. Nothing here installs or touches `Programs`.
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { restorePaths } from "../restore-startup";
 import { applyPendingRestoreSwap, createBackupStore, createSqliteInstanceLock, createUpdateCopy, finishRestore, findUpdateCopy, MIGRATIONS, openDatabase, readPendingRestore } from "@ludiary/db";
 import { EXIT, type RuntimeDeps } from "../deps";
 import { createFileLogger, type Logger } from "../files";
@@ -104,6 +105,6 @@ async function restoreDatabase(deps: RuntimeDeps, dataDir: string, backups: stri
   }
   const pending = readPendingRestore(dataDir);
   if (pending.kind !== "pending") throw new Error("the restoration was not prepared");
-  if (!(await applyPendingRestoreSwap(dataDir, addon, pending.state, Date.now(), (m) => log("warn", m)))) throw new Error("the current database could not be saved first");
+  if (!(await applyPendingRestoreSwap(dataDir, addon, pending.state, Date.now(), (m) => log("warn", m), restorePaths))) throw new Error("the current database could not be saved first");
   finishRestore(dataDir);
 }

@@ -56,6 +56,17 @@ export interface LibraryRepository {
    * storeGameIds of its non-retired `dlc` properties.
    */
   findVisibleCanonicals(store: StoreId): Promise<{ games: ReadonlyMap<string, string>; dlc: ReadonlySet<string> }>;
+  /** ADR 93. Canonical id of a manual installation of this device whose executable satisfies `same` (compared by the core with compareKey), or null. */
+  findManualByExecutable(same: (executable: string) => boolean): Promise<string | null>;
+  /**
+   * ADR 93. ONE transaction: if a manual installation of this device already satisfies `same`, returns it with `created: false`;
+   * otherwise creates canonical game + property + installation (`detected_by = 'library'`).
+   */
+  addManualGame(input: { title: string; executable: string; installPath: string; same: (executable: string) => boolean }, at: number): Promise<{ canonicalId: string; created: boolean }>;
+  /** ADR 93. ONE transaction: `not-found` if the game is gone, `action-unavailable` unless every property is manual. Upserts the installation of this device. */
+  setManualInstallation(canonicalId: string, input: { executable: string; installPath: string }, at: number): Promise<void>;
+  /** ADR 93. ONE transaction: the property (its installation cascades), the canonical game and its user data, then orphan tags. `not-found`; `action-unavailable` unless manual-only. */
+  removeManual(canonicalId: string): Promise<void>;
   /** Applies the whole plan in one transaction; rolls everything back if it fails midway. */
   applyScanPlan(plan: ScanPlan): Promise<void>;
   /** ADR 74. Applies a library snapshot plan in ONE transaction (owned, playtime, last played, media, retirements). */

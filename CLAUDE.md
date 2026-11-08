@@ -10,7 +10,7 @@ The source of truth for the design is the **ADR** (`docs/adr/ADR.md`). This file
 - **Phase 2:** home server mode in Docker, local agent and preparation for multi-user.
 - **Phase 3:** price comparator with IsThereAnyDeal (plus direct store prices where it does not cover).
 - **Phase 4:** lowest-price alerts (price history is dropped: IsThereAnyDeal already gives the historical low).
-- **No phase assigned:** manual games (interface) and user customization of metadata.
+- **No phase assigned:** user customization of metadata. Manual games are done (decision 93).
 
 ## Invariants
 

@@ -93,6 +93,12 @@ export interface LudiaryApi {
   getGame(id: string): Promise<GameDetailDto | null>;
   /** ADR 85. Replaces favorite, tags and/or collections of a game and returns the game. Errors carry translatable keys (ApiError). */
   updateGame(id: string, patch: GamePatchDto): Promise<GameDetailDto>;
+  /** ADR 93. Opens the native .exe dialog on the server (no path travels). `null` when the user cancels. */
+  addManualGame(): Promise<GameDetailDto | null>;
+  /** ADR 93. Same dialog for the executable of a local game. `null` when the user cancels. */
+  pickManualExecutable(id: string): Promise<GameDetailDto | null>;
+  /** ADR 93. Only local games; the files on disk are not touched. */
+  removeGame(id: string): Promise<void>;
   getCollections(): Promise<readonly CollectionDto[]>;
   createCollection(name: string): Promise<CollectionDto>;
   renameCollection(id: string, name: string): Promise<CollectionDto>;

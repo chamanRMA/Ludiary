@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { errorText } from "../app/errors";
 import { Link } from "../app/Link";
+import { navigate } from "../app/router";
 import { STORE_BRAND } from "../app/stores";
 import { useLaunch } from "../app/useLaunch";
 import { api, isSimulated } from "../data/api";
@@ -128,6 +129,8 @@ export function Game({ id }: { id: string }) {
         ))}
       </section>
 
+      {game.properties.every((p) => p.store === "manual") && <LocalPanel game={game} busy={busy} save={save} />}
+
       {game.dlc.length > 0 && (
         <section className={ui.panel} aria-labelledby="g-dlc">
           <h2 id="g-dlc">{t("game.dlc")}</h2>
@@ -146,6 +149,56 @@ export function Game({ id }: { id: string }) {
 
       <Organize game={game} busy={busy} error={pickerOpen ? null : saveError} save={save} />
     </div>
+  );
+}
+
+/** ADR 93 point 5. Rename, change the executable (native dialog, no path travels) and remove from Ludiary. */
+function LocalPanel({ game, busy, save }: { game: GameDetailDto; busy: boolean; save: (patch: GamePatchDto) => Promise<boolean> }) {
+  const { t } = useTranslation();
+  const [name, setName] = useState(game.title);
+  const [picking, setPicking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const here = game.properties.some((p) => p.installed);
+  const run = async (action: () => Promise<unknown>): Promise<void> => {
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(errorText(t, e));
+    }
+  };
+  const changeExe = async (): Promise<void> => {
+    setPicking(true);
+    await run(() => mutate(api.pickManualExecutable(game.id)));
+    setPicking(false);
+  };
+  const remove = async (): Promise<void> => {
+    if (!window.confirm(t("game.manual.removeConfirm", { title: game.title }))) return;
+    await run(async () => {
+      await mutate(api.removeGame(game.id));
+      navigate("/local");
+    });
+  };
+  return (
+    <section className={ui.panel} aria-labelledby="g-local" aria-busy={busy}>
+      <h2 id="g-local">{t("game.manual.title")}</h2>
+      <div className={ui.chips}>
+        <input className={ui.field} value={name} maxLength={200} aria-label={t("game.manual.name")} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void save({ title: name })} />
+        <button type="button" className={ui.btn} disabled={name.trim() === "" || name === game.title} onClick={() => void save({ title: name })}>
+          {t("game.manual.save")}
+        </button>
+      </div>
+      {!here && <p className={ui.muted}>{t("game.manual.notHere")}</p>}
+      <div className={ui.chips}>
+        <button type="button" className={ui.btn} disabled={picking} onClick={() => void changeExe()}>
+          {picking ? t("local.picking") : here ? t("game.manual.changeExe") : t("game.manual.chooseExe")}
+        </button>
+        <button type="button" className={ui.btn} onClick={() => void remove()}>
+          {t("game.manual.remove")}
+        </button>
+      </div>
+      {error && <p role="alert" className={ui.error}>{error}</p>}
+    </section>
   );
 }
 

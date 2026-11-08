@@ -449,6 +449,8 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     updateGame: async (id, patch) => {
       const at = library.findIndex((g) => g.id === id);
       if (at < 0) throw notFound();
+      if (patch.title !== undefined && (library[at] as GameSummaryDto).stores.length > 0) throw new ApiError(422, "action-unavailable", "core.errors.action-unavailable");
+      const title = patch.title === undefined ? undefined : clean(patch.title, 200);
       // ADR 88: ids of mirrors are ignored, and the memberships in mirrors stay as they are.
       const mirrorIds = new Set(collections.filter((c) => c.source !== null).map((c) => c.id));
       if (patch.collectionIds?.some((c) => !mirrorIds.has(c) && !collections.some((x) => x.id === c))) throw notFound();
@@ -456,7 +458,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
       const tags = patch.tags?.map((t) => clean(t, MAX_TAG)).filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
       if (tags && tags.length > 20 && tags.length > (library[at] as GameSummaryDto).tags.length) throw limit(20, "tagsPerGame");
       const wanted = patch.collectionIds && new Set(patch.collectionIds.filter((c) => !mirrorIds.has(c)));
-      library[at] = { ...(library[at] as GameSummaryDto), ...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}), ...(tags ? { tags } : {}) };
+      library[at] = { ...(library[at] as GameSummaryDto), ...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}), ...(tags ? { tags } : {}), ...(title ? { title } : {}) };
       for (const c of collections) {
         if (!wanted || c.source !== null) continue;
         const has = c.gameIds.includes(id);
@@ -464,6 +466,26 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
         else if (!has && wanted.has(c.id)) c.gameIds = [...c.gameIds, id];
       }
       return (await detail(id)) as GameDetailDto;
+    },
+    // ADR 93: no path travels either here; the simulator invents a sample game.
+    addManualGame: async () => {
+      const n = library.filter((g) => g.stores.length === 0).length + 1;
+      const id = `local-${now()}-${n}`;
+      library.push({ id, title: "Starfall", stores: [], installed: true, favorite: false, playtimeMinutes: 0, tags: [], mainAction: "play" });
+      return (await detail(id)) as GameDetailDto;
+    },
+    pickManualExecutable: async (id) => {
+      const at = library.findIndex((g) => g.id === id);
+      if (at < 0) throw notFound();
+      library[at] = { ...(library[at] as GameSummaryDto), installed: true, mainAction: "play" };
+      return (await detail(id)) as GameDetailDto;
+    },
+    removeGame: async (id) => {
+      const at = library.findIndex((g) => g.id === id);
+      if (at < 0) throw notFound();
+      if ((library[at] as GameSummaryDto).stores.length > 0) throw new ApiError(422, "action-unavailable", "core.errors.action-unavailable");
+      library.splice(at, 1);
+      for (const c of collections) c.gameIds = c.gameIds.filter((g) => g !== id);
     },
     createCollection: async (name) => {
       const text = clean(name, MAX_COLLECTION_NAME);

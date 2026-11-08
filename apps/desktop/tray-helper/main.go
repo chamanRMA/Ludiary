@@ -78,6 +78,8 @@ func main() {
 			os.Exit(handleRegistry(os.Stdin, os.Stdout))
 		case "--pick-folder":
 			os.Exit(handlePickFolder(os.Stdin, os.Stdout))
+		case "--pick-file": // ADR 93
+			os.Exit(handlePickFile(os.Stdin, os.Stdout))
 		case "--known-folder": // ADR 89
 			os.Exit(handleKnownFolder(os.Args[2:], os.Stdout))
 		case "--processes": // ADR 92

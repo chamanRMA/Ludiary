@@ -5,7 +5,7 @@ export { HelperProcessDialogs } from "./dialogs";
 export { createHelperRunner, type DisposableHelperRunner, type HelperRunner } from "./helper-io";
 export { WindowsLocationResolver, type WindowsLocationResolverOptions } from "./location-resolver";
 export { HelperProcessUserFolders, parseKnownFolderResponse } from "./user-folders";
-export { HelperProcessFolderPicker, parsePickFolderResponse } from "./folder-picker";
+export { HelperProcessFilePicker, HelperProcessFolderPicker, parsePickFolderResponse } from "./folder-picker";
 export {
   childEnv,
   createWindowsProcessLauncher,

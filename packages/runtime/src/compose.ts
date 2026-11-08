@@ -82,6 +82,9 @@ export async function composeCore(
   const locale = localeOf(deps);
   const locations = deps.createLocationResolver?.(files);
   const launcher = deps.createProcessLauncher?.(unionUriSchemes(connectors));
+  const ownFolders = await Promise.all(
+    [deps.platform.installDir, deps.platform.dataDir].map((dir) => files.realPath(dir).catch(() => dir)),
+  );
   try {
     await repos.identity.ensure(randomUUID, systemClock.now()); // before using any repository (ADR 47)
     const services = deps.priceServices ?? createPriceServices();
@@ -102,6 +105,8 @@ export async function composeCore(
       ...(locations ? { locations } : {}),
       ...(launcher ? { launcher } : {}),
       ...(deps.folderPicker ? { folderPicker: deps.folderPicker } : {}),
+      ...(deps.filePicker ? { filePicker: deps.filePicker } : {}),
+      ownFolders, // ADR 93, A4: the core refuses Ludiary's own files as a manual game
       ...(deps.processWatcher ? { processes: deps.processWatcher } : {}),
       ...(deps.embeddedLogin ? { embeddedLogin: deps.embeddedLogin } : {}),
       ...(deps.userFolders ? { userFolders: deps.userFolders } : {}),

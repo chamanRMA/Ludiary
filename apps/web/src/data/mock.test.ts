@@ -182,3 +182,18 @@ describe("mock API: favorites, tags and collections (ADR 85)", () => {
     expect((await api.getGame("portal2"))?.collections.map((c) => c.source)).toEqual(["steam"]);
   });
 });
+
+describe("mock API: manual games (ADR 93)", () => {
+  it("adds a sample local game, renames it, changes its executable and removes it; store games are refused", async () => {
+    const api = createMockApi(memoryStorage());
+    const game = (await api.addManualGame())!;
+    expect(game).toMatchObject({ stores: [], installed: true, properties: [{ store: "manual" }] });
+    expect((await api.updateGame(game.id, { title: "  My   game " })).title).toBe("My game");
+    expect((await api.pickManualExecutable(game.id))!.id).toBe(game.id);
+    const steamGame = (await api.getLibrary()).find((g) => g.stores.length > 0)!;
+    await expect(api.updateGame(steamGame.id, { title: "x" })).rejects.toMatchObject({ code: "action-unavailable" });
+    await expect(api.removeGame(steamGame.id)).rejects.toMatchObject({ code: "action-unavailable" });
+    await api.removeGame(game.id);
+    expect(await api.getGame(game.id)).toBeNull();
+  });
+});

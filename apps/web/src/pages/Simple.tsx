@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { errorText } from "../app/errors";
 import { Link } from "../app/Link";
+import { navigate } from "../app/router";
 import { STORE_BRAND } from "../app/stores";
 import { api } from "../data/api";
 import { mutate, useQuery } from "../data/hooks";
@@ -136,15 +137,37 @@ export function Collections() {
 export function Local() {
   const { t } = useTranslation();
   const library = useQuery(() => api.getLibrary());
+  const [picking, setPicking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   if (!library) return null;
+  const games = library.filter((g) => g.stores.length === 0);
+  // ADR 93: the browser sends nothing; the server opens the native dialog and checks the result. Cancel does nothing.
+  const add = async (): Promise<void> => {
+    setPicking(true);
+    setError(null);
+    try {
+      const game = await mutate(api.addManualGame());
+      if (game) navigate(`/game/${encodeURIComponent(game.id)}`);
+    } catch (e) {
+      setError(errorText(t, e));
+    } finally {
+      setPicking(false);
+    }
+  };
   return (
     <div className={ui.stack}>
       <header>
         <PageTitle>{t("local.title")}</PageTitle>
         <p className={ui.muted}>{t("local.subtitle")}</p>
       </header>
-      <GameGrid games={library.filter((g) => g.stores.length === 0)} />
-      <p className={ui.muted}>{t("local.addLater")}</p>
+      <div className={ui.actions} style={{ justifyContent: "flex-start" }}>
+        <button type="button" className={cx(ui.btn, ui.primary)} disabled={picking} onClick={() => void add()}>
+          {picking ? t("local.picking") : t("local.add")}
+        </button>
+        <span className={ui.muted}>{t("local.addHint")}</span>
+      </div>
+      {error && <p role="alert" className={ui.error}>{error}</p>}
+      {games.length === 0 ? <p className={ui.muted}>{t("local.empty")}</p> : <GameGrid games={games} />}
     </div>
   );
 }

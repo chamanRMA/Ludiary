@@ -171,11 +171,26 @@ func TestFolderDialogCreates(t *testing.T) {
 		t.Skip("COM unavailable")
 	}
 	defer windows.CoUninitialize()
-	dlg, err := newFolderDialog("Test")
-	if err != nil {
-		t.Fatal(err)
+	for _, file := range []bool{false, true} {
+		dlg, err := newDialog("Test", file, "Programs")
+		if err != nil {
+			t.Fatalf("file=%v: %v", file, err)
+		}
+		comRelease(dlg)
 	}
-	comRelease(dlg)
+}
+
+func TestParsePickFileRequest(t *testing.T) {
+	r, ok := parsePickRequest([]byte(`{"title":"T","filterName":"Programas","pattern":"*.*"}`))
+	if !ok || r.FilterName != "Programas" {
+		t.Errorf("good: %v %v", r, ok)
+	}
+	if _, ok := parsePickRequest([]byte(`{"filterName":"` + strings.Repeat("a", maxTitleLen+1) + `"}`)); ok {
+		t.Error("long filter name accepted")
+	}
+	if filePattern != "*.exe" {
+		t.Error("pattern must be fixed in Go")
+	}
 }
 
 func TestKnownFolder(t *testing.T) {
@@ -220,5 +235,21 @@ func TestProcessesIncludesTheOwnExecutable(t *testing.T) {
 	}
 	if !found || len(got.Paths) > maxProcessPaths {
 		t.Fatalf("own executable %q missing in %d paths", self, len(got.Paths))
+	}
+}
+
+func TestDialogOptionsFileMode(t *testing.T) {
+	const fosNoDereferenceLinks = 0x00100000
+	got := dialogOptions(0, true)
+	for name, flag := range map[string]uint32{"PATHMUSTEXIST": fosPathMustExist, "FILEMUSTEXIST": fosFileMustExist, "FORCEFILESYSTEM": fosForceFileSystem} {
+		if got&flag == 0 {
+			t.Errorf("file mode lacks FOS_%s", name)
+		}
+	}
+	if got&fosNoDereferenceLinks != 0 || got&fosPickFolders != 0 {
+		t.Errorf("file mode sets a forbidden flag: %#x", got)
+	}
+	if dialogOptions(0, false)&fosPickFolders == 0 {
+		t.Error("folder mode lacks FOS_PICKFOLDERS")
 	}
 }

@@ -92,6 +92,7 @@ export const installations = sqliteTable(
     deviceId: text("device_id").notNull().references(() => devices.id),
     installPath: text("install_path").notNull(),
     launchData: text("launch_data", { mode: "json" }).$type<Record<string, string>>(),
+    /** 'scan' = found by a scan. 'library' = registered by the user (manual game, ADR 93): only addManualGame and setManualInstallation write it; scans and syncs never touch those rows. */
     detectedBy: text("detected_by").notNull().default("scan"),
     lastSeenAt: integer("last_seen_at").notNull(),
   },

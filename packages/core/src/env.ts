@@ -1,5 +1,5 @@
 // Public facade types of the core (ADR 72, point 4) and the shared environment of its use-case modules.
-import type { Clock, ConnectorLogger, EmbeddedLogin, FolderPicker, HttpClient, LocalFiles, LocationResolver, PriceService, PriceServiceId, ProcessLauncher, ProcessWatcher, SecretCipher, SecretVault, StoreConnector, StoreId, UserFolders, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
+import type { Clock, ConnectorLogger, EmbeddedLogin, FilePicker, FolderPicker, HttpClient, LocalFiles, LocationResolver, PriceService, PriceServiceId, ProcessLauncher, ProcessWatcher, SecretCipher, SecretVault, StoreConnector, StoreId, UserFolders, WizardDone, WizardInput, WizardStep } from "@ludiary/contracts";
 import type {
   CoreErrorInfo,
   CoreLogger,
@@ -104,6 +104,10 @@ export interface CoreDeps {
   processes?: ProcessWatcher;
   /** Absent: the mode cannot open a native folder dialog. */
   folderPicker?: FolderPicker;
+  /** ADR 93. Absent (Docker, tests): the manual-game pick routes answer `picker-unavailable`. */
+  filePicker?: FilePicker;
+  /** ADR 93 (A4). Ludiary's install and data folders, already resolved; a manual executable inside them is refused. */
+  ownFolders?: readonly string[];
   /** ADR 73, 74. Factory of the HttpClient of one connector (its apiHosts). maxBytes: the core passes 16 MiB for listLibrary, 2 MiB otherwise. Absent: no network, no media step. */
   http?: (hosts: readonly string[], signal: AbortSignal, log: ConnectorLogger, opts?: { maxBytes?: number }) => HttpClient;
   /** ADR 80. Absent (Docker, Linux, tests): the embedded-login step is rejected as unavailable. */
@@ -148,7 +152,13 @@ export interface LudiaryCore {
   listLibrary(): Promise<readonly GameSummary[]>;
   getGame(canonicalId: string): Promise<GameDetail | null>;
   /** ADR 85. Replaces favorite, tags and/or collections of a shown game and returns it. `tags` are raw names: the core normalizes them. */
-  updateGame(canonicalId: string, patch: { favorite?: boolean; tags?: readonly string[]; collectionIds?: readonly string[] }): Promise<GameDetail>;
+  updateGame(canonicalId: string, patch: { favorite?: boolean; tags?: readonly string[]; collectionIds?: readonly string[]; title?: string }): Promise<GameDetail>;
+  /** ADR 93. Native .exe dialog; null if cancelled. `created: false` if that executable was already added. */
+  addManualGame(): Promise<{ game: GameDetail; created: boolean } | null>;
+  /** ADR 93. Same dialog and checks; replaces the executable of this device. null if cancelled. Only manual-only games. */
+  pickManualExecutable(canonicalId: string): Promise<GameDetail | null>;
+  /** ADR 93. Only manual-only games; files on disk are never touched. */
+  removeGame(canonicalId: string): Promise<void>;
   listCollections(): Promise<readonly CollectionRecord[]>;
   createCollection(name: string): Promise<CollectionRecord>;
   renameCollection(id: string, name: string): Promise<CollectionRecord>;

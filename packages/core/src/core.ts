@@ -26,6 +26,7 @@ import { createWizardEngine } from "./wizards";
 import { createCollectionMirror } from "./collection-mirror";
 import { createBackupService } from "./backups";
 import { bumpEpoch, syncContext } from "./contexts";
+import { checkPickedExecutable, manualTitle } from "./manual";
 
 /** A connector was refused at startup (ADR 40 rule 11, ADR 72). `problems` are English, for developers. */
 export class ConnectorRegistrationError extends Error {
@@ -102,10 +103,44 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
   };
   let picking = false;
 
+  /** One native dialog at a time, shared by the folder and file dialogs. */
+  const dialog = async <T>(open: () => Promise<T>): Promise<T> => {
+    if (picking) throw new CoreError("busy", "A dialog is already open");
+    picking = true;
+    try {
+      return await open();
+    } finally {
+      picking = false;
+    }
+  };
+
+  const filePicker = (): NonNullable<CoreDeps["filePicker"]> => {
+    if (!deps.filePicker) throw new CoreError("picker-unavailable", "This mode has no file dialog");
+    return deps.filePicker;
+  };
+  const pickExecutable = () => dialog(() => filePicker().pickExecutable({ title: deps.t("core.pickExecutable.title"), filterName: deps.t("core.pickExecutable.filter") }));
+  /** Quick check before the dialog; the repository checks again inside its transaction (ADR 93, A6). */
+  const requireManualOnly = async (canonicalId: unknown): Promise<string> => {
+    if (typeof canonicalId !== "string" || canonicalId === "") throw new CoreError("invalid-input", "Missing game id");
+    const g = await deps.library.getGame(canonicalId);
+    if (!g) throw new CoreError("not-found", "Game not found");
+    if (g.properties.some((p) => p.store !== "manual")) throw new CoreError("action-unavailable", "Only manual games can be changed this way");
+    return canonicalId;
+  };
+  const shown = async (canonicalId: string): Promise<GameDetail> => {
+    const game = await deps.library.getGame(canonicalId);
+    if (!game) throw new CoreError("not-found", "The game is not shown");
+    return withActions(game);
+  };
+
   /** ADR 74: the repository proposes the main action from the data; the core drops it where the mode or the stores cannot do it. */
   const withMainAction = <T extends GameSummary>(game: T): T => {
     const proposed = game.mainAction ?? null;
-    const ok = proposed !== null && deps.launcher !== undefined && game.stores.some((st) => connectors.get(st)?.capabilities.actions.includes(proposed));
+    // ADR 93 shortcut: no stores = only manual properties (until matching exists); a manual game can only be played.
+    const ok =
+      proposed !== null &&
+      deps.launcher !== undefined &&
+      (game.stores.length === 0 ? proposed === "play" : game.stores.some((st) => connectors.get(st)?.capabilities.actions.includes(proposed)));
     return { ...game, mainAction: ok ? proposed : null };
   };
 
@@ -114,7 +149,9 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
     properties: game.properties.map((p) => {
       const c = p.store === "manual" ? undefined : connectors.get(p.store);
       const actions: GameAction[] = [];
-      if (c) {
+      if (p.store === "manual") {
+        if (p.installed && deps.launcher) actions.push("play");
+      } else if (c) {
         // The main action (ADR 16): play if installed (and this mode can launch), otherwise install if owned, otherwise open the store page.
         if (p.installed && deps.launcher && c.capabilities.actions.includes("play")) actions.push("play");
         else if (!p.installed) {
@@ -149,6 +186,7 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
       if (typeof canonicalId !== "string" || canonicalId === "") throw new CoreError("invalid-input", "Missing game id");
       if (patch.favorite !== undefined && typeof patch.favorite !== "boolean") throw new CoreError("invalid-input", "favorite must be a boolean");
       const data: GameDataPatch = { ...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}) };
+      if (patch.title !== undefined) data.title = normalizeLabel(patch.title, 200).name;
       if (patch.tags !== undefined) {
         // Repeated names (same key) are one tag; the first spelling wins.
         const byKey = new Map<string, Label>();
@@ -169,6 +207,28 @@ export async function createCore(deps: CoreDeps): Promise<LudiaryCore> {
       const game = await deps.library.getGame(canonicalId);
       if (!game) throw new CoreError("not-found", "The game is not shown");
       return withActions(game);
+    },
+    async addManualGame() {
+      filePicker();
+      const chosen = await pickExecutable();
+      if (chosen === null) return null;
+      const { executable, installPath } = await checkPickedExecutable(env, chosen);
+      const key = deps.files.compareKey(executable);
+      const title = normalizeLabel([...manualTitle(executable)].slice(0, 200).join(""), 200).name;
+      const { canonicalId, created } = await deps.library.addManualGame({ title, executable, installPath, same: (e) => deps.files.compareKey(e) === key }, deps.clock.now());
+      return { game: await shown(canonicalId), created };
+    },
+    async pickManualExecutable(canonicalId) {
+      filePicker();
+      await requireManualOnly(canonicalId);
+      const chosen = await pickExecutable();
+      if (chosen === null) return null;
+      const { executable, installPath } = await checkPickedExecutable(env, chosen);
+      await deps.library.setManualInstallation(canonicalId, { executable, installPath }, deps.clock.now());
+      return shown(canonicalId);
+    },
+    async removeGame(canonicalId) {
+      await deps.library.removeManual(await requireManualOnly(canonicalId));
     },
     listCollections: () => deps.userData.listCollections(),
     createCollection: async (name) => deps.userData.createCollection(normalizeLabel(name, COLLECTION_MAX_LENGTH), deps.clock.now()),

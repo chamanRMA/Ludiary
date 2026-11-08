@@ -130,6 +130,11 @@ export interface FolderPicker {
   pick(opts: { title: string }): Promise<string | null>;
 }
 
+/** ADR 93. Native "Open file" dialog for one .exe on the user's desktop (localhost only). null if cancelled. Texts arrive translated. */
+export interface FilePicker {
+  pickExecutable(opts: { title: string; filterName: string }): Promise<string | null>;
+}
+
 /** ADR 89. Documents folder of the user, already resolved by the OS. null if the OS does not say. */
 export interface UserFolders {
   documents(): Promise<string | null>;

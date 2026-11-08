@@ -283,6 +283,31 @@ export function createLocalServer(deps: LocalServerDeps): LocalServer {
     async (req) => core.updateGame(req.params.id, req.body),
   );
 
+  // ADR 93. Session + key (default). The body is always empty: a path never arrives through the API.
+  app.post(
+    "/api/manual-games/pick",
+    { schema: { querystring: noQuery, body: EmptyObjectSchema, response: { 200: { anyOf: [PickCancelledSchema, GameDetailSchema] }, 201: GameDetailSchema } } },
+    async (_req, reply) => {
+      const r = await core.addManualGame();
+      return r === null ? reply.code(200).send({ cancelled: true }) : reply.code(r.created ? 201 : 200).send(r.game);
+    },
+  );
+
+  app.post<{ Params: IdParams }>(
+    "/api/games/:id/executable/pick",
+    { schema: { params: IdParamsSchema, querystring: noQuery, body: EmptyObjectSchema, response: { 200: { anyOf: [PickCancelledSchema, GameDetailSchema] } } } },
+    async (req) => (await core.pickManualExecutable(req.params.id)) ?? { cancelled: true },
+  );
+
+  app.delete<{ Params: IdParams }>(
+    "/api/games/:id",
+    { schema: { params: IdParamsSchema, querystring: noQuery } },
+    async (req, reply) => {
+      await core.removeGame(req.params.id);
+      return reply.code(204).send();
+    },
+  );
+
   app.get("/api/collections", { schema: { querystring: noQuery, response: { 200: list(CollectionSchema) } } }, async () =>
     core.listCollections(),
   );

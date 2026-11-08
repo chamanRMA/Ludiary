@@ -25,6 +25,7 @@ const (
 	fosPickFolders     = 0x00000020
 	fosForceFileSystem = 0x00000040
 	fosPathMustExist   = 0x00000800
+	fosFileMustExist   = 0x00001000
 	sigdnFileSysPath   = 0x80058000
 	hresultCancelled   = 0x800704C7
 	maxTitleLen        = 512
@@ -45,12 +46,21 @@ var (
 )
 
 type pickRequest struct {
-	Title string `json:"title"`
+	Title      string `json:"title"`
+	FilterName string `json:"filterName"` // --pick-file only; the pattern is never read from the request
 }
+
+// filePattern is the only filter --pick-file offers (ADR 93).
+const filePattern = "*.exe"
+
+// filterSpec is COMDLG_FILTERSPEC.
+type filterSpec struct{ name, spec *uint16 }
+
+var fileFilter filterSpec
 
 func parsePickRequest(line []byte) (pickRequest, bool) {
 	var req pickRequest
-	if err := json.Unmarshal(line, &req); err != nil || len(req.Title) > maxTitleLen {
+	if err := json.Unmarshal(line, &req); err != nil || len(req.Title) > maxTitleLen || len(req.FilterName) > maxTitleLen {
 		return pickRequest{}, false
 	}
 	return req, true
@@ -70,6 +80,7 @@ func comRelease(obj unsafe.Pointer) { comCall(obj, 2) }
 // Vtable slots (IUnknown 0-2, IModalWindow 3, IFileDialog 4..).
 const (
 	slotShow       = 3
+	slotSetFileTypes = 4
 	slotSetOptions = 9
 	slotGetOptions = 10
 	slotSetTitle   = 17
@@ -77,8 +88,20 @@ const (
 	slotItemName   = 5 // IShellItem::GetDisplayName
 )
 
-// newFolderDialog creates the dialog and configures it (without showing it). The caller releases it.
-func newFolderDialog(title string) (unsafe.Pointer, error) {
+// dialogOptions adds the flags of each mode. File mode never sets FOS_NODEREFERENCELINKS (0x100): a shortcut is
+// resolved to its target by the dialog (ADR 93, A5).
+func dialogOptions(opts uint32, file bool) uint32 {
+	opts |= fosForceFileSystem | fosNoChangeDir | fosPathMustExist
+	if file {
+		return opts | fosFileMustExist
+	}
+	return opts | fosPickFolders
+}
+
+// newDialog creates the folder dialog, or in file mode an "Open file" dialog limited to *.exe, and configures it
+// (without showing it). The shortcut (.lnk) is resolved by the dialog: FOS_NODEREFERENCELINKS is not set (ADR 93, A5).
+// The caller releases it.
+func newDialog(title string, file bool, filterName string) (unsafe.Pointer, error) {
 	var dlg unsafe.Pointer
 	const clsctxInprocServer = 0x1
 	hr, _, _ := procCoCreateInstance.Call(uintptr(unsafe.Pointer(&clsidFileOpenDialog)), 0, clsctxInprocServer,
@@ -91,10 +114,25 @@ func newFolderDialog(title string) (unsafe.Pointer, error) {
 		comRelease(dlg)
 		return nil, windows.Errno(hr)
 	}
-	opts |= fosPickFolders | fosForceFileSystem | fosNoChangeDir | fosPathMustExist
+	opts = dialogOptions(opts, file)
 	if hr := comCall(dlg, slotSetOptions, uintptr(opts)); int32(hr) < 0 {
 		comRelease(dlg)
 		return nil, windows.Errno(hr)
+	}
+	if file {
+		name, err1 := windows.UTF16PtrFromString(filterName)
+		spec, err2 := windows.UTF16PtrFromString(filePattern)
+		if err1 != nil || err2 != nil {
+			comRelease(dlg)
+			return nil, windows.ERROR_INVALID_PARAMETER
+		}
+		// Package-level (not on the stack) so the address handed to COM as a uintptr cannot move.
+		fileFilter = filterSpec{name, spec}
+		hr := comCall(dlg, slotSetFileTypes, 1, uintptr(unsafe.Pointer(&fileFilter)))
+		if int32(hr) < 0 {
+			comRelease(dlg)
+			return nil, windows.Errno(hr)
+		}
 	}
 	if title != "" {
 		t, err := windows.UTF16PtrFromString(title)
@@ -119,8 +157,8 @@ func foregroundOwner() uintptr {
 	return hwnd
 }
 
-// pickFolder returns (path, cancelled, error).
-func pickFolder(title string) (string, bool, error) {
+// pickPath returns (path, cancelled, error).
+func pickPath(title string, file bool, filterName string) (string, bool, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if err := windows.CoInitializeEx(0, windows.COINIT_APARTMENTTHREADED); err != nil {
@@ -128,7 +166,7 @@ func pickFolder(title string) (string, bool, error) {
 	}
 	defer windows.CoUninitialize()
 
-	dlg, err := newFolderDialog(title)
+	dlg, err := newDialog(title, file, filterName)
 	if err != nil {
 		return "", false, err
 	}
@@ -157,7 +195,12 @@ func pickFolder(title string) (string, bool, error) {
 	return windows.UTF16PtrToString(name), false, nil
 }
 
-func handlePickFolder(in io.Reader, out io.Writer) int {
+func handlePickFolder(in io.Reader, out io.Writer) int { return handlePick(in, out, false) }
+
+// handlePickFile is `--pick-file` (ADR 93): same protocol, one .exe.
+func handlePickFile(in io.Reader, out io.Writer) int { return handlePick(in, out, true) }
+
+func handlePick(in io.Reader, out io.Writer, file bool) int {
 	respond := func(v map[string]any, code int) int {
 		_ = json.NewEncoder(out).Encode(v)
 		return code
@@ -171,7 +214,7 @@ func handlePickFolder(in io.Reader, out io.Writer) int {
 	if !ok {
 		return respond(map[string]any{"error": "bad-request"}, 2)
 	}
-	path, cancelled, err := pickFolder(req.Title)
+	path, cancelled, err := pickPath(req.Title, file, req.FilterName)
 	switch {
 	case err != nil:
 		return respond(map[string]any{"error": "dialog-failed"}, 1)

@@ -17,6 +17,17 @@ export interface KeptValues {
   nextAllowedAt: { store: string; operation: string; at: number }[];
   /** pathKey of the user scan folders that are enabled in the database being replaced (point 16, H1). */
   activeUserRoots: string[];
+  /**
+   * ADR 93 point 6 (A1, A7). Manual installations of the database being replaced: `key` = compareKey of the executable.
+   * Absent (older state, `-raw` case, no path helpers): every manual installation of the restored copy is dropped.
+   */
+  activeManualExecutables?: { key: string; executable: string; installPath: string }[];
+}
+
+/** ADR 93 (A7). The platform's path semantics, given by `runtime` (the db package has no `LocalFiles`). */
+export interface RestorePaths {
+  compareKey(path: string): string;
+  dirname(path: string): string;
 }
 
 export interface PendingRestore {
@@ -99,14 +110,29 @@ const readSetting = (db: Database.Database, key: string): unknown => {
   }
 };
 
-function readKept(db: Database.Database): { kept: KeptValues; chained: boolean } {
+function readKept(db: Database.Database, paths?: RestorePaths): { kept: KeptValues; chained: boolean } {
   const periodic = readSetting(db, K.periodic);
   const folder = readSetting(db, K.folder);
   const installId = readSetting(db, K.installId);
   const rows = db.prepare("SELECT store, operation, next_allowed_at AS at FROM sync_state WHERE next_allowed_at IS NOT NULL").all() as KeptValues["nextAllowedAt"];
   const roots = db.prepare("SELECT path_key AS k FROM scan_roots WHERE origin = 'user' AND enabled = 1").all() as { k: string }[];
+  const manual: NonNullable<KeptValues["activeManualExecutables"]> = [];
+  if (paths) {
+    const rows = db
+      .prepare("SELECT i.install_path AS p, i.launch_data AS d FROM installations i JOIN game_properties g ON g.id = i.property_id WHERE g.store = 'manual' AND i.detected_by = 'library'")
+      .all() as { p: string; d: string | null }[];
+    for (const r of rows) {
+      const executable = parseExecutable(r.d);
+      try {
+        if (executable !== undefined) manual.push({ key: paths.compareKey(executable), executable, installPath: r.p });
+      } catch {
+        // unusable path: not carried over
+      }
+    }
+  }
   return {
     kept: {
+      activeManualExecutables: manual,
       ...(typeof periodic === "boolean" ? { periodic } : {}),
       ...(typeof folder === "string" ? { folder } : {}),
       ...(typeof installId === "string" ? { installId } : {}),
@@ -116,6 +142,15 @@ function readKept(db: Database.Database): { kept: KeptValues; chained: boolean }
     chained: readSetting(db, K.restoredAt) !== undefined,
   };
 }
+
+const parseExecutable = (launchData: string | null): string | undefined => {
+  try {
+    const e = (JSON.parse(launchData ?? "null") as { executable?: unknown } | null)?.executable;
+    return typeof e === "string" ? e : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 /** Step B, repeatable: wal/shm out of the way, then the restored file over the database. */
 function swapFiles(dataDir: string): void {
@@ -155,6 +190,7 @@ export async function applyPendingRestoreSwap(
   state: PendingRestore,
   now: number,
   log: (msg: string) => void = () => {},
+  paths?: RestorePaths,
 ): Promise<PendingRestore | null> {
   if (state.phase !== "prepared") {
     if (state.phase === "swapped") swapFiles(dataDir);
@@ -176,7 +212,7 @@ export async function applyPendingRestoreSwap(
     let db: Database.Database | null = null;
     try {
       db = openDatabase(dbFile, addon);
-      const read = readKept(db);
+      const read = readKept(db, paths);
       const name = preRestoreName(now, !read.chained);
       mkdirSync(backupDir, { recursive: true });
       await db.backup(join(backupDir, `${name}.partial`));
@@ -217,9 +253,28 @@ export async function applyPendingRestoreSwap(
 }
 
 /** Step C. One idempotent transaction on the migrated, restored database. Returns how many user folders it switched off. */
-export function applyRestoreAdjustments(db: Database.Database, kept: KeptValues, now: number): number {
+export function applyRestoreAdjustments(db: Database.Database, kept: KeptValues, now: number, paths?: RestorePaths): number {
   return db.transaction(() => {
-    db.prepare("DELETE FROM installations").run();
+    // ADR 93 (A1): a manual installation survives only if its executable is a manual one of the database being replaced AND
+    // its folder is that executable's folder; it is then rewritten with the current values. Anything else is dropped.
+    const current = new Map((paths ? (kept.activeManualExecutables ?? []) : []).map((m) => [m.key, m]));
+    const survivors: { id: string; executable: string; installPath: string }[] = [];
+    if (paths) {
+      const rows = db
+        .prepare("SELECT i.id AS id, i.install_path AS p, i.launch_data AS d FROM installations i JOIN game_properties g ON g.id = i.property_id WHERE g.store = 'manual' AND i.detected_by = 'library'")
+        .all() as { id: string; p: string; d: string | null }[];
+      for (const r of rows) {
+        const exe = parseExecutable(r.d);
+        try {
+          const cur = exe === undefined ? undefined : current.get(paths.compareKey(exe));
+          if (exe !== undefined && cur && paths.compareKey(r.p) === paths.compareKey(paths.dirname(exe))) survivors.push({ id: r.id, executable: cur.executable, installPath: cur.installPath });
+        } catch {
+          // A tampered row (e.g. a NUL in launch_data) loses only itself, not the whole restoration.
+        }
+      }
+    }
+    db.prepare("DELETE FROM installations WHERE id NOT IN (SELECT value FROM json_each(?))").run(JSON.stringify(survivors.map((m) => m.id)));
+    for (const m of survivors) db.prepare("UPDATE installations SET install_path = ?, launch_data = ? WHERE id = ?").run(m.installPath, JSON.stringify({ executable: m.executable }), m.id);
     db.prepare("DELETE FROM scan_roots WHERE origin = 'discovered'").run();
     // H1 (hardened): a user folder stays on only if the same path is on in the database being replaced.
     const active = new Set(kept.activeUserRoots);

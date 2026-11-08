@@ -191,9 +191,21 @@ export function createCoreFacade(core: LudiaryCore): LudiaryCoreFacade {
             ...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}),
             ...(patch.tags !== undefined ? { tags: patch.tags } : {}),
             ...(patch.collectionIds !== undefined ? { collectionIds: patch.collectionIds } : {}),
+            ...(patch.title !== undefined ? { title: patch.title } : {}),
           }),
         ),
       ),
+    addManualGame: () =>
+      guard(async () => {
+        const r = await core.addManualGame();
+        return r ? { game: detailDto(r.game), created: r.created } : null;
+      }),
+    pickManualExecutable: (id) =>
+      guard(async () => {
+        const g = await core.pickManualExecutable(id);
+        return g ? detailDto(g) : null;
+      }),
+    removeGame: (id) => guard(() => core.removeGame(id)),
     listCollections: () => guard(async () => (await core.listCollections()).map(collectionDto)),
     createCollection: (name) => guard(async () => collectionDto(await core.createCollection(name))),
     renameCollection: (id, name) => guard(async () => collectionDto(await core.renameCollection(id, name))),

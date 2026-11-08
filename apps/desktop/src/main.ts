@@ -8,6 +8,7 @@ import type { UserDialogs } from "@ludiary/contracts";
 import {
   CredentialManagerKeyStore,
   HelperProcessDialogs,
+  HelperProcessFilePicker,
   HelperProcessFolderPicker,
   HelperProcessUserFolders,
   HelperProcessWatcher,
@@ -118,6 +119,7 @@ function compose(serverRole: boolean): RuntimeDeps {
     createLocationResolver: (files) => new WindowsLocationResolver({ files, runHelper, env }),
     createProcessLauncher: (allowedSchemes) => createWindowsProcessLauncher({ allowedSchemes }),
     folderPicker: new HelperProcessFolderPicker(runHelper),
+    filePicker: new HelperProcessFilePicker(runHelper), // ADR 93
     userFolders: new HelperProcessUserFolders(runHelper),
     processWatcher: new HelperProcessWatcher(runHelper), // ADR 92
     ...(embeddedLogin ? { embeddedLogin } : {}),

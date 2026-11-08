@@ -147,6 +147,7 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
     deviceId: r.deviceId,
     installPath: r.installPath,
     launchData: r.launchData ?? null,
+    detectedBy: r.detectedBy as "scan" | "library",
   });
 
   const installsOfDevice = (s: Scope) =>
@@ -514,6 +515,54 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
       return { games, dlc };
     },
 
+    async findManualByExecutable(same) {
+      const s = need();
+      return findManual(db, s, same)?.canonicalId ?? null;
+    },
+
+    async addManualGame(input, at) {
+      const s = need();
+      return db.transaction((tx) => {
+        // Checked inside the transaction: another add may have run while the dialog was open (ADR 93, A6).
+        const known = findManual(tx, s, input.same);
+        if (known) return { canonicalId: known.canonicalId, created: false };
+        const canonicalId = randomUUID();
+        const propertyId = randomUUID();
+        const normalizedTitle = normalizeTitle(input.title);
+        tx.insert(canonicalGames).values({ id: canonicalId, userId: s.userId, title: input.title, normalizedTitle, metadataSource: "manual", createdAt: at, updatedAt: at }).run();
+        // The stable key is `manual:<uuid>` (ADR 93 point 3): never the path, which is personal data.
+        tx.insert(gameProperties)
+          .values({ id: propertyId, userId: s.userId, canonicalGameId: canonicalId, store: "manual", storeGameId: randomUUID(), kind: "game", title: input.title, normalizedTitle, owned: 1 })
+          .run();
+        tx.insert(installations)
+          .values({ id: randomUUID(), userId: s.userId, propertyId, deviceId: s.deviceId, installPath: input.installPath, launchData: { executable: input.executable }, detectedBy: "library", lastSeenAt: at })
+          .run();
+        return { canonicalId, created: true };
+      });
+    },
+
+    async setManualInstallation(canonicalId, input, at) {
+      const s = need();
+      db.transaction((tx) => {
+        const prop = manualOnly(tx, s, canonicalId);
+        const row = { installPath: input.installPath, launchData: { executable: input.executable }, detectedBy: "library", lastSeenAt: at };
+        tx.insert(installations)
+          .values({ id: randomUUID(), userId: s.userId, propertyId: prop.id, deviceId: s.deviceId, ...row })
+          .onConflictDoUpdate({ target: [installations.propertyId, installations.deviceId], set: row })
+          .run();
+      });
+    },
+
+    async removeManual(canonicalId) {
+      const s = need();
+      db.transaction((tx) => {
+        manualOnly(tx, s, canonicalId);
+        tx.delete(gameProperties).where(and(eq(gameProperties.canonicalGameId, canonicalId), eq(gameProperties.userId, s.userId))).run(); // installations cascade
+        tx.delete(canonicalGames).where(and(eq(canonicalGames.id, canonicalId), eq(canonicalGames.userId, s.userId))).run(); // user data cascades (ADR 85)
+        deleteOrphanTags(tx, s);
+      });
+    },
+
     async applyScanPlan(plan) {
       const s = need();
       db.transaction((tx) => applyPlan(tx, s, plan, log));
@@ -526,6 +575,7 @@ export function createRepositories(sqlite: Database.Database, log?: Pick<CoreLog
       db.transaction((tx) => {
         // Checked again inside the transaction: the game or a collection may have gone since the core looked (ADR 85 point 12).
         if (!isShown(tx, s, canonicalId)) throw new CoreError("not-found", "The game is not shown");
+        if (patch.title !== undefined) renameManual(tx, s, canonicalId, patch.title, at);
         if (patch.favorite === true) {
           tx.insert(userGameData)
             .values({ canonicalGameId: canonicalId, userId: s.userId, favorite: 1, updatedAt: at })
@@ -1113,6 +1163,40 @@ function applyKindsAndLinks(
   }
 }
 
+/** ADR 93. The visible `game` property of a canonical game whose properties are ALL manual; `not-found` / `action-unavailable` otherwise. */
+function manualOnly(tx: Db | Tx, s: Scope, canonicalId: string): typeof gameProperties.$inferSelect {
+  if (!tx.select({ id: canonicalGames.id }).from(canonicalGames).where(and(eq(canonicalGames.id, canonicalId), eq(canonicalGames.userId, s.userId))).get()) {
+    throw new CoreError("not-found", "The game does not exist");
+  }
+  const all = tx.select().from(gameProperties).where(and(eq(gameProperties.canonicalGameId, canonicalId), eq(gameProperties.userId, s.userId))).all();
+  const prop = all.find((p) => p.kind === "game" && p.removedAt === null);
+  if (!prop || all.some((p) => p.store !== "manual")) throw new CoreError("action-unavailable", "Only manual games can be changed this way");
+  return prop;
+}
+
+/** ADR 93. `title` arrives normalized by the core; canonical and property change together. */
+function renameManual(tx: Db | Tx, s: Scope, canonicalId: string, title: string, at: number): void {
+  manualOnly(tx, s, canonicalId);
+  const normalizedTitle = normalizeTitle(title);
+  tx.update(canonicalGames).set({ title, normalizedTitle, updatedAt: at }).where(and(eq(canonicalGames.id, canonicalId), eq(canonicalGames.userId, s.userId))).run();
+  tx.update(gameProperties).set({ title, normalizedTitle }).where(and(eq(gameProperties.canonicalGameId, canonicalId), eq(gameProperties.userId, s.userId))).run();
+}
+
+/** ADR 93. The manual installation of this device whose executable satisfies `same`. */
+function findManual(tx: Db | Tx, s: Scope, same: (executable: string) => boolean): { canonicalId: string } | null {
+  const rows = tx
+    .select({ exe: installations.launchData, canonicalId: gameProperties.canonicalGameId })
+    .from(installations)
+    .innerJoin(gameProperties, eq(gameProperties.id, installations.propertyId))
+    .where(and(eq(installations.userId, s.userId), eq(installations.deviceId, s.deviceId), eq(gameProperties.store, "manual"), isNotNull(gameProperties.canonicalGameId)))
+    .all();
+  for (const r of rows) {
+    const e = r.exe?.executable;
+    if (typeof e === "string" && r.canonicalId && same(e)) return { canonicalId: r.canonicalId };
+  }
+  return null;
+}
+
 interface UserData {
   favorites: ReadonlySet<string>;
   tags: ReadonlyMap<string, readonly string[]>;
@@ -1387,13 +1471,13 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan, log?: Pick<CoreLogger, "war
 
   for (const part of chunks(plan.removeInstallations)) {
     tx.delete(installations)
-      .where(and(eq(installations.userId, s.userId), eq(installations.deviceId, s.deviceId), inArray(installations.id, part)))
+      .where(and(eq(installations.userId, s.userId), eq(installations.deviceId, s.deviceId), eq(installations.detectedBy, "scan"), inArray(installations.id, part)))
       .run();
   }
   for (const part of chunks(plan.retireProperties)) {
     tx.update(gameProperties)
       .set({ removedAt: at })
-      .where(and(eq(gameProperties.userId, s.userId), inArray(gameProperties.id, part)))
+      .where(and(eq(gameProperties.userId, s.userId), ne(gameProperties.store, "manual"), inArray(gameProperties.id, part)))
       .run();
   }
   for (const part of chunks(plan.reviveProperties)) {

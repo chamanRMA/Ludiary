@@ -148,6 +148,26 @@ describe("restoration at startup", () => {
     db.close();
   });
 
+
+  it("keeps a restored manual game whose executable is also one on this PC, with the install_path of the current database (ADR 93 A1, A7)", async () => {
+    await makeLudiaryDb(join(dataDir, "ludiary.db"), CURRENT);
+    await makeLudiaryDb(join(userDir, COPY_ID), RESTORED);
+    const addManual = (file: string, exe: string, folder: string) => {
+      const db = openDatabase(file, undefined);
+      db.prepare("INSERT INTO canonical_games (id, user_id, title, normalized_title, created_at, updated_at) VALUES ('gm', 'u1', 'Farm', 'farm', 1, 1)").run();
+      db.prepare("INSERT INTO game_properties (id, user_id, canonical_game_id, store, store_game_id, kind, title, normalized_title, owned) VALUES ('pm', 'u1', 'gm', 'manual', 'm1', 'game', 'Farm', 'farm', 1)").run();
+      db.prepare("INSERT INTO installations (id, user_id, property_id, device_id, install_path, launch_data, detected_by, last_seen_at) VALUES ('im', 'u1', 'pm', 'd1', ?, ?, 'library', 1)").run(folder, JSON.stringify({ executable: exe }));
+      db.close();
+    };
+    addManual(join(dataDir, "ludiary.db"), "D:\\Games\\Farm\\Farm.exe", "D:\\Games\\Farm");
+    addManual(join(userDir, COPY_ID), "d:\\games\\farm\\FARM.EXE", "d:\\games\\farm");
+    await prepare();
+    const { db } = await start();
+    expect(q(db, "SELECT install_path AS p, launch_data AS l FROM installations")).toEqual([
+      { p: "D:\\Games\\Farm", l: JSON.stringify({ executable: "D:\\Games\\Farm\\Farm.exe" }) },
+    ]);
+    db.close();
+  });
   it("H1: only a user folder that is also on in the current database stays on, whatever the install id; discovered ones go", async () => {
     for (const installId of ["bbbbbbbb", INSTALL]) {
       reset();
