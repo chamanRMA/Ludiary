@@ -133,7 +133,7 @@ Please report vulnerabilities privately. See [SECURITY.md](SECURITY.md).
 
 ## Code signing policy
 
-See the [code signing policy](docs/code-signing-policy.md). The project has applied to the [SignPath Foundation](https://signpath.org) program for free code signing.
+See the [code signing policy](docs/code-signing-policy.md). The installers are not code-signed yet; updates are still verified with the project's Ed25519 signature.
 
 ## License
 

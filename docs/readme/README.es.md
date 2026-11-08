@@ -133,7 +133,7 @@ Comunica las vulnerabilidades en privado. Mira [SECURITY.md](../../SECURITY.md).
 
 ## Política de firma de código
 
-Mira la [política de firma de código](../code-signing-policy.md) (en inglés). El proyecto ha solicitado la firma gratuita del programa [SignPath Foundation](https://signpath.org).
+Mira la [política de firma de código](../code-signing-policy.md) (en inglés). Los instaladores aún no están firmados con un certificado de firma de código; las actualizaciones se siguen verificando con la firma Ed25519 del proyecto.
 
 ## Licencia
 
