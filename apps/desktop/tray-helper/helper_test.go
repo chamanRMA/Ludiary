@@ -237,3 +237,19 @@ func TestProcessesIncludesTheOwnExecutable(t *testing.T) {
 		t.Fatalf("own executable %q missing in %d paths", self, len(got.Paths))
 	}
 }
+
+func TestDialogOptionsFileMode(t *testing.T) {
+	const fosNoDereferenceLinks = 0x00100000
+	got := dialogOptions(0, true)
+	for name, flag := range map[string]uint32{"PATHMUSTEXIST": fosPathMustExist, "FILEMUSTEXIST": fosFileMustExist, "FORCEFILESYSTEM": fosForceFileSystem} {
+		if got&flag == 0 {
+			t.Errorf("file mode lacks FOS_%s", name)
+		}
+	}
+	if got&fosNoDereferenceLinks != 0 || got&fosPickFolders != 0 {
+		t.Errorf("file mode sets a forbidden flag: %#x", got)
+	}
+	if dialogOptions(0, false)&fosPickFolders == 0 {
+		t.Error("folder mode lacks FOS_PICKFOLDERS")
+	}
+}

@@ -1471,13 +1471,13 @@ function applyPlan(tx: Tx, s: Scope, plan: ScanPlan, log?: Pick<CoreLogger, "war
 
   for (const part of chunks(plan.removeInstallations)) {
     tx.delete(installations)
-      .where(and(eq(installations.userId, s.userId), eq(installations.deviceId, s.deviceId), inArray(installations.id, part)))
+      .where(and(eq(installations.userId, s.userId), eq(installations.deviceId, s.deviceId), eq(installations.detectedBy, "scan"), inArray(installations.id, part)))
       .run();
   }
   for (const part of chunks(plan.retireProperties)) {
     tx.update(gameProperties)
       .set({ removedAt: at })
-      .where(and(eq(gameProperties.userId, s.userId), inArray(gameProperties.id, part)))
+      .where(and(eq(gameProperties.userId, s.userId), ne(gameProperties.store, "manual"), inArray(gameProperties.id, part)))
       .run();
   }
   for (const part of chunks(plan.reviveProperties)) {

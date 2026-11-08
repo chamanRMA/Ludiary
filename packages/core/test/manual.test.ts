@@ -32,6 +32,7 @@ describe("manualTitle", () => {
     expect(manualTitle("D:\\Game\\bin\\x64\\game.exe")).toBe("game");
     expect(manualTitle("D:\\Win64\\x.exe")).toBe("x");
     expect(manualTitle("D:\\Emu.EXE")).toBe("Emu");
+    expect(manualTitle("C:\\Users\\john\\game.exe")).toBe("game"); // never the Windows user name
   });
 });
 

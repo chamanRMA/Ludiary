@@ -104,6 +104,18 @@ describe("store syncs and scans leave manual rows intact (A8)", () => {
   });
 });
 
+describe("scan plans cannot touch manual rows by id (A8)", () => {
+  it("an EA plan naming the manual installation and property in removals and retirements leaves them", async () => {
+    await add();
+    const inst = (sqlite.prepare("SELECT id FROM installations").get() as { id: string }).id;
+    const prop = (sqlite.prepare("SELECT id FROM game_properties").get() as { id: string }).id;
+    const scan: ScanPlan = { store: "ea", at: 30, create: [], update: [], removeInstallations: [inst], retireProperties: [prop], reviveProperties: [], kindChanges: [], dlcLinks: [], upsertDiscoveredRoots: [], deleteRoots: [], sync: sync("ea") };
+    await repos.library.applyScanPlan(scan);
+    expect(count("installations")).toBe(1);
+    expect(sqlite.prepare("SELECT removed_at FROM game_properties").get()).toEqual({ removed_at: null });
+  });
+});
+
 describe("applyRestoreAdjustments (ADR 93 point 6, A1, A7)", () => {
   const kept = (current: { executable: string; installPath: string }[]): KeptValues => ({
     nextAllowedAt: [],
@@ -136,5 +148,14 @@ describe("applyRestoreAdjustments (ADR 93 point 6, A1, A7)", () => {
     sqlite.prepare("UPDATE game_properties SET store = 'steam'").run();
     applyRestoreAdjustments(sqlite, kept([{ executable: EXE, installPath: FOLDER }]), 50, paths);
     expect(rows()).toEqual([]);
+  });
+
+  it("a tampered row whose path cannot be compared loses only itself", async () => {
+    await add();
+    const bad = await add("D:\Games\Bad\bad.exe", "D:\Games\Bad");
+    sqlite.prepare("UPDATE installations SET launch_data = ? WHERE property_id IN (SELECT id FROM game_properties WHERE canonical_game_id = ?)").run(JSON.stringify({ executable: "D:\Games\Bad\ba\u0000d.exe" }), bad.canonicalId);
+    const strict: RestorePaths = { ...paths, compareKey: (p) => (p.includes("\u0000") ? (() => { throw new Error("NUL"); })() : p.toLowerCase()) };
+    applyRestoreAdjustments(sqlite, kept([{ executable: EXE, installPath: FOLDER }]), 50, strict);
+    expect(rows()).toEqual([{ p: FOLDER, l: JSON.stringify({ executable: EXE }) }]);
   });
 });

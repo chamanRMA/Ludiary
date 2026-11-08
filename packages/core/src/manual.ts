@@ -18,7 +18,9 @@ export function manualTitle(path: string): string {
   const parts = path.split(/[\\/]+/).filter((x) => x !== "");
   const file = (parts.pop() ?? "").replace(EXE, "");
   const folder = parts.length > 1 ? parts[parts.length - 1]! : undefined; // parts[0] is the drive
-  return folder === undefined || GENERIC_FOLDERS.has(folder.toLowerCase()) ? file : folder;
+  // A user profile folder (<drive>:\Users\<x>) would turn the Windows user name into the title.
+  const profile = parts.length === 3 && parts[1]!.toLowerCase() === "users";
+  return folder === undefined || profile || GENERIC_FOLDERS.has(folder.toLowerCase()) ? file : folder;
 }
 
 const badFile = (why: string, cause?: unknown): CoreError =>

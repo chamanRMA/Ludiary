@@ -123,7 +123,11 @@ function readKept(db: Database.Database, paths?: RestorePaths): { kept: KeptValu
       .all() as { p: string; d: string | null }[];
     for (const r of rows) {
       const executable = parseExecutable(r.d);
-      if (executable !== undefined) manual.push({ key: paths.compareKey(executable), executable, installPath: r.p });
+      try {
+        if (executable !== undefined) manual.push({ key: paths.compareKey(executable), executable, installPath: r.p });
+      } catch {
+        // unusable path: not carried over
+      }
     }
   }
   return {
@@ -261,8 +265,12 @@ export function applyRestoreAdjustments(db: Database.Database, kept: KeptValues,
         .all() as { id: string; p: string; d: string | null }[];
       for (const r of rows) {
         const exe = parseExecutable(r.d);
-        const cur = exe === undefined ? undefined : current.get(paths.compareKey(exe));
-        if (exe !== undefined && cur && paths.compareKey(r.p) === paths.compareKey(paths.dirname(exe))) survivors.push({ id: r.id, executable: cur.executable, installPath: cur.installPath });
+        try {
+          const cur = exe === undefined ? undefined : current.get(paths.compareKey(exe));
+          if (exe !== undefined && cur && paths.compareKey(r.p) === paths.compareKey(paths.dirname(exe))) survivors.push({ id: r.id, executable: cur.executable, installPath: cur.installPath });
+        } catch {
+          // A tampered row (e.g. a NUL in launch_data) loses only itself, not the whole restoration.
+        }
       }
     }
     db.prepare("DELETE FROM installations WHERE id NOT IN (SELECT value FROM json_each(?))").run(JSON.stringify(survivors.map((m) => m.id)));

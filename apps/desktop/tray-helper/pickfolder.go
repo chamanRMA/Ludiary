@@ -56,6 +56,8 @@ const filePattern = "*.exe"
 // filterSpec is COMDLG_FILTERSPEC.
 type filterSpec struct{ name, spec *uint16 }
 
+var fileFilter filterSpec
+
 func parsePickRequest(line []byte) (pickRequest, bool) {
 	var req pickRequest
 	if err := json.Unmarshal(line, &req); err != nil || len(req.Title) > maxTitleLen || len(req.FilterName) > maxTitleLen {
@@ -86,6 +88,16 @@ const (
 	slotItemName   = 5 // IShellItem::GetDisplayName
 )
 
+// dialogOptions adds the flags of each mode. File mode never sets FOS_NODEREFERENCELINKS (0x100): a shortcut is
+// resolved to its target by the dialog (ADR 93, A5).
+func dialogOptions(opts uint32, file bool) uint32 {
+	opts |= fosForceFileSystem | fosNoChangeDir | fosPathMustExist
+	if file {
+		return opts | fosFileMustExist
+	}
+	return opts | fosPickFolders
+}
+
 // newDialog creates the folder dialog, or in file mode an "Open file" dialog limited to *.exe, and configures it
 // (without showing it). The shortcut (.lnk) is resolved by the dialog: FOS_NODEREFERENCELINKS is not set (ADR 93, A5).
 // The caller releases it.
@@ -102,12 +114,7 @@ func newDialog(title string, file bool, filterName string) (unsafe.Pointer, erro
 		comRelease(dlg)
 		return nil, windows.Errno(hr)
 	}
-	opts |= fosForceFileSystem | fosNoChangeDir | fosPathMustExist
-	if file {
-		opts |= fosFileMustExist
-	} else {
-		opts |= fosPickFolders
-	}
+	opts = dialogOptions(opts, file)
 	if hr := comCall(dlg, slotSetOptions, uintptr(opts)); int32(hr) < 0 {
 		comRelease(dlg)
 		return nil, windows.Errno(hr)
@@ -119,9 +126,9 @@ func newDialog(title string, file bool, filterName string) (unsafe.Pointer, erro
 			comRelease(dlg)
 			return nil, windows.ERROR_INVALID_PARAMETER
 		}
-		fs := filterSpec{name, spec}
-		hr := comCall(dlg, slotSetFileTypes, 1, uintptr(unsafe.Pointer(&fs)))
-		runtime.KeepAlive(&fs)
+		// Package-level (not on the stack) so the address handed to COM as a uintptr cannot move.
+		fileFilter = filterSpec{name, spec}
+		hr := comCall(dlg, slotSetFileTypes, 1, uintptr(unsafe.Pointer(&fileFilter)))
 		if int32(hr) < 0 {
 			comRelease(dlg)
 			return nil, windows.Errno(hr)

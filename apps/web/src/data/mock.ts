@@ -471,7 +471,7 @@ export function createMockApi(storage: KeyValueStorage = browserStorage()): Ludi
     addManualGame: async () => {
       const n = library.filter((g) => g.stores.length === 0).length + 1;
       const id = `local-${now()}-${n}`;
-      library.push({ id, title: `Sample local game ${n}`, stores: [], installed: true, favorite: false, playtimeMinutes: 0, tags: [], mainAction: "play" });
+      library.push({ id, title: "Starfall", stores: [], installed: true, favorite: false, playtimeMinutes: 0, tags: [], mainAction: "play" });
       return (await detail(id)) as GameDetailDto;
     },
     pickManualExecutable: async (id) => {
