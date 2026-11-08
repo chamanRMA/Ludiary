@@ -27,6 +27,7 @@ Ludiary funciona en tu propio PC. Una pequeña aplicación de la bandeja arranca
 - **Jugar.** Lanza un juego desde Ludiary usando su entrada guardada. En GOG, Jugar pasa por GOG Galaxy por defecto (un ajuste permite abrir el juego directamente).
 - **Favoritos, etiquetas y colecciones**, y **tiempo de juego** que informa Steam. Las colecciones de Steam se importan y se refrescan en cada sincronización.
 - **DLC** dentro de la ficha de su juego base.
+- **Juegos manuales.** Añade un juego de otro lanzador o sin tienda eligiendo su `.exe`, y ábrelo con Jugar como los demás. Mira la [guía de juegos manuales](../guides/manual-games.md) (en inglés).
 - **Comparador de precios** con [IsThereAnyDeal](https://isthereanydeal.com): mejor precio, mínimo histórico y una lista de juegos que sigues. Pones tu propia clave gratuita. Puedes importar tus **listas de deseos de Steam y GOG** a esa lista. Mira la [guía de precios](../guides/prices.md) (en inglés).
 - **Copias de seguridad y restauración** de tu biblioteca y tus datos, automáticas o manuales. Mira la [guía de copias](../guides/backups.md) (en inglés).
 - **Actualizaciones automáticas firmadas** (Ed25519) con vuelta atrás si la nueva versión no arranca. Mira la [guía de actualizaciones](../guides/updates.md) (en inglés).
@@ -116,7 +117,7 @@ docs/
 
 - **Fase 2:** modo servidor casero en Docker, agente local y preparación para varios usuarios.
 - **Fase 4:** histórico de precios y alertas de mínimos. (La fase 3, el comparador de precios, ya está disponible.)
-- **Sin fase asignada:** juegos manuales desde la interfaz y edición de metadatos por el usuario.
+- **Sin fase asignada:** edición de metadatos por el usuario.
 
 ## Contribuir
 

@@ -27,6 +27,7 @@ Ludiary runs on your own PC. A small tray app starts a local server, and you use
 - **Play.** Launch a game from Ludiary by its saved entry. For GOG, Play goes through GOG Galaxy by default (a setting lets you open the game directly).
 - **Favorites, tags and collections**, plus **play time** reported by Steam. Steam collections are imported and refreshed on each sync.
 - **DLC** shown inside the page of its base game.
+- **Manual games.** Add a game from another launcher or without a store by choosing its `.exe`, and open it with Play like the rest. See the [manual games guide](docs/guides/manual-games.md).
 - **Price comparison** with [IsThereAnyDeal](https://isthereanydeal.com): best price, historical low and a list of games you follow. You bring your own free key. You can import your **Steam and GOG wishlists** into that list. See the [price guide](docs/guides/prices.md).
 - **Backups and restore** of your library and your data, automatic or manual. See the [backups guide](docs/guides/backups.md).
 - **Signed automatic updates** (Ed25519) with rollback if the new version does not start. See the [updates guide](docs/guides/updates.md).
@@ -116,7 +117,7 @@ docs/
 
 - **Phase 2:** home-server mode in Docker, a local agent, and groundwork for several users.
 - **Phase 4:** price history and alerts for lows. (Phase 3, the price comparator, is already available.)
-- **No phase yet:** manual games added from the interface, and editing game metadata yourself.
+- **No phase yet:** editing game metadata yourself.
 
 ## Contributing
 
