@@ -173,6 +173,27 @@ describe("real client: what the server serves", () => {
   });
 });
 
+describe("real client: manual games (ADR 93)", () => {
+  it("pick, change executable, rename and remove send no path; a cancelled dialog is null", async () => {
+    let reply: unknown = { id: "m1", title: "Farm" };
+    const { http, log } = fakeHttp((_m, p) => (p.endsWith("/pick") ? reply : undefined));
+    const api = createRealApi(http, createMockApi(memory()));
+    await expect(api.addManualGame()).resolves.toMatchObject({ id: "m1" });
+    await expect(api.pickManualExecutable("m1")).resolves.toMatchObject({ id: "m1" });
+    reply = { cancelled: true };
+    await expect(api.addManualGame()).resolves.toBeNull();
+    await api.updateGame("m1", { title: "New" });
+    await api.removeGame("m1");
+    expect(log).toEqual([
+      "POST /api/manual-games/pick {}",
+      "POST /api/games/m1/executable/pick {}",
+      "POST /api/manual-games/pick {}",
+      'PATCH /api/games/m1 {"title":"New"}',
+      "DELETE /api/games/m1",
+    ]);
+  });
+});
+
 describe("real client: backups (ADR 89)", () => {
   const state = { periodic: true, folder: "C:\\Docs\\Ludiary\\Copias", folderIsDefault: true, lastBackupAt: 4242, lastError: null, lastRestore: null, copies: [] };
   const ID = "ludiary-20261103T123456789Z-0a1b2c3d-manual.sqlite";

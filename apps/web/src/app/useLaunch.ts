@@ -24,7 +24,7 @@ export function useLaunch() {
     timer.current = setTimeout(() => setLaunching(false), 5000);
     try {
       await api.launchGame(gameId, propertyId, action === "play" ? undefined : action);
-      setMessage({ text: isSimulated ? t("game.playSimulated", { title }) : t(action === "install" ? "game.installing" : "game.launching", { store: storeName }), error: false });
+      setMessage({ text: isSimulated ? t("game.playSimulated", { title }) : storeName === "" && action === "play" ? t("game.launchingLocal", { title }) : t(action === "install" ? "game.installing" : "game.launching", { store: storeName }), error: false });
     } catch (e) {
       setMessage({ text: errorText(t, e), error: true });
     }

@@ -7,6 +7,7 @@ import {
   childEnv,
   createWindowsProcessLauncher,
   createHelperRunner,
+  HelperProcessFilePicker,
   HelperProcessFolderPicker,
   openWithShellHandler,
   rundll32Path,
@@ -124,6 +125,33 @@ describe("folder picker", () => {
     release('{"cancelled":true}');
     expect(await third).toBeNull();
     expect(calls).toBe(2);
+  });
+});
+
+describe("HelperProcessFilePicker (ADR 93)", () => {
+  it("calls --pick-file, joins a second call and treats the answer as untrusted", async () => {
+    let calls = 0;
+    let release!: (value: string) => void;
+    const inputs: string[] = [];
+    const picker = new HelperProcessFilePicker((args, input) => {
+      calls++;
+      expect(args).toEqual(["--pick-file"]);
+      inputs.push(input);
+      return new Promise<string>((resolve) => (release = resolve));
+    });
+    const first = picker.pickExecutable({ title: "Elegir", filterName: "Programas" });
+    const second = picker.pickExecutable({ title: "Otro", filterName: "x" });
+    release('{"path":"D:\\\\Games\\\\a.exe"}');
+    expect(await first).toBe("D:\\Games\\a.exe");
+    expect(await second).toBe("D:\\Games\\a.exe");
+    expect(calls).toBe(1);
+    expect(JSON.parse(inputs[0] ?? "")).toEqual({ title: "Elegir", filterName: "Programas" });
+    const bad = picker.pickExecutable({ title: "x", filterName: "y" });
+    release('{"path":"relative\\\\a.exe"}');
+    await expect(bad).rejects.toThrow();
+    const cancelled = picker.pickExecutable({ title: "x", filterName: "y" });
+    release('{"cancelled":true}');
+    expect(await cancelled).toBeNull();
   });
 });
 

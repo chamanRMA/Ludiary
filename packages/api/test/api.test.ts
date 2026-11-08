@@ -138,6 +138,7 @@ describe("access levels (ADR 67, 72)", () => {
       ["POST", "/api/onboarding/reset"], ["GET", "/api/settings"], ["PATCH", "/api/settings"],
       ["PATCH", "/api/games/g1"], ["GET", "/api/collections"], ["POST", "/api/collections"], ["PATCH", "/api/collections/c1"], ["DELETE", "/api/collections/c1"],
       ["PATCH", "/api/scan-roots/r1"], ["DELETE", "/api/scan-roots/r1"], ["POST", "/api/scan-roots/pick"],
+      ["POST", "/api/manual-games/pick"], ["POST", "/api/games/g1/executable/pick"], ["DELETE", "/api/games/g1"],
       ...WIZARD_ROUTES,
       ...PRICE_ROUTES,
     ];
@@ -515,6 +516,58 @@ describe("collections of a store as a mirror (ADR 88)", () => {
     expect((await send(port, "/api/collections/col2", { method: "DELETE", headers: auth })).status).toBe(422);
     const game = await send(port, "/api/games/g1", { headers: auth });
     expect(game.json()["collections"]).toEqual([{ id: "col1", name: "Pending", source: null }, { id: "col2", name: "Co-op", source: "steam" }]);
+  });
+});
+
+describe("manual games (ADR 93, point 9)", () => {
+  const detail = { id: "m1", title: "Farm", stores: [], installed: true, favorite: false, playtimeMinutes: 0, tags: [], properties: [{ id: "pm", store: "manual" as const, installed: true, actions: ["play" as const] }], dlc: [], collections: [] };
+
+  it("pick: 201 created, 200 same game, 200 cancelled, errors mapped, and no path field is accepted", async () => {
+    let mode: "new" | "same" | "cancel" | "bad" = "new";
+    const core = fakeCore({
+      addManualGame: async () => {
+        if (mode === "bad") throw new FakeCoreError("invalid-input", "core.errors.manual-bad-file");
+        return mode === "cancel" ? null : { game: detail, created: mode === "new" };
+      },
+    });
+    const { port } = await start({ core });
+    const { auth } = await login(port);
+    const pick = (body: unknown = {}) => send(port, "/api/manual-games/pick", { method: "POST", headers: auth, body });
+    expect((await pick()).status).toBe(201);
+    mode = "same";
+    expect((await pick()).status).toBe(200);
+    mode = "cancel";
+    expect((await pick()).json()).toEqual({ cancelled: true });
+    mode = "bad";
+    const bad = await pick();
+    expect(bad.status).toBe(400);
+    expect(JSON.stringify(bad.json())).toContain("core.errors.manual-bad-file");
+    for (const extra of ["path", "executable", "args", "cwd"]) expect((await pick({ [extra]: "C:/x.exe" })).status).toBe(400);
+  });
+
+  it("change executable, rename and remove", async () => {
+    const core = fakeCore({
+      pickManualExecutable: async (id) => (id === "m1" ? detail : null),
+      removeGame: async (id) => {
+        if (id === "nope") throw new FakeCoreError("not-found", "core.errors.not-found");
+        if (id === "steamy") throw new FakeCoreError("action-unavailable", "core.errors.action-unavailable");
+      },
+      updateGame: async () => detail,
+    });
+    const { port } = await start({ core });
+    const { auth } = await login(port);
+    const exe = (id: string, body: unknown = {}) => send(port, `/api/games/${id}/executable/pick`, { method: "POST", headers: auth, body });
+    expect((await exe("m1")).status).toBe(200);
+    expect((await exe("zzz")).json()).toEqual({ cancelled: true });
+    expect((await exe("m1", { path: "C:/x.exe" })).status).toBe(400);
+    const rename = (body: unknown) => send(port, "/api/games/m1", { method: "PATCH", headers: auth, body });
+    expect((await rename({ title: "New" })).status).toBe(200);
+    expect((await rename({ title: "x".repeat(201) })).status).toBe(400);
+    expect((await rename({ title: "x", executable: "C:/x.exe" })).status).toBe(400);
+    const del = (id: string) => send(port, `/api/games/${id}`, { method: "DELETE", headers: auth });
+    expect((await del("m1")).status).toBe(204);
+    expect((await del("nope")).status).toBe(404);
+    expect((await del("steamy")).status).toBe(422);
   });
 });
 

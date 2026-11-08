@@ -24,6 +24,7 @@ export {
   SwapError,
   preRestoreName,
   type KeptValues,
+  type RestorePaths,
   type PendingRead,
   type PendingRestore,
   type RestorePhase,

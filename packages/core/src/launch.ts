@@ -1,5 +1,5 @@
 // Launching a game (ADR 40 rule 5, invariant 3, ADR 72). The only input is stored ids; the LaunchSpec never leaves here.
-import { ConnectorError, ExecError, LocationsUnreadableError } from "@ludiary/contracts";
+import { ConnectorError, ExecError, isStrictLocalPath, LocationsUnreadableError } from "@ludiary/contracts";
 import type { LaunchContext, LaunchSpec, ResolvedLocation, StoreConnector } from "@ludiary/contracts";
 import { DOUBLE_LAUNCH_MS, LAUNCH_ORDER, type Env } from "./env";
 import { asKey, CoreError, toCoreError } from "./errors";
@@ -7,6 +7,14 @@ import type { LaunchTarget } from "./model";
 import { storedActiveRoots } from "./active-roots";
 import { effectiveLocale, readLaunchMode, readSettings } from "./settings";
 import { insideAny } from "./validate";
+import { parentOf } from "./manual";
+
+/** ADR 93 point 4: what `checkSpec` reads of its source. A manual game has no connector. */
+interface SpecSource {
+  id: string;
+  capabilities: { launchKinds: readonly ("uri" | "exec")[]; uriSchemes: readonly string[] };
+}
+const MANUAL_SOURCE: SpecSource = { id: "manual", capabilities: { launchKinds: ["exec"], uriSchemes: [] } };
 
 const CONTROL = /\p{Cc}/u;
 const URI_BAD = /[\p{Cc}\s"'<>\\^`{|}]/u;
@@ -30,7 +38,7 @@ function pickTarget(targets: readonly LaunchTarget[], propertyId: string | undef
       t.property.removedAt === null &&
       (action === "play" ? t.installation !== null : t.installation === null && t.property.owned),
   );
-  for (const store of LAUNCH_ORDER) {
+  for (const store of [...LAUNCH_ORDER, "manual"]) {
     const t = live.find((x) => x.property.store === store);
     if (t) return t;
   }
@@ -60,13 +68,13 @@ export function createLaunchService(env: Env): LaunchService {
     return { launchers: out, resolved };
   }
 
-  function reject(c: StoreConnector, why: string): never {
+  function reject(c: SpecSource, why: string): never {
     deps.log.warn("Launch specification rejected", { connector: c.id, reason: why });
     throw new CoreError("launch.rejected", `Launch specification rejected: ${why}`);
   }
 
   /** Rule 5 of ADR 40. Throws launch.rejected; otherwise the spec is safe to hand to ProcessLauncher. */
-  async function checkSpec(c: StoreConnector, spec: unknown, execRoots: readonly string[], client?: ClientRule): Promise<LaunchSpec> {
+  async function checkSpec(c: SpecSource, spec: unknown, execRoots: readonly string[], client?: ClientRule): Promise<LaunchSpec> {
     let allowedRoots = execRoots;
     const launcher = deps.launcher;
     if (!launcher) throw new CoreError("action-unavailable", "This mode cannot launch games");
@@ -155,6 +163,60 @@ export function createLaunchService(env: Env): LaunchService {
     return undefined;
   }
 
+  /** Double-click guard (also covers a second click while the first is still being resolved); a failed attempt does not block the retry. */
+  async function guarded(clickKey: string, run: () => Promise<void>): Promise<{ status: "started" | "already-starting" }> {
+    const now = deps.clock.now();
+    const last = lastStart.get(clickKey);
+    if (last !== undefined && now - last < DOUBLE_LAUNCH_MS) return { status: "already-starting" };
+    lastStart.set(clickKey, now);
+    try {
+      await run();
+      return { status: "started" };
+    } catch (e) {
+      lastStart.delete(clickKey);
+      throw e;
+    }
+  }
+
+  /** Hands a checked spec to the platform and maps its refusal. Never logs the path or the arguments: they may hold the user name (ADR 76 point 2). */
+  async function start(safe: LaunchSpec, id: string, denied: { key: string; params?: Record<string, string> }): Promise<void> {
+    const launcher = deps.launcher!;
+    try {
+      if (safe.kind === "uri") await launcher.openUri(safe.uri);
+      else await launcher.exec({ executable: safe.executable, args: safe.args, ...(safe.cwd !== undefined ? { cwd: safe.cwd } : {}) });
+    } catch (e) {
+      if (e instanceof ExecError && e.reason !== "failed") {
+        deps.log.warn("The platform refused to start the game", { connector: id, reason: e.reason });
+        if (e.reason === "denied") throw new CoreError("launch.denied", "The OS did not allow opening the game", { key: asKey(denied.key), ...(denied.params ? { params: denied.params } : {}), cause: e });
+        throw new CoreError("launch.rejected", "The platform rejected the launch specification", { cause: e });
+      }
+      deps.log.error("The platform could not start the game", { connector: id, error: e instanceof Error ? e.name : "unknown" });
+      throw new CoreError("internal", "The platform could not start the game", { cause: e });
+    }
+  }
+
+  /** ADR 93 point 4 and 15 (A1, A8). Everything comes from the stored installation; only `launch_data.executable` is read. */
+  async function launchManual(canonicalId: string, action: "play" | "install", installation: NonNullable<LaunchTarget["installation"]>) {
+    if (action !== "play") throw new CoreError("action-unavailable", "A manual game can only be played");
+    if (!deps.launcher) throw new CoreError("action-unavailable", "This mode cannot launch games");
+    return guarded(`${canonicalId}|${action}`, async () => {
+      const exe = installation.launchData?.executable;
+      if (installation.detectedBy !== "library" || typeof exe !== "string") return reject(MANUAL_SOURCE, "not a registered manual installation");
+      // Before anything touches the disk (a UNC path would open a network connection).
+      if (!isStrictLocalPath(exe) || !isStrictLocalPath(installation.installPath)) return reject(MANUAL_SOURCE, "path is not local");
+      let cwd: string;
+      try {
+        cwd = parentOf(await deps.files.realPath(exe));
+        if (deps.files.compareKey(cwd) !== deps.files.compareKey(await deps.files.realPath(installation.installPath))) return reject(MANUAL_SOURCE, "executable is not in its install folder");
+      } catch (e) {
+        if (e instanceof CoreError) throw e;
+        return reject(MANUAL_SOURCE, "path could not be resolved");
+      }
+      const safe = await checkSpec(MANUAL_SOURCE, { kind: "exec", executable: exe, args: [], cwd }, [installation.installPath]);
+      await start(safe, MANUAL_SOURCE.id, { key: "game.launchDeniedLocal" });
+    });
+  }
+
   return {
     async launch(canonicalId, propertyId, action = "play") {
       if (action !== "play" && action !== "install") throw new CoreError("invalid-input", "Unknown launch action");
@@ -174,20 +236,17 @@ export function createLaunchService(env: Env): LaunchService {
         if (installation !== null) throw new CoreError("action-unavailable", "The game is already installed");
         if (!property.owned || property.removedAt !== null) throw new CoreError("action-unavailable", "The game is not owned");
       }
-      if (property.store === "manual") throw new CoreError("action-unavailable", "Manual entries cannot be launched yet");
+      if (property.store === "manual") {
+        if (action === "play") return launchManual(canonicalId, action, installation!); // installed: checked above
+        throw new CoreError("action-unavailable", "A manual game can only be played");
+      }
 
       const connector = env.connectors.get(property.store);
       if (!connector) throw new CoreError("action-unavailable", "No connector for this store");
       if (!connector.capabilities.actions.includes(action)) throw new CoreError("action-unavailable", `The store does not support ${action}`);
       if (!deps.launcher) throw new CoreError("action-unavailable", "This mode cannot launch games");
 
-      const now = deps.clock.now();
-      const clickKey = `${canonicalId}|${action}`;
-      const last = lastStart.get(clickKey);
-      if (last !== undefined && now - last < DOUBLE_LAUNCH_MS) return { status: "already-starting" };
-      lastStart.set(clickKey, now); // also covers a second click while this one is still being resolved
-
-      try {
+      return guarded(`${canonicalId}|${action}`, async () => {
         // Only what the scan would still see: a disabled or removed folder, or detection 'later', means not installed.
         if (action === "play" && installation !== null) {
           const mode = (await readSettings(env)).detection ?? "later";
@@ -232,24 +291,8 @@ export function createLaunchService(env: Env): LaunchService {
         if (spec === null) throw new CoreError("action-unavailable", `The connector has no ${action} action for this property`);
 
         const safe = await checkSpec(connector, spec, execRoots, action === "play" && launchMode === "client" ? await clientRule(connector, launchers, resolved) : undefined);
-        try {
-          if (safe.kind === "uri") await deps.launcher.openUri(safe.uri);
-          else await deps.launcher.exec({ executable: safe.executable, args: safe.args, ...(safe.cwd !== undefined ? { cwd: safe.cwd } : {}) });
-        } catch (e) {
-          // Never the path or the arguments: they may hold the user name (ADR 76 point 2).
-          if (e instanceof ExecError && e.reason !== "failed") {
-            deps.log.warn("The platform refused to start the game", { connector: connector.id, reason: e.reason });
-            if (e.reason === "denied") throw new CoreError("launch.denied", "The OS did not allow opening the game", { key: asKey("game.launchDenied"), params: { store: connector.id }, cause: e });
-            throw new CoreError("launch.rejected", "The platform rejected the launch specification", { cause: e });
-          }
-          deps.log.error("The platform could not start the game", { connector: connector.id, error: e instanceof Error ? e.name : "unknown" });
-          throw new CoreError("internal", "The platform could not start the game", { cause: e });
-        }
-        return { status: "started" };
-      } catch (e) {
-        lastStart.delete(clickKey); // a failed attempt must not block the retry
-        throw e;
-      }
+        await start(safe, connector.id, { key: "game.launchDenied", params: { store: connector.id } });
+      });
     },
   };
 }

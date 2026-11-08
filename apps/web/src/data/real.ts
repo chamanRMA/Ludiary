@@ -229,6 +229,15 @@ export function createRealApi(http: Http, sim: LudiaryApi, storage: WizardIdStor
       }
     },
     updateGame: (id, patch) => http.patch<GameDetailDto>(`/api/games/${enc(id)}`, patch satisfies GamePatchDto),
+    addManualGame: async () => {
+      const answer = await http.post<PickCancelledDto | GameDetailDto>("/api/manual-games/pick", {});
+      return "cancelled" in answer ? null : answer;
+    },
+    pickManualExecutable: async (id) => {
+      const answer = await http.post<PickCancelledDto | GameDetailDto>(`/api/games/${enc(id)}/executable/pick`, {});
+      return "cancelled" in answer ? null : answer;
+    },
+    removeGame: (id) => http.delete(`/api/games/${enc(id)}`),
     getCollections: () => http.get<readonly CollectionDto[]>("/api/collections"),
     createCollection: (name) => http.post<CollectionDto>("/api/collections", { name } satisfies CollectionCreateDto),
     renameCollection: (id, name) => http.patch<CollectionDto>(`/api/collections/${enc(id)}`, { name } satisfies CollectionPatchDto),

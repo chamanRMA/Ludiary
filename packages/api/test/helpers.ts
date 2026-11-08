@@ -70,6 +70,7 @@ export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCor
     playtimeMinutes: 0,
     tags: [],
   };
+  const manualDetail = { ...game, id: "m1", stores: [] as never[], properties: [{ id: "pm", store: "manual" as const, installed: true, actions: ["play" as const] }], dlc: [], collections: [] };
   const rec = <T>(name: string, value: T) => async (...args: unknown[]): Promise<T> => {
     calls.push([name, ...args]);
     return value;
@@ -82,6 +83,9 @@ export function fakeCore(overrides: Partial<LudiaryCoreFacade> = {}): LudiaryCor
       return id === "g1" ? { ...game, properties: [{ id: "p1", store: "steam", installed: true, actions: ["play"] }], dlc: [], collections: [{ id: "col1", name: "Pending", source: null }, { id: "col2", name: "Co-op", source: "steam" as const }] } : null;
     },
     updateGame: rec("updateGame", { ...game, properties: [], dlc: [], collections: [] }),
+    addManualGame: rec("addManualGame", null as { game: typeof manualDetail; created: boolean } | null),
+    pickManualExecutable: rec("pickManualExecutable", null as typeof manualDetail | null),
+    removeGame: rec("removeGame", undefined),
     listCollections: rec("listCollections", [{ id: "col1", name: "Pending", source: null, gameIds: ["g1"] }, { id: "col2", name: "Co-op", source: "steam" as const, gameIds: ["g1"] }]),
     createCollection: rec("createCollection", { id: "col1", name: "Pending", source: null, gameIds: [] }),
     renameCollection: rec("renameCollection", { id: "col1", name: "Renamed", source: null, gameIds: [] }),

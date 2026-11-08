@@ -103,7 +103,7 @@ describe("applyScanPlan", () => {
     ]);
     const props = await repos.library.listProperties("steam");
     expect(props).toEqual([{ id: "p1", canonicalGameId: "c1", store: "steam", storeGameId: "620", kind: "game", baseStoreGameId: null, dlcInferred: false, title: "Portal 2", normalizedTitle: "portal 2", owned: false, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null }]);
-    expect(await repos.library.listInstallations("steam")).toEqual([{ id: "i1", propertyId: "p1", deviceId: expect.any(String), installPath: "D:\\Games\\Portal 2", launchData: { a: "b" } }]);
+    expect(await repos.library.listInstallations("steam")).toEqual([{ id: "i1", propertyId: "p1", deviceId: expect.any(String), installPath: "D:\\Games\\Portal 2", launchData: { a: "b" }, detectedBy: "scan" }]);
     expect(sqlite.prepare("SELECT user_id FROM installations").get()).toEqual({ user_id: expect.any(String) });
     expect((await repos.syncState.get("steam", "scan"))?.status).toBe("idle");
   });

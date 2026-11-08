@@ -21,7 +21,7 @@ import type {
   StoreId,
   FolderPicker,
 } from "@ludiary/contracts";
-import { collectionsKey, createCore, emptyMirrorCounts, planCollectionMirror, type CoreDeps, type LudiaryCore } from "../src";
+import { CoreError, collectionsKey, createCore, emptyMirrorCounts, planCollectionMirror, type CoreDeps, type LudiaryCore } from "../src";
 import type {
   GameDetail,
   GameSummary,
@@ -233,7 +233,7 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
         title: g.title,
         ...(g.media?.coverUrl ? { coverUrl: g.media.coverUrl } : {}),
         ...(g.media?.heroUrl ? { coverFallbackUrl: g.media.heroUrl } : {}),
-        stores: ps.map((p) => p.store as StoreId),
+        stores: ps.filter((p) => p.store !== "manual").map((p) => p.store as StoreId),
         installed: ps.some((p) => [...this.installs.values()].some((i) => i.propertyId === p.id)),
         favorite: false,
         playtimeMinutes: ps.reduce((n, p) => n + (p.storePlaytimeMinutes ?? 0), 0),
@@ -263,6 +263,43 @@ export class MemoryStore implements LibraryRepository, IdentityRepository {
     return [...this.properties.values()]
       .filter((p) => p.canonicalGameId === id)
       .map((p) => ({ canonicalGameId: id, property: p, installation: [...this.installs.values()].find((i) => i.propertyId === p.id) ?? null }));
+  }
+  /** ADR 93. In-memory versions of the manual-game transactions. */
+  private manualSeq = 0;
+  async findManualByExecutable(same: (e: string) => boolean) {
+    for (const i of this.installs.values()) {
+      const p = this.properties.get(i.propertyId);
+      if (p?.store === "manual" && typeof i.launchData?.executable === "string" && same(i.launchData.executable)) return p.canonicalGameId;
+    }
+    return null;
+  }
+  async addManualGame(input: { title: string; executable: string; installPath: string; same: (e: string) => boolean }, _at: number) {
+    const known = await this.findManualByExecutable(input.same);
+    if (known) return { canonicalId: known, created: false };
+    const n = ++this.manualSeq;
+    const canonicalId = `m-c${n}`;
+    this.canonical.set(canonicalId, { id: canonicalId, title: input.title });
+    this.properties.set(`m-p${n}`, { id: `m-p${n}`, canonicalGameId: canonicalId, store: "manual", storeGameId: `uuid${n}`, kind: "game", baseStoreGameId: null, title: input.title, normalizedTitle: input.title.toLowerCase(), owned: true, removedAt: null, storePlaytimeMinutes: null, storeLastPlayedAt: null });
+    this.installs.set(`m-i${n}`, { id: `m-i${n}`, propertyId: `m-p${n}`, deviceId: "dev", installPath: input.installPath, launchData: { executable: input.executable }, detectedBy: "library" });
+    return { canonicalId, created: true };
+  }
+  private manualProp(canonicalId: string): PropertyRecord {
+    const ps = [...this.properties.values()].filter((p) => p.canonicalGameId === canonicalId);
+    if (ps.length === 0) throw new CoreError("not-found", "gone");
+    if (ps.some((p) => p.store !== "manual")) throw new CoreError("action-unavailable", "not manual");
+    return ps[0]!;
+  }
+  async setManualInstallation(canonicalId: string, input: { executable: string; installPath: string }) {
+    const p = this.manualProp(canonicalId);
+    const old = [...this.installs.values()].find((i) => i.propertyId === p.id);
+    const id = old?.id ?? `m-i-${p.id}`;
+    this.installs.set(id, { id, propertyId: p.id, deviceId: "dev", installPath: input.installPath, launchData: { executable: input.executable }, detectedBy: "library" });
+  }
+  async removeManual(canonicalId: string) {
+    const p = this.manualProp(canonicalId);
+    for (const [id, i] of this.installs) if (i.propertyId === p.id) this.installs.delete(id);
+    this.properties.delete(p.id);
+    this.canonical.delete(canonicalId);
   }
   async listProperties(store: StoreId) {
     return [...this.properties.values()].filter((p) => p.store === store);
@@ -555,6 +592,9 @@ export async function harness(
     locations?: LocationResolver | null;
     launcher?: Partial<ProcessLauncher> | null;
     picker?: FolderPicker | null;
+    /** ADR 93. */
+    filePicker?: CoreDeps["filePicker"];
+    ownFolders?: CoreDeps["ownFolders"];
     onboarded?: boolean;
     mode?: "auto-and-manual" | "manual-only" | "later" | null;
     http?: CoreDeps["http"];
@@ -641,6 +681,8 @@ export async function harness(
     ...(opts.locations === null || opts.locations === undefined ? {} : { locations: opts.locations }),
     ...(launcher ? { launcher } : {}),
     ...(opts.picker ? { folderPicker: opts.picker } : {}),
+    ...(opts.filePicker ? { filePicker: opts.filePicker } : {}),
+    ...(opts.ownFolders ? { ownFolders: opts.ownFolders } : {}),
     ...(opts.http ? { http: opts.http } : {}),
     ...(opts.backups ? { backups: opts.backups } : {}),
     ...(opts.userFolders ? { userFolders: opts.userFolders } : {}),

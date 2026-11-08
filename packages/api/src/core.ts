@@ -38,6 +38,10 @@ export interface LudiaryCoreFacade {
   getGame(canonicalId: string): Promise<GameDetailDto | null>;
   /** ADR 85. */
   updateGame(canonicalId: string, patch: GamePatchDto): Promise<GameDetailDto>;
+  /** ADR 93. Native .exe dialog; null if cancelled. */
+  addManualGame(): Promise<{ game: GameDetailDto; created: boolean } | null>;
+  pickManualExecutable(canonicalId: string): Promise<GameDetailDto | null>;
+  removeGame(canonicalId: string): Promise<void>;
   listCollections(): Promise<readonly CollectionDto[]>;
   createCollection(name: string): Promise<CollectionDto>;
   renameCollection(id: string, name: string): Promise<CollectionDto>;

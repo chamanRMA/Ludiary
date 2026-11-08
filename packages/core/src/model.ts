@@ -140,6 +140,8 @@ export interface GameDataPatch {
   favorite?: boolean;
   tags?: readonly Label[];
   collectionIds?: readonly string[];
+  /** ADR 93. New title of a manual-only game, already normalized. */
+  title?: string;
 }
 
 /** ADR 88. Closed list of the counters the connector's snapshot and the pass add up; they go to the log as `skipped_*`. */
@@ -232,6 +234,8 @@ export interface InstallationRecord {
   deviceId: string;
   installPath: string;
   launchData: Readonly<Record<string, string>> | null;
+  /** ADR 93 (A8). 'library' = registered by the user (manual game), not found by a scan. */
+  detectedBy?: "scan" | "library";
 }
 
 /** One validated entry reported by a scan, ready to be planned. */

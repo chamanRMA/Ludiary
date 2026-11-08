@@ -389,6 +389,8 @@ export const GamePatchSchema = Type.Object(
     favorite: Type.Optional(Type.Boolean()),
     tags: Type.Optional(Type.Array(LabelText, { maxItems: 1000 })),
     collectionIds: Type.Optional(Type.Array(Id, { maxItems: 200 })),
+    /** ADR 93. Rename; only for a game whose properties are all manual (else 422 action-unavailable). */
+    title: Type.Optional(LabelText),
   },
   { ...strict, minProperties: 1 },
 );

@@ -1,4 +1,4 @@
-import type { FolderPicker } from "@ludiary/contracts";
+import type { FilePicker, FolderPicker } from "@ludiary/contracts";
 import type { HelperRunner } from "./helper-io";
 
 const MAX_DIALOG_MS = 15 * 60_000;
@@ -31,6 +31,30 @@ export class HelperProcessFolderPicker implements FolderPicker {
   pick(opts: { title: string }): Promise<string | null> {
     if (this.inFlight) return this.inFlight;
     const run = this.runHelper(["--pick-folder"], JSON.stringify({ title: opts.title }), {
+      timeoutMs: MAX_DIALOG_MS,
+      visible: true,
+    })
+      .then(parsePickFolderResponse)
+      .finally(() => {
+        this.inFlight = null;
+      });
+    this.inFlight = run;
+    return run;
+  }
+}
+
+/**
+ * FilePicker through `ludiary-tray.exe --pick-file` (ADR 93): one .exe. The answer is untrusted like the folder one
+ * (the core still checks extension, local disk and real path); the `*.exe` filter lives in the Go helper.
+ */
+export class HelperProcessFilePicker implements FilePicker {
+  private inFlight: Promise<string | null> | null = null;
+
+  constructor(private readonly runHelper: HelperRunner) {}
+
+  pickExecutable(opts: { title: string; filterName: string }): Promise<string | null> {
+    if (this.inFlight) return this.inFlight;
+    const run = this.runHelper(["--pick-file"], JSON.stringify({ title: opts.title, filterName: opts.filterName }), {
       timeoutMs: MAX_DIALOG_MS,
       visible: true,
     })

@@ -171,11 +171,26 @@ func TestFolderDialogCreates(t *testing.T) {
 		t.Skip("COM unavailable")
 	}
 	defer windows.CoUninitialize()
-	dlg, err := newFolderDialog("Test")
-	if err != nil {
-		t.Fatal(err)
+	for _, file := range []bool{false, true} {
+		dlg, err := newDialog("Test", file, "Programs")
+		if err != nil {
+			t.Fatalf("file=%v: %v", file, err)
+		}
+		comRelease(dlg)
 	}
-	comRelease(dlg)
+}
+
+func TestParsePickFileRequest(t *testing.T) {
+	r, ok := parsePickRequest([]byte(`{"title":"T","filterName":"Programas","pattern":"*.*"}`))
+	if !ok || r.FilterName != "Programas" {
+		t.Errorf("good: %v %v", r, ok)
+	}
+	if _, ok := parsePickRequest([]byte(`{"filterName":"` + strings.Repeat("a", maxTitleLen+1) + `"}`)); ok {
+		t.Error("long filter name accepted")
+	}
+	if filePattern != "*.exe" {
+		t.Error("pattern must be fixed in Go")
+	}
 }
 
 func TestKnownFolder(t *testing.T) {

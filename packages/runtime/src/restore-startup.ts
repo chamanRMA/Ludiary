@@ -1,6 +1,6 @@
 // Startup order of ADR 89 point 6.3: pending restoration -> database -> migrations -> adjustment -> composeCore.
 // The state machine lives in `@ludiary/db`; this function only decides which piece comes next and when to roll back.
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { LastRestore } from "@ludiary/core";
 import {
   applyPendingRestoreSwap,
@@ -12,11 +12,16 @@ import {
   rollBackRestore,
   SwapError,
   type PendingRestore,
+  type RestorePaths,
   type SqliteAddon,
 } from "@ludiary/db";
+import { createNodeLocalFiles } from "@ludiary/platform-node";
 import { FatalError } from "./compose";
 import { EXIT } from "./deps";
 import type { Logger } from "./files";
+
+/** ADR 93 (A7): the same `compareKey` the core uses, so the restore matches manual executables like the app does. */
+export const restorePaths: RestorePaths = { compareKey: createNodeLocalFiles().compareKey, dirname };
 
 /** Test seam: thrown by `cut` to simulate the process dying at that point. Never triggers a roll back. */
 type Db = ReturnType<typeof openDatabase>;
@@ -70,14 +75,14 @@ export async function startDatabase<T>(o: StartDatabaseOptions<T>): Promise<{ db
 
   let db: Db | null = null;
   try {
-    const swapped = await applyPendingRestoreSwap(dataDir, o.addon, state, o.now(), (m) => log("warn", m));
+    const swapped = await applyPendingRestoreSwap(dataDir, o.addon, state, o.now(), (m) => log("warn", m), restorePaths);
     if (!swapped) return plain(rolledBack(state.id)); // no copy of the current data was possible: nothing was touched
     state = swapped;
     o.cut?.("after-swap");
     db = open();
     await o.migrate(db, true);
     o.cut?.("after-migrate");
-    const disabled = applyRestoreAdjustments(db, state.kept ?? { nextAllowedAt: [], activeUserRoots: [] }, o.now());
+    const disabled = applyRestoreAdjustments(db, state.kept ?? { nextAllowedAt: [], activeUserRoots: [] }, o.now(), restorePaths);
     if (state.phase !== "adjusted") state = markAdjusted(dataDir, state, disabled); // a repeat keeps the count of the first run
     o.cut?.("after-adjust");
     const composed = await o.compose(db);
