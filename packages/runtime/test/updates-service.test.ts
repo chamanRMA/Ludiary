@@ -348,6 +348,24 @@ describe("checking (point 3)", () => {
     expect(headers).toEqual({ Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2026-03-10", "User-Agent": "Ludiary/0.2.0" });
   });
 
+  it("a stored failure is cleared by the next check, and the version is offered again (point 23)", async () => {
+    writeState(dataDir, { state: "failed", to: "0.3.0", code: "verify-failed", retryBad: "0.3.0" });
+    publish("0.3.0");
+    const svc = make();
+    expect((await svc.status()).state).toBe("failed");
+    await svc.checkNow();
+    expect(await svc.status()).toMatchObject({ state: "available", latest: "0.3.0" });
+    expect(readState(dataDir)).toEqual({ state: "idle", retryBad: "0.3.0" });
+  });
+
+  it("a check does not clear a stored failure while a trial or rollback owns state.json (A1)", async () => {
+    writeFileSync(join(root, "versions.json"), JSON.stringify({ active: "0.2.0", previous: "0.1.0", trial: true, trials: 0, badVersions: [] }));
+    writeState(dataDir, { state: "failed", to: "0.3.0", code: "verify-failed" });
+    publish("0.3.0");
+    await make().checkNow();
+    expect(readState(dataDir).state).toBe("failed");
+  });
+
   it("404 (nothing published) and an older or equal version are `up-to-date`", async () => {
     const svc = make();
     logged.length = 0;

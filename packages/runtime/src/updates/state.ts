@@ -98,13 +98,15 @@ export function reconcileState(dataDir: string, installRoot: string, current: st
     } else if (vf && vf.active === st.to) {
       if (!vf.trial) next = { state: "idle", updated: st.to }; // the trial passed
       // trial still running: leave it
+    } else if (compareVersions(st.to, current) <= 0) {
+      next = compareVersions(st.to, current) === 0 ? { state: "idle", updated: st.to } : { state: "idle" }; // stale (point 23): the target is already installed or older, e.g. a manual install after a finished update
     } else if (!vf?.badVersions.includes(st.to) && existsSync(updateFolder(dataDir, st.to))) {
       next = { state: "ready", version: st.to }; // the installation was cut: the next cold start tries again, Go counts the attempts
     } else {
       // Go deletes the folder when the signature or the hash did not check out again, before it counts any attempt.
       next = { state: "failed", to: st.to, code: vf?.applyingTo === st.to || vf?.badVersions.includes(st.to) ? "install-interrupted" : "verify-failed" };
     }
-  } else if ((st.state === "ready" || st.state === "downloading") && (!st.version || compareVersions(st.version, current) <= 0)) {
+  } else if ((st.state === "ready" || st.state === "downloading" || (st.state === "failed" && !vf?.rollingBack)) && (!(st.version ?? st.to) || compareVersions((st.version ?? st.to)!, current) <= 0)) {
     next = { state: "idle" };
   }
   // M8: a manual installation of an older version than the one it replaced.
