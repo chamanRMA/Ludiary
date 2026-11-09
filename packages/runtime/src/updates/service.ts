@@ -230,6 +230,12 @@ export function createUpdateService(o: UpdateServiceOptions): UpdateService {
       }
       lastError = undefined;
       await writeCache(cache);
+      // A failure recorded earlier never hides what this check finds: the installed version and GitHub decide (point 23).
+      const st = readState(dataDir);
+      if (st.state === "failed" && !inTrial()) { // a trial or a rollback owns state.json (point 18, A1)
+        writeState(dataDir, { state: "idle", ...(st.retryBad ? { retryBad: st.retryBad } : {}), ...(st.updated ? { updated: st.updated } : {}), ...(st.downgraded ? { downgraded: true } : {}) });
+        log("info", `update state failed -> idle (${st.code ?? "?"}, cleared by a check)`);
+      }
       // Point 20: a newer version is announced only after its signed manifest verifies (two 64 KiB downloads, outside the API quota).
       const fresh = newer(cache);
       // The mode may have changed to `off` while the request was in flight: then nothing more is asked.

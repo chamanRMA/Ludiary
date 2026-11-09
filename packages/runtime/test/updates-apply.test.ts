@@ -248,6 +248,26 @@ describe("reconcileState", () => {
     vf({ active: "0.3.0", rollingBack: { from: "0.2.0", to: "0.3.0" } });
     expect(reconcileState(dataDir, root, "0.2.0", log)).toMatchObject({ code: "rollback-interrupted" });
   });
+  it("a stale applying (the target is already installed or older) goes back to idle (point 23)", () => {
+    writeState(dataDir, { state: "applying", from: "0.1.0", to: "0.2.0" });
+    vf({ active: "0.3.0" });
+    expect(reconcileState(dataDir, root, "0.3.0", log)).toEqual({ state: "idle" });
+  });
+  it("a stored failure for a version not newer than the installed one goes back to idle (point 23)", () => {
+    writeState(dataDir, { state: "failed", to: "0.2.0", code: "verify-failed" });
+    expect(reconcileState(dataDir, root, "0.2.0", log).state).toBe("idle");
+    writeState(dataDir, { state: "failed", version: "0.3.0", code: "hash-mismatch" });
+    expect(reconcileState(dataDir, root, "0.2.0", log).state).toBe("failed"); // still newer: the check decides
+  });
+  it("rollback-interrupted is kept while the rollback is still marked (point 23, A1)", () => {
+    writeState(dataDir, { state: "failed", to: "0.2.0", code: "rollback-interrupted" });
+    vf({ active: "0.3.0", rollingBack: { from: "0.3.0", to: "0.2.0" } });
+    expect(reconcileState(dataDir, root, "0.2.0", log)).toMatchObject({ state: "failed", code: "rollback-interrupted" });
+  });
+  it("a stale applying whose target is the installed version keeps the updated notice", () => {
+    writeState(dataDir, { state: "applying", from: "0.1.0", to: "0.3.0" });
+    expect(reconcileState(dataDir, root, "0.3.0", log)).toEqual({ state: "idle", updated: "0.3.0" });
+  });
   it("a stale ready state (the version is already installed) goes back to idle", () => {
     stage("0.2.0");
     expect(reconcileState(dataDir, root, "0.2.0", log).state).toBe("idle");
